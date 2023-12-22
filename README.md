@@ -56,6 +56,7 @@ This project is currently a working prototype with limited functionality:
   - Including static methods, trait methods, interface methods, first class callables, etc.
   - Callbacks like `[$this, 'method']` are mostly not detected
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
+  - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored
   - Does not check constructor calls
   - Does not check magic methods

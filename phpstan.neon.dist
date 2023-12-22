@@ -40,3 +40,5 @@ parameters:
             enabled: false # native check is better now; this rule will be dropped / reworked in 3.0
         enforceClosureParamNativeTypehint:
             enabled: false # we support even PHP 7.4, some typehints cannot be used
+        enforceReadonlyPublicProperty:
+            enabled: false # we support even PHP 7.4

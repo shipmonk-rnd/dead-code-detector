@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
-use Nette\Utils\Strings;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
@@ -10,7 +9,7 @@ use PHPStan\Node\InClassNode;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
-use function str_contains;
+use function strpos;
 
 /**
  * @implements Collector<InClassNode, list<array{string, int}>>
@@ -60,7 +59,7 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            if (Strings::startsWith($method->getName(), '__')) { // magic methods like __toString, __clone, __get, __set etc
+            if (strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
                 continue;
             }
 
@@ -72,7 +71,7 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            if (str_contains($method->getFileName(), '/vendor/')) {
+            if (strpos($method->getFileName(), '/vendor/') !== false) {
                 continue;
             }
 

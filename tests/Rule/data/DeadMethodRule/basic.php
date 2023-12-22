@@ -7,15 +7,6 @@ interface TestInterface {
     public function interfaceMethod(): void;
 }
 
-enum TestEnum: string {
-
-
-    public function unusedEnumMethod(): void // error: Unused DeadBasic\TestEnum::unusedEnumMethod
-    {
-        self::cases();
-    }
-}
-
 class TestA {
 
     public function commonMethod(): void

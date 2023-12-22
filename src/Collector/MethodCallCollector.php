@@ -2,9 +2,9 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
-use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -70,15 +70,20 @@ class MethodCallCollector implements Collector
     }
 
     /**
+     * @param NullsafeMethodCall|MethodCall $methodCall
      * @return list<string>|null
      */
     private function registerMethodCall(
-        NullsafeMethodCall|MethodCall $methodCall,
+        CallLike $methodCall,
         Scope $scope
     ): ?array
     {
         $methodName = $this->getMethodName($methodCall);
         $callerType = $scope->getType($methodCall->var);
+
+        if ($methodName === null) {
+            return null;
+        }
 
         $result = [];
 
@@ -99,6 +104,10 @@ class MethodCallCollector implements Collector
     ): ?array
     {
         $methodName = $this->getMethodName($staticCall);
+
+        if ($methodName === null) {
+            return null;
+        }
 
         if ($staticCall->class instanceof Expr) {
             $callerType = $scope->getType($staticCall->class);
@@ -157,10 +166,13 @@ class MethodCallCollector implements Collector
         return null;
     }
 
-    private function getMethodName(NullsafeMethodCall|MethodCall|StaticCall $call): string
+    /**
+     * @param NullsafeMethodCall|MethodCall|StaticCall $call
+     */
+    private function getMethodName(CallLike $call): ?string
     {
         if (!$call->name instanceof Identifier) {
-            throw new LogicException('Unsupported method name:' . $call->name::class);
+            return null;
         }
 
         return $call->name->toString();

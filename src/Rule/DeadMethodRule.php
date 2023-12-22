@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
-use Nette\Utils\Strings;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
@@ -15,6 +14,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
 use function array_merge;
 use function array_values;
+use function strpos;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -114,7 +114,7 @@ class DeadMethodRule implements Rule
     private function isAnonymousClass(string $methodKey): bool
     {
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return Strings::startsWith($methodKey, 'AnonymousClass');
+        return strpos($methodKey, 'AnonymousClass') === 0;
     }
 
     /**

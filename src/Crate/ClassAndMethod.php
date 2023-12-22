@@ -5,9 +5,9 @@ namespace ShipMonk\PHPStan\DeadCode\Crate;
 class ClassAndMethod
 {
 
-    public readonly string $className;
+    public string $className;
 
-    public readonly string $methodName;
+    public string $methodName;
 
     public function __construct(
         string $className,

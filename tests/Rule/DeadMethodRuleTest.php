@@ -9,6 +9,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use const PHP_VERSION_ID;
 
 /**
  * @extends RuleTestCase<DeadMethodRule>
@@ -46,17 +47,22 @@ class DeadMethodRuleTest extends RuleTestCase
     /**
      * @dataProvider provideFiles
      */
-    public function testDead(string $file): void
+    public function testDead(string $file, ?int $lowestPhpVersion = null): void
     {
+        if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
+            self::markTestSkipped('Requires PHP ' . $lowestPhpVersion);
+        }
+
         $this->analyseFile($file);
     }
 
     /**
-     * @return string[][]
+     * @return array<string, array{0: string, 1?: int}>
      */
     public static function provideFiles(): array
     {
         return [
+            'enum' => [__DIR__ . '/data/DeadMethodRule/basic.php', 80_000],
             'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'],
             'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'],
             'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'],
