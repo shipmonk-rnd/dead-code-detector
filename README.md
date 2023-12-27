@@ -12,7 +12,7 @@ Use [official extension-installer](https://phpstan.org/user-guide/extension-libr
 
 ```neon
 includes:
-    - vendor/shipmonk/phpstan-rules/rules.neon
+    - vendor/shipmonk/dead-code-detector/rules.neon
 ```
 
 
@@ -28,6 +28,11 @@ services:
             - shipmonk.deadCode.entrypointProvider
 ```
 ```php
+
+use ReflectionMethod;
+use PHPStan\Reflection\ReflectionProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+
 class SymfonyEntrypointProvider implements EntrypointProvider
 {
 
@@ -50,7 +55,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 ```
 
 ## Limitations
-This project is currently a working prototype with limited functionality:
+This project is currently a working prototype (we are using it since 2022) with limited functionality:
 
 - Only method calls are detected
   - Including static methods, trait methods, interface methods, first class callables, etc.
@@ -62,8 +67,6 @@ This project is currently a working prototype with limited functionality:
   - Does not check magic methods
   - No transitive check is performed (dead method called only from dead method)
   - No dead cycles are detected (e.g. dead method calling itself)
-- Performance is not yet optimized
-  - Expect higher memory usage
 
 ## Contributing
 - Check your code by `composer check`
