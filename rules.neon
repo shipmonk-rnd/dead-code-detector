@@ -1,0 +1,17 @@
+services:
+    -
+        class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
+        tags:
+            - phpstan.collector
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
+        arguments:
+            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
+        tags:
+            - phpstan.collector
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
+        tags:
+            - phpstan.rules.rule

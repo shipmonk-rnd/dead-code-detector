@@ -1,0 +1,44 @@
+includes:
+    - phar://phpstan.phar/conf/config.levelmax.neon
+    - phar://phpstan.phar/conf/bleedingEdge.neon
+    - ./vendor/phpstan/phpstan-strict-rules/rules.neon
+    - ./vendor/phpstan/phpstan-phpunit/extension.neon
+    - ./vendor/phpstan/phpstan-phpunit/rules.neon
+    - ./vendor/shipmonk/phpstan-rules/rules.neon
+
+parameters:
+    paths:
+        - src
+        - tests
+    excludePaths:
+        analyseAndScan:
+            - tests/*/data/*
+    tmpDir: cache/phpstan/
+    checkMissingCallableSignature: true
+    checkUninitializedProperties: true
+    checkBenevolentUnionTypes: true
+    checkImplicitMixed: true
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    exceptions:
+        check:
+            missingCheckedExceptionInThrows: true
+            tooWideThrowType: true
+        implicitThrows: false
+        uncheckedExceptionClasses:
+            - LogicException
+
+    editorUrl: 'jetbrains://php-storm/navigate/reference?project=dead-code-detector&path=%%relFile%%:%%line%%' # requires usage of JetBrains Toolbox
+    editorUrlTitle: '%%relFile%%:%%line%%'
+
+    shipmonkRules:
+        classSuffixNaming:
+            superclassToSuffixMapping:
+                PHPStan\Rules\Rule: Rule
+                PHPStan\Collectors\Collector: Collector
+                ShipMonk\PHPStan\DeadCode\Rule: RuleTest
+        forbidAssignmentNotMatchingVarDoc:
+            enabled: false # native check is better now; this rule will be dropped / reworked in 3.0
+        enforceClosureParamNativeTypehint:
+            enabled: false # we support even PHP 7.4, some typehints cannot be used
+        enforceReadonlyPublicProperty:
+            enabled: false # we support even PHP 7.4
