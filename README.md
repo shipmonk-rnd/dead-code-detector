@@ -8,7 +8,7 @@ PHPStan rules to find dead code in your project.
 composer require --dev shipmonk/dead-code-detector
 ```
 
-Use [official extension-installer](https://phpstan.org/user-guide/extension-library#installing-extensions) or enable just load the rules:
+Use [official extension-installer](https://phpstan.org/user-guide/extension-library#installing-extensions) or just load the rules:
 
 ```neon
 includes:
