@@ -72,3 +72,6 @@ This project is currently a working prototype (we are using it since 2022) with 
 - Check your code by `composer check`
 - Autofix coding-style by `composer fix:cs`
 - All functionality must be tested
+
+## Supported PHP versions
+- PHP 7.4 - 8.3
