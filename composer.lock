@@ -932,30 +932,29 @@
         },
         {
             "name": "nette/utils",
-            "version": "v4.0.3",
+            "version": "v3.2.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/utils.git",
-                "reference": "a9d127dd6a203ce6d255b2e2db49759f7506e015"
+                "reference": "a4175c62652f2300c8017fb7e640f9ccb11648d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/utils/zipball/a9d127dd6a203ce6d255b2e2db49759f7506e015",
-                "reference": "a9d127dd6a203ce6d255b2e2db49759f7506e015",
+                "url": "https://api.github.com/repos/nette/utils/zipball/a4175c62652f2300c8017fb7e640f9ccb11648d2",
+                "reference": "a4175c62652f2300c8017fb7e640f9ccb11648d2",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.0 <8.4"
+                "php": ">=7.2 <8.4"
             },
             "conflict": {
-                "nette/finder": "<3",
-                "nette/schema": "<1.2.2"
+                "nette/di": "<3.0.6"
             },
             "require-dev": {
                 "jetbrains/phpstorm-attributes": "dev-master",
-                "nette/tester": "^2.5",
+                "nette/tester": "~2.0",
                 "phpstan/phpstan": "^1.0",
-                "tracy/tracy": "^2.9"
+                "tracy/tracy": "^2.3"
             },
             "suggest": {
                 "ext-gd": "to use Image",
@@ -963,12 +962,13 @@
                 "ext-intl": "to use Strings::webalize(), toAscii(), normalize() and compare()",
                 "ext-json": "to use Nette\\Utils\\Json",
                 "ext-mbstring": "to use Strings::lower() etc...",
-                "ext-tokenizer": "to use Nette\\Utils\\Reflection::getUseStatements()"
+                "ext-tokenizer": "to use Nette\\Utils\\Reflection::getUseStatements()",
+                "ext-xml": "to use Strings::length() etc. when mbstring is not available"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "4.0-dev"
+                    "dev-master": "3.2-dev"
                 }
             },
             "autoload": {
@@ -1012,9 +1012,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/utils/issues",
-                "source": "https://github.com/nette/utils/tree/v4.0.3"
+                "source": "https://github.com/nette/utils/tree/v3.2.10"
             },
-            "time": "2023-10-29T21:02:13+00:00"
+            "time": "2023-07-30T15:38:18+00:00"
         },
         {
             "name": "nikic/php-parser",
@@ -2719,19 +2719,20 @@
         },
         {
             "name": "shipmonk/name-collision-detector",
-            "version": "2.1.0",
+            "version": "2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/name-collision-detector.git",
-                "reference": "322993a0b057457ab363929c3ca37bce6eb4affb"
+                "reference": "e8c8267a9a3774450b64f4cbf0bb035108e78f07"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/name-collision-detector/zipball/322993a0b057457ab363929c3ca37bce6eb4affb",
-                "reference": "322993a0b057457ab363929c3ca37bce6eb4affb",
+                "url": "https://api.github.com/repos/shipmonk-rnd/name-collision-detector/zipball/e8c8267a9a3774450b64f4cbf0bb035108e78f07",
+                "reference": "e8c8267a9a3774450b64f4cbf0bb035108e78f07",
                 "shasum": ""
             },
             "require": {
+                "ext-json": "*",
                 "ext-tokenizer": "*",
                 "nette/schema": "^1.1.0",
                 "php": "^7.2 || ^8.0"
@@ -2743,6 +2744,7 @@
                 "phpstan/phpstan-phpunit": "^1.1.1",
                 "phpstan/phpstan-strict-rules": "^1.2.3",
                 "phpunit/phpunit": "^8.5.28 || ^9.5.20",
+                "shipmonk/composer-dependency-analyser": "^1.0.0",
                 "slevomat/coding-standard": "^8.0.1"
             },
             "bin": [
@@ -2769,9 +2771,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/name-collision-detector/issues",
-                "source": "https://github.com/shipmonk-rnd/name-collision-detector/tree/2.1.0"
+                "source": "https://github.com/shipmonk-rnd/name-collision-detector/tree/2.1.1"
             },
-            "time": "2023-10-09T12:15:58+00:00"
+            "time": "2024-03-01T13:26:32+00:00"
         },
         {
             "name": "shipmonk/phpstan-rules",
