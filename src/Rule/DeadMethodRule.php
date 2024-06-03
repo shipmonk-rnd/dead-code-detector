@@ -57,7 +57,7 @@ class DeadMethodRule implements Rule
      * @param CollectedDataNode $node
      * @return list<RuleError>
      */
-    public function processNode(
+    public function processNode( // @phpstan-ignore method.childReturnType (Do not yet raise prod dependency of phpstan to 1.11, but use it in CI)
         Node $node,
         Scope $scope
     ): array
