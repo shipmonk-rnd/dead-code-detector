@@ -118,6 +118,7 @@ class MethodCallCollector implements Collector
             if (!$this->reflectionProvider->hasClass($class)) {
                 return null;
             }
+
             $classReflections = [
                 $this->reflectionProvider->getClass($class),
             ];
