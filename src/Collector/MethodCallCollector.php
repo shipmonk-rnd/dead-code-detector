@@ -114,6 +114,7 @@ class MethodCallCollector implements Collector
             $classReflections = $this->getReflectionsWithMethod($callerType, $methodName);
         } else {
             $className = $scope->resolveName($staticCall->class);
+
             if ($this->reflectionProvider->hasClass($className)) {
                 $classReflections = [
                     $this->reflectionProvider->getClass($className),
