@@ -119,6 +119,8 @@ class MethodCallCollector implements Collector
                 $classReflections = [
                     $this->reflectionProvider->getClass($className),
                 ];
+            } else {
+                $classReflections = [];
             }
         }
 
