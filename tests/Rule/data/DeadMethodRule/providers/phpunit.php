@@ -8,13 +8,24 @@ use PHPUnit\Framework\TestCase;
 class SomeTest extends TestCase
 {
 
-
-    #[DataProvider('provide')]
+    #[DataProvider('provideFromAttribute')]
     public function testFoo(string $arg): void
     {
     }
 
-    public static function provide(): array
+    /**
+     * @dataProvider provideFromPhpDoc
+     */
+    public function testBar(string $arg): void
+    {
+    }
+
+    public static function provideFromAttribute(): array
+    {
+        return [];
+    }
+
+    public static function provideFromPhpDoc(): array
     {
         return [];
     }

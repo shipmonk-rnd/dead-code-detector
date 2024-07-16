@@ -4,6 +4,8 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
 use PHPStan\Collectors\Collector;
+use PHPStan\PhpDocParser\Lexer\Lexer;
+use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
@@ -45,7 +47,11 @@ class DeadMethodRuleTest extends RuleTestCase
                 self::getContainer()->getByType(ReflectionProvider::class),
                 enabled: true,
             ),
-            new PhpUnitEntrypointProvider(enabled: true),
+            new PhpUnitEntrypointProvider(
+                true,
+                self::getContainer()->getByType(PhpDocParser::class),
+                self::getContainer()->getByType(Lexer::class),
+            ),
             new SymfonyEntrypointProvider(enabled: true),
         ];
         return [
