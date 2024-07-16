@@ -309,6 +309,7 @@
     <rule ref="SlevomatCodingStandard.Exceptions.DeadCatch"/>
     <rule ref="SlevomatCodingStandard.Exceptions.DisallowNonCapturingCatch"/>
     <rule ref="SlevomatCodingStandard.Exceptions.ReferenceThrowableOnly"/>
+    <rule ref="SlevomatCodingStandard.Functions.DisallowNamedArguments"/>
     <rule ref="SlevomatCodingStandard.Functions.DisallowTrailingCommaInClosureUse"/><!-- add onlySingleLine once PHP is bumped -->
     <rule ref="SlevomatCodingStandard.Functions.DisallowTrailingCommaInDeclaration"/><!-- add onlySingleLine once PHP is bumped -->
     <rule ref="SlevomatCodingStandard.Functions.DisallowTrailingCommaInCall">

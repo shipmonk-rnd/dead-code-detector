@@ -5,10 +5,11 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
-use function str_starts_with;
+use function is_string;
+use function strpos;
+use const PHP_VERSION_ID;
 
 class PhpUnitEntrypointProvider implements EntrypointProvider
 {
@@ -46,7 +47,7 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
     private function isTestCaseMethod(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->isSubclassOf(TestCase::class)
-            && str_starts_with($method->getName(), 'test');
+            && strpos($method->getName(), 'test') === 0;
     }
 
     private function isDataProviderMethod(ReflectionMethod $originalMethod): bool
@@ -112,11 +113,16 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
      */
     private function getDataProvidersFromAttributes(ReflectionMethod $method): iterable
     {
-        foreach ($method->getAttributes(DataProvider::class) as $providerAttributeReflection) {
-            /** @var DataProvider $providerAttribute */
-            $providerAttribute = $providerAttributeReflection->newInstance();
+        if (PHP_VERSION_ID < 80_000) {
+            return;
+        }
 
-            yield $providerAttribute->methodName();
+        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
+            $methodName = $providerAttributeReflection->getArguments()[0] ?? null;
+
+            if (is_string($methodName)) {
+                yield $methodName;
+            }
         }
     }
 

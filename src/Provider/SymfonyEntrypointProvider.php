@@ -3,9 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use ReflectionMethod;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Contracts\Service\Attribute\Required;
+use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider
 {
@@ -25,9 +23,9 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
         $methodName = $method->getName();
 
-        return $method->getDeclaringClass()->implementsInterface(EventSubscriberInterface::class)
-            || $method->getAttributes(Required::class) !== []
-            || $method->getAttributes(Route::class) !== []
+        return $method->getDeclaringClass()->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
+            || (PHP_VERSION_ID >= 80_000 && $method->getAttributes('Symfony\Contracts\Service\Attribute\Required') !== [])
+            || (PHP_VERSION_ID >= 80_000 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route') !== [])
             || $this->isProbablySymfonyListener($methodName);
     }
 

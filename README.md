@@ -71,5 +71,4 @@ class MyEntrypointProvider implements EntrypointProvider
 - All functionality must be tested
 
 ## Supported PHP versions
-- v0.1: PHP 7.4 - 8.3
-- v0.2: PHP 8.1 - 8.3
+- PHP 7.4 - 8.3
