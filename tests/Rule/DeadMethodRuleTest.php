@@ -5,10 +5,14 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use PhpParser\Node;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use const PHP_VERSION_ID;
 
 /**
@@ -37,6 +41,12 @@ class DeadMethodRuleTest extends RuleTestCase
                 }
 
             },
+            new DefaultEntrypointProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                enabled: true,
+            ),
+            new PhpUnitEntrypointProvider(enabled: true),
+            new SymfonyEntrypointProvider(enabled: true),
         ];
         return [
             new MethodDefinitionCollector($entrypointProviders),
@@ -44,9 +54,7 @@ class DeadMethodRuleTest extends RuleTestCase
         ];
     }
 
-    /**
-     * @dataProvider provideFiles
-     */
+    #[DataProvider('provideFiles')]
     public function testDead(string $file, ?int $lowestPhpVersion = null): void
     {
         if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
@@ -77,6 +85,9 @@ class DeadMethodRuleTest extends RuleTestCase
             'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'],
             'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'],
             'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'],
+            'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php'],
+            'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php'],
+            'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'],
         ];
     }
 

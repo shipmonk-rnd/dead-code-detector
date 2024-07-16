@@ -16,7 +16,7 @@ jobs:
 
             -
                 name: Install dependencies
-                run: composer install --no-progress --no-interaction
+                run: composer update --no-progress --no-interaction
 
             -
                 name: Lint

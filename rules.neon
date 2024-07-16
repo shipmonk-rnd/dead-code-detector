@@ -1,5 +1,26 @@
 services:
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %deadCode.entrypoints.default.enabled%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %deadCode.entrypoints.phpunit.enabled%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %deadCode.entrypoints.symfony.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
@@ -15,3 +36,29 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
         tags:
             - phpstan.rules.rule
+
+
+parameters:
+    deadCode:
+        entrypoints:
+            default:
+                enabled: true
+            phpunit:
+                enabled: false
+            symfony:
+                enabled: false
+
+parametersSchema:
+    deadCode: structure([
+        entrypoints: structure([
+            default: structure([
+                enabled: bool()
+            ])
+            phpunit: structure([
+                enabled: bool()
+            ])
+            symfony: structure([
+                enabled: bool()
+            ])
+        ])
+    ])

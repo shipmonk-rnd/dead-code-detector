@@ -5,6 +5,7 @@ includes:
     - ./vendor/phpstan/phpstan-phpunit/extension.neon
     - ./vendor/phpstan/phpstan-phpunit/rules.neon
     - ./vendor/shipmonk/phpstan-rules/rules.neon
+    - ./rules.neon
 
 parameters:
     paths:
@@ -35,10 +36,9 @@ parameters:
             superclassToSuffixMapping:
                 PHPStan\Rules\Rule: Rule
                 PHPStan\Collectors\Collector: Collector
-                ShipMonk\PHPStan\DeadCode\Rule: RuleTest
-        forbidAssignmentNotMatchingVarDoc:
-            enabled: false # native check is better now; this rule will be dropped / reworked in 3.0
-        enforceClosureParamNativeTypehint:
-            enabled: false # we support even PHP 7.4, some typehints cannot be used
-        enforceReadonlyPublicProperty:
-            enabled: false # we support even PHP 7.4
+                ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase: RuleTest
+
+    deadCode:
+        entrypoints:
+            phpunit:
+                enabled: true

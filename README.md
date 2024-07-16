@@ -17,50 +17,42 @@ includes:
 
 
 ## Configuration:
-- You need to mark all entrypoints of your code to get proper results.
-- This is typically long whitelist of all code that is called by your framework and libraries.
-- You can easily start with DefaultEntrypointProvider which marks all methods declared in vendor packages as entrypoints.
+- All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
+- By default, all overridden methods which declaration originates inside vendor are considered entrypoints
+- Also, there are some basic entrypoint providers for `symfony` and `phpunit`
+- For everything else, you can implement your own entrypoint provider
 
 ```neon
+parameters:
+    deadCode:
+        entrypoints:
+            symfony:
+                enabled: true
+            phpunit:
+                enabled: true
+
 services:
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider
-        tags:
-            - shipmonk.deadCode.entrypointProvider
-
-    -
-        class: App\SymfonyEntrypointProvider
+        class: App\MyEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
 ```
 ```php
 
 use ReflectionMethod;
-use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 
-class SymfonyEntrypointProvider implements EntrypointProvider
+class MyEntrypointProvider implements EntrypointProvider
 {
-
-    public function __construct(
-        private ReflectionProvider $reflectionProvider
-    ) {}
 
     public function isEntrypoint(ReflectionMethod $method): bool
     {
-        $methodName = $method->getName();
-        $reflection = $this->reflectionProvider->getClass($method->getDeclaringClass()->getName());
-
-        return $reflection->is(\Symfony\Bundle\FrameworkBundle\Controller\AbstractController::class)
-            || $reflection->is(\Symfony\Component\EventDispatcher\EventSubscriberInterface::class)
-            || $method->getAttributes(\Symfony\Contracts\Service\Attribute\Required::class) !== []
-            // and many more
+        return $method->getDeclaringClass()->implementsInterface(ApiOutput::class));
     }
 }
 ```
 
-## Limitations
-This project is currently a working prototype (we are using it since 2022) with limited functionality:
+## Limitations:
 
 - Only method calls are detected
   - Including static methods, trait methods, interface methods, first class callables, etc.
@@ -79,4 +71,5 @@ This project is currently a working prototype (we are using it since 2022) with 
 - All functionality must be tested
 
 ## Supported PHP versions
-- PHP 7.4 - 8.3
+- v0.1: PHP 7.4 - 8.3
+- v0.2: PHP 8.1 - 8.3

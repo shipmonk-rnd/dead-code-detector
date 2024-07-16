@@ -16,13 +16,20 @@ class DefaultEntrypointProvider implements EntrypointProvider
 
     private ReflectionProvider $reflectionProvider;
 
-    public function __construct(ReflectionProvider $reflectionProvider)
+    private bool $enabled;
+
+    public function __construct(ReflectionProvider $reflectionProvider, bool $enabled)
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->enabled = $enabled;
     }
 
     public function isEntrypoint(ReflectionMethod $method): bool
     {
+        if (!$this->enabled) {
+            return false;
+        }
+
         $methodName = $method->getName();
         $className = $method->getDeclaringClass()->getName();
 
