@@ -19,9 +19,15 @@ includes:
 ## Configuration:
 - You need to mark all entrypoints of your code to get proper results.
 - This is typically long whitelist of all code that is called by your framework and libraries.
+- You can easily start with DefaultEntrypointProvider which marks all methods declared in vendor packages as entrypoints.
 
 ```neon
 services:
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+
     -
         class: App\SymfonyEntrypointProvider
         tags:
@@ -47,8 +53,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
         return $reflection->is(\Symfony\Bundle\FrameworkBundle\Controller\AbstractController::class)
             || $reflection->is(\Symfony\Component\EventDispatcher\EventSubscriberInterface::class)
-            || $reflection->is(\Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface::class)
-            || ($reflection->is(\Symfony\Component\Console\Command\Command::class) && in_array($methodName, ['execute', 'initialize', ...], true)
+            || $method->getAttributes(\Symfony\Contracts\Service\Attribute\Required::class) !== []
             // and many more
     }
 }
@@ -59,7 +64,7 @@ This project is currently a working prototype (we are using it since 2022) with 
 
 - Only method calls are detected
   - Including static methods, trait methods, interface methods, first class callables, etc.
-  - Callbacks like `[$this, 'method']` are mostly not detected
+  - Callbacks like `[$this, 'method']` are mostly not detected; prefer first class callables `$this->method(...)`
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored
