@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use ReflectionAttribute;
 use ReflectionMethod;
 use const PHP_VERSION_ID;
 
@@ -28,7 +29,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || (PHP_VERSION_ID >= 8_00_00 && $class->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
             || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
             || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Contracts\Service\Attribute\Required') !== [])
-            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route') !== [])
+            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF) !== [])
             || $this->isProbablySymfonyListener($methodName);
     }
 
