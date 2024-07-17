@@ -51,7 +51,10 @@ class DeadMethodRuleTest extends RuleTestCase
                 self::getContainer()->getByType(PhpDocParser::class),
                 self::getContainer()->getByType(Lexer::class),
             ),
-            new SymfonyEntrypointProvider(true),
+            new SymfonyEntrypointProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                true,
+            ),
         ];
         return [
             new MethodDefinitionCollector($entrypointProviders),

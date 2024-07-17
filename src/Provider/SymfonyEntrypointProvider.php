@@ -2,17 +2,23 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use PHPStan\Reflection\ReflectionProvider;
 use ReflectionAttribute;
+use ReflectionClass;
 use ReflectionMethod;
+use Reflector;
 use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider
 {
 
+    private ReflectionProvider $reflectionProvider;
+
     private bool $enabled;
 
-    public function __construct(bool $enabled)
+    public function __construct(ReflectionProvider $reflectionProvider, bool $enabled)
     {
+        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled;
     }
 
@@ -26,10 +32,10 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         $class = $method->getDeclaringClass();
 
         return $class->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
-            || (PHP_VERSION_ID >= 8_00_00 && $class->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
-            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
-            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Contracts\Service\Attribute\Required') !== [])
-            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF) !== [])
+            || $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
+            || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
+            || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
+            || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->isProbablySymfonyListener($methodName);
     }
 
@@ -45,6 +51,23 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || $methodName === 'onConsoleCommand'
             || $methodName === 'onConsoleSignal'
             || $methodName === 'onConsoleTerminate';
+    }
+
+    /**
+     * @param ReflectionClass<object>|ReflectionMethod $classOrMethod
+     */
+    private function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
+    {
+        if (PHP_VERSION_ID < 8_00_00) {
+            return false;
+        }
+
+        if ($classOrMethod->getAttributes($attributeClass) !== []) {
+            return true;
+        }
+
+        return $this->reflectionProvider->hasClass($attributeClass) // prevent https://github.com/phpstan/phpstan/issues/9618
+            && $classOrMethod->getAttributes($attributeClass, $flags) !== [];
     }
 
 }
