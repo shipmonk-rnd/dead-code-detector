@@ -22,10 +22,13 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         }
 
         $methodName = $method->getName();
+        $class = $method->getDeclaringClass();
 
-        return $method->getDeclaringClass()->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
-            || (PHP_VERSION_ID >= 80_000 && $method->getAttributes('Symfony\Contracts\Service\Attribute\Required') !== [])
-            || (PHP_VERSION_ID >= 80_000 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route') !== [])
+        return $class->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
+            || (PHP_VERSION_ID >= 8_00_00 && $class->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
+            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\EventDispatcher\Attribute\AsEventListener') !== [])
+            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Contracts\Service\Attribute\Required') !== [])
+            || (PHP_VERSION_ID >= 8_00_00 && $method->getAttributes('Symfony\Component\Routing\Attribute\Route') !== [])
             || $this->isProbablySymfonyListener($methodName);
     }
 

@@ -113,7 +113,7 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
      */
     private function getDataProvidersFromAttributes(ReflectionMethod $method): iterable
     {
-        if (PHP_VERSION_ID < 80_000) {
+        if (PHP_VERSION_ID < 8_00_00) {
             return;
         }
 
