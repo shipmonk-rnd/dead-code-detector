@@ -41,7 +41,7 @@ parameters:
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4
 
-    deadCode:
+    shipmonkDeadCode:
         entrypoints:
             phpunit:
                 enabled: true
