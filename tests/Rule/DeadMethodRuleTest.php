@@ -11,10 +11,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
-use ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
 use const PHP_VERSION_ID;
 
 /**
@@ -43,8 +43,7 @@ class DeadMethodRuleTest extends RuleTestCase
                 }
 
             },
-            new DefaultEntrypointProvider(
-                self::getContainer()->getByType(ReflectionProvider::class),
+            new VendorEntrypointProvider(
                 true,
             ),
             new PhpUnitEntrypointProvider(

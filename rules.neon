@@ -1,10 +1,10 @@
 services:
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\DefaultEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
         arguments:
-            enabled: %deadCode.entrypoints.default.enabled%
+            enabled: %deadCode.entrypoints.vendor.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider
@@ -41,7 +41,7 @@ services:
 parameters:
     deadCode:
         entrypoints:
-            default:
+            vendor:
                 enabled: true
             phpunit:
                 enabled: false
@@ -51,7 +51,7 @@ parameters:
 parametersSchema:
     deadCode: structure([
         entrypoints: structure([
-            default: structure([
+            vendor: structure([
                 enabled: bool()
             ])
             phpunit: structure([
