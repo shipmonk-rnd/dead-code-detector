@@ -36,6 +36,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
+            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->isProbablySymfonyListener($methodName);
     }
 
@@ -55,6 +56,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
     /**
      * @param ReflectionClass<object>|ReflectionMethod $classOrMethod
+     * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
     {
