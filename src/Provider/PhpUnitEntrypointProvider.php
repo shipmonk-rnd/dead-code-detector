@@ -46,8 +46,18 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
 
     private function isTestCaseMethod(ReflectionMethod $method): bool
     {
-        return $method->getDeclaringClass()->isSubclassOf(TestCase::class)
-            && strpos($method->getName(), 'test') === 0;
+        if (!$method->getDeclaringClass()->isSubclassOf(TestCase::class)) {
+            return false;
+        }
+
+        return strpos($method->getName(), 'test') === 0
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Test')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\After')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\AfterClass')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Before')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\BeforeClass')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PostCondition')
+            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PreCondition');
     }
 
     private function isDataProviderMethod(ReflectionMethod $originalMethod): bool
@@ -124,6 +134,11 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
                 yield $methodName;
             }
         }
+    }
+
+    private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    {
+        return PHP_VERSION_ID >= 8_00_00 && $method->getAttributes($attributeClass) !== [];
     }
 
 }
