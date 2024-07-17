@@ -4,11 +4,17 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
 use PHPStan\Collectors\Collector;
+use PHPStan\PhpDocParser\Lexer\Lexer;
+use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
 use const PHP_VERSION_ID;
 
 /**
@@ -37,6 +43,18 @@ class DeadMethodRuleTest extends RuleTestCase
                 }
 
             },
+            new VendorEntrypointProvider(
+                true,
+            ),
+            new PhpUnitEntrypointProvider(
+                true,
+                self::getContainer()->getByType(PhpDocParser::class),
+                self::getContainer()->getByType(Lexer::class),
+            ),
+            new SymfonyEntrypointProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                true,
+            ),
         ];
         return [
             new MethodDefinitionCollector($entrypointProviders),
@@ -59,25 +77,26 @@ class DeadMethodRuleTest extends RuleTestCase
     /**
      * @return array<string, array{0: string, 1?: int}>
      */
-    public static function provideFiles(): array
+    public static function provideFiles(): iterable
     {
-        return [
-            'enum' => [__DIR__ . '/data/DeadMethodRule/basic.php', 80_000],
-            'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'],
-            'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'],
-            'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'],
-            'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'],
-            'overwriting-2' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-2.php'],
-            'overwriting-3' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-3.php'],
-            'overwriting-4' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-4.php'],
-            'overwriting-5' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-5.php'],
-            'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'],
-            'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'],
-            'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'],
-            'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'],
-            'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'],
-            'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'],
-        ];
+        yield 'enum' => [__DIR__ . '/data/DeadMethodRule/basic.php', 80_000];
+        yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
+        yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
+        yield 'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'];
+        yield 'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'];
+        yield 'overwriting-2' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-2.php'];
+        yield 'overwriting-3' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-3.php'];
+        yield 'overwriting-4' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-4.php'];
+        yield 'overwriting-5' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-5.php'];
+        yield 'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'];
+        yield 'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'];
+        yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];
+        yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
+        yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
+        yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
+        yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
+        yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
+        yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];
     }
 
 }

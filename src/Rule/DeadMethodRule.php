@@ -6,8 +6,8 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
-use PHPStan\Rules\RuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
@@ -39,7 +39,7 @@ class DeadMethodRule implements Rule
     private array $detectedTraitUsages = [];
 
     /**
-     * @var array<string, RuleError>
+     * @var array<string, IdentifierRuleError>
      */
     private array $errors = [];
 
@@ -55,9 +55,9 @@ class DeadMethodRule implements Rule
 
     /**
      * @param CollectedDataNode $node
-     * @return list<RuleError>
+     * @return list<IdentifierRuleError>
      */
-    public function processNode( // @phpstan-ignore method.childReturnType (Do not yet raise prod dependency of phpstan to 1.11, but use it in CI)
+    public function processNode(
         Node $node,
         Scope $scope
     ): array

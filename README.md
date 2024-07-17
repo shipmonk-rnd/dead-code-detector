@@ -17,49 +17,48 @@ includes:
 
 
 ## Configuration:
-- You need to mark all entrypoints of your code to get proper results.
-- This is typically long whitelist of all code that is called by your framework and libraries.
+- All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
+- By default, all overridden methods which declaration originates inside vendor are considered entrypoints
+- Also, there are some basic entrypoint providers for `symfony` and `phpunit`
+- For everything else, you can implement your own entrypoint provider, just tag it with `shipmonk.deadCode.entrypointProvider`
 
 ```neon
+parameters:
+    deadCode:
+        entrypoints:
+            vendor:
+                enabled: true # enabled by default
+            symfony:
+                enabled: true
+            phpunit:
+                enabled: true
+
 services:
     -
-        class: App\SymfonyEntrypointProvider
+        class: App\MyEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
 ```
 ```php
 
 use ReflectionMethod;
-use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 
-class SymfonyEntrypointProvider implements EntrypointProvider
+class MyEntrypointProvider implements EntrypointProvider
 {
-
-    public function __construct(
-        private ReflectionProvider $reflectionProvider
-    ) {}
 
     public function isEntrypoint(ReflectionMethod $method): bool
     {
-        $methodName = $method->getName();
-        $reflection = $this->reflectionProvider->getClass($method->getDeclaringClass()->getName());
-
-        return $reflection->is(\Symfony\Bundle\FrameworkBundle\Controller\AbstractController::class)
-            || $reflection->is(\Symfony\Component\EventDispatcher\EventSubscriberInterface::class)
-            || $reflection->is(\Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface::class)
-            || ($reflection->is(\Symfony\Component\Console\Command\Command::class) && in_array($methodName, ['execute', 'initialize', ...], true)
-            // and many more
+        return $method->getDeclaringClass()->implementsInterface(ApiOutput::class));
     }
 }
 ```
 
-## Limitations
-This project is currently a working prototype (we are using it since 2022) with limited functionality:
+## Limitations:
 
 - Only method calls are detected
   - Including static methods, trait methods, interface methods, first class callables, etc.
-  - Callbacks like `[$this, 'method']` are mostly not detected
+  - Callbacks like `[$this, 'method']` are mostly not detected; prefer first class callables `$this->method(...)`
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored
