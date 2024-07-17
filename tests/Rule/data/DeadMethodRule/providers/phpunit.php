@@ -2,7 +2,9 @@
 
 namespace PhpUnit;
 
+use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class SomeTest extends TestCase
@@ -17,6 +19,16 @@ class SomeTest extends TestCase
      * @dataProvider provideFromPhpDoc
      */
     public function testBar(string $arg): void
+    {
+    }
+
+    #[Test]
+    public function someTestCase(): void
+    {
+    }
+
+    #[Before]
+    public function someBeforeCall(): void
     {
     }
 
