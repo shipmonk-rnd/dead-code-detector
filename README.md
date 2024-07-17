@@ -20,12 +20,14 @@ includes:
 - All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
 - By default, all overridden methods which declaration originates inside vendor are considered entrypoints
 - Also, there are some basic entrypoint providers for `symfony` and `phpunit`
-- For everything else, you can implement your own entrypoint provider
+- For everything else, you can implement your own entrypoint provider, just tag it with `shipmonk.deadCode.entrypointProvider`
 
 ```neon
 parameters:
     deadCode:
         entrypoints:
+            vendor:
+                enabled: true # enabled by default
             symfony:
                 enabled: true
             phpunit:
