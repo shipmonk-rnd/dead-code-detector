@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
@@ -55,6 +56,9 @@ class DeadMethodRuleTest extends RuleTestCase
                 self::getContainer()->getByType(ReflectionProvider::class),
                 true,
             ),
+            new DoctrineEntrypointProvider(
+                true,
+            ),
         ];
         return [
             new MethodDefinitionCollector($entrypointProviders),
@@ -97,6 +101,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
         yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];
+        yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 80_000];
     }
 
 }
