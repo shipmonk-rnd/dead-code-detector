@@ -20,6 +20,9 @@ parameters:
     checkBenevolentUnionTypes: true
     checkImplicitMixed: true
     checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    reportAnyTypeWideningInVarTag: true
+    reportPossiblyNonexistentConstantArrayOffset: true
+    reportPossiblyNonexistentGeneralArrayOffset: true
     exceptions:
         check:
             missingCheckedExceptionInThrows: true
