@@ -143,6 +143,10 @@ class MethodCallCollector implements Collector
             return;
         }
 
+        if (!isset($functionCall->getArgs()[0])) {
+            return;
+        }
+
         $callableType = $scope->getType($functionCall->getArgs()[0]->value);
 
         if ($callableType->isCallable()->yes()) {
