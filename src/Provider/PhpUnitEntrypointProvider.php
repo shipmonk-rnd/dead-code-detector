@@ -51,6 +51,13 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
         }
 
         return strpos($method->getName(), 'test') === 0
+            || $this->hasAnnotation($method, '@test')
+            || $this->hasAnnotation($method, '@after')
+            || $this->hasAnnotation($method, '@afterClass')
+            || $this->hasAnnotation($method, '@before')
+            || $this->hasAnnotation($method, '@beforeClass')
+            || $this->hasAnnotation($method, '@postCondition')
+            || $this->hasAnnotation($method, '@preCondition')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Test')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\After')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\AfterClass')
@@ -139,6 +146,15 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
     private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
     {
         return PHP_VERSION_ID >= 8_00_00 && $method->getAttributes($attributeClass) !== [];
+    }
+
+    private function hasAnnotation(ReflectionMethod $method, string $string): bool
+    {
+        if ($method->getDocComment() === false) {
+            return false;
+        }
+
+        return strpos($method->getDocComment(), $string) !== false;
     }
 
 }

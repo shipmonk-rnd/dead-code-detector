@@ -52,4 +52,21 @@ class SomeTest extends TestCase
         return [];
     }
 
+
+    /**
+     * @afterClass
+     */
+    public function afterClassAnnotation(): void
+    {
+
+    }
+
+    /**
+     * @before
+     */
+    public function beforeAnnotation(): void
+    {
+
+    }
+
 }
