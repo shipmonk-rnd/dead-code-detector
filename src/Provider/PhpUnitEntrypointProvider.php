@@ -128,7 +128,7 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
         }
 
         foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
-            $methodName = $providerAttributeReflection->getArguments()[0] ?? null;
+            $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
 
             if (is_string($methodName)) {
                 yield $methodName;

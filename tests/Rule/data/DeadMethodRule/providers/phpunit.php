@@ -15,6 +15,11 @@ class SomeTest extends TestCase
     {
     }
 
+    #[DataProvider(methodName: 'provideFromAttributeWithNamedArgument')]
+    public function testFoo2(string $arg): void
+    {
+    }
+
     /**
      * @dataProvider provideFromPhpDoc
      */
@@ -33,6 +38,11 @@ class SomeTest extends TestCase
     }
 
     public static function provideFromAttribute(): array
+    {
+        return [];
+    }
+
+    public static function provideFromAttributeWithNamedArgument(): array
     {
         return [];
     }
