@@ -55,11 +55,7 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            if ($method->isConstructor()) {
-                continue;
-            }
-
-            if (strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
+            if (!$method->isConstructor() && strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
                 continue;
             }
 

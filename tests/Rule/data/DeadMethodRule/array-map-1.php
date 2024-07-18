@@ -20,3 +20,5 @@ class ArrayMapTest
         return $foo;
     }
 }
+
+new ArrayMapTest();

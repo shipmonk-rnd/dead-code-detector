@@ -65,7 +65,6 @@ class MyEntrypointProvider implements EntrypointProvider
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored
-  - Does not check constructor calls
   - Does not check magic methods
   - No transitive check is performed (dead method called only from dead method)
   - No dead cycles are detected (e.g. dead method calling itself)

@@ -62,6 +62,10 @@ abstract class TestParent {
 
     use TestTrait;
 
+    public function __construct()
+    {
+    }
+
     public function parentMethodUsed(TestChild $child): void
     {
         $child->childMethodUsed();
@@ -91,3 +95,5 @@ trait TestTrait {
 
     }
 }
+
+new TestChild();

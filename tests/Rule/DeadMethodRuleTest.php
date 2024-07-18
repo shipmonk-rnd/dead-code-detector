@@ -7,7 +7,6 @@ use PHPStan\Collectors\Collector;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
-use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
@@ -54,6 +53,7 @@ class DeadMethodRuleTest extends RuleTestCase
             ),
             new SymfonyEntrypointProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
+                null,
                 true,
             ),
             new DoctrineEntrypointProvider(

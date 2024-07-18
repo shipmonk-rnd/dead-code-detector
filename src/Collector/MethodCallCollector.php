@@ -7,6 +7,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
@@ -60,7 +61,7 @@ class MethodCallCollector implements Collector
             $this->registerStaticCall($node->getOriginalNode(), $scope);
         }
 
-        if ($node instanceof MethodCall || $node instanceof NullsafeMethodCall) {
+        if ($node instanceof MethodCall || $node instanceof NullsafeMethodCall || $node instanceof New_) {
             $this->registerMethodCall($node, $scope);
         }
 
@@ -82,7 +83,7 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @param NullsafeMethodCall|MethodCall $methodCall
+     * @param NullsafeMethodCall|MethodCall|New_ $methodCall
      */
     private function registerMethodCall(
         CallLike $methodCall,
@@ -90,7 +91,20 @@ class MethodCallCollector implements Collector
     ): void
     {
         $methodName = $this->getMethodName($methodCall);
-        $callerType = $scope->getType($methodCall->var);
+
+        if ($methodCall instanceof New_) {
+            if ($methodCall->class instanceof Expr) {
+                $callerType = $scope->getType($methodCall->class);
+
+            } elseif ($methodCall->class instanceof Name) {
+                $callerType = $scope->resolveTypeByName($methodCall->class);
+
+            } else {
+                return;
+            }
+        } else {
+            $callerType = $scope->getType($methodCall->var);
+        }
 
         if ($methodName === null) {
             return;
@@ -166,10 +180,14 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @param NullsafeMethodCall|MethodCall|StaticCall $call
+     * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
      */
     private function getMethodName(CallLike $call): ?string
     {
+        if ($call instanceof New_) {
+            return '__construct';
+        }
+
         if (!$call->name instanceof Identifier) {
             return null;
         }

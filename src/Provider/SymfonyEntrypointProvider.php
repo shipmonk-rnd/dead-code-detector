@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -16,10 +17,29 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
     private bool $enabled;
 
-    public function __construct(ReflectionProvider $reflectionProvider, bool $enabled)
+    /**
+     * @var array<string, string>
+     */
+    private array $dicClasses = [];
+
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        ?ServiceMapFactory $serviceMapFactory,
+        bool $enabled
+    )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled;
+
+        if ($serviceMapFactory !== null) {
+            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
+                if ($service->getClass() === null) { // @phpstan-ignore phpstanApi.method
+                    continue;
+                }
+
+                $this->dicClasses[$service->getClass()] = $service->getId(); // @phpstan-ignore phpstanApi.method, phpstanApi.method
+            }
+        }
     }
 
     public function isEntrypoint(ReflectionMethod $method): bool
@@ -37,6 +57,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
+            || $this->isConstructorCalledBySymfonyDic($method)
             || $this->isProbablySymfonyListener($methodName);
     }
 
@@ -70,6 +91,15 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
         return $this->reflectionProvider->hasClass($attributeClass) // prevent https://github.com/phpstan/phpstan/issues/9618
             && $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+    }
+
+    private function isConstructorCalledBySymfonyDic(ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor()) {
+            return false;
+        }
+
+        return isset($this->dicClasses[$method->getDeclaringClass()->getName()]);
     }
 
 }
