@@ -24,7 +24,7 @@ includes:
 
 ```neon
 parameters:
-    deadCode:
+    shipmonkDeadCode:
         entrypoints:
             vendor:
                 enabled: true # enabled by default
