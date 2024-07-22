@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PhpParser\Node;
+use PhpParser\Node\Attribute;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\FuncCall;
@@ -71,6 +72,10 @@ class MethodCallCollector implements Collector
 
         if ($node instanceof FuncCall) {
             $this->registerFuncCall($node, $scope);
+        }
+
+        if ($node instanceof Attribute) {
+            $this->registerAttribute($node, $scope);
         }
 
         if (!$scope->isInClass() || $node instanceof ClassMethodsNode) { // @phpstan-ignore-line ignore BC promise
@@ -177,6 +182,11 @@ class MethodCallCollector implements Collector
                 }
             }
         }
+    }
+
+    private function registerAttribute(Attribute $node, Scope $scope): void
+    {
+        $this->callsBuffer[] = DeadCodeHelper::composeMethodKey($scope->resolveName($node->name), '__construct');
     }
 
     /**

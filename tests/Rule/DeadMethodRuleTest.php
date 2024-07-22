@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
 use PHPStan\Collectors\Collector;
+use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
@@ -12,6 +13,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
@@ -59,6 +61,10 @@ class DeadMethodRuleTest extends RuleTestCase
             new DoctrineEntrypointProvider(
                 true,
             ),
+            new PhpStanEntrypointProvider(
+                true,
+                $this->getFakePhpStanContainer(),
+            ),
         ];
         return [
             new MethodDefinitionCollector($entrypointProviders),
@@ -97,11 +103,29 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
+        yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
         yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
         yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];
         yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 80_000];
+        yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php', 80_000];
+    }
+
+    private function getFakePhpStanContainer(): Container
+    {
+        $mock = $this->createMock(Container::class);
+        $mock->method('findServiceNamesByType')
+            ->willReturnCallback(
+                static function (string $type): array {
+                    if ($type === 'PHPStan\MyRule') {
+                        return [''];
+                    }
+
+                    return [];
+                },
+            );
+        return $mock;
     }
 
 }

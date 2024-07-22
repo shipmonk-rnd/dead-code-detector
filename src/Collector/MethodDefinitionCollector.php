@@ -59,6 +59,10 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
+            if ($method->isConstructor() && $method->isPrivate()) { // e.g. classes used for storing static methods only
+                continue;
+            }
+
             if ($method->getFileName() === false) { // e.g. php core
                 continue;
             }

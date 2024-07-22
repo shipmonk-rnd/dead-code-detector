@@ -96,4 +96,11 @@ trait TestTrait {
     }
 }
 
+class StaticClass {
+
+    private function __construct()
+    {
+    }
+}
+
 new TestChild();

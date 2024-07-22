@@ -28,6 +28,13 @@ services:
             enabled: %shipmonkDeadCode.entrypoints.doctrine.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %shipmonkDeadCode.entrypoints.phpstan.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
@@ -50,6 +57,8 @@ parameters:
         entrypoints:
             vendor:
                 enabled: true
+            phpstan:
+                enabled: true
             phpunit:
                 enabled: false
             symfony:
@@ -70,6 +79,9 @@ parametersSchema:
                 enabled: bool()
             ])
             doctrine: structure([
+                enabled: bool()
+            ])
+            phpstan: structure([
                 enabled: bool()
             ])
         ])
