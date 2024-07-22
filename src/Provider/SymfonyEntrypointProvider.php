@@ -33,11 +33,17 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
         if ($serviceMapFactory !== null) {
             foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
-                if ($service->getClass() === null) { // @phpstan-ignore phpstanApi.method
+                $dicClass = $service->getClass(); // @phpstan-ignore phpstanApi.method
+
+                if ($dicClass === null) {
                     continue;
                 }
 
-                $this->dicClasses[$service->getClass()] = $service->getId(); // @phpstan-ignore phpstanApi.method, phpstanApi.method
+                if ($reflectionProvider->hasClass($dicClass)) {
+                    foreach ($reflectionProvider->getClass($dicClass)->getAncestors() as $classReflection) {
+                        $this->dicClasses[$classReflection->getName()] = $service->getId(); // @phpstan-ignore phpstanApi.method
+                    }
+                }
             }
         }
     }

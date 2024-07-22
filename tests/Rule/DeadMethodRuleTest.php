@@ -8,6 +8,9 @@ use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Symfony\ServiceDefinition;
+use PHPStan\Symfony\ServiceMap;
+use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
@@ -35,39 +38,8 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     protected function getCollectors(): array
     {
-        $entrypointProviders = [
-            new class implements EntrypointProvider
-            {
-
-                public function isEntrypoint(ReflectionMethod $method): bool
-                {
-                    return $method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint';
-                }
-
-            },
-            new VendorEntrypointProvider(
-                true,
-            ),
-            new PhpUnitEntrypointProvider(
-                true,
-                self::getContainer()->getByType(PhpDocParser::class),
-                self::getContainer()->getByType(Lexer::class),
-            ),
-            new SymfonyEntrypointProvider(
-                self::getContainer()->getByType(ReflectionProvider::class),
-                null,
-                true,
-            ),
-            new DoctrineEntrypointProvider(
-                true,
-            ),
-            new PhpStanEntrypointProvider(
-                true,
-                $this->getFakePhpStanContainer(),
-            ),
-        ];
         return [
-            new MethodDefinitionCollector($entrypointProviders),
+            new MethodDefinitionCollector($this->getEntrypointProviders()),
             new MethodCallCollector(self::getContainer()->getByType(ReflectionProvider::class)),
         ];
     }
@@ -112,7 +84,45 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php', 80_000];
     }
 
-    private function getFakePhpStanContainer(): Container
+    /**
+     * @return list<EntrypointProvider>
+     */
+    private function getEntrypointProviders(): array
+    {
+        return [
+            new class implements EntrypointProvider
+            {
+
+                public function isEntrypoint(ReflectionMethod $method): bool
+                {
+                    return $method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint';
+                }
+
+            },
+            new VendorEntrypointProvider(
+                true,
+            ),
+            new PhpUnitEntrypointProvider(
+                true,
+                self::getContainer()->getByType(PhpDocParser::class),
+                self::getContainer()->getByType(Lexer::class),
+            ),
+            new SymfonyEntrypointProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                $this->createServiceMapFactoryMock(),
+                true,
+            ),
+            new DoctrineEntrypointProvider(
+                true,
+            ),
+            new PhpStanEntrypointProvider(
+                true,
+                $this->createPhpStanContainerMock(),
+            ),
+        ];
+    }
+
+    private function createPhpStanContainerMock(): Container
     {
         $mock = $this->createMock(Container::class);
         $mock->method('findServiceNamesByType')
@@ -126,6 +136,27 @@ class DeadMethodRuleTest extends RuleTestCase
                 },
             );
         return $mock;
+    }
+
+    private function createServiceMapFactoryMock(): ServiceMapFactory
+    {
+        $service1Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service1Mock->method('getClass')
+            ->willReturn('Symfony\DicClass1');
+
+        $service2Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service2Mock->method('getClass')
+            ->willReturn('Symfony\DicClass2');
+
+        $serviceMapMock = $this->createMock(ServiceMap::class); // @phpstan-ignore phpstanApi.classConstant
+        $serviceMapMock->method('getServices')
+            ->willReturn([$service1Mock, $service2Mock]);
+
+        $factoryMock = $this->createMock(ServiceMapFactory::class); // @phpstan-ignore phpstanApi.classConstant
+        $factoryMock->method('create')
+            ->willReturn($serviceMapMock);
+
+        return $factoryMock;
     }
 
 }

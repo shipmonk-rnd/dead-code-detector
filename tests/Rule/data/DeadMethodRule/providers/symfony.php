@@ -39,3 +39,15 @@ class SomeSubscriber implements EventSubscriberInterface
     }
 
 }
+
+class DicClassParent { // not present in DIC, but ctor is not dead
+    public function __construct() {}
+}
+
+class DicClass1 extends DicClassParent {
+
+}
+
+class DicClass2 {
+    public function __construct() {}
+}
