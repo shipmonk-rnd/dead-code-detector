@@ -9,9 +9,12 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
+use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use function array_merge;
 use function array_values;
 use function strpos;
@@ -24,28 +27,30 @@ class DeadMethodRule implements Rule
 
     private ReflectionProvider $reflectionProvider;
 
-    /**
-     * parentMethodKey => childrenMethodKey[] that can mark parent as used
-     *
-     * @var array<string, list<string>>
-     */
-    private array $detectedDescendants = [];
-
-    /**
-     * traitMethodKey => traitUserMethodKey[]
-     *
-     * @var array<string, list<string>>
-     */
-    private array $detectedTraitUsages = [];
+    private ClassHierarchy $classHierarchy;
 
     /**
      * @var array<string, IdentifierRuleError>
      */
     private array $errors = [];
 
-    public function __construct(ReflectionProvider $reflectionProvider)
+    /**
+     * @var list<EntrypointProvider>
+     */
+    private array $entrypointProviders;
+
+    /**
+     * @param list<EntrypointProvider> $entrypointProviders
+     */
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        ClassHierarchy $classHierarchy,
+        array $entrypointProviders
+    )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->classHierarchy = $classHierarchy;
+        $this->entrypointProviders = $entrypointProviders;
     }
 
     public function getNodeType(): string
@@ -66,10 +71,19 @@ class DeadMethodRule implements Rule
             return [];
         }
 
+        $classDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodDeclarationData = $node->get(MethodDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
 
         $declaredMethods = [];
+
+        foreach ($classDeclarationData as $file => $classesInFile) {
+            foreach ($classesInFile as $classes) {
+                foreach ($classes as $declaredClassName) {
+                    $this->registerClassToHierarchy($declaredClassName);
+                }
+            }
+        }
 
         foreach ($methodDeclarationData as $file => $methodsInFile) {
             foreach ($methodsInFile as $declared) {
@@ -80,8 +94,7 @@ class DeadMethodRule implements Rule
 
                     $declaredMethods[$declaredMethodKey] = [$file, $line];
 
-                    $this->fillDescendants($declaredMethodKey);
-                    $this->fillTraitsUser($declaredMethodKey);
+                    $this->fillHierarchy($declaredMethodKey);
                 }
             }
         }
@@ -105,6 +118,10 @@ class DeadMethodRule implements Rule
         unset($methodCallData);
 
         foreach ($declaredMethods as $methodKey => [$file, $line]) {
+            if ($this->isEntryPoint($methodKey)) {
+                continue;
+            }
+
             $this->raiseError($methodKey, $file, $line);
         }
 
@@ -157,15 +174,7 @@ class DeadMethodRule implements Rule
             return [];
         }
 
-        $result = [];
-
-        if (isset($this->detectedTraitUsages[$traitMethodKey])) {
-            foreach ($this->detectedTraitUsages[$traitMethodKey] as $traitUserMethodKey) {
-                $result[] = $traitUserMethodKey;
-            }
-        }
-
-        return $result;
+        return $this->classHierarchy->getMethodTraitUsages($traitMethodKey);
     }
 
     /**
@@ -173,36 +182,25 @@ class DeadMethodRule implements Rule
      */
     private function getDescendantsToMarkAsUsed(string $methodKey): array
     {
-        $result = [];
-
-        if (isset($this->detectedDescendants[$methodKey])) {
-            foreach ($this->detectedDescendants[$methodKey] as $descendantMethodKey) {
-                $result[] = $descendantMethodKey;
-            }
-        }
-
-        return $result;
+        return $this->classHierarchy->getMethodDescendants($methodKey);
     }
 
-    private function fillTraitsUser(string $methodKey): void
+    private function fillHierarchy(string $methodKey): void
     {
         $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
         $reflection = $this->reflectionProvider->getClass($classAndMethod->className);
+
         $declaringTraitMethodKey = DeadCodeHelper::getDeclaringTraitMethodKey($reflection, $classAndMethod->methodName);
 
-        if ($declaringTraitMethodKey === null) {
-            return;
+        if ($declaringTraitMethodKey !== null) {
+            $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $methodKey);
         }
 
-        $this->detectedTraitUsages[$declaringTraitMethodKey][] = $methodKey;
-    }
-
-    private function fillDescendants(string $methodKey): void
-    {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
-        $reflection = $this->reflectionProvider->getClass($classAndMethod->className);
-
         foreach ($reflection->getAncestors() as $ancestor) {
+            if ($ancestor === $reflection) {
+                continue;
+            }
+
             if (!$ancestor->hasMethod($classAndMethod->methodName)) {
                 continue;
             }
@@ -212,7 +210,7 @@ class DeadMethodRule implements Rule
             }
 
             $ancestorMethodKey = DeadCodeHelper::composeMethodKey($ancestor->getName(), $classAndMethod->methodName);
-            $this->detectedDescendants[$ancestorMethodKey][] = $methodKey; // mark ancestor as markable by its child
+            $this->classHierarchy->registerMethodPair($ancestorMethodKey, $methodKey);
         }
     }
 
@@ -241,6 +239,43 @@ class DeadMethodRule implements Rule
                 ->line($line)
                 ->identifier('shipmonk.deadMethod')
                 ->build();
+        }
+    }
+
+    private function isEntryPoint(string $methodKey): bool
+    {
+        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
+
+        if (!$this->reflectionProvider->hasClass($classAndMethod->className)) {
+            return false;
+        }
+
+        $methodReflection = $this->reflectionProvider // @phpstan-ignore missingType.checkedException (method should exist)
+            ->getClass($classAndMethod->className)
+            ->getNativeReflection()
+            ->getMethod($classAndMethod->methodName);
+
+        foreach ($this->entrypointProviders as $entrypointProvider) {
+            if ($entrypointProvider->isEntrypoint($methodReflection)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function registerClassToHierarchy(string $className): void
+    {
+        if ($this->reflectionProvider->hasClass($className)) {
+            $origin = $this->reflectionProvider->getClass($className);
+
+            foreach ($origin->getAncestors() as $ancestor) {
+                if ($ancestor->isTrait() || $ancestor === $origin) {
+                    continue;
+                }
+
+                $this->classHierarchy->registerClassPair($ancestor, $origin);
+            }
         }
     }
 

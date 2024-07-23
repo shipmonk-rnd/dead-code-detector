@@ -8,6 +8,7 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider
@@ -15,20 +16,24 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
     private ReflectionProvider $reflectionProvider;
 
+    private ClassHierarchy $classHierarchy;
+
     private bool $enabled;
 
     /**
-     * @var array<string, string>
+     * @var array<string, true>
      */
     private array $dicClasses = [];
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
+        ClassHierarchy $classHierarchy,
         ?ServiceMapFactory $serviceMapFactory,
         bool $enabled
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->classHierarchy = $classHierarchy;
         $this->enabled = $enabled;
 
         if ($serviceMapFactory !== null) {
@@ -39,11 +44,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
                     continue;
                 }
 
-                if ($reflectionProvider->hasClass($dicClass)) {
-                    foreach ($reflectionProvider->getClass($dicClass)->getAncestors() as $classReflection) {
-                        $this->dicClasses[$classReflection->getName()] = $service->getId(); // @phpstan-ignore phpstanApi.method
-                    }
-                }
+                $this->dicClasses[$dicClass] = true;
             }
         }
     }
@@ -105,7 +106,29 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             return false;
         }
 
-        return isset($this->dicClasses[$method->getDeclaringClass()->getName()]);
+        $declaringClass = $method->getDeclaringClass()->getName();
+
+        if (isset($this->dicClasses[$declaringClass])) {
+            return true;
+        }
+
+        foreach ($this->classHierarchy->getClassDescendants($declaringClass) as $descendant) {
+            $descendantReflection = $this->reflectionProvider->getClass($descendant);
+
+            if (!$descendantReflection->hasConstructor()) {
+                continue;
+            }
+
+            if ($descendantReflection->getConstructor()->getDeclaringClass()->getName() === $descendantReflection->getName()) {
+                return false;
+            }
+
+            if (isset($this->dicClasses[$descendant])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

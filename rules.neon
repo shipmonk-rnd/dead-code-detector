@@ -1,5 +1,8 @@
 services:
     -
+        class: ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
@@ -40,14 +43,19 @@ services:
             - phpstan.collector
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
+        tags:
+            - phpstan.collector
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
-        arguments:
-            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
         tags:
             - phpstan.collector
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
+        arguments:
+            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
         tags:
             - phpstan.rules.rule
 

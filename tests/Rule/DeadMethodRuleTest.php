@@ -12,6 +12,7 @@ use PHPStan\Symfony\ServiceDefinition;
 use PHPStan\Symfony\ServiceMap;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
@@ -20,6 +21,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use const PHP_VERSION_ID;
 
 /**
@@ -28,9 +30,20 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
+    private ClassHierarchy $classHierarchy;
+
+    public function setUp(): void
+    {
+        $this->classHierarchy = new ClassHierarchy();
+    }
+
     protected function getRule(): DeadMethodRule
     {
-        return new DeadMethodRule(self::getContainer()->getByType(ReflectionProvider::class));
+        return new DeadMethodRule(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            $this->classHierarchy,
+            $this->getEntrypointProviders(),
+        );
     }
 
     /**
@@ -39,7 +52,8 @@ class DeadMethodRuleTest extends RuleTestCase
     protected function getCollectors(): array
     {
         return [
-            new MethodDefinitionCollector($this->getEntrypointProviders()),
+            new ClassDefinitionCollector(),
+            new MethodDefinitionCollector(),
             new MethodCallCollector(self::getContainer()->getByType(ReflectionProvider::class)),
         ];
     }
@@ -109,6 +123,7 @@ class DeadMethodRuleTest extends RuleTestCase
             ),
             new SymfonyEntrypointProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
+                $this->classHierarchy,
                 $this->createServiceMapFactoryMock(),
                 true,
             ),
