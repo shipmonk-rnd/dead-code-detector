@@ -49,7 +49,6 @@ class MyEntrypointProvider implements EntrypointProvider
 
 - Only method calls are detected
   - Including static methods, trait methods, interface methods, first class callables, etc.
-  - Callbacks like `[$this, 'method']` are mostly not detected; prefer first class callables `$this->method(...)`
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored

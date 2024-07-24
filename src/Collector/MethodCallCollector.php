@@ -5,8 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 use PhpParser\Node;
 use PhpParser\Node\Attribute;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\CallLike;
-use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -70,8 +70,8 @@ class MethodCallCollector implements Collector
             $this->registerStaticCall($node, $scope);
         }
 
-        if ($node instanceof FuncCall) {
-            $this->registerFuncCall($node, $scope);
+        if ($node instanceof Array_) {
+            $this->registerArrayCallable($node, $scope);
         }
 
         if ($node instanceof Attribute) {
@@ -153,23 +153,13 @@ class MethodCallCollector implements Collector
         }
     }
 
-    private function registerFuncCall(
-        FuncCall $functionCall,
+    private function registerArrayCallable(
+        Array_ $array,
         Scope $scope
     ): void
     {
-        if (!$functionCall->name instanceof Name || $functionCall->name->toString() !== 'array_map') { // we should support all native fns
-            return;
-        }
-
-        if (!isset($functionCall->getArgs()[0])) {
-            return;
-        }
-
-        $callableType = $scope->getType($functionCall->getArgs()[0]->value);
-
-        if ($callableType->isCallable()->yes()) {
-            foreach ($callableType->getConstantArrays() as $constantArray) {
+        if ($scope->getType($array)->isCallable()->yes()) {
+            foreach ($scope->getType($array)->getConstantArrays() as $constantArray) {
                 $callableTypeAndNames = $constantArray->findTypeAndMethodNames();
 
                 foreach ($callableTypeAndNames as $typeAndName) {
