@@ -18,26 +18,12 @@ includes:
 
 ## Configuration:
 - All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
-- By default, all overridden methods which declaration originates inside vendor are considered entrypoints
+- By default, all overridden methods which declaration originates inside `vendor` are considered entrypoints
 - Also, there are some built-in providers for some magic calls that occur in `doctrine`, `symfony`, `phpstan` and `phpunit`
 - For everything else, you can implement your own entrypoint provider, just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
 
 ```neon
 # phpstan.neon.dist
-parameters:
-    shipmonkDeadCode:
-        entrypoints:
-            vendor:
-                enabled: true # enabled by default
-            phpstan:
-                enabled: true # enabled by default
-            symfony:
-                enabled: true
-            phpunit:
-                enabled: true
-            doctrine:
-                enabled: true
-
 services:
     -
         class: App\MyEntrypointProvider

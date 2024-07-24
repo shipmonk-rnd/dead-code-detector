@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use Composer\InstalledVersions;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
@@ -29,12 +30,12 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         ReflectionProvider $reflectionProvider,
         ClassHierarchy $classHierarchy,
         ?ServiceMapFactory $serviceMapFactory,
-        bool $enabled
+        ?bool $enabled
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->classHierarchy = $classHierarchy;
-        $this->enabled = $enabled;
+        $this->enabled = $enabled ?? $this->isSymfonyInstalled();
 
         if ($serviceMapFactory !== null) {
             foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
@@ -129,6 +130,13 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         }
 
         return false;
+    }
+
+    private function isSymfonyInstalled(): bool
+    {
+        return InstalledVersions::isInstalled('symfony/event-dispatcher')
+            || InstalledVersions::isInstalled('symfony/routing')
+            || InstalledVersions::isInstalled('symfony/contracts');
     }
 
 }
