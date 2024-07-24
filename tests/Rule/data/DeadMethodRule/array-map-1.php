@@ -8,6 +8,8 @@ class ArrayMapTest
     public function __construct()
     {
         array_map([$this, 'calledMagically'], ['a']);
+        array_filter([], [$this, 'calledMagically2']);
+        [$this, 'calledMagically3'];
     }
 
     private function notCalledMagically(string $foo): string // error: Unused DeadMap\ArrayMapTest::notCalledMagically
@@ -19,6 +21,9 @@ class ArrayMapTest
     {
         return $foo;
     }
+
+    private function calledMagically2(): void {}
+    private function calledMagically3(): void {}
 }
 
 new ArrayMapTest();
