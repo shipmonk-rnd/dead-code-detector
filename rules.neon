@@ -1,5 +1,8 @@
 services:
     -
+        class: ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
@@ -28,19 +31,31 @@ services:
             enabled: %shipmonkDeadCode.entrypoints.doctrine.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %shipmonkDeadCode.entrypoints.phpstan.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
+        tags:
+            - phpstan.collector
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
-        arguments:
-            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
         tags:
             - phpstan.collector
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
+        arguments:
+            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
         tags:
             - phpstan.rules.rule
 
@@ -49,6 +64,8 @@ parameters:
     shipmonkDeadCode:
         entrypoints:
             vendor:
+                enabled: true
+            phpstan:
                 enabled: true
             phpunit:
                 enabled: false
@@ -70,6 +87,9 @@ parametersSchema:
                 enabled: bool()
             ])
             doctrine: structure([
+                enabled: bool()
+            ])
+            phpstan: structure([
                 enabled: bool()
             ])
         ])

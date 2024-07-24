@@ -3,10 +3,12 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider
@@ -14,12 +16,37 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
     private ReflectionProvider $reflectionProvider;
 
+    private ClassHierarchy $classHierarchy;
+
     private bool $enabled;
 
-    public function __construct(ReflectionProvider $reflectionProvider, bool $enabled)
+    /**
+     * @var array<string, true>
+     */
+    private array $dicClasses = [];
+
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        ClassHierarchy $classHierarchy,
+        ?ServiceMapFactory $serviceMapFactory,
+        bool $enabled
+    )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->classHierarchy = $classHierarchy;
         $this->enabled = $enabled;
+
+        if ($serviceMapFactory !== null) {
+            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
+                $dicClass = $service->getClass(); // @phpstan-ignore phpstanApi.method
+
+                if ($dicClass === null) {
+                    continue;
+                }
+
+                $this->dicClasses[$dicClass] = true;
+            }
+        }
     }
 
     public function isEntrypoint(ReflectionMethod $method): bool
@@ -37,6 +64,7 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
+            || $this->isConstructorCalledBySymfonyDic($method)
             || $this->isProbablySymfonyListener($methodName);
     }
 
@@ -70,6 +98,37 @@ class SymfonyEntrypointProvider implements EntrypointProvider
 
         return $this->reflectionProvider->hasClass($attributeClass) // prevent https://github.com/phpstan/phpstan/issues/9618
             && $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+    }
+
+    private function isConstructorCalledBySymfonyDic(ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor()) {
+            return false;
+        }
+
+        $declaringClass = $method->getDeclaringClass()->getName();
+
+        if (isset($this->dicClasses[$declaringClass])) {
+            return true;
+        }
+
+        foreach ($this->classHierarchy->getClassDescendants($declaringClass) as $descendant) {
+            $descendantReflection = $this->reflectionProvider->getClass($descendant);
+
+            if (!$descendantReflection->hasConstructor()) {
+                continue;
+            }
+
+            if ($descendantReflection->getConstructor()->getDeclaringClass()->getName() === $descendantReflection->getName()) {
+                return false;
+            }
+
+            if (isset($this->dicClasses[$descendant])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

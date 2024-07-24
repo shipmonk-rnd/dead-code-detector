@@ -6,9 +6,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
-use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
-use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use function strpos;
 
 /**
@@ -16,21 +14,6 @@ use function strpos;
  */
 class MethodDefinitionCollector implements Collector
 {
-
-    /**
-     * @var array<EntrypointProvider>
-     */
-    private array $entrypointProviders;
-
-    /**
-     * @param array<EntrypointProvider> $entrypointProviders
-     */
-    public function __construct(
-        array $entrypointProviders
-    )
-    {
-        $this->entrypointProviders = $entrypointProviders;
-    }
 
     public function getNodeType(): string
     {
@@ -55,11 +38,11 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            if ($method->isConstructor()) {
+            if (!$method->isConstructor() && strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
                 continue;
             }
 
-            if (strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
+            if ($method->isConstructor() && $method->isPrivate()) { // e.g. classes used for storing static methods only
                 continue;
             }
 
@@ -75,10 +58,6 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            if ($this->isEntrypoint($method)) {
-                continue;
-            }
-
             $line = $method->getStartLine();
 
             if ($line === false) {
@@ -90,17 +69,6 @@ class MethodDefinitionCollector implements Collector
         }
 
         return $result !== [] ? $result : null;
-    }
-
-    private function isEntrypoint(ReflectionMethod $reflectionMethod): bool
-    {
-        foreach ($this->entrypointProviders as $entrypointProvider) {
-            if ($entrypointProvider->isEntrypoint($reflectionMethod)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
 }

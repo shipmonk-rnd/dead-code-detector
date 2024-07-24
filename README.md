@@ -19,7 +19,7 @@ includes:
 ## Configuration:
 - All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
 - By default, all overridden methods which declaration originates inside vendor are considered entrypoints
-- Also, there are some built-in providers for some magic calls that occur in `doctrine`, `symfony` and `phpunit`
+- Also, there are some built-in providers for some magic calls that occur in `doctrine`, `symfony`, `phpstan` and `phpunit`
 - For everything else, you can implement your own entrypoint provider, just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
 
 ```neon
@@ -28,6 +28,8 @@ parameters:
     shipmonkDeadCode:
         entrypoints:
             vendor:
+                enabled: true # enabled by default
+            phpstan:
                 enabled: true # enabled by default
             symfony:
                 enabled: true
@@ -65,7 +67,6 @@ class MyEntrypointProvider implements EntrypointProvider
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Expression method calls are not detected, e.g. `$this->$methodName()`
   - Anonymous classes are ignored
-  - Does not check constructor calls
   - Does not check magic methods
   - No transitive check is performed (dead method called only from dead method)
   - No dead cycles are detected (e.g. dead method calling itself)
