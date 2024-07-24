@@ -43,8 +43,3 @@ parameters:
                 ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider: EntrypointProvider
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4
-
-    shipmonkDeadCode:
-        entrypoints:
-            phpunit:
-                enabled: true
