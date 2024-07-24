@@ -68,11 +68,11 @@ parameters:
             phpstan:
                 enabled: true
             phpunit:
-                enabled: false
+                enabled: null
             symfony:
-                enabled: false
+                enabled: null
             doctrine:
-                enabled: false
+                enabled: null
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -80,17 +80,17 @@ parametersSchema:
             vendor: structure([
                 enabled: bool()
             ])
-            phpunit: structure([
-                enabled: bool()
-            ])
-            symfony: structure([
-                enabled: bool()
-            ])
-            doctrine: structure([
-                enabled: bool()
-            ])
             phpstan: structure([
                 enabled: bool()
+            ])
+            phpunit: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            symfony: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            doctrine: structure([
+                enabled: schema(bool(), nullable())
             ])
         ])
     ])

@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use Composer\InstalledVersions;
 use ReflectionClass;
 use ReflectionMethod;
 use const PHP_VERSION_ID;
@@ -11,9 +12,9 @@ class DoctrineEntrypointProvider implements EntrypointProvider
 
     private bool $enabled;
 
-    public function __construct(bool $enabled)
+    public function __construct(?bool $enabled)
     {
-        $this->enabled = $enabled;
+        $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
 
     public function isEntrypoint(ReflectionMethod $method): bool
@@ -85,6 +86,13 @@ class DoctrineEntrypointProvider implements EntrypointProvider
         }
 
         return false;
+    }
+
+    private function isDoctrineInstalled(): bool
+    {
+        return InstalledVersions::isInstalled('doctrine/orm')
+            || InstalledVersions::isInstalled('doctrine/event-manager')
+            || InstalledVersions::isInstalled('doctrine/doctrine-bundle');
     }
 
 }

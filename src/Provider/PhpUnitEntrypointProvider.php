@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use Composer\InstalledVersions;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
@@ -25,9 +26,9 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
 
     private Lexer $lexer;
 
-    public function __construct(bool $enabled, PhpDocParser $phpDocParser, Lexer $lexer)
+    public function __construct(?bool $enabled, PhpDocParser $phpDocParser, Lexer $lexer)
     {
-        $this->enabled = $enabled;
+        $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpunit/phpunit');
         $this->lexer = $lexer;
         $this->phpDocParser = $phpDocParser;
     }
