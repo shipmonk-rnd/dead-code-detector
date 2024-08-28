@@ -200,7 +200,7 @@ class MethodCallCollector implements Collector
      */
     private function getReflectionsWithMethod(Type $type, string $methodName): iterable
     {
-        $classReflections = $type->getObjectClassReflections();
+        $classReflections = $type->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         foreach ($classReflections as $classReflection) {
             if ($classReflection->hasMethod($methodName)) {

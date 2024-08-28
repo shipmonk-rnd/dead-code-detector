@@ -90,6 +90,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
         yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
+        yield 'call-on-class-string' => [__DIR__ . '/data/DeadMethodRule/class-string.php'];
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
         yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
