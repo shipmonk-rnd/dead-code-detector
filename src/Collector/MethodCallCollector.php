@@ -21,6 +21,7 @@ use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
 use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
 
 /**
@@ -200,7 +201,9 @@ class MethodCallCollector implements Collector
      */
     private function getReflectionsWithMethod(Type $type, string $methodName): iterable
     {
-        $classReflections = $type->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        // remove null to support nullsafe calls
+        $typeNoNull = TypeCombinator::removeNull($type);
+        $classReflections = $typeNoNull->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         foreach ($classReflections as $classReflection) {
             if ($classReflection->hasMethod($methodName)) {

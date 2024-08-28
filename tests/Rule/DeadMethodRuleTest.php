@@ -87,6 +87,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'];
         yield 'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'];
         yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];
+        yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
         yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
