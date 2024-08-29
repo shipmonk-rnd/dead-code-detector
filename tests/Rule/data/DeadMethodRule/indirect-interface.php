@@ -4,7 +4,7 @@ namespace DeadIndirect;
 
 interface FooInterface
 {
-    public function foo(): void; // error: Unused DeadIndirect\FooInterface::foo
+    public function foo(): void;
 }
 
 abstract class FooAbstract

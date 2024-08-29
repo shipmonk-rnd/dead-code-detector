@@ -10,7 +10,7 @@ use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
 use function strpos;
 
 /**
- * @implements Collector<InClassNode, list<array{string, int}>>
+ * @implements Collector<InClassNode, list<array{line: int, methodKey: string, overrides: array<string, string>, traitOrigin: ?string}>>
  */
 class MethodDefinitionCollector implements Collector
 {
@@ -22,7 +22,7 @@ class MethodDefinitionCollector implements Collector
 
     /**
      * @param InClassNode $node
-     * @return list<array{string, int}>|null
+     * @return list<array{line: int, methodKey: string, overrides: array<string, string>, traitOrigin: ?string}>|null
      */
     public function processNode(
         Node $node,
@@ -32,6 +32,10 @@ class MethodDefinitionCollector implements Collector
         $reflection = $node->getClassReflection();
         $nativeReflection = $reflection->getNativeReflection();
         $result = [];
+
+        if ($reflection->isAnonymous()) {
+            return null; // https://github.com/phpstan/phpstan/issues/8410
+        }
 
         foreach ($nativeReflection->getMethods() as $method) {
             if ($method->isDestructor()) {
@@ -64,8 +68,37 @@ class MethodDefinitionCollector implements Collector
                 continue;
             }
 
-            $methodKey = DeadCodeHelper::composeMethodKey($method->getDeclaringClass()->getName(), $method->getName());
-            $result[] = [$methodKey, $line];
+            $className = $method->getDeclaringClass()->getName();
+            $methodName = $method->getName();
+            $methodKey = DeadCodeHelper::composeMethodKey($className, $methodName);
+
+            $declaringTraitMethodKey = DeadCodeHelper::getDeclaringTraitMethodKey($reflection, $methodName);
+
+            $methodOverrides = [];
+
+            foreach ($reflection->getAncestors() as $ancestor) {
+                if ($ancestor === $reflection) {
+                    continue;
+                }
+
+                if (!$ancestor->hasMethod($methodName)) {
+                    continue;
+                }
+
+                if ($ancestor->isTrait()) {
+                    continue;
+                }
+
+                $ancestorMethodKey = DeadCodeHelper::composeMethodKey($ancestor->getName(), $methodName);
+                $methodOverrides[$ancestorMethodKey] = $methodKey;
+            }
+
+            $result[] = [
+                'line' => $line,
+                'methodKey' => $methodKey,
+                'overrides' => $methodOverrides,
+                'traitOrigin' => $declaringTraitMethodKey,
+            ];
         }
 
         return $result !== [] ? $result : null;

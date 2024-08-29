@@ -8,7 +8,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 
 /**
- * @implements Collector<InClassNode, array{string}>
+ * @implements Collector<InClassNode, array<string, string>>
  */
 class ClassDefinitionCollector implements Collector
 {
@@ -20,14 +20,25 @@ class ClassDefinitionCollector implements Collector
 
     /**
      * @param InClassNode $node
-     * @return array{string}
+     * @return array<string, string>
      */
     public function processNode(
         Node $node,
         Scope $scope
     ): array
     {
-        return [$node->getClassReflection()->getName()];
+        $pairs = [];
+        $origin = $node->getClassReflection();
+
+        foreach ($origin->getAncestors() as $ancestor) {
+            if ($ancestor->isTrait() || $ancestor === $origin) {
+                continue;
+            }
+
+            $pairs[$ancestor->getName()] = $origin->getName();
+        }
+
+        return $pairs;
     }
 
 }

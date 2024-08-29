@@ -78,23 +78,32 @@ class DeadMethodRule implements Rule
         $declaredMethods = [];
 
         foreach ($classDeclarationData as $file => $classesInFile) {
-            foreach ($classesInFile as $classes) {
-                foreach ($classes as $declaredClassName) {
-                    $this->registerClassToHierarchy($declaredClassName);
+            foreach ($classesInFile as $classPairs) {
+                foreach ($classPairs as $ancestor => $descendant) {
+                    $this->classHierarchy->registerClassPair($ancestor, $descendant);
                 }
             }
         }
 
+        unset($classDeclarationData);
+
         foreach ($methodDeclarationData as $file => $methodsInFile) {
             foreach ($methodsInFile as $declared) {
-                foreach ($declared as [$declaredMethodKey, $line]) {
-                    if ($this->isAnonymousClass($declaredMethodKey)) {
-                        continue;
+                foreach ($declared as [
+                    'line' => $line,
+                    'methodKey' => $methodKey,
+                    'overrides' => $methodOverrides,
+                    'traitOrigin' => $declaringTraitMethodKey,
+                ]) {
+                    $declaredMethods[$methodKey] = [$file, $line];
+
+                    if ($declaringTraitMethodKey !== null) {
+                        $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $methodKey);
                     }
 
-                    $declaredMethods[$declaredMethodKey] = [$file, $line];
-
-                    $this->fillHierarchy($declaredMethodKey);
+                    foreach ($methodOverrides as $ancestorMethodKey => $descendantMethodKey) {
+                        $this->classHierarchy->registerMethodPair($ancestorMethodKey, $descendantMethodKey);
+                    }
                 }
             }
         }
@@ -139,79 +148,16 @@ class DeadMethodRule implements Rule
      */
     private function getMethodsToMarkAsUsed(string $methodKey): array
     {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
+        $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($methodKey);
 
-        if (!$this->reflectionProvider->hasClass($classAndMethod->className)) {
-            return []; // e.g. attributes
-        }
-
-        $reflection = $this->reflectionProvider->getClass($classAndMethod->className);
-        $traitMethodKey = DeadCodeHelper::getDeclaringTraitMethodKey($reflection, $classAndMethod->methodName);
-
-        $result = array_merge(
-            $this->getDescendantsToMarkAsUsed($methodKey),
-            $this->getTraitUsersToMarkAsUsed($traitMethodKey),
+        return array_merge(
+            [$methodKey],
+            $this->classHierarchy->getMethodDescendants($methodKey),
+            $this->classHierarchy->getMethodAncestors($methodKey),
+            $traitMethodKey !== null
+                ? $this->classHierarchy->getMethodTraitUsages($traitMethodKey)
+                : [],
         );
-
-        foreach ($reflection->getAncestors() as $ancestor) {
-            if (!$ancestor->hasMethod($classAndMethod->methodName)) {
-                continue;
-            }
-
-            $ancestorMethodKey = DeadCodeHelper::composeMethodKey($ancestor->getName(), $classAndMethod->methodName);
-            $result[] = $ancestorMethodKey;
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getTraitUsersToMarkAsUsed(?string $traitMethodKey): array
-    {
-        if ($traitMethodKey === null) {
-            return [];
-        }
-
-        return $this->classHierarchy->getMethodTraitUsages($traitMethodKey);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getDescendantsToMarkAsUsed(string $methodKey): array
-    {
-        return $this->classHierarchy->getMethodDescendants($methodKey);
-    }
-
-    private function fillHierarchy(string $methodKey): void
-    {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
-        $reflection = $this->reflectionProvider->getClass($classAndMethod->className);
-
-        $declaringTraitMethodKey = DeadCodeHelper::getDeclaringTraitMethodKey($reflection, $classAndMethod->methodName);
-
-        if ($declaringTraitMethodKey !== null) {
-            $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $methodKey);
-        }
-
-        foreach ($reflection->getAncestors() as $ancestor) {
-            if ($ancestor === $reflection) {
-                continue;
-            }
-
-            if (!$ancestor->hasMethod($classAndMethod->methodName)) {
-                continue;
-            }
-
-            if ($ancestor->isTrait()) {
-                continue;
-            }
-
-            $ancestorMethodKey = DeadCodeHelper::composeMethodKey($ancestor->getName(), $classAndMethod->methodName);
-            $this->classHierarchy->registerMethodPair($ancestorMethodKey, $methodKey);
-        }
     }
 
     private function raiseError(
@@ -262,21 +208,6 @@ class DeadMethodRule implements Rule
         }
 
         return false;
-    }
-
-    private function registerClassToHierarchy(string $className): void
-    {
-        if ($this->reflectionProvider->hasClass($className)) {
-            $origin = $this->reflectionProvider->getClass($className);
-
-            foreach ($origin->getAncestors() as $ancestor) {
-                if ($ancestor->isTrait() || $ancestor === $origin) {
-                    continue;
-                }
-
-                $this->classHierarchy->registerClassPair($ancestor, $origin);
-            }
-        }
     }
 
 }
