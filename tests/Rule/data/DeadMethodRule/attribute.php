@@ -12,6 +12,7 @@ class Attr {
 }
 
 #[Attr("arg")]
+#[Unknown("arg")]
 class AttrUser
 {
 

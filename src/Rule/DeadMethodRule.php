@@ -148,12 +148,6 @@ class DeadMethodRule implements Rule
      */
     private function getMethodsToMarkAsUsed(string $methodKey): array
     {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
-
-        if (!$this->reflectionProvider->hasClass($classAndMethod->className)) {
-            return []; // e.g. attributes
-        }
-
         $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($methodKey);
 
         return array_merge(
