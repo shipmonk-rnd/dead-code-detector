@@ -33,6 +33,10 @@ class MethodDefinitionCollector implements Collector
         $nativeReflection = $reflection->getNativeReflection();
         $result = [];
 
+        if ($reflection->isAnonymous()) {
+            return null; // https://github.com/phpstan/phpstan/issues/8410
+        }
+
         foreach ($nativeReflection->getMethods() as $method) {
             if ($method->isDestructor()) {
                 continue;
