@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Reflection;
 
-use PHPStan\Reflection\ClassReflection;
 use function array_keys;
 
 class ClassHierarchy
@@ -29,9 +28,9 @@ class ClassHierarchy
      */
     private array $methodTraitUsages = [];
 
-    public function registerClassPair(ClassReflection $ancestor, ClassReflection $descendant): void
+    public function registerClassPair(string $ancestorName, string $descendantName): void
     {
-        $this->classDescendants[$ancestor->getName()][$descendant->getName()] = true;
+        $this->classDescendants[$ancestorName][$descendantName] = true;
     }
 
     public function registerMethodPair(string $ancestorMethodKey, string $descendantMethodKey): void
