@@ -10,7 +10,7 @@ trait MyTrait1 {
 
 interface TraitInterface
 {
-    public function used(): void;
+    public function used(): void; // error: Unused DeadTrait3\TraitInterface::used
 }
 
 class MyUser1 implements TraitInterface

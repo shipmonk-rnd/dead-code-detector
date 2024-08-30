@@ -4,12 +4,12 @@ namespace DeadOver1;
 
 interface Interface1
 {
-    public function foo(): void;
+    public function foo(): void; // error: Unused DeadOver1\Interface1::foo
 }
 
 interface Interface2
 {
-    public function foo(): void;
+    public function foo(): void; // error: Unused DeadOver1\Interface2::foo
 }
 
 abstract class AbstractClass implements Interface1, Interface2
@@ -29,5 +29,5 @@ class Child2 extends AbstractClass
 
 function testIt(AbstractClass $abstractClass): void
 {
-    $abstractClass->foo(); // makes Child1::foo, Child2::foo, AbstractClass::foo, Interface1::foo, Interface2::foo used
+    $abstractClass->foo(); // makes Child1::foo, Child2::foo, AbstractClass::foo used
 }

@@ -75,8 +75,10 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public static function provideFiles(): iterable
     {
-        yield 'enum' => [__DIR__ . '/data/DeadMethodRule/basic.php', 80_000];
+        yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 80_000];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
+        yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
+        yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
         yield 'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'];
         yield 'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'];
@@ -87,9 +89,14 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'];
         yield 'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'];
         yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];
+        yield 'trait-4' => [__DIR__ . '/data/DeadMethodRule/traits-4.php'];
         yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
+        yield 'parent-call-1' => [__DIR__ . '/data/DeadMethodRule/parent-call-1.php'];
+        yield 'parent-call-2' => [__DIR__ . '/data/DeadMethodRule/parent-call-2.php'];
+        yield 'parent-call-3' => [__DIR__ . '/data/DeadMethodRule/parent-call-3.php'];
+        yield 'parent-call-4' => [__DIR__ . '/data/DeadMethodRule/parent-call-4.php'];
         yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
         yield 'call-on-class-string' => [__DIR__ . '/data/DeadMethodRule/class-string.php'];
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];

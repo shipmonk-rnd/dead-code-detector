@@ -7,23 +7,29 @@ class ArrayMapTest
 
     public function __construct()
     {
-        array_map([$this, 'calledMagically'], ['a']);
-        array_filter([], [$this, 'calledMagically2']);
-        [$this, 'calledMagically3'];
+        array_map([$this, 'method2'], ['a']);
+        array_filter([], [$this, 'method3']);
+        [$this, 'method4'];
+        [self::class, 'method5'];
+        ['static', 'method6']; // https://github.com/phpstan/phpstan/issues/11594
     }
 
-    private function notCalledMagically(string $foo): string // error: Unused DeadMap\ArrayMapTest::notCalledMagically
-    {
-        return $foo;
-    }
+    public function method1(string $foo): void {} // error: Unused DeadMap\ArrayMapTest::method1
+    public function method2(): void {}
+    public function method3(): void {}
+    public function method4(): void {}
+    public static function method5(): void {}
+    public static function method6(): void {} // error: Unused DeadMap\ArrayMapTest::method6
+}
 
-    private function calledMagically(string $foo): string
-    {
-        return $foo;
-    }
+class Child extends ArrayMapTest {
 
-    private function calledMagically2(): void {}
-    private function calledMagically3(): void {}
+    public function method2(): void {}
+    public function method3(): void {}
+    public function method4(): void {}
+    public static function method5(): void {} // should be reported (https://github.com/phpstan/phpstan-src/pull/3372)
+    public static function method6(): void {} // error: Unused DeadMap\Child::method6
+
 }
 
 new ArrayMapTest();
