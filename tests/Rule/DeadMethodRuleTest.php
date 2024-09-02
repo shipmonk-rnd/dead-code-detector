@@ -17,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
@@ -111,6 +112,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];
         yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 80_000];
         yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php', 80_000];
+        yield 'provider-nette' => [__DIR__ . '/data/DeadMethodRule/providers/nette.php'];
     }
 
     /**
@@ -148,6 +150,10 @@ class DeadMethodRuleTest extends RuleTestCase
             new PhpStanEntrypointProvider(
                 true,
                 $this->createPhpStanContainerMock(),
+            ),
+            new NetteEntrypointProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                true,
             ),
         ];
     }

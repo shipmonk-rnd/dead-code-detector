@@ -19,6 +19,9 @@
         "doctrine/orm": "^2.19 || ^3.0",
         "editorconfig-checker/editorconfig-checker": "^10.3.0",
         "ergebnis/composer-normalize": "^2.28",
+        "nette/application": "^3.1",
+        "nette/component-model": "^3.0",
+        "nette/utils": "^3.0 || ^4.0",
         "phpstan/phpstan-phpunit": "^1.1.1",
         "phpstan/phpstan-strict-rules": "^1.2.3",
         "phpstan/phpstan-symfony": "^1.4",
@@ -74,7 +77,7 @@
         "check:dependencies": "composer-dependency-analyser",
         "check:ec": "ec src tests",
         "check:tests": "phpunit tests",
-        "check:types": "phpstan analyse -vvv --ansi",
+        "check:types": "phpstan analyse -vv --ansi",
         "fix:cs": "phpcbf"
     }
 }

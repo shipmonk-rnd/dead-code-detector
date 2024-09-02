@@ -10,6 +10,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use ReflectionException;
+use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use function array_map;
 use function strpos;
@@ -45,6 +46,10 @@ class MethodDefinitionCollector implements Collector
         // we need to collect even methods of traits that are always overridden
         foreach ($reflection->getTraits(true) as $trait) {
             foreach ($trait->getNativeReflection()->getMethods() as $traitMethod) {
+                if ($this->isUnsupportedMethod($traitMethod)) {
+                    continue;
+                }
+
                 $traitLine = $traitMethod->getStartLine();
                 $traitName = $trait->getName();
                 $traitMethodName = $traitMethod->getName();
@@ -64,27 +69,11 @@ class MethodDefinitionCollector implements Collector
         }
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if ($method->isDestructor()) {
-                continue;
-            }
-
-            if (!$method->isConstructor() && strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
-                continue;
-            }
-
-            if ($method->isConstructor() && $method->isPrivate()) { // e.g. classes used for storing static methods only
-                continue;
-            }
-
-            if ($method->getFileName() === false) { // e.g. php core
+            if ($this->isUnsupportedMethod($method)) {
                 continue;
             }
 
             if ($scope->getFile() !== $method->getDeclaringClass()->getFileName()) { // method in parent class
-                continue;
-            }
-
-            if (strpos($method->getFileName(), '/vendor/') !== false) {
                 continue;
             }
 
@@ -152,6 +141,27 @@ class MethodDefinitionCollector implements Collector
         }
 
         return null;
+    }
+
+    private function isUnsupportedMethod(ReflectionMethod $method): bool
+    {
+        if ($method->isDestructor()) {
+            return true;
+        }
+
+        if (!$method->isConstructor() && strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
+            return true;
+        }
+
+        if ($method->isConstructor() && $method->isPrivate()) { // e.g. classes with "denied" instantiation
+            return true;
+        }
+
+        if ($method->getFileName() === false) { // e.g. php core
+            return true;
+        }
+
+        return strpos($method->getFileName(), '/vendor/') !== false;
     }
 
 }
