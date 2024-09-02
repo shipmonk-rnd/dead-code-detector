@@ -2,15 +2,20 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
+use Closure;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\ReflectionMethod as BetterReflectionMethod;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
-use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
+use PHPStan\Reflection\ClassReflection;
+use ReflectionException;
+use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
+use function array_map;
 use function strpos;
 
 /**
- * @implements Collector<InClassNode, list<array{line: int, methodKey: string, overrides: array<string, string>, traitOrigin: ?string}>>
+ * @implements Collector<InClassNode, list<array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>>
  */
 class MethodDefinitionCollector implements Collector
 {
@@ -22,7 +27,7 @@ class MethodDefinitionCollector implements Collector
 
     /**
      * @param InClassNode $node
-     * @return list<array{line: int, methodKey: string, overrides: array<string, string>, traitOrigin: ?string}>|null
+     * @return list<array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>|null
      */
     public function processNode(
         Node $node,
@@ -35,6 +40,27 @@ class MethodDefinitionCollector implements Collector
 
         if ($reflection->isAnonymous()) {
             return null; // https://github.com/phpstan/phpstan/issues/8410
+        }
+
+        // we need to collect even methods of traits that are always overridden
+        foreach ($reflection->getTraits(true) as $trait) {
+            foreach ($trait->getNativeReflection()->getMethods() as $traitMethod) {
+                $traitLine = $traitMethod->getStartLine();
+                $traitName = $trait->getName();
+                $traitMethodName = $traitMethod->getName();
+                $declaringTraitDefinition = $this->getDeclaringTraitDefinition($trait, $traitMethodName);
+
+                if ($traitLine === false) {
+                    continue;
+                }
+
+                $result[] = [
+                    'line' => $traitLine,
+                    'definition' => (new MethodDefinition($traitName, $traitMethodName))->toString(),
+                    'overriddenDefinitions' => [],
+                    'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,
+                ];
+            }
         }
 
         foreach ($nativeReflection->getMethods() as $method) {
@@ -70,11 +96,11 @@ class MethodDefinitionCollector implements Collector
 
             $className = $method->getDeclaringClass()->getName();
             $methodName = $method->getName();
-            $methodKey = DeadCodeHelper::composeMethodKey($className, $methodName);
+            $definition = new MethodDefinition($className, $methodName);
 
-            $declaringTraitMethodKey = DeadCodeHelper::getDeclaringTraitMethodKey($reflection, $methodName);
+            $declaringTraitDefinition = $this->getDeclaringTraitDefinition($reflection, $methodName);
 
-            $methodOverrides = [];
+            $overriddenDefinitions = [];
 
             foreach ($reflection->getAncestors() as $ancestor) {
                 if ($ancestor === $reflection) {
@@ -85,23 +111,47 @@ class MethodDefinitionCollector implements Collector
                     continue;
                 }
 
-                if ($ancestor->isTrait()) {
-                    continue;
-                }
-
-                $ancestorMethodKey = DeadCodeHelper::composeMethodKey($ancestor->getName(), $methodName);
-                $methodOverrides[$ancestorMethodKey] = $methodKey;
+                $overriddenDefinitions[] = new MethodDefinition($ancestor->getName(), $methodName);
             }
 
             $result[] = [
                 'line' => $line,
-                'methodKey' => $methodKey,
-                'overrides' => $methodOverrides,
-                'traitOrigin' => $declaringTraitMethodKey,
+                'definition' => $definition->toString(),
+                'overriddenDefinitions' => array_map(static fn (MethodDefinition $definition) => $definition->toString(), $overriddenDefinitions),
+                'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,
             ];
         }
 
         return $result !== [] ? $result : null;
+    }
+
+    private function getDeclaringTraitDefinition(
+        ClassReflection $classReflection,
+        string $methodName
+    ): ?MethodDefinition
+    {
+        try {
+            $nativeReflectionMethod = $classReflection->getNativeReflection()->getMethod($methodName);
+            $betterReflectionMethod = $nativeReflectionMethod->getBetterReflection();
+            $realDeclaringClass = $betterReflectionMethod->getDeclaringClass();
+
+            // when trait method name is aliased, we need the original name
+            $realName = Closure::bind(function (): string {
+                return $this->name;
+            }, $betterReflectionMethod, BetterReflectionMethod::class)();
+
+        } catch (ReflectionException $e) {
+            return null;
+        }
+
+        if ($realDeclaringClass->isTrait()) {
+            return new MethodDefinition(
+                $realDeclaringClass->getName(),
+                $realName,
+            );
+        }
+
+        return null;
     }
 
 }

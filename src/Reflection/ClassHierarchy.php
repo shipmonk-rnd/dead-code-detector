@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Reflection;
 
+use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use function array_keys;
 
 class ClassHierarchy
@@ -17,28 +18,21 @@ class ClassHierarchy
     /**
      * parentMethodKey => childrenMethodKey[]
      *
-     * @var array<string, list<string>>
+     * @var array<string, list<MethodDefinition>>
      */
     private array $methodDescendants = [];
 
     /**
-     * childrenMethodKey => parentMethodKey[]
-     *
-     * @var array<string, list<string>>
-     */
-    private array $methodAncestors = [];
-
-    /**
      * traitMethodKey => traitUserMethodKey[]
      *
-     * @var array<string, list<string>>
+     * @var array<string, list<MethodDefinition>>
      */
     private array $methodTraitUsages = [];
 
     /**
      * traitUserMethodKey => declaringTraitMethodKey
      *
-     * @var array<string, string>
+     * @var array<string, MethodDefinition>
      */
     private array $declaringTraits = [];
 
@@ -47,16 +41,18 @@ class ClassHierarchy
         $this->classDescendants[$ancestorName][$descendantName] = true;
     }
 
-    public function registerMethodPair(string $ancestorMethodKey, string $descendantMethodKey): void
+    public function registerMethodPair(MethodDefinition $ancestor, MethodDefinition $descendant): void
     {
-        $this->methodDescendants[$ancestorMethodKey][] = $descendantMethodKey;
-        $this->methodAncestors[$descendantMethodKey][] = $ancestorMethodKey;
+        $this->methodDescendants[$ancestor->toString()][] = $descendant;
     }
 
-    public function registerMethodTraitUsage(string $declaringTraitMethodKey, string $traitUsageMethodKey): void
+    public function registerMethodTraitUsage(
+        MethodDefinition $declaringTraitMethodKey,
+        MethodDefinition $traitUsageMethodKey
+    ): void
     {
-        $this->methodTraitUsages[$declaringTraitMethodKey][] = $traitUsageMethodKey;
-        $this->declaringTraits[$traitUsageMethodKey] = $declaringTraitMethodKey;
+        $this->methodTraitUsages[$declaringTraitMethodKey->toString()][] = $traitUsageMethodKey;
+        $this->declaringTraits[$traitUsageMethodKey->toString()] = $declaringTraitMethodKey;
     }
 
     /**
@@ -70,32 +66,24 @@ class ClassHierarchy
     }
 
     /**
-     * @return list<string>
+     * @return list<MethodDefinition>
      */
-    public function getMethodDescendants(string $methodKey): array
+    public function getMethodDescendants(MethodDefinition $definition): array
     {
-        return $this->methodDescendants[$methodKey] ?? [];
+        return $this->methodDescendants[$definition->toString()] ?? [];
     }
 
     /**
-     * @return list<string>
+     * @return list<MethodDefinition>
      */
-    public function getMethodAncestors(string $methodKey): array
+    public function getMethodTraitUsages(MethodDefinition $definition): array
     {
-        return $this->methodAncestors[$methodKey] ?? [];
+        return $this->methodTraitUsages[$definition->toString()] ?? [];
     }
 
-    /**
-     * @return list<string>
-     */
-    public function getMethodTraitUsages(string $traitMethodKey): array
+    public function getDeclaringTraitMethodDefinition(MethodDefinition $definition): ?MethodDefinition
     {
-        return $this->methodTraitUsages[$traitMethodKey] ?? [];
-    }
-
-    public function getDeclaringTraitMethodKey(string $methodKey): ?string
-    {
-        return $this->declaringTraits[$methodKey] ?? null;
+        return $this->declaringTraits[$definition->toString()] ?? null;
     }
 
 }

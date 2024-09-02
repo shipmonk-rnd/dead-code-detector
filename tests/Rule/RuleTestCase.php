@@ -6,12 +6,18 @@ use LogicException;
 use PHPStan\Analyser\Error;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
+use function array_values;
 use function explode;
 use function file_get_contents;
+use function file_put_contents;
 use function implode;
+use function ksort;
+use function preg_match;
 use function preg_match_all;
+use function preg_replace;
 use function sprintf;
 use function trim;
+use function uniqid;
 
 /**
  * @template TRule of Rule
@@ -20,9 +26,16 @@ use function trim;
 abstract class RuleTestCase extends OriginalRuleTestCase
 {
 
-    protected function analyseFile(string $file): void
+    protected function analyseFile(string $file, bool $autofix = false): void
     {
-        $actualErrors = $this->processActualErrors($this->gatherAnalyserErrors([$file]));
+        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+
+        if ($autofix === true) {
+            $this->autofix($file, $analyserErrors);
+            self::fail("File $file was autofixed. This setup should never remain in the codebase.");
+        }
+
+        $actualErrors = $this->processActualErrors($analyserErrors);
         $expectedErrors = $this->parseExpectedErrors($file);
 
         self::assertSame(
@@ -40,13 +53,17 @@ abstract class RuleTestCase extends OriginalRuleTestCase
         $resultToAssert = [];
 
         foreach ($actualErrors as $error) {
-            $resultToAssert[] = $this->formatErrorForAssert($error->getMessage(), $error->getLine());
+            $usedLine = $error->getLine() ?? -1;
+            $key = sprintf('%04d', $usedLine) . '-' . uniqid();
+            $resultToAssert[$key] = $this->formatErrorForAssert($error->getMessage(), $usedLine);
 
             self::assertNotNull($error->getIdentifier(), "Missing error identifier for error: {$error->getMessage()}");
-            self::assertStringStartsWith('shipmonk.', $error->getIdentifier(), $error->getMessage());
+            self::assertStringStartsWith('shipmonk.', $error->getIdentifier(), "Unexpected error identifier for: {$error->getMessage()}");
         }
 
-        return $resultToAssert;
+        ksort($resultToAssert);
+
+        return array_values($resultToAssert);
     }
 
     /**
@@ -54,18 +71,11 @@ abstract class RuleTestCase extends OriginalRuleTestCase
      */
     private function parseExpectedErrors(string $file): array
     {
-        $fileData = file_get_contents($file);
-
-        if ($fileData === false) {
-            throw new LogicException('Error while reading data from ' . $file);
-        }
-
-        $fileDataLines = explode("\n", $fileData);
-
+        $fileLines = $this->getFileLines($file);
         $expectedErrors = [];
 
-        foreach ($fileDataLines as $line => $row) {
-            /** @var array{0: list<string>, 1: list<string>} $matches */
+        foreach ($fileLines as $line => $row) {
+            /** @var array{0: list<string>, 1: list<non-empty-string>} $matches */
             $matched = preg_match_all('#// error:(.+)#', $row, $matches);
 
             if ($matched === false) {
@@ -77,16 +87,72 @@ abstract class RuleTestCase extends OriginalRuleTestCase
             }
 
             foreach ($matches[1] as $error) {
-                $expectedErrors[] = $this->formatErrorForAssert(trim($error), $line + 1);
+                $actualLine = $line + 1;
+                $key = sprintf('%04d', $actualLine) . '-' . uniqid();
+                $expectedErrors[$key] = $this->formatErrorForAssert(trim($error), $actualLine);
             }
         }
 
-        return $expectedErrors;
+        ksort($expectedErrors);
+
+        return array_values($expectedErrors);
     }
 
-    private function formatErrorForAssert(string $message, ?int $line): string
+    private function formatErrorForAssert(string $message, int $line): string
     {
-        return sprintf('%02d: %s', $line ?? -1, $message);
+        return sprintf('%02d: %s', $line, $message);
+    }
+
+    /**
+     * @param list<Error> $analyserErrors
+     */
+    private function autofix(string $file, array $analyserErrors): void
+    {
+        $errorsByLines = [];
+
+        foreach ($analyserErrors as $analyserError) {
+            $line = $analyserError->getLine();
+
+            if ($line === null) {
+                throw new LogicException('Error without line number: ' . $analyserError->getMessage());
+            }
+
+            $errorsByLines[$line] = $analyserError;
+        }
+
+        $fileLines = $this->getFileLines($file);
+
+        foreach ($fileLines as $line => &$row) {
+            if (!isset($errorsByLines[$line + 1])) {
+                continue;
+            }
+
+            $errorCommentPattern = '~ ?//.*$~';
+            $errorMessage = $errorsByLines[$line + 1]->getMessage();
+            $errorComment = ' // error: ' . $errorMessage;
+
+            if (preg_match($errorCommentPattern, $row) === 1) {
+                $row = preg_replace($errorCommentPattern, $errorComment, $row);
+            } else {
+                $row .= $errorComment;
+            }
+        }
+
+        file_put_contents($file, implode("\n", $fileLines));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getFileLines(string $file): array
+    {
+        $fileData = file_get_contents($file);
+
+        if ($fileData === false) {
+            throw new LogicException('Error while reading data from ' . $file);
+        }
+
+        return explode("\n", $fileData);
     }
 
 }

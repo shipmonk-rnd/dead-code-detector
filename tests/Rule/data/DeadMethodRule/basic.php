@@ -54,7 +54,7 @@ final class TestChild extends TestParent {
 
     public function overwrittenParentMethodUsedByChild(): void
     {
-        // TODO no parent called, TestParent::overwrittenParentMethodUsedByChild should not be marked
+
     }
 }
 
@@ -62,7 +62,7 @@ abstract class TestParent {
 
     use TestTrait;
 
-    public function __construct()
+    public function __construct() // error: Unused DeadBasic\TestParent::__construct
     {
     }
 
@@ -72,7 +72,7 @@ abstract class TestParent {
         $this->traitMethodUsed();
     }
 
-    public function overwrittenParentMethodUsedByChild(): void
+    public function overwrittenParentMethodUsedByChild(): void // error: Unused DeadBasic\TestParent::overwrittenParentMethodUsedByChild
     {
 
     }
@@ -84,6 +84,10 @@ abstract class TestParent {
 }
 
 trait TestTrait {
+
+    public function __construct() // error: Unused DeadBasic\TestTrait::__construct
+    {
+    }
 
     public function traitMethodUsed(): void
     {

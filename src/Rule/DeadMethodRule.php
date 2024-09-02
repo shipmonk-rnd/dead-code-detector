@@ -12,9 +12,11 @@ use PHPStan\Rules\RuleErrorBuilder;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
-use ShipMonk\PHPStan\DeadCode\Helper\DeadCodeHelper;
+use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
+use function array_map;
 use function array_merge;
 use function array_values;
 use function strpos;
@@ -89,20 +91,22 @@ class DeadMethodRule implements Rule
 
         foreach ($methodDeclarationData as $file => $methodsInFile) {
             foreach ($methodsInFile as $declared) {
-                foreach ($declared as [
-                    'line' => $line,
-                    'methodKey' => $methodKey,
-                    'overrides' => $methodOverrides,
-                    'traitOrigin' => $declaringTraitMethodKey,
-                ]) {
-                    $declaredMethods[$methodKey] = [$file, $line];
+                foreach ($declared as $serializedMethodDeclaration) {
+                    [
+                        'line' => $line,
+                        'definition' => $definition,
+                        'overriddenDefinitions' => $overriddenDefinitions,
+                        'traitOriginDefinition' => $declaringTraitMethodKey,
+                    ] = $this->deserializeMethodDeclaration($serializedMethodDeclaration);
+
+                    $declaredMethods[$definition->toString()] = [$file, $line];
 
                     if ($declaringTraitMethodKey !== null) {
-                        $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $methodKey);
+                        $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $definition);
                     }
 
-                    foreach ($methodOverrides as $ancestorMethodKey => $descendantMethodKey) {
-                        $this->classHierarchy->registerMethodPair($ancestorMethodKey, $descendantMethodKey);
+                    foreach ($overriddenDefinitions as $ancestor) {
+                        $this->classHierarchy->registerMethodPair($ancestor, $definition);
                     }
                 }
             }
@@ -112,13 +116,15 @@ class DeadMethodRule implements Rule
 
         foreach ($methodCallData as $file => $callsInFile) {
             foreach ($callsInFile as $calls) {
-                foreach ($calls as $calledMethodKey) {
-                    if ($this->isAnonymousClass($calledMethodKey)) {
+                foreach ($calls as $callString) {
+                    $call = Call::fromString($callString);
+
+                    if ($this->isAnonymousClass($call)) {
                         continue;
                     }
 
-                    foreach ($this->getMethodsToMarkAsUsed($calledMethodKey) as $methodKeyToMarkAsUsed) {
-                        unset($declaredMethods[$methodKeyToMarkAsUsed]);
+                    foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinitionToMarkAsUsed) {
+                        unset($declaredMethods[$methodDefinitionToMarkAsUsed->toString()]);
                     }
                 }
             }
@@ -126,61 +132,76 @@ class DeadMethodRule implements Rule
 
         unset($methodCallData);
 
-        foreach ($declaredMethods as $methodKey => [$file, $line]) {
-            if ($this->isEntryPoint($methodKey)) {
+        foreach ($declaredMethods as $definitionString => [$file, $line]) {
+            $definition = MethodDefinition::fromString($definitionString);
+
+            if ($this->isEntryPoint($definition)) {
                 continue;
             }
 
-            $this->raiseError($methodKey, $file, $line);
+            $this->raiseError($definition, $file, $line);
         }
 
         return array_values($this->errors);
     }
 
-    private function isAnonymousClass(string $methodKey): bool
+    private function isAnonymousClass(Call $call): bool
     {
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return strpos($methodKey, 'AnonymousClass') === 0;
+        return strpos($call->className, 'AnonymousClass') === 0;
     }
 
     /**
-     * @return list<string>
+     * @return list<MethodDefinition>
      */
-    private function getMethodsToMarkAsUsed(string $methodKey): array
+    private function getMethodsToMarkAsUsed(Call $call): array
     {
-        $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($methodKey);
+        $definition = $call->getDefinition();
 
-        return array_merge(
-            [$methodKey],
-            $this->classHierarchy->getMethodDescendants($methodKey),
-            $this->classHierarchy->getMethodAncestors($methodKey),
-            $traitMethodKey !== null
-                ? $this->classHierarchy->getMethodTraitUsages($traitMethodKey)
-                : [],
-        );
+        $result = [$definition];
+
+        if ($call->possibleDescendantCall) {
+            foreach ($this->classHierarchy->getMethodDescendants($definition) as $descendant) {
+                $result[] = $descendant;
+            }
+        }
+
+        // each descendant can be a trait user
+        foreach ($result as $methodDefinition) {
+            $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
+
+            if ($traitMethodDefinition !== null) {
+                $result = array_merge(
+                    $result,
+                    [$traitMethodDefinition],
+                    $this->classHierarchy->getMethodTraitUsages($traitMethodDefinition),
+                );
+            }
+        }
+
+        return $result;
     }
 
     private function raiseError(
-        string $methodKey,
+        MethodDefinition $methodDefinition,
         string $file,
         int $line
     ): void
     {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
-        $reflection = $this->reflectionProvider->getClass($classAndMethod->className);
-        $declaringTraitReflection = DeadCodeHelper::getDeclaringTraitReflection($reflection, $classAndMethod->methodName);
+        $declaringTraitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
 
-        if ($declaringTraitReflection !== null) {
-            $traitMethodKey = DeadCodeHelper::composeMethodKey($declaringTraitReflection->getName(), $classAndMethod->methodName);
+        if ($declaringTraitMethodDefinition !== null) {
+            $declaringTraitReflection = $this->reflectionProvider->getClass($declaringTraitMethodDefinition->className)->getNativeReflection();
+            $declaringTraitMethodKey = $declaringTraitMethodDefinition->toString();
 
-            $this->errors[$traitMethodKey] = RuleErrorBuilder::message("Unused {$traitMethodKey}")
+            $this->errors[$declaringTraitMethodKey] = RuleErrorBuilder::message("Unused {$declaringTraitMethodKey}")
                 ->file($declaringTraitReflection->getFileName()) // @phpstan-ignore-line
-                ->line($declaringTraitReflection->getMethod($classAndMethod->methodName)->getStartLine()) // @phpstan-ignore-line
+                ->line($declaringTraitReflection->getMethod($methodDefinition->methodName)->getStartLine()) // @phpstan-ignore-line
                 ->identifier('shipmonk.deadMethod')
                 ->build();
 
         } else {
-            $this->errors[$methodKey] = RuleErrorBuilder::message("Unused $methodKey")
+            $this->errors[$methodDefinition->toString()] = RuleErrorBuilder::message('Unused ' . $methodDefinition->toString())
                 ->file($file)
                 ->line($line)
                 ->identifier('shipmonk.deadMethod')
@@ -188,18 +209,16 @@ class DeadMethodRule implements Rule
         }
     }
 
-    private function isEntryPoint(string $methodKey): bool
+    private function isEntryPoint(MethodDefinition $methodDefinition): bool
     {
-        $classAndMethod = DeadCodeHelper::splitMethodKey($methodKey);
-
-        if (!$this->reflectionProvider->hasClass($classAndMethod->className)) {
+        if (!$this->reflectionProvider->hasClass($methodDefinition->className)) {
             return false;
         }
 
         $methodReflection = $this->reflectionProvider // @phpstan-ignore missingType.checkedException (method should exist)
-            ->getClass($classAndMethod->className)
+            ->getClass($methodDefinition->className)
             ->getNativeReflection()
-            ->getMethod($classAndMethod->methodName);
+            ->getMethod($methodDefinition->methodName);
 
         foreach ($this->entrypointProviders as $entrypointProvider) {
             if ($entrypointProvider->isEntrypoint($methodReflection)) {
@@ -208,6 +227,25 @@ class DeadMethodRule implements Rule
         }
 
         return false;
+    }
+
+    /**
+     * @param array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: string|null} $serializedMethodDeclaration
+     * @return array{line: int, definition: MethodDefinition, overriddenDefinitions: list<MethodDefinition>, traitOriginDefinition: MethodDefinition|null}
+     */
+    private function deserializeMethodDeclaration(array $serializedMethodDeclaration): array
+    {
+        return [
+            'line' => $serializedMethodDeclaration['line'],
+            'definition' => MethodDefinition::fromString($serializedMethodDeclaration['definition']),
+            'overriddenDefinitions' => array_map(
+                static fn (string $definition) => MethodDefinition::fromString($definition),
+                $serializedMethodDeclaration['overriddenDefinitions'],
+            ),
+            'traitOriginDefinition' => $serializedMethodDeclaration['traitOriginDefinition'] !== null
+                ? MethodDefinition::fromString($serializedMethodDeclaration['traitOriginDefinition'])
+                : null,
+        ];
     }
 
 }
