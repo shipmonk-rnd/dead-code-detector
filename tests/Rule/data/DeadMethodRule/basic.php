@@ -85,7 +85,7 @@ abstract class TestParent {
 
 trait TestTrait {
 
-    public function __construct()
+    public function __construct() // error: Unused DeadBasic\TestTrait::__construct
     {
     }
 

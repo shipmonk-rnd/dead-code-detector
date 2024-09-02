@@ -156,17 +156,30 @@ class DeadMethodRule implements Rule
      */
     private function getMethodsToMarkAsUsed(Call $call): array
     {
-        $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($call->getDefinition());
+        $definition = $call->getDefinition();
 
-        return array_merge(
-            [$call->getDefinition()],
-            $call->possibleDescendantCall
-                ? $this->classHierarchy->getMethodDescendants($call->getDefinition())
-                : [],
-            $traitMethodDefinition !== null
-                ? $this->classHierarchy->getMethodTraitUsages($traitMethodDefinition)
-                : [],
-        );
+        $result = [$definition];
+
+        if ($call->possibleDescendantCall) {
+            foreach ($this->classHierarchy->getMethodDescendants($definition) as $descendant) {
+                $result[] = $descendant;
+            }
+        }
+
+        // each descendant can be a trait user
+        foreach ($result as $methodDefinition) {
+            $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
+
+            if ($traitMethodDefinition !== null) {
+                $result = array_merge(
+                    $result,
+                    [$traitMethodDefinition],
+                    $this->classHierarchy->getMethodTraitUsages($traitMethodDefinition),
+                );
+            }
+        }
+
+        return $result;
     }
 
     private function raiseError(
