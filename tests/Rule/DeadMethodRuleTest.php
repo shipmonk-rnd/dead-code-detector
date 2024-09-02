@@ -55,7 +55,7 @@ class DeadMethodRuleTest extends RuleTestCase
         return [
             new ClassDefinitionCollector(),
             new MethodDefinitionCollector(),
-            new MethodCallCollector(self::getContainer()->getByType(ReflectionProvider::class)),
+            new MethodCallCollector(),
         ];
     }
 
@@ -105,8 +105,10 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'parent-call-3' => [__DIR__ . '/data/DeadMethodRule/parent-call-3.php'];
         yield 'parent-call-4' => [__DIR__ . '/data/DeadMethodRule/parent-call-4.php'];
         yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
+        yield 'dynamic-method' => [__DIR__ . '/data/DeadMethodRule/dynamic-method.php'];
         yield 'call-on-class-string' => [__DIR__ . '/data/DeadMethodRule/class-string.php'];
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
+        yield 'unknown-class' => [__DIR__ . '/data/DeadMethodRule/unknown-class.php'];
         yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
         yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];

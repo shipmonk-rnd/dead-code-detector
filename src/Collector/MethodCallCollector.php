@@ -11,7 +11,6 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
-use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
@@ -19,7 +18,6 @@ use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\Reflection\ClassReflection;
-use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
@@ -31,17 +29,10 @@ use function array_map;
 class MethodCallCollector implements Collector
 {
 
-    private ReflectionProvider $reflectionProvider;
-
     /**
      * @var list<Call>
      */
     private array $callsBuffer = [];
-
-    public function __construct(ReflectionProvider $reflectionProvider)
-    {
-        $this->reflectionProvider = $reflectionProvider;
-    }
 
     public function getNodeType(): string
     {
@@ -104,7 +95,7 @@ class MethodCallCollector implements Collector
         Scope $scope
     ): void
     {
-        $methodName = $this->getMethodName($methodCall);
+        $methodNames = $this->getMethodName($methodCall, $scope);
 
         if ($methodCall instanceof New_) {
             if ($methodCall->class instanceof Expr) {
@@ -123,13 +114,15 @@ class MethodCallCollector implements Collector
             $possibleDescendantCall = true;
         }
 
-        if ($methodName === null) {
-            return;
-        }
+        foreach ($methodNames as $methodName) {
+            foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
+                if (!$classWithMethod->hasMethod($methodName)) {
+                    continue;
+                }
 
-        foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
-            $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-            $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+                $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+                $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+            }
         }
     }
 
@@ -138,33 +131,26 @@ class MethodCallCollector implements Collector
         Scope $scope
     ): void
     {
-        $methodName = $this->getMethodName($staticCall);
-
-        if ($methodName === null) {
-            return;
-        }
+        $methodNames = $this->getMethodName($staticCall, $scope);
 
         if ($staticCall->class instanceof Expr) {
             $callerType = $scope->getType($staticCall->class);
-            $classReflections = $this->getReflectionsWithMethod($callerType, $methodName);
             $possibleDescendantCall = true;
 
         } else {
-            $className = $scope->resolveName($staticCall->class);
+            $callerType = $scope->resolveTypeByName($staticCall->class);
             $possibleDescendantCall = $staticCall->class->toString() === 'static';
-
-            if ($this->reflectionProvider->hasClass($className)) {
-                $classReflections = [
-                    $this->reflectionProvider->getClass($className),
-                ];
-            } else {
-                $classReflections = [];
-            }
         }
 
-        foreach ($classReflections as $classWithMethod) {
-            $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-            $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+        foreach ($methodNames as $methodName) {
+            foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classReflection) {
+                if (!$classReflection->hasMethod($methodName)) {
+                    continue;
+                }
+
+                $className = $classReflection->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+                $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+            }
         }
     }
 
@@ -200,18 +186,25 @@ class MethodCallCollector implements Collector
 
     /**
      * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
+     * @return list<string>
      */
-    private function getMethodName(CallLike $call): ?string
+    private function getMethodName(CallLike $call, Scope $scope): array
     {
         if ($call instanceof New_) {
-            return '__construct';
+            return ['__construct'];
         }
 
-        if (!$call->name instanceof Identifier) {
-            return null;
+        if ($call->name instanceof Expr) {
+            $possibleMethodNames = [];
+
+            foreach ($scope->getType($call->name)->getConstantStrings() as $constantString) {
+                $possibleMethodNames[] = $constantString->getValue();
+            }
+
+            return $possibleMethodNames;
         }
 
-        return $call->name->toString();
+        return [$call->name->toString()];
     }
 
     /**
