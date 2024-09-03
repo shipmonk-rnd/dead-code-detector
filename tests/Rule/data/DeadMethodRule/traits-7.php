@@ -3,7 +3,7 @@
 namespace DeadTrait7;
 
 trait HelloWorld {
-    public function sayHello() { // error: Unused DeadTrait7\HelloWorld::sayHello
+    public function sayHello() {
         echo 'Hello World!';
     }
 }

@@ -5,12 +5,12 @@ namespace DeadTrait3;
 trait MyTrait1 {
 
     public function used(): void {}
-    public function unused(): void {} // error: Unused DeadTrait3\MyTrait1::unused
+    public function unused(): void {}
 }
 
 interface TraitInterface
 {
-    public function used(): void; // error: Unused DeadTrait3\TraitInterface::used
+    public function used(): void;
 }
 
 class MyUser1 implements TraitInterface

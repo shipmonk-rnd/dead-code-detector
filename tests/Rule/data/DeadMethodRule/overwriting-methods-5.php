@@ -4,7 +4,7 @@ namespace DeadOver5;
 
 interface Interface1
 {
-    public function foo(): void; // error: Unused DeadOver5\Interface1::foo
+    public function foo(): void;
 }
 
 interface Interface2

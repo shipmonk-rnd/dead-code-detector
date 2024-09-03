@@ -3,7 +3,7 @@
 namespace DeadTrait8;
 
 trait A {
-    public function smallTalk() { // error: Unused DeadTrait8\A::smallTalk
+    public function smallTalk() {
         echo 'a';
     }
     public function bigTalk() {

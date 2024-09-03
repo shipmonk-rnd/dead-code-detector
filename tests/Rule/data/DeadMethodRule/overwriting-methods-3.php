@@ -4,22 +4,22 @@ namespace DeadOver3;
 
 interface Interface1
 {
-    public function foo(): void; // error: Unused DeadOver3\Interface1::foo
+    public function foo(): void;
 }
 
 interface Interface2
 {
-    public function foo(): void; // error: Unused DeadOver3\Interface2::foo
+    public function foo(): void;
 }
 
 abstract class AbstractClass implements Interface1, Interface2
 {
-    public abstract function foo(): void; // error: Unused DeadOver3\AbstractClass::foo
+    public abstract function foo(): void;
 }
 
 class Child1 extends AbstractClass
 {
-    public function foo(): void {} // error: Unused DeadOver3\Child1::foo
+    public function foo(): void {}
 }
 
 class Child2 extends AbstractClass
