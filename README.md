@@ -94,7 +94,7 @@ class MyEntrypointProvider implements EntrypointProvider
   - It does not offer any custom adjustments of used methods
   - It has almost no built-it library extensions
   - It ignores trait methods
-  - Is lacks many minor features like `class-string` calls, `$dynamic->$method` etc
+  - Is lacks many minor features like class-string calls, dynamic method calls, array callbacks, nullsafe call chains etc
 
 ## Limitations:
 
