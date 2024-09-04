@@ -20,3 +20,10 @@ updates:
                     - minor
         ignore:
             - dependency-name: "*"
+        allow:
+            - dependency-name: "phpstan/*"
+            - dependency-name: "shipmonk/*"
+            - dependency-name: "phpunit/*"
+            - dependency-name: "editorconfig-checker/*"
+            - dependency-name: "ergebnis/composer-normalize"
+            - dependency-name: "slevomat/coding-standard"
