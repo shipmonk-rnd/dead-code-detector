@@ -8,8 +8,6 @@ updates:
         versioning-strategy: lockfile-only
         groups:
             ci-tools:
-                exclude-patterns:
-                    - "*"
                 patterns:
                     - "phpstan/*"
                     - "shipmonk/*"
@@ -20,3 +18,5 @@ updates:
                 update-types:
                     - patch
                     - minor
+        ignore:
+            - dependency-name: "*"
