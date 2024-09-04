@@ -7,7 +7,14 @@ updates:
             interval: monthly
         versioning-strategy: lockfile-only
         groups:
-            prod-dependencies:
-                dependency-type: production
-            dev-dependencies:
-                dependency-type: development
+            ci-tools:
+                patterns:
+                    - "phpstan/*"
+                    - "shipmonk/*"
+                    - "phpunit/*"
+                    - "editorconfig-checker/*"
+                    - "ergebnis/composer-normalize"
+                    - "slevomat/coding-standard"
+                update-types:
+                    - patch
+                    - minor
