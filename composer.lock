@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "phpstan/phpstan",
-            "version": "1.11.8",
+            "version": "1.12.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "6adbd118e6c0515dd2f36b06cde1d6da40f1b8ec"
+                "reference": "d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/6adbd118e6c0515dd2f36b06cde1d6da40f1b8ec",
-                "reference": "6adbd118e6c0515dd2f36b06cde1d6da40f1b8ec",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2",
+                "reference": "d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2",
                 "shasum": ""
             },
             "require": {
@@ -62,7 +62,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-07-24T07:01:22+00:00"
+            "time": "2024-09-03T19:55:22+00:00"
         }
     ],
     "packages-dev": [
@@ -2316,16 +2316,16 @@
         },
         {
             "name": "phpstan/phpstan-symfony",
-            "version": "1.4.6",
+            "version": "1.4.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-symfony.git",
-                "reference": "e909a075d69e0d4db262ac3407350ae2c6b6ab5f"
+                "reference": "14eec8c011b856eee4d744a2a3f709db1e1858bd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-symfony/zipball/e909a075d69e0d4db262ac3407350ae2c6b6ab5f",
-                "reference": "e909a075d69e0d4db262ac3407350ae2c6b6ab5f",
+                "url": "https://api.github.com/repos/phpstan/phpstan-symfony/zipball/14eec8c011b856eee4d744a2a3f709db1e1858bd",
+                "reference": "14eec8c011b856eee4d744a2a3f709db1e1858bd",
                 "shasum": ""
             },
             "require": {
@@ -2382,9 +2382,9 @@
             "description": "Symfony Framework extensions and rules for PHPStan",
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-symfony/issues",
-                "source": "https://github.com/phpstan/phpstan-symfony/tree/1.4.6"
+                "source": "https://github.com/phpstan/phpstan-symfony/tree/1.4.8"
             },
-            "time": "2024-07-16T11:48:54+00:00"
+            "time": "2024-08-13T19:43:40+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -3975,16 +3975,16 @@
         },
         {
             "name": "shipmonk/composer-dependency-analyser",
-            "version": "1.6.1",
+            "version": "1.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/composer-dependency-analyser.git",
-                "reference": "9252ee58b802328237ebbd4e1decb002823afbb2"
+                "reference": "bca862b2830a453734aee048eb0cdab82e5c9da3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/composer-dependency-analyser/zipball/9252ee58b802328237ebbd4e1decb002823afbb2",
-                "reference": "9252ee58b802328237ebbd4e1decb002823afbb2",
+                "url": "https://api.github.com/repos/shipmonk-rnd/composer-dependency-analyser/zipball/bca862b2830a453734aee048eb0cdab82e5c9da3",
+                "reference": "bca862b2830a453734aee048eb0cdab82e5c9da3",
                 "shasum": ""
             },
             "require": {
@@ -4035,9 +4035,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/composer-dependency-analyser/issues",
-                "source": "https://github.com/shipmonk-rnd/composer-dependency-analyser/tree/1.6.1"
+                "source": "https://github.com/shipmonk-rnd/composer-dependency-analyser/tree/1.7.0"
             },
-            "time": "2024-07-02T20:09:30+00:00"
+            "time": "2024-08-08T08:12:32+00:00"
         },
         {
             "name": "shipmonk/name-collision-detector",
@@ -4099,16 +4099,16 @@
         },
         {
             "name": "shipmonk/phpstan-rules",
-            "version": "3.1.0",
+            "version": "3.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/phpstan-rules.git",
-                "reference": "8ace7eaadb0622707f7a9284cfbc9496193edf8e"
+                "reference": "e0f9fe9a9c48a062082de82289efac32f0bc694c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-rules/zipball/8ace7eaadb0622707f7a9284cfbc9496193edf8e",
-                "reference": "8ace7eaadb0622707f7a9284cfbc9496193edf8e",
+                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-rules/zipball/e0f9fe9a9c48a062082de82289efac32f0bc694c",
+                "reference": "e0f9fe9a9c48a062082de82289efac32f0bc694c",
                 "shasum": ""
             },
             "require": {
@@ -4150,9 +4150,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/phpstan-rules/issues",
-                "source": "https://github.com/shipmonk-rnd/phpstan-rules/tree/3.1.0"
+                "source": "https://github.com/shipmonk-rnd/phpstan-rules/tree/3.2.0"
             },
-            "time": "2024-07-10T15:23:53+00:00"
+            "time": "2024-08-22T13:26:25+00:00"
         },
         {
             "name": "slevomat/coding-standard",
