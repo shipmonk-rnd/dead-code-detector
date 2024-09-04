@@ -215,8 +215,19 @@ class DeadMethodRule implements Rule
             return false;
         }
 
-        $methodReflection = $this->reflectionProvider // @phpstan-ignore missingType.checkedException (method should exist)
-            ->getClass($methodDefinition->className)
+        $reflection = $this->reflectionProvider->getClass($methodDefinition->className);
+
+        // if trait has users, we need to check entrypoint even from their context
+        if ($reflection->isTrait()) {
+            foreach ($this->classHierarchy->getMethodTraitUsages($methodDefinition) as $traitUsage) {
+                if ($this->isEntryPoint($traitUsage)) {
+                    return true;
+                }
+            }
+        }
+
+        // @phpstan-ignore missingType.checkedException (method should exist)
+        $methodReflection = $reflection
             ->getNativeReflection()
             ->getMethod($methodDefinition->methodName);
 

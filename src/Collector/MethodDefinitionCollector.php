@@ -133,7 +133,7 @@ class MethodDefinitionCollector implements Collector
             return null;
         }
 
-        if ($realDeclaringClass->isTrait()) {
+        if ($realDeclaringClass->isTrait() && $realDeclaringClass->getName() !== $classReflection->getName()) {
             return new MethodDefinition(
                 $realDeclaringClass->getName(),
                 $realName,
