@@ -89,10 +89,11 @@ class MyEntrypointProvider implements EntrypointProvider
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:
-  - It ignores trait methods
+  - It cannot detect dead constructors
   - It does not properly detect calls within inheritance hierarchy
   - It does not offer any custom adjustments of used methods
-  - It has almost none built-it library extensions
+  - It has almost no built-it library extensions
+  - It ignores trait methods
   - Is lacks many minor features like `class-string` calls, `$dynamic->$method` etc
 
 ## Limitations:
