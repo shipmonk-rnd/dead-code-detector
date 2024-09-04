@@ -21,6 +21,11 @@ class SomeController {
     {
     }
 
+    #[Unknown] // error: Unused Symfony\SomeController::dead
+    public function dead(): void
+    {
+    }
+
 }
 
 
