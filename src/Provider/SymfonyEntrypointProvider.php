@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
@@ -97,8 +98,12 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             return true;
         }
 
-        return $this->reflectionProvider->hasClass($attributeClass) // prevent https://github.com/phpstan/phpstan/issues/9618
-            && $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+        try {
+            /** @throws IdentifierNotFound */
+            return $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+        } catch (IdentifierNotFound $e) {
+            return false; // prevent https://github.com/phpstan/phpstan/issues/9618
+        }
     }
 
     private function isConstructorCalledBySymfonyDic(ReflectionMethod $method): bool
