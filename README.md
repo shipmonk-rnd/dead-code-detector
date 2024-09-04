@@ -1,6 +1,6 @@
 # Dead code detector
 
-PHPStan rules to find dead code in your project.
+[PHPStan](https://github.com/phpstan/phpstan) rules to find dead code in your project.
 
 ## Installation:
 
@@ -15,12 +15,53 @@ includes:
     - vendor/shipmonk/dead-code-detector/rules.neon
 ```
 
+## Supported libraries
+- Any overridden method that originates in `vendor` is not reported as dead
+- We also support many magic calls in following libraries:
 
-## Configuration:
-- All entrypoints of your code (controllers, consumers, commands, ...) need to be known to the detector to get proper results
-- By default, all overridden methods which declaration originates inside `vendor` are considered entrypoints
-- Also, there are some built-in providers for some magic calls that occur in `doctrine`, `nette`, `symfony`, `phpstan` and `phpunit`
-- For everything else, you can implement your own entrypoint provider, just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
+#### Symfony:
+- **constructor calls for DIC services!**
+   - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
+- `AsEventListener` attribute
+- `Required` attribute
+- `Route` attributes
+- `onKernelResponse`, `onKernelRequest`, etc
+
+#### Doctrine:
+- `AsEntityListener` attribute
+- `Doctrine\ORM\Events::*` events
+- `Doctrine\Common\EventSubscriber` methods
+- lifecycle event attributes `PreFlush`, `PostLoad`, ...
+
+#### PHPUnit:
+- **data provider methods**
+- `testXxx` methods
+- annotations like `@test`, `@before`, `@afterClass` etc
+- attributes like `#[Test]`, `#[Before]`, `#[AfterClass]` etc
+
+
+#### PHPStan:
+- constructor calls for DIC services (rules, extensions, ...)
+
+#### Nette:
+- `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
+- `SmartObject` magic calls for `@property` annotations
+
+
+All those libraries are autoenabled when found within your composer dependencies. If you want to force enable/disable some of them, you can:
+
+```neon
+# phpstan.neon.dist
+parameters:
+    shipmonkDeadCode:
+        entrypoints:
+            phpunit:
+                enabled: true
+```
+
+## Customization:
+- If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
+- Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
 
 ```neon
 # phpstan.neon.dist
@@ -45,15 +86,25 @@ class MyEntrypointProvider implements EntrypointProvider
 }
 ```
 
+## Comparison with tomasvotruba/unused-public
+- You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
+- Basically, their analysis is less precise and less flexible. Mainly:
+  - It ignores trait methods
+  - It does not properly detect calls within inheritance hierarchy
+  - It does not offer any custom adjustments of used methods
+  - It has almost none built-it library extensions
+  - Is lacks many minor features like `class-string` calls, `$dynamic->$method` etc
+
 ## Limitations:
 
-- Only method calls are detected
+- Only method calls are detected so far
   - Including static methods, trait methods, interface methods, first class callables, etc.
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
-  - Anonymous classes are ignored
-  - Does not check magic methods
-  - No transitive check is performed (dead method called only from dead method)
-  - No dead cycles are detected (e.g. dead method calling itself)
+  - Anonymous classes are ignored ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
+  - Does not check magic methods (`__get`, `__set` etc)
+  - Call-graph not implemented so far
+    - No transitive check is performed (dead method called only from dead method)
+    - No dead cycles are detected (e.g. dead method calling itself)
 
 ## Contributing
 - Check your code by `composer check`
