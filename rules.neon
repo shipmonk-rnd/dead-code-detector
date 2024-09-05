@@ -38,6 +38,14 @@ services:
             enabled: %shipmonkDeadCode.entrypoints.phpstan.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\ExcludeEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            paths: %shipmonkDeadCode.entrypoints.exclude.paths%
+            enabled: %shipmonkDeadCode.entrypoints.exclude.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
@@ -73,6 +81,9 @@ parameters:
                 enabled: null
             doctrine:
                 enabled: null
+            exclude:
+                enabled: true
+                paths: []
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -91,6 +102,10 @@ parametersSchema:
             ])
             doctrine: structure([
                 enabled: schema(bool(), nullable())
+            ])
+            exclude: structure([
+                enabled: schema(bool(), nullable())
+                paths: listOf(string())
             ])
         ])
     ])

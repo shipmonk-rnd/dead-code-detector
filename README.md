@@ -59,6 +59,24 @@ parameters:
                 enabled: true
 ```
 
+## Exclude Paths:
+
+To exclude paths, configure the `exclude` entrypoint as following, based on class FQCN:
+
+```neon
+# phpstan.neon.dist
+parameters:
+    shipmonkDeadCode:
+        entrypoints:
+            exclude:
+                enabled: true
+                paths:
+                    # supports fqcn
+                    - 'App\Foo\Bar'
+                    # supports fqcn with regex
+                    - '/^App\\Foo\\.+$/i'
+```
+
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
 - Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`

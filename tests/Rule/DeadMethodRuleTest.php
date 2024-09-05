@@ -17,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ExcludeEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
@@ -78,6 +79,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public static function provideFiles(): iterable
     {
+        yield 'exclude' => [[__DIR__ . '/data/DeadMethodRule/providers/exclude-by-class-name.php', __DIR__ . '/data/DeadMethodRule/providers/exclude-by-class-regex.php']];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 80_000];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
@@ -158,6 +160,13 @@ class DeadMethodRuleTest extends RuleTestCase
             ),
             new NetteEntrypointProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
+                true,
+            ),
+            new ExcludeEntrypointProvider(
+                [
+                    'Exclude\ByClassName\ExcludedClass',
+                    '/^Exclude\\\ByClassRegex\\\.+$/',
+                ],
                 true,
             ),
         ];
