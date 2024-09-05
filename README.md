@@ -1,6 +1,6 @@
-# Dead code detector
+# Dead code detector for PHP
 
-[PHPStan](https://github.com/phpstan/phpstan) rules to find dead code in your project.
+[PHPStan](https://phpstan.org/) rules to find unused code in your project with ease!
 
 ## Installation:
 
@@ -99,7 +99,7 @@ class MyEntrypointProvider implements EntrypointProvider
 ## Limitations:
 
 - Only method calls are detected so far
-  - Including static methods, trait methods, interface methods, first class callables, etc.
+  - Including **constructors**, static methods, trait methods, interface methods, first class callables, etc.
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Anonymous classes are ignored ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
   - Does not check magic methods (`__get`, `__set` etc)
