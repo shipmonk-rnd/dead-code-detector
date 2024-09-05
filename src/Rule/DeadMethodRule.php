@@ -89,11 +89,12 @@ class DeadMethodRule implements Rule
 
         unset($classDeclarationData);
 
-        foreach ($methodDeclarationData as $file => $methodsInFile) {
+        foreach ($methodDeclarationData as $methodsInFile) {
             foreach ($methodsInFile as $declared) {
                 foreach ($declared as $serializedMethodDeclaration) {
                     [
                         'line' => $line,
+                        'file' => $file,
                         'definition' => $definition,
                         'overriddenDefinitions' => $overriddenDefinitions,
                         'traitOriginDefinition' => $declaringTraitMethodKey,
@@ -241,13 +242,14 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @param array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: string|null} $serializedMethodDeclaration
-     * @return array{line: int, definition: MethodDefinition, overriddenDefinitions: list<MethodDefinition>, traitOriginDefinition: MethodDefinition|null}
+     * @param array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: string|null} $serializedMethodDeclaration
+     * @return array{line: int, file: string, definition: MethodDefinition, overriddenDefinitions: list<MethodDefinition>, traitOriginDefinition: MethodDefinition|null}
      */
     private function deserializeMethodDeclaration(array $serializedMethodDeclaration): array
     {
         return [
             'line' => $serializedMethodDeclaration['line'],
+            'file' => $serializedMethodDeclaration['file'],
             'definition' => MethodDefinition::fromString($serializedMethodDeclaration['definition']),
             'overriddenDefinitions' => array_map(
                 static fn (string $definition) => MethodDefinition::fromString($definition),
