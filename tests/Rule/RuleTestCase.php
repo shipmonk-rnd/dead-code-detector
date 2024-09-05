@@ -6,6 +6,7 @@ use LogicException;
 use PHPStan\Analyser\Error;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
+use function array_diff;
 use function array_values;
 use function explode;
 use function file_get_contents;
@@ -15,6 +16,7 @@ use function ksort;
 use function preg_match;
 use function preg_match_all;
 use function preg_replace;
+use function sort;
 use function sprintf;
 use function trim;
 use function uniqid;
@@ -26,27 +28,52 @@ use function uniqid;
 abstract class RuleTestCase extends OriginalRuleTestCase
 {
 
-    protected function analyseFile(string $file, bool $autofix = false): void
+    /**
+     * @param list<string> $files
+     */
+    protected function analyseFiles(array $files, bool $autofix = false): void
     {
-        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+        sort($files);
+
+        $analyserErrors = $this->gatherAnalyserErrors($files);
 
         if ($autofix === true) {
-            $this->autofix($file, $analyserErrors);
-            self::fail("File $file was autofixed. This setup should never remain in the codebase.");
+            foreach ($files as $file) {
+                $this->autofix($file, $analyserErrors);
+            }
+
+            self::fail('Autofixed. This setup should never remain in the codebase.');
         }
 
-        $actualErrors = $this->processActualErrors($analyserErrors);
-        $expectedErrors = $this->parseExpectedErrors($file);
+        if ($analyserErrors === []) {
+            $this->expectNotToPerformAssertions();
+        }
 
-        self::assertSame(
-            implode("\n", $expectedErrors) . "\n",
-            implode("\n", $actualErrors) . "\n",
-        );
+        $actualErrorsByFile = $this->processActualErrors($analyserErrors);
+
+        foreach ($actualErrorsByFile as $file => $actualErrors) {
+            $expectedErrors = $this->parseExpectedErrors($file);
+
+            $extraErrors = array_diff($expectedErrors, $actualErrors);
+            $missingErrors = array_diff($actualErrors, $expectedErrors);
+
+            $extraErrorsString = $extraErrors === [] ? '' : "\n - Extra errors: " . implode("\n", $extraErrors);
+            $missingErrorsString = $missingErrors === [] ? '' : "\n - Missing errors: " . implode("\n", $missingErrors);
+
+            self::assertSame(
+                implode("\n", $expectedErrors) . "\n",
+                implode("\n", $actualErrors) . "\n",
+                sprintf(
+                    "Errors in file $file do not match. %s\n",
+                    $extraErrorsString . $missingErrorsString,
+                ),
+            );
+        }
     }
 
     /**
      * @param list<Error> $actualErrors
-     * @return list<string>
+     * @return array<string, list<string>>
      */
     protected function processActualErrors(array $actualErrors): array
     {
@@ -55,15 +82,22 @@ abstract class RuleTestCase extends OriginalRuleTestCase
         foreach ($actualErrors as $error) {
             $usedLine = $error->getLine() ?? -1;
             $key = sprintf('%04d', $usedLine) . '-' . uniqid();
-            $resultToAssert[$key] = $this->formatErrorForAssert($error->getMessage(), $usedLine);
+            $resultToAssert[$error->getFile()][$key] = $this->formatErrorForAssert($error->getMessage(), $usedLine);
 
             self::assertNotNull($error->getIdentifier(), "Missing error identifier for error: {$error->getMessage()}");
             self::assertStringStartsWith('shipmonk.', $error->getIdentifier(), "Unexpected error identifier for: {$error->getMessage()}");
         }
 
-        ksort($resultToAssert);
+        $finalResult = [];
 
-        return array_values($resultToAssert);
+        foreach ($resultToAssert as $file => $fileErrors) {
+            ksort($fileErrors);
+            $finalResult[$file] = array_values($fileErrors);
+        }
+
+        ksort($finalResult);
+
+        return $finalResult;
     }
 
     /**
@@ -115,6 +149,10 @@ abstract class RuleTestCase extends OriginalRuleTestCase
 
             if ($line === null) {
                 throw new LogicException('Error without line number: ' . $analyserError->getMessage());
+            }
+
+            if ($analyserError->getFile() !== $file) {
+                continue;
             }
 
             $errorsByLines[$line] = $analyserError;

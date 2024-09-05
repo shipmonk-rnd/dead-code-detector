@@ -16,7 +16,7 @@ use function array_map;
 use function strpos;
 
 /**
- * @implements Collector<InClassNode, list<array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>>
+ * @implements Collector<InClassNode, list<array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>>
  */
 class MethodDefinitionCollector implements Collector
 {
@@ -28,7 +28,7 @@ class MethodDefinitionCollector implements Collector
 
     /**
      * @param InClassNode $node
-     * @return list<array{line: int, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>|null
+     * @return list<array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>|null
      */
     public function processNode(
         Node $node,
@@ -51,16 +51,18 @@ class MethodDefinitionCollector implements Collector
                 }
 
                 $traitLine = $traitMethod->getStartLine();
+                $traitFile = $traitMethod->getFileName();
                 $traitName = $trait->getName();
                 $traitMethodName = $traitMethod->getName();
                 $declaringTraitDefinition = $this->getDeclaringTraitDefinition($trait, $traitMethodName);
 
-                if ($traitLine === false) {
+                if ($traitLine === false || $traitFile === false) {
                     continue;
                 }
 
                 $result[] = [
                     'line' => $traitLine,
+                    'file' => $traitFile,
                     'definition' => (new MethodDefinition($traitName, $traitMethodName))->toString(),
                     'overriddenDefinitions' => [],
                     'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,
@@ -105,6 +107,7 @@ class MethodDefinitionCollector implements Collector
 
             $result[] = [
                 'line' => $line,
+                'file' => $scope->getFile(),
                 'definition' => $definition->toString(),
                 'overriddenDefinitions' => array_map(static fn (MethodDefinition $definition) => $definition->toString(), $overriddenDefinitions),
                 'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,

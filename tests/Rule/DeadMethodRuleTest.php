@@ -23,6 +23,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
+use function is_array;
 use const PHP_VERSION_ID;
 
 /**
@@ -60,19 +61,20 @@ class DeadMethodRuleTest extends RuleTestCase
     }
 
     /**
+     * @param string|list<string> $files
      * @dataProvider provideFiles
      */
-    public function testDead(string $file, ?int $lowestPhpVersion = null): void
+    public function testDead($files, ?int $lowestPhpVersion = null): void
     {
         if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
             self::markTestSkipped('Requires PHP ' . $lowestPhpVersion);
         }
 
-        $this->analyseFile($file);
+        $this->analyseFiles(is_array($files) ? $files : [$files]);
     }
 
     /**
-     * @return array<string, array{0: string, 1?: int}>
+     * @return array<string, array{0: string|list<string>, 1?: int}>
      */
     public static function provideFiles(): iterable
     {
@@ -97,6 +99,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-8' => [__DIR__ . '/data/DeadMethodRule/traits-8.php'];
         yield 'trait-9' => [__DIR__ . '/data/DeadMethodRule/traits-9.php'];
         yield 'trait-10' => [__DIR__ . '/data/DeadMethodRule/traits-10.php'];
+        yield 'trait-11' => [[__DIR__ . '/data/DeadMethodRule/traits-11-a.php', __DIR__ . '/data/DeadMethodRule/traits-11-b.php']];
         yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
