@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use Override;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
@@ -19,7 +20,9 @@ use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use function array_map;
 use function array_merge;
 use function array_values;
+use function count;
 use function strpos;
+use const PHP_VERSION_ID;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -231,6 +234,11 @@ class DeadMethodRule implements Rule
         $methodReflection = $reflection
             ->getNativeReflection()
             ->getMethod($methodDefinition->methodName);
+
+        // no need for a provider for such detection
+        if (PHP_VERSION_ID >= 80_300 && count($methodReflection->getAttributes(Override::class)) > 0) {
+            return true;
+        }
 
         foreach ($this->entrypointProviders as $entrypointProvider) {
             if ($entrypointProvider->isEntrypoint($methodReflection)) {

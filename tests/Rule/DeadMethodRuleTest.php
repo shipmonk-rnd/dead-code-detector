@@ -118,6 +118,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 80_000];
         yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php', 80_000];
         yield 'provider-nette' => [__DIR__ . '/data/DeadMethodRule/providers/nette.php'];
+        yield 'provider-override-attribute' => [__DIR__ . '/data/DeadMethodRule/providers/override-attribute.php', 80_300];
     }
 
     /**
