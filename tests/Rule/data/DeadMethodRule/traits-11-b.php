@@ -2,21 +2,6 @@
 
 namespace DeadTrait11;
 
-class Origin {
-
-    protected function method(): string {
-        return 'Doing something';
-    }
-}
-
-class User extends Origin {
+class User {
     use SomeTrait;
-
-    public function __construct()
-    {
-        $this->method();
-    }
 }
-
-new User();
-
