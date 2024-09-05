@@ -22,16 +22,16 @@ includes:
 #### Symfony:
 - **constructor calls for DIC services!**
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
-- `AsEventListener` attribute
-- `Required` attribute
-- `Route` attributes
+- `#[AsEventListener]` attribute
+- `#[Required]` attribute
+- `#[Route]` attributes
 - `onKernelResponse`, `onKernelRequest`, etc
 
 #### Doctrine:
-- `AsEntityListener` attribute
+- `#[AsEntityListener]` attribute
 - `Doctrine\ORM\Events::*` events
 - `Doctrine\Common\EventSubscriber` methods
-- lifecycle event attributes `PreFlush`, `PostLoad`, ...
+- lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 
 #### PHPUnit:
 - **data provider methods**
