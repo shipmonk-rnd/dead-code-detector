@@ -26,7 +26,7 @@ use function strpos;
  *       name: string,
  *       methods: array<string, array{line: int}>,
  *       parents: array<string, null>,
- *       traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+ *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
  *       interfaces: array<string, null>,
  *  }>
  */
@@ -45,7 +45,7 @@ class MethodDefinitionCollector implements Collector
      *      name: string,
      *      methods: array<string, array{line: int}>,
      *      parents: array<string, null>,
-     *      traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+     *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>,
      * }|null
      */
@@ -128,7 +128,7 @@ class MethodDefinitionCollector implements Collector
     }
 
     /**
-     * @return array<string, array<string, array{useFrom?: string, alias?: string}>>
+     * @return array<string, array{excluded?: list<string>, aliases?: array<string, string>}>
      */
     private function getTraits(ClassLike $node): array
     {
@@ -141,17 +141,17 @@ class MethodDefinitionCollector implements Collector
 
             foreach ($traitUse->adaptations as $adaptation) {
                 if ($adaptation->trait === null) {
-                    continue; // TODO when??
+                    continue; // not supported (it is undocumented, so nobody actually use it)
                 }
 
                 if ($adaptation instanceof Precedence) {
                     foreach ($adaptation->insteadof as $insteadof) {
-                        $traits[$insteadof->toString()][$adaptation->method->toString()]['useFrom'] = $adaptation->trait->toString();
+                        $traits[$insteadof->toString()]['excluded'][] = $adaptation->method->toString();
                     }
                 }
 
-                if ($adaptation instanceof Alias && $adaptation->newName !== null) { // TODO when null?
-                    $traits[$adaptation->trait->toString()][$adaptation->method->toString()]['alias'] = $adaptation->newName->toString();
+                if ($adaptation instanceof Alias && $adaptation->newName !== null) {
+                    $traits[$adaptation->trait->toString()]['aliases'][$adaptation->method->toString()] = $adaptation->newName->toString();
                 }
             }
         }

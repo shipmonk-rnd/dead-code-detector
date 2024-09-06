@@ -18,6 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use function array_keys;
 use function array_merge;
 use function array_values;
+use function in_array;
 use function strpos;
 
 /**
@@ -44,7 +45,7 @@ class DeadMethodRule implements Rule
      *      file: string,
      *      methods: array<string, array{line: int}>,
      *      parents: array<string, null>,
-     *      traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+     *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>
      * }>
      */
@@ -174,24 +175,34 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @param array<string, array<string, array{useFrom?: string, alias?: string}>> $usedTraits
+     * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
      */
     private function fillTraitUsages(string $typeName, array $usedTraits): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
             $traitMethods = array_keys($this->typeDefinitions[$traitName]['methods'] ?? []);
 
+            $excludedMethods = $adaptations['excluded'] ?? [];
+
             foreach ($traitMethods as $traitMethod) {
                 if (isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])) {
                     continue; // overridden trait method, thus not used
                 }
 
-                if (isset($adaptations['useFrom'])) {
-                    continue; // TODO
+                $declaringTraitMethodDefinition = new MethodDefinition($traitName, $traitMethod);
+                $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
+
+                // both method names need to work
+                if ($aliasMethodName !== null) {
+                    $aliasMethodDefinition = new MethodDefinition($typeName, $aliasMethodName);
+                    $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
                 }
 
-                $declaringTraitMethodDefinition = new MethodDefinition($traitName, $traitMethod);
-                $usedTraitMethodDefinition = new MethodDefinition($typeName, $traitMethod /* TODO or alias */);
+                if (in_array($traitMethod, $excludedMethods, true)) {
+                    continue; // was replaced by insteadof
+                }
+
+                $usedTraitMethodDefinition = new MethodDefinition($typeName, $traitMethod);
                 $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
             }
 
@@ -319,7 +330,7 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @return array<string, array<string, array{useFrom?: string, alias?: string}>>
+     * @return array<string, array{excluded?: list<string>, aliases?: array<string, string>}>
      */
     private function getTraitUsages(string $typeName): array
     {

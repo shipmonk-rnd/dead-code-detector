@@ -29,7 +29,7 @@ abstract class RuleTestCase extends OriginalRuleTestCase
 {
 
     /**
-     * @param list<string> $files
+     * @param non-empty-list<string> $files
      */
     protected function analyseFiles(array $files, bool $autofix = false): void
     {
@@ -45,13 +45,10 @@ abstract class RuleTestCase extends OriginalRuleTestCase
             self::fail('Autofixed. This setup should never remain in the codebase.');
         }
 
-        if ($analyserErrors === []) {
-            $this->expectNotToPerformAssertions();
-        }
-
         $actualErrorsByFile = $this->processActualErrors($analyserErrors);
 
-        foreach ($actualErrorsByFile as $file => $actualErrors) {
+        foreach ($files as $file) {
+            $actualErrors = $actualErrorsByFile[$file] ?? [];
             $expectedErrors = $this->parseExpectedErrors($file);
 
             $extraErrors = array_diff($expectedErrors, $actualErrors);

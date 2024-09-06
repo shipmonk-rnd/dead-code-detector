@@ -59,7 +59,7 @@ class DeadMethodRuleTest extends RuleTestCase
     }
 
     /**
-     * @param string|list<string> $files
+     * @param string|non-empty-list<string> $files
      * @dataProvider provideFiles
      */
     public function testDead($files, ?int $lowestPhpVersion = null): void
@@ -101,6 +101,9 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-12' => [__DIR__ . '/data/DeadMethodRule/traits-12.php'];
         yield 'trait-13' => [__DIR__ . '/data/DeadMethodRule/traits-13.php'];
         yield 'trait-14' => [__DIR__ . '/data/DeadMethodRule/traits-14.php'];
+        yield 'trait-15' => [__DIR__ . '/data/DeadMethodRule/traits-15.php'];
+        yield 'trait-16' => [__DIR__ . '/data/DeadMethodRule/traits-16.php'];
+        yield 'trait-17' => [__DIR__ . '/data/DeadMethodRule/traits-17.php'];
         yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
