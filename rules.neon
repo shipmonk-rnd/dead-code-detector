@@ -43,11 +43,6 @@ services:
             - phpstan.collector
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
-        tags:
-            - phpstan.collector
-
-    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
         tags:
             - phpstan.collector

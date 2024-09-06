@@ -2,169 +2,201 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
-use Closure;
+use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassLike;
+use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Enum_;
+use PhpParser\Node\Stmt\Interface_;
+use PhpParser\Node\Stmt\Trait_;
+use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
+use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PHPStan\Analyser\Scope;
-use PHPStan\BetterReflection\Reflection\ReflectionMethod as BetterReflectionMethod;
 use PHPStan\Collectors\Collector;
-use PHPStan\Node\InClassNode;
-use PHPStan\Reflection\ClassReflection;
-use ReflectionException;
-use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
+use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use function array_fill_keys;
 use function array_map;
 use function strpos;
 
 /**
- * @implements Collector<InClassNode, list<array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>>
+ * @implements Collector<ClassLike, array{
+ *       kind: string,
+ *       name: string,
+ *       methods: array<string, array{line: int}>,
+ *       parents: array<string, null>,
+ *       traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+ *       interfaces: array<string, null>,
+ *  }>
  */
 class MethodDefinitionCollector implements Collector
 {
 
     public function getNodeType(): string
     {
-        return InClassNode::class;
+        return ClassLike::class;
     }
 
     /**
-     * @param InClassNode $node
-     * @return list<array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: ?string}>|null
+     * @param ClassLike $node
+     * @return array{
+     *      kind: string,
+     *      name: string,
+     *      methods: array<string, array{line: int}>,
+     *      parents: array<string, null>,
+     *      traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+     *      interfaces: array<string, null>,
+     * }|null
      */
     public function processNode(
         Node $node,
         Scope $scope
     ): ?array
     {
-        $reflection = $node->getClassReflection();
-        $nativeReflection = $reflection->getNativeReflection();
-        $result = [];
-
-        if ($reflection->isAnonymous()) {
-            return null; // https://github.com/phpstan/phpstan/issues/8410
+        if ($node->namespacedName === null) {
+            return null;
         }
 
-        // we need to collect even methods of traits that are always overridden
-        foreach ($reflection->getTraits(true) as $trait) {
-            foreach ($trait->getNativeReflection()->getMethods() as $traitMethod) {
-                if ($this->isUnsupportedMethod($traitMethod)) {
-                    continue;
-                }
+        $kind = $this->getKind($node);
+        $typeName = $node->namespacedName->toString();
 
-                $traitLine = $traitMethod->getStartLine();
-                $traitFile = $traitMethod->getFileName();
-                $traitName = $trait->getName();
-                $traitMethodName = $traitMethod->getName();
-                $declaringTraitDefinition = $this->getDeclaringTraitDefinition($trait, $traitMethodName);
+        $methods = [];
 
-                if ($traitLine === false || $traitFile === false) {
-                    continue;
-                }
-
-                $result[] = [
-                    'line' => $traitLine,
-                    'file' => $traitFile,
-                    'definition' => (new MethodDefinition($traitName, $traitMethodName))->toString(),
-                    'overriddenDefinitions' => [],
-                    'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,
-                ];
-            }
-        }
-
-        foreach ($nativeReflection->getMethods() as $method) {
+        foreach ($node->getMethods() as $method) {
             if ($this->isUnsupportedMethod($method)) {
                 continue;
             }
 
-            if ($scope->getFile() !== $method->getDeclaringClass()->getFileName()) { // method in parent class
-                continue;
-            }
-
-            $line = $method->getStartLine();
-
-            if ($line === false) {
-                continue;
-            }
-
-            $className = $method->getDeclaringClass()->getName();
-            $methodName = $method->getName();
-            $definition = new MethodDefinition($className, $methodName);
-
-            $declaringTraitDefinition = $this->getDeclaringTraitDefinition($reflection, $methodName);
-
-            $overriddenDefinitions = [];
-
-            foreach ($reflection->getAncestors() as $ancestor) {
-                if ($ancestor === $reflection) {
-                    continue;
-                }
-
-                if (!$ancestor->hasMethod($methodName)) {
-                    continue;
-                }
-
-                $overriddenDefinitions[] = new MethodDefinition($ancestor->getName(), $methodName);
-            }
-
-            $result[] = [
-                'line' => $line,
-                'file' => $scope->getFile(),
-                'definition' => $definition->toString(),
-                'overriddenDefinitions' => array_map(static fn (MethodDefinition $definition) => $definition->toString(), $overriddenDefinitions),
-                'traitOriginDefinition' => $declaringTraitDefinition !== null ? $declaringTraitDefinition->toString() : null,
+            $methods[$method->name->toString()] = [
+                'line' => $method->getStartLine(),
             ];
         }
 
-        return $result !== [] ? $result : null;
+        return [
+            'kind' => $kind,
+            'name' => $typeName,
+            'methods' => $methods,
+            'parents' => $this->getParents($node),
+            'traits' => $this->getTraits($node),
+            'interfaces' => $this->getInterfaces($node),
+        ];
     }
 
-    private function getDeclaringTraitDefinition(
-        ClassReflection $classReflection,
-        string $methodName
-    ): ?MethodDefinition
+    /**
+     * @return array<string, null>
+     */
+    private function getParents(ClassLike $node): array
     {
-        try {
-            $nativeReflectionMethod = $classReflection->getNativeReflection()->getMethod($methodName);
-            $betterReflectionMethod = $nativeReflectionMethod->getBetterReflection();
-            $realDeclaringClass = $betterReflectionMethod->getDeclaringClass();
+        if ($node instanceof Class_) {
+            if ($node->extends === null) {
+                return [];
+            }
 
-            // when trait method name is aliased, we need the original name
-            $realName = Closure::bind(function (): string {
-                return $this->name;
-            }, $betterReflectionMethod, BetterReflectionMethod::class)();
-
-        } catch (ReflectionException $e) {
-            return null;
+            return [$node->extends->toString() => null];
         }
 
-        if ($realDeclaringClass->isTrait() && $realDeclaringClass->getName() !== $classReflection->getName()) {
-            return new MethodDefinition(
-                $realDeclaringClass->getName(),
-                $realName,
+        if ($node instanceof Interface_) {
+            return array_fill_keys(
+                array_map(
+                    static fn(Name $name) => $name->toString(),
+                    $node->extends,
+                ),
+                null,
             );
         }
 
-        return null;
+        return [];
     }
 
-    private function isUnsupportedMethod(ReflectionMethod $method): bool
+    /**
+     * @return array<string, null>
+     */
+    private function getInterfaces(ClassLike $node): array
     {
-        if ($method->isDestructor()) {
+        if ($node instanceof Class_ || $node instanceof Enum_) {
+            return array_fill_keys(
+                array_map(
+                    static fn(Name $name) => $name->toString(),
+                    $node->implements,
+                ),
+                null,
+            );
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<string, array<string, array{useFrom?: string, alias?: string}>>
+     */
+    private function getTraits(ClassLike $node): array
+    {
+        $traits = [];
+
+        foreach ($node->getTraitUses() as $traitUse) {
+            foreach ($traitUse->traits as $trait) {
+                $traits[$trait->toString()] = [];
+            }
+
+            foreach ($traitUse->adaptations as $adaptation) {
+                if ($adaptation->trait === null) {
+                    continue; // TODO when??
+                }
+
+                if ($adaptation instanceof Precedence) {
+                    foreach ($adaptation->insteadof as $insteadof) {
+                        $traits[$insteadof->toString()][$adaptation->method->toString()]['useFrom'] = $adaptation->trait->toString();
+                    }
+                }
+
+                if ($adaptation instanceof Alias && $adaptation->newName !== null) { // TODO when null?
+                    $traits[$adaptation->trait->toString()][$adaptation->method->toString()]['alias'] = $adaptation->newName->toString();
+                }
+            }
+        }
+
+        return $traits;
+    }
+
+    private function isUnsupportedMethod(ClassMethod $method): bool
+    {
+        $methodName = $method->name->toString();
+
+        if ($methodName === '__destruct') {
             return true;
         }
 
-        if (!$method->isConstructor() && strpos($method->getName(), '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
+        if ($methodName !== '__construct' && strpos($methodName, '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
             return true;
         }
 
-        if ($method->isConstructor() && $method->isPrivate()) { // e.g. classes with "denied" instantiation
+        if ($methodName === '__construct' && $method->isPrivate()) { // e.g. classes with "denied" instantiation
             return true;
         }
 
-        if ($method->getFileName() === false) { // e.g. php core
-            return true;
+        return false;
+    }
+
+    private function getKind(ClassLike $node): string
+    {
+        if ($node instanceof Class_) {
+            return Kind::CLASSS;
         }
 
-        return strpos($method->getFileName(), '/vendor/') !== false;
+        if ($node instanceof Interface_) {
+            return Kind::INTERFACE;
+        }
+
+        if ($node instanceof Trait_) {
+            return Kind::TRAIT;
+        }
+
+        if ($node instanceof Enum_) {
+            return Kind::ENUM;
+        }
+
+        throw new LogicException('Unknown class-like node');
     }
 
 }

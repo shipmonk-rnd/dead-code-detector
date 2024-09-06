@@ -57,8 +57,8 @@ abstract class RuleTestCase extends OriginalRuleTestCase
             $extraErrors = array_diff($expectedErrors, $actualErrors);
             $missingErrors = array_diff($actualErrors, $expectedErrors);
 
-            $extraErrorsString = $extraErrors === [] ? '' : "\n - Extra errors: " . implode("\n", $extraErrors);
-            $missingErrorsString = $missingErrors === [] ? '' : "\n - Missing errors: " . implode("\n", $missingErrors);
+            $extraErrorsString = $extraErrors === [] ? '' : "\nExtra errors:\n" . implode("\n", $extraErrors);
+            $missingErrorsString = $missingErrors === [] ? '' : "\nMissing errors:\n" . implode("\n", $missingErrors);
 
             self::assertSame(
                 implode("\n", $expectedErrors) . "\n",

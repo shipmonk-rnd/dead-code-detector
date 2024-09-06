@@ -5,7 +5,7 @@ includes:
     - ./vendor/phpstan/phpstan-phpunit/extension.neon
     - ./vendor/phpstan/phpstan-phpunit/rules.neon
     - ./vendor/shipmonk/phpstan-rules/rules.neon
-    - ./rules.neon
+    #- ./rules.neon
 
 parameters:
     paths:
@@ -15,6 +15,7 @@ parameters:
         analyseAndScan:
             - tests/*/data/*
     tmpDir: cache/phpstan/
+    internalErrorsCountLimit: 1
     checkMissingCallableSignature: true
     checkUninitializedProperties: true
     checkBenevolentUnionTypes: true

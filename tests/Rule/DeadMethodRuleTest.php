@@ -12,7 +12,6 @@ use PHPStan\Symfony\ServiceDefinition;
 use PHPStan\Symfony\ServiceMap;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
@@ -54,7 +53,6 @@ class DeadMethodRuleTest extends RuleTestCase
     protected function getCollectors(): array
     {
         return [
-            new ClassDefinitionCollector(),
             new MethodDefinitionCollector(),
             new MethodCallCollector(),
         ];
@@ -100,6 +98,9 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-9' => [__DIR__ . '/data/DeadMethodRule/traits-9.php'];
         yield 'trait-10' => [__DIR__ . '/data/DeadMethodRule/traits-10.php'];
         yield 'trait-11' => [[__DIR__ . '/data/DeadMethodRule/traits-11-a.php', __DIR__ . '/data/DeadMethodRule/traits-11-b.php']];
+        yield 'trait-12' => [__DIR__ . '/data/DeadMethodRule/traits-12.php'];
+        yield 'trait-13' => [__DIR__ . '/data/DeadMethodRule/traits-13.php'];
+        yield 'trait-14' => [__DIR__ . '/data/DeadMethodRule/traits-14.php'];
         yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
@@ -107,6 +108,8 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'parent-call-2' => [__DIR__ . '/data/DeadMethodRule/parent-call-2.php'];
         yield 'parent-call-3' => [__DIR__ . '/data/DeadMethodRule/parent-call-3.php'];
         yield 'parent-call-4' => [__DIR__ . '/data/DeadMethodRule/parent-call-4.php'];
+        yield 'parent-call-5' => [__DIR__ . '/data/DeadMethodRule/parent-call-5.php'];
+        yield 'parent-call-6' => [__DIR__ . '/data/DeadMethodRule/parent-call-6.php'];
         yield 'attribute' => [__DIR__ . '/data/DeadMethodRule/attribute.php'];
         yield 'dynamic-method' => [__DIR__ . '/data/DeadMethodRule/dynamic-method.php'];
         yield 'call-on-class-string' => [__DIR__ . '/data/DeadMethodRule/class-string.php'];

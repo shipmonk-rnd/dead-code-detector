@@ -9,14 +9,13 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
-use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
-use function array_map;
+use function array_keys;
 use function array_merge;
 use function array_values;
 use function strpos;
@@ -29,12 +28,27 @@ class DeadMethodRule implements Rule
 
     private ReflectionProvider $reflectionProvider;
 
-    private ClassHierarchy $classHierarchy;
+    private ClassHierarchy $classHierarchy; // TODO not reflection namespace
 
     /**
      * @var array<string, IdentifierRuleError>
      */
     private array $errors = [];
+
+    /**
+     * typename => data
+     *
+     * @var array<string, array{
+     *      kind: string,
+     *      name: string,
+     *      file: string,
+     *      methods: array<string, array{line: int}>,
+     *      parents: array<string, null>,
+     *      traits: array<string, array<string, array{useFrom?: string, alias?: string}>>,
+     *      interfaces: array<string, null>
+     * }>
+     */
+    private array $typeDefinitions = [];
 
     /**
      * @var list<EntrypointProvider>
@@ -73,43 +87,35 @@ class DeadMethodRule implements Rule
             return [];
         }
 
-        $classDeclarationData = $node->get(ClassDefinitionCollector::class);
-        $methodDeclarationData = $node->get(MethodDefinitionCollector::class);
+        $methodDeclarationData = $node->get(MethodDefinitionCollector::class); // TODO rename to ClassDefinitionCollector?
         $methodCallData = $node->get(MethodCallCollector::class);
 
-        $declaredMethods = [];
+        $declaredMethods = []; // TODO maintain old structure?
 
-        foreach ($classDeclarationData as $file => $classesInFile) {
-            foreach ($classesInFile as $classPairs) {
-                foreach ($classPairs as $ancestor => $descendant) {
-                    $this->classHierarchy->registerClassPair($ancestor, $descendant);
-                }
+        foreach ($methodDeclarationData as $file => $data) {
+            foreach ($data as $typeData) {
+                $typeName = $typeData['name'];
+                $this->typeDefinitions[$typeName] = [
+                    'file' => $file,
+                    ...$typeData,
+                ];
             }
         }
 
-        unset($classDeclarationData);
+        foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
+            $methods = $typeDefinition['methods'];
+            $file = $typeDefinition['file'];
 
-        foreach ($methodDeclarationData as $methodsInFile) {
-            foreach ($methodsInFile as $declared) {
-                foreach ($declared as $serializedMethodDeclaration) {
-                    [
-                        'line' => $line,
-                        'file' => $file,
-                        'definition' => $definition,
-                        'overriddenDefinitions' => $overriddenDefinitions,
-                        'traitOriginDefinition' => $declaringTraitMethodKey,
-                    ] = $this->deserializeMethodDeclaration($serializedMethodDeclaration);
+            $ancestorNames = $this->getAncestorNames($typeName);
 
-                    $declaredMethods[$definition->toString()] = [$file, $line];
+            $this->fillTraitUsages($typeName, $this->getTraitUsages($typeName));
+            $this->fillClassHierarchy($typeName, $ancestorNames);
 
-                    if ($declaringTraitMethodKey !== null) {
-                        $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodKey, $definition);
-                    }
+            foreach ($methods as $methodName => $methodData) {
+                $definition = new MethodDefinition($typeName, $methodName);
+                $declaredMethods[$definition->toString()] = [$file, $methodData['line']];
 
-                    foreach ($overriddenDefinitions as $ancestor) {
-                        $this->classHierarchy->registerMethodPair($ancestor, $definition);
-                    }
-                }
+                $this->fillMethodHierarchy($typeName, $methodName, $ancestorNames);
             }
         }
 
@@ -146,6 +152,65 @@ class DeadMethodRule implements Rule
         return array_values($this->errors);
     }
 
+    /**
+     * @param list<string> $ancestorNames
+     */
+    private function fillMethodHierarchy(string $typeName, string $methodName, array $ancestorNames): void
+    {
+        foreach ($ancestorNames as $ancestorName) {
+            if (isset($this->typeDefinitions[$ancestorName]['methods'][$methodName])) {
+                $this->classHierarchy->registerMethodPair(
+                    new MethodDefinition($ancestorName, $methodName),
+                    new MethodDefinition($typeName, $methodName),
+                );
+            }
+
+            $this->fillMethodHierarchy(
+                $typeName,
+                $methodName,
+                $this->getAncestorNames($ancestorName),
+            );
+        }
+    }
+
+    /**
+     * @param array<string, array<string, array{useFrom?: string, alias?: string}>> $usedTraits
+     */
+    private function fillTraitUsages(string $typeName, array $usedTraits): void
+    {
+        foreach ($usedTraits as $traitName => $adaptations) {
+            $traitMethods = array_keys($this->typeDefinitions[$traitName]['methods'] ?? []);
+
+            foreach ($traitMethods as $traitMethod) {
+                if (isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])) {
+                    continue; // overridden trait method, thus not used
+                }
+
+                if (isset($adaptations['useFrom'])) {
+                    continue; // TODO
+                }
+
+                $declaringTraitMethodDefinition = new MethodDefinition($traitName, $traitMethod);
+                $usedTraitMethodDefinition = new MethodDefinition($typeName, $traitMethod /* TODO or alias */);
+                $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
+            }
+
+            $this->fillTraitUsages($typeName, $this->getTraitUsages($traitName));
+        }
+    }
+
+    /**
+     * @param list<string> $ancestorNames
+     */
+    private function fillClassHierarchy(string $typeName, array $ancestorNames): void
+    {
+        foreach ($ancestorNames as $ancestorName) {
+            $this->classHierarchy->registerClassPair($ancestorName, $typeName);
+
+            $this->fillClassHierarchy($typeName, $this->getAncestorNames($ancestorName));
+        }
+    }
+
     private function isAnonymousClass(Call $call): bool
     {
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
@@ -162,8 +227,8 @@ class DeadMethodRule implements Rule
         $result = [$definition];
 
         if ($call->possibleDescendantCall) {
-            foreach ($this->classHierarchy->getMethodDescendants($definition) as $descendant) {
-                $result[] = $descendant;
+            foreach ($this->classHierarchy->getClassDescendants($definition->className) as $descendantName) {
+                $result[] = new MethodDefinition($descendantName, $definition->methodName);
             }
         }
 
@@ -242,23 +307,23 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @param array{line: int, file: string, definition: string, overriddenDefinitions: list<string>, traitOriginDefinition: string|null} $serializedMethodDeclaration
-     * @return array{line: int, file: string, definition: MethodDefinition, overriddenDefinitions: list<MethodDefinition>, traitOriginDefinition: MethodDefinition|null}
+     * @return list<string>
      */
-    private function deserializeMethodDeclaration(array $serializedMethodDeclaration): array
+    private function getAncestorNames(string $typeName): array
     {
-        return [
-            'line' => $serializedMethodDeclaration['line'],
-            'file' => $serializedMethodDeclaration['file'],
-            'definition' => MethodDefinition::fromString($serializedMethodDeclaration['definition']),
-            'overriddenDefinitions' => array_map(
-                static fn (string $definition) => MethodDefinition::fromString($definition),
-                $serializedMethodDeclaration['overriddenDefinitions'],
-            ),
-            'traitOriginDefinition' => $serializedMethodDeclaration['traitOriginDefinition'] !== null
-                ? MethodDefinition::fromString($serializedMethodDeclaration['traitOriginDefinition'])
-                : null,
-        ];
+        return array_merge(
+            array_keys($this->typeDefinitions[$typeName]['parents'] ?? []),
+            array_keys($this->typeDefinitions[$typeName]['traits'] ?? []),
+            array_keys($this->typeDefinitions[$typeName]['interfaces'] ?? []),
+        );
+    }
+
+    /**
+     * @return array<string, array<string, array{useFrom?: string, alias?: string}>>
+     */
+    private function getTraitUsages(string $typeName): array
+    {
+        return $this->typeDefinitions[$typeName]['traits'] ?? [];
     }
 
 }
