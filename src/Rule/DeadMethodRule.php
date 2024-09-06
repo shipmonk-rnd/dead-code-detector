@@ -197,7 +197,7 @@ class DeadMethodRule implements Rule
 
             $this->errors[$declaringTraitMethodKey] = RuleErrorBuilder::message("Unused {$declaringTraitMethodKey}")
                 ->file($declaringTraitReflection->getFileName()) // @phpstan-ignore-line
-                ->line($declaringTraitReflection->getMethod($methodDefinition->methodName)->getStartLine()) // @phpstan-ignore-line
+                ->line($declaringTraitReflection->getMethod($declaringTraitMethodDefinition->methodName)->getStartLine()) // @phpstan-ignore-line
                 ->identifier('shipmonk.deadMethod')
                 ->build();
 
