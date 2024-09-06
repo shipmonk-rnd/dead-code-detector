@@ -91,14 +91,19 @@ class DeadMethodRule implements Rule
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
 
-        $declaredMethods = []; // TODO maintain old structure?
+        $declaredMethods = [];
 
         foreach ($methodDeclarationData as $file => $data) {
             foreach ($data as $typeData) {
                 $typeName = $typeData['name'];
                 $this->typeDefinitions[$typeName] = [
+                    'kind' => $typeData['kind'],
+                    'name' => $typeName,
                     'file' => $file,
-                    ...$typeData,
+                    'methods' => $typeData['methods'],
+                    'parents' => $typeData['parents'],
+                    'traits' => $typeData['traits'],
+                    'interfaces' => $typeData['interfaces'],
                 ];
             }
         }
