@@ -3,12 +3,12 @@
 namespace DeadTrait16;
 
 trait A {
-    public function method() {} // error: Unused DeadTrait16\A::method
+    public function method() {}
 }
 
 class TraitAliases {
     use A {
-        method as aliased; // trait name missing in old name, not supported yet
+        method as aliased;
     }
 }
 

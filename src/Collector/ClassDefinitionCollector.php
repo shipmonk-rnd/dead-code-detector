@@ -140,10 +140,6 @@ class ClassDefinitionCollector implements Collector
             }
 
             foreach ($traitUse->adaptations as $adaptation) {
-                if ($adaptation->trait === null) {
-                    continue; // not supported (it is undocumented, so nobody actually use it)
-                }
-
                 if ($adaptation instanceof Precedence) {
                     foreach ($adaptation->insteadof as $insteadof) {
                         $traits[$insteadof->toString()]['excluded'][] = $adaptation->method->toString();
@@ -151,7 +147,14 @@ class ClassDefinitionCollector implements Collector
                 }
 
                 if ($adaptation instanceof Alias && $adaptation->newName !== null) {
-                    $traits[$adaptation->trait->toString()]['aliases'][$adaptation->method->toString()] = $adaptation->newName->toString();
+                    if ($adaptation->trait === null) {
+                        // assign alias to all traits, wrong ones are eliminated in Rule logic
+                        foreach ($traitUse->traits as $trait) {
+                            $traits[$trait->toString()]['aliases'][$adaptation->method->toString()] = $adaptation->newName->toString();
+                        }
+                    } else {
+                        $traits[$adaptation->trait->toString()]['aliases'][$adaptation->method->toString()] = $adaptation->newName->toString();
+                    }
                 }
             }
         }

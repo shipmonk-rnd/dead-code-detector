@@ -9,6 +9,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
@@ -285,10 +286,13 @@ class DeadMethodRule implements Rule
             }
         }
 
-        // @phpstan-ignore missingType.checkedException (method should exist)
-        $methodReflection = $reflection
-            ->getNativeReflection()
-            ->getMethod($methodDefinition->methodName);
+        try {
+            $methodReflection = $reflection
+                ->getNativeReflection()
+                ->getMethod($methodDefinition->methodName);
+        } catch (ReflectionException $e) {
+            return false; // to be removed once https://github.com/Roave/BetterReflection/pull/1453 is fixed
+        }
 
         foreach ($this->entrypointProviders as $entrypointProvider) {
             if ($entrypointProvider->isEntrypoint($methodReflection)) {
