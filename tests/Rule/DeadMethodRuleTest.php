@@ -12,8 +12,8 @@ use PHPStan\Symfony\ServiceDefinition;
 use PHPStan\Symfony\ServiceMap;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
-use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
@@ -53,7 +53,7 @@ class DeadMethodRuleTest extends RuleTestCase
     protected function getCollectors(): array
     {
         return [
-            new MethodDefinitionCollector(),
+            new ClassDefinitionCollector(),
             new MethodCallCollector(),
         ];
     }

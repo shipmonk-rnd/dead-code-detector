@@ -9,8 +9,8 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
-use ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
@@ -88,7 +88,7 @@ class DeadMethodRule implements Rule
             return [];
         }
 
-        $methodDeclarationData = $node->get(MethodDefinitionCollector::class); // TODO rename to ClassDefinitionCollector?
+        $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
 
         $declaredMethods = []; // TODO maintain old structure?

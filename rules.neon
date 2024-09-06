@@ -43,7 +43,7 @@ services:
             - phpstan.collector
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
+        class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
 

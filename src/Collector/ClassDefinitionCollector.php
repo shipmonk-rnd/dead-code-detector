@@ -30,7 +30,7 @@ use function strpos;
  *       interfaces: array<string, null>,
  *  }>
  */
-class MethodDefinitionCollector implements Collector
+class ClassDefinitionCollector implements Collector
 {
 
     public function getNodeType(): string
