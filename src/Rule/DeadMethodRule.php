@@ -115,8 +115,6 @@ class DeadMethodRule implements Rule
             foreach ($methods as $methodName => $methodData) {
                 $definition = new MethodDefinition($typeName, $methodName);
                 $declaredMethods[$definition->toString()] = [$file, $methodData['line']];
-
-                $this->fillMethodHierarchy($typeName, $methodName, $ancestorNames);
             }
         }
 
@@ -151,27 +149,6 @@ class DeadMethodRule implements Rule
         }
 
         return array_values($this->errors);
-    }
-
-    /**
-     * @param list<string> $ancestorNames
-     */
-    private function fillMethodHierarchy(string $typeName, string $methodName, array $ancestorNames): void
-    {
-        foreach ($ancestorNames as $ancestorName) {
-            if (isset($this->typeDefinitions[$ancestorName]['methods'][$methodName])) {
-                $this->classHierarchy->registerMethodPair(
-                    new MethodDefinition($ancestorName, $methodName),
-                    new MethodDefinition($typeName, $methodName),
-                );
-            }
-
-            $this->fillMethodHierarchy(
-                $typeName,
-                $methodName,
-                $this->getAncestorNames($ancestorName),
-            );
-        }
     }
 
     /**

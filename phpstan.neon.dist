@@ -5,7 +5,7 @@ includes:
     - ./vendor/phpstan/phpstan-phpunit/extension.neon
     - ./vendor/phpstan/phpstan-phpunit/rules.neon
     - ./vendor/shipmonk/phpstan-rules/rules.neon
-    #- ./rules.neon
+    - ./rules.neon
 
 parameters:
     paths:

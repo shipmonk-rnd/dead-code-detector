@@ -16,13 +16,6 @@ class ClassHierarchy
     private array $classDescendants = [];
 
     /**
-     * parentMethodKey => childrenMethodKey[]
-     *
-     * @var array<string, list<MethodDefinition>>
-     */
-    private array $methodDescendants = [];
-
-    /**
      * traitMethodKey => traitUserMethodKey[]
      *
      * @var array<string, list<MethodDefinition>>
@@ -39,11 +32,6 @@ class ClassHierarchy
     public function registerClassPair(string $ancestorName, string $descendantName): void
     {
         $this->classDescendants[$ancestorName][$descendantName] = true;
-    }
-
-    public function registerMethodPair(MethodDefinition $ancestor, MethodDefinition $descendant): void
-    {
-        $this->methodDescendants[$ancestor->toString()][] = $descendant;
     }
 
     public function registerMethodTraitUsage(
@@ -63,14 +51,6 @@ class ClassHierarchy
         return isset($this->classDescendants[$className])
             ? array_keys($this->classDescendants[$className])
             : [];
-    }
-
-    /**
-     * @return list<MethodDefinition>
-     */
-    public function getMethodDescendants(MethodDefinition $definition): array
-    {
-        return $this->methodDescendants[$definition->toString()] ?? [];
     }
 
     /**
