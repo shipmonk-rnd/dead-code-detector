@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Reflection;
+namespace ShipMonk\PHPStan\DeadCode\Hierarchy;
 
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use function array_keys;

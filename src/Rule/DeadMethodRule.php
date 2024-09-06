@@ -13,8 +13,8 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
+use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use function array_keys;
 use function array_merge;
 use function array_values;
@@ -29,7 +29,7 @@ class DeadMethodRule implements Rule
 
     private ReflectionProvider $reflectionProvider;
 
-    private ClassHierarchy $classHierarchy; // TODO not reflection namespace
+    private ClassHierarchy $classHierarchy;
 
     /**
      * @var array<string, IdentifierRuleError>

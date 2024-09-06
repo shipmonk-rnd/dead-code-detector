@@ -14,6 +14,7 @@ use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
@@ -21,7 +22,6 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
 use function is_array;
 use const PHP_VERSION_ID;
 

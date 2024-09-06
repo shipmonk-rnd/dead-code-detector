@@ -1,6 +1,6 @@
 services:
     -
-        class: ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy
+        class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
