@@ -1,6 +1,6 @@
 {
     "name": "shipmonk/dead-code-detector",
-    "description": "PHPStan rules and collectors to find dead and unused code",
+    "description": "Dead code detector to find unused PHP code via PHPStan extension.",
     "license": [
         "MIT"
     ],
