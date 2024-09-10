@@ -53,6 +53,11 @@ class DeadMethodRule implements Rule
     private array $typeDefinitions = [];
 
     /**
+     * @var array<string, list<MethodDefinition>>
+     */
+    private array $methodsToMarkAsUsedCache = [];
+
+    /**
      * @var list<EntrypointProvider>
      */
     private array $entrypointProviders;
@@ -216,6 +221,10 @@ class DeadMethodRule implements Rule
      */
     private function getMethodsToMarkAsUsed(Call $call): array
     {
+        if (isset($this->methodsToMarkAsUsedCache[$call->toString()])) {
+            return $this->methodsToMarkAsUsedCache[$call->toString()];
+        }
+
         $definition = $call->getDefinition();
 
         $result = [$definition];
@@ -238,6 +247,8 @@ class DeadMethodRule implements Rule
                 );
             }
         }
+
+        $this->methodsToMarkAsUsedCache[$call->toString()] = $result;
 
         return $result;
     }
