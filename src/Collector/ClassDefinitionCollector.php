@@ -64,7 +64,7 @@ class ClassDefinitionCollector implements Collector
         $methods = [];
 
         foreach ($node->getMethods() as $method) {
-            if ($this->isUnsupportedMethod($method)) {
+            if ($this->isUnsupportedMethod($node, $method)) {
                 continue;
             }
 
@@ -163,7 +163,7 @@ class ClassDefinitionCollector implements Collector
         return $traits;
     }
 
-    private function isUnsupportedMethod(ClassMethod $method): bool
+    private function isUnsupportedMethod(ClassLike $class, ClassMethod $method): bool
     {
         $methodName = $method->name->toString();
 
@@ -176,6 +176,12 @@ class ClassDefinitionCollector implements Collector
         }
 
         if ($methodName === '__construct' && $method->isPrivate()) { // e.g. classes with "denied" instantiation
+            return true;
+        }
+
+        // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
+        // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
+        if ($class instanceof Trait_ && $method->isAbstract()) {
             return true;
         }
 
