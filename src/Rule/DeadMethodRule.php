@@ -229,11 +229,7 @@ class DeadMethodRule implements Rule
             $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
 
             if ($traitMethodDefinition !== null) {
-                $result = array_merge(
-                    $result,
-                    [$traitMethodDefinition],
-                    $this->classHierarchy->getMethodTraitUsages($traitMethodDefinition),
-                );
+                $result[] = $traitMethodDefinition;
             }
         }
 
