@@ -173,10 +173,7 @@ class DeadMethodRule implements Rule
             $excludedMethods = $adaptations['excluded'] ?? [];
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
-                if (
-                    isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])
-                    && !$traitMethodData['abstract']
-                ) {
+                if (isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])) {
                     continue; // overridden trait method, thus not used
                 }
 
