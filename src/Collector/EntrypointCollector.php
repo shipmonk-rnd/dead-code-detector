@@ -12,7 +12,7 @@ use PHPStan\Reflection\MethodReflection;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 
 /**
- * @implements Collector<InClassNode, list<string>>
+ * @implements Collector<InClassNode, list<string>|null>
  */
 class EntrypointCollector implements Collector
 {
@@ -39,12 +39,12 @@ class EntrypointCollector implements Collector
 
     /**
      * @param InClassNode $node
-     * @return list<string>
+     * @return list<string>|null
      */
     public function processNode(
         Node $node,
         Scope $scope
-    ): array
+    ): ?array
     {
         $entrypoints = [];
 
@@ -54,7 +54,7 @@ class EntrypointCollector implements Collector
             }
         }
 
-        return $entrypoints;
+        return $entrypoints === [] ? null : $entrypoints;
     }
 
     private function getRealDeclaringMethodKey(
