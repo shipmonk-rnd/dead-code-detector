@@ -6,19 +6,16 @@ use Composer\InstalledVersions;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
+use PHPStan\Reflection\ClassReflection;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use function array_merge;
 use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitEntrypointProvider extends MethodBasedEntrypointProvider // TODO better not to extend this one
+class PhpUnitEntrypointProvider implements EntrypointProvider
 {
-
-    /**
-     * @var array<string, array<string, bool>>
-     */
-    private array $dataProviders = [];
 
     private bool $enabled;
 
@@ -33,24 +30,44 @@ class PhpUnitEntrypointProvider extends MethodBasedEntrypointProvider // TODO be
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function getEntrypoints(ClassReflection $classReflection): array
     {
         if (!$this->enabled) {
-            return false;
+            return [];
         }
 
-        $this->gatherDataProviders($method);
+        if (!$classReflection->is(TestCase::class)) {
+            return [];
+        }
 
-        return $this->isTestCaseMethod($method)
-            || $this->isDataProviderMethod($method);
+        $entrypoints = [];
+
+        foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() !== $classReflection->getName()) {
+                continue;
+            }
+
+            $dataProviders = array_merge(
+                $this->getDataProvidersFromAnnotations($method->getDocComment()),
+                $this->getDataProvidersFromAttributes($method),
+            );
+
+            foreach ($dataProviders as $dataProvider) {
+                if ($classReflection->hasNativeMethod($dataProvider)) {
+                    $entrypoints[] = $classReflection->getNativeMethod($dataProvider);
+                }
+            }
+
+            if ($this->isTestCaseMethod($method)) {
+                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+            }
+        }
+
+        return $entrypoints;
     }
 
     private function isTestCaseMethod(ReflectionMethod $method): bool
     {
-        if (!$method->getDeclaringClass()->isSubclassOf(TestCase::class)) {
-            return false;
-        }
-
         return strpos($method->getName(), 'test') === 0
             || $this->hasAnnotation($method, '@test')
             || $this->hasAnnotation($method, '@after')
@@ -68,80 +85,48 @@ class PhpUnitEntrypointProvider extends MethodBasedEntrypointProvider // TODO be
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PreCondition');
     }
 
-    private function isDataProviderMethod(ReflectionMethod $originalMethod): bool
-    {
-        if (!$originalMethod->getDeclaringClass()->isSubclassOf(TestCase::class)) {
-            return false;
-        }
-
-        $declaringClass = $originalMethod->getDeclaringClass();
-        $declaringClassName = $declaringClass->getName();
-
-        return $this->dataProviders[$declaringClassName][$originalMethod->getName()] ?? false;
-    }
-
-    private function gatherDataProviders(ReflectionMethod $originalMethod): void
-    {
-        if (!$originalMethod->getDeclaringClass()->isSubclassOf(TestCase::class)) {
-            return;
-        }
-
-        $declaringClass = $originalMethod->getDeclaringClass();
-        $declaringClassName = $declaringClass->getName();
-
-        if (isset($this->dataProviders[$declaringClassName])) {
-            return;
-        }
-
-        foreach ($declaringClass->getMethods() as $method) {
-            if ($method->getDeclaringClass()->getName() !== $declaringClassName) {
-                continue; // dont iterate parents
-            }
-
-            foreach ($this->getDataProvidersFromAnnotations($method->getDocComment()) as $dataProvider) {
-                $this->dataProviders[$declaringClassName][$dataProvider] = true;
-            }
-
-            foreach ($this->getDataProvidersFromAttributes($method) as $dataProvider) {
-                $this->dataProviders[$declaringClassName][$dataProvider] = true;
-            }
-        }
-    }
-
     /**
      * @param false|string $rawPhpDoc
-     * @return iterable<string>
+     * @return list<string>
      */
-    private function getDataProvidersFromAnnotations($rawPhpDoc): iterable
+    private function getDataProvidersFromAnnotations($rawPhpDoc): array
     {
-        if ($rawPhpDoc === false) {
-            return;
+        if ($rawPhpDoc === false || strpos($rawPhpDoc, '@dataProvider') === false) {
+            return [];
         }
 
         $tokens = new TokenIterator($this->lexer->tokenize($rawPhpDoc));
         $phpDoc = $this->phpDocParser->parse($tokens);
 
+        $result = [];
+
         foreach ($phpDoc->getTagsByName('@dataProvider') as $tag) {
-            yield (string) $tag->value;
+            $result[] = (string) $tag->value;
         }
+
+        return $result;
     }
 
     /**
-     * @return iterable<string>
+     * @return list<string>
      */
-    private function getDataProvidersFromAttributes(ReflectionMethod $method): iterable
+    private function getDataProvidersFromAttributes(ReflectionMethod $method): array
     {
         if (PHP_VERSION_ID < 8_00_00) {
-            return;
+            return [];
         }
+
+        $result = [];
 
         foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
             $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
 
             if (is_string($methodName)) {
-                yield $methodName;
+                $result[] = $methodName;
             }
         }
+
+        return $result;
     }
 
     private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
