@@ -36,7 +36,6 @@ class DeadMethodRuleTest extends RuleTestCase
     protected function getRule(): DeadMethodRule
     {
         return new DeadMethodRule(
-            self::getContainer()->getByType(ReflectionProvider::class),
             new ClassHierarchy(),
         );
     }

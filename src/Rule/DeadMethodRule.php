@@ -5,7 +5,6 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
-use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -25,8 +24,6 @@ use function strpos;
  */
 class DeadMethodRule implements Rule
 {
-
-    private ReflectionProvider $reflectionProvider;
 
     private ClassHierarchy $classHierarchy;
 
@@ -51,11 +48,9 @@ class DeadMethodRule implements Rule
     private array $methodsToMarkAsUsedCache = [];
 
     public function __construct(
-        ReflectionProvider $reflectionProvider,
         ClassHierarchy $classHierarchy
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
         $this->classHierarchy = $classHierarchy;
     }
 
