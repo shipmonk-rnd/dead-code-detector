@@ -4,21 +4,16 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
-use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
-use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider
 {
-
-    private ReflectionProvider $reflectionProvider;
-
-    private ClassHierarchy $classHierarchy;
 
     private bool $enabled;
 
@@ -28,14 +23,10 @@ class SymfonyEntrypointProvider implements EntrypointProvider
     private array $dicClasses = [];
 
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        ClassHierarchy $classHierarchy,
         ?ServiceMapFactory $serviceMapFactory,
         ?bool $enabled
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
-        $this->classHierarchy = $classHierarchy;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
 
         if ($serviceMapFactory !== null) {
@@ -51,7 +42,31 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         }
     }
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function getEntrypoints(ClassReflection $classReflection): array
+    {
+        $nativeReflection = $classReflection->getNativeReflection();
+        $className = $classReflection->getName();
+
+        $entrypoints = [];
+
+        foreach ($nativeReflection->getMethods() as $method) {
+            if ($method->isConstructor() && isset($this->dicClasses[$className])) {
+                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+            }
+
+            if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
+                continue;
+            }
+
+            if ($this->isEntrypointMethod($method)) {
+                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+            }
+        }
+
+        return $entrypoints;
+    }
+
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;
@@ -66,7 +81,6 @@ class SymfonyEntrypointProvider implements EntrypointProvider
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->isConstructorCalledBySymfonyDic($method)
             || $this->isProbablySymfonyListener($methodName);
     }
 
@@ -104,37 +118,6 @@ class SymfonyEntrypointProvider implements EntrypointProvider
         } catch (IdentifierNotFound $e) {
             return false; // prevent https://github.com/phpstan/phpstan/issues/9618
         }
-    }
-
-    private function isConstructorCalledBySymfonyDic(ReflectionMethod $method): bool
-    {
-        if (!$method->isConstructor()) {
-            return false;
-        }
-
-        $declaringClass = $method->getDeclaringClass()->getName();
-
-        if (isset($this->dicClasses[$declaringClass])) {
-            return true;
-        }
-
-        foreach ($this->classHierarchy->getClassDescendants($declaringClass) as $descendant) {
-            $descendantReflection = $this->reflectionProvider->getClass($descendant);
-
-            if (!$descendantReflection->hasConstructor()) {
-                continue;
-            }
-
-            if ($descendantReflection->getConstructor()->getDeclaringClass()->getName() === $descendantReflection->getName()) {
-                return false;
-            }
-
-            if (isset($this->dicClasses[$descendant])) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function isSymfonyInstalled(): bool

@@ -11,7 +11,7 @@ use function strlen;
 use function strpos;
 use function substr;
 
-class VendorEntrypointProvider implements EntrypointProvider
+class VendorEntrypointProvider extends MethodBasedEntrypointProvider
 {
 
     /**
@@ -27,7 +27,7 @@ class VendorEntrypointProvider implements EntrypointProvider
         $this->enabled = $enabled;
     }
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;

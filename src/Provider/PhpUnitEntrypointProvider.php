@@ -12,7 +12,7 @@ use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitEntrypointProvider implements EntrypointProvider
+class PhpUnitEntrypointProvider extends MethodBasedEntrypointProvider // TODO better not to extend this one
 {
 
     /**
@@ -33,7 +33,7 @@ class PhpUnitEntrypointProvider implements EntrypointProvider
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;

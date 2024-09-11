@@ -2,13 +2,17 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use ReflectionMethod;
+use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\MethodReflection;
 
 interface EntrypointProvider
 {
 
     public const TAG_ENTRYPOINT_PROVIDER = 'shipmonk.deadCode.entrypointProvider';
 
-    public function isEntrypoint(ReflectionMethod $method): bool;
+    /**
+     * @return list<MethodReflection>
+     */
+    public function getEntrypoints(ClassReflection $classReflection): array;
 
 }

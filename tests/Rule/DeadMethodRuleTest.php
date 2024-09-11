@@ -13,10 +13,12 @@ use PHPStan\Symfony\ServiceMap;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MethodBasedEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
@@ -31,19 +33,11 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
-    private ClassHierarchy $classHierarchy;
-
-    public function setUp(): void
-    {
-        $this->classHierarchy = new ClassHierarchy();
-    }
-
     protected function getRule(): DeadMethodRule
     {
         return new DeadMethodRule(
             self::getContainer()->getByType(ReflectionProvider::class),
-            $this->classHierarchy,
-            $this->getEntrypointProviders(),
+            new ClassHierarchy(),
         );
     }
 
@@ -53,6 +47,7 @@ class DeadMethodRuleTest extends RuleTestCase
     protected function getCollectors(): array
     {
         return [
+            new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
             new MethodCallCollector(),
         ];
@@ -136,10 +131,10 @@ class DeadMethodRuleTest extends RuleTestCase
     private function getEntrypointProviders(): array
     {
         return [
-            new class implements EntrypointProvider
+            new class extends MethodBasedEntrypointProvider
             {
 
-                public function isEntrypoint(ReflectionMethod $method): bool
+                public function isEntrypointMethod(ReflectionMethod $method): bool
                 {
                     return $method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint';
                 }
@@ -154,8 +149,6 @@ class DeadMethodRuleTest extends RuleTestCase
                 self::getContainer()->getByType(Lexer::class),
             ),
             new SymfonyEntrypointProvider(
-                self::getContainer()->getByType(ReflectionProvider::class),
-                $this->classHierarchy,
                 $this->createServiceMapFactoryMock(),
                 true,
             ),

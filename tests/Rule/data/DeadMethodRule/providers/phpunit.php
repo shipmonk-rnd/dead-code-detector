@@ -16,7 +16,9 @@ trait TraitTestCase {
 
 class SomeTest extends TestCase
 {
-    use TraitTestCase;
+    use TraitTestCase {
+        callBefore as anotherCallBefore;
+    }
 
     #[DataProvider('provideFromAttribute')]
     public function testFoo(string $arg): void
