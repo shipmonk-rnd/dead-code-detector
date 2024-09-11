@@ -10,7 +10,7 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
-use ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy;
+use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use const PHP_VERSION_ID;
 
 class SymfonyEntrypointProvider implements EntrypointProvider

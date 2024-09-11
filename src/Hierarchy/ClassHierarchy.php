@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Reflection;
+namespace ShipMonk\PHPStan\DeadCode\Hierarchy;
 
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use function array_keys;
@@ -14,13 +14,6 @@ class ClassHierarchy
      * @var array<string, array<string, true>>
      */
     private array $classDescendants = [];
-
-    /**
-     * parentMethodKey => childrenMethodKey[]
-     *
-     * @var array<string, list<MethodDefinition>>
-     */
-    private array $methodDescendants = [];
 
     /**
      * traitMethodKey => traitUserMethodKey[]
@@ -41,11 +34,6 @@ class ClassHierarchy
         $this->classDescendants[$ancestorName][$descendantName] = true;
     }
 
-    public function registerMethodPair(MethodDefinition $ancestor, MethodDefinition $descendant): void
-    {
-        $this->methodDescendants[$ancestor->toString()][] = $descendant;
-    }
-
     public function registerMethodTraitUsage(
         MethodDefinition $declaringTraitMethodKey,
         MethodDefinition $traitUsageMethodKey
@@ -63,14 +51,6 @@ class ClassHierarchy
         return isset($this->classDescendants[$className])
             ? array_keys($this->classDescendants[$className])
             : [];
-    }
-
-    /**
-     * @return list<MethodDefinition>
-     */
-    public function getMethodDescendants(MethodDefinition $definition): array
-    {
-        return $this->methodDescendants[$definition->toString()] ?? [];
     }
 
     /**

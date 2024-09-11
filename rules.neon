@@ -1,6 +1,6 @@
 services:
     -
-        class: ShipMonk\PHPStan\DeadCode\Reflection\ClassHierarchy
+        class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
@@ -44,11 +44,6 @@ services:
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
-        tags:
-            - phpstan.collector
-
-    -
-        class: ShipMonk\PHPStan\DeadCode\Collector\MethodDefinitionCollector
         tags:
             - phpstan.collector
 
