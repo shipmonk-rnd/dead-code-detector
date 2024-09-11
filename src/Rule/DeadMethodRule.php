@@ -18,7 +18,6 @@ use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use function array_keys;
 use function array_merge;
-use function array_values;
 use function in_array;
 use function strpos;
 
@@ -31,11 +30,6 @@ class DeadMethodRule implements Rule
     private ReflectionProvider $reflectionProvider;
 
     private ClassHierarchy $classHierarchy;
-
-    /**
-     * @var array<string, IdentifierRuleError>
-     */
-    private array $errors = [];
 
     /**
      * typename => data
@@ -149,6 +143,8 @@ class DeadMethodRule implements Rule
 
         unset($methodCallData);
 
+        $errors = [];
+
         foreach ($declaredMethods as $definitionString => [$file, $line]) {
             $definition = MethodDefinition::fromString($definitionString);
 
@@ -156,10 +152,10 @@ class DeadMethodRule implements Rule
                 continue;
             }
 
-            $this->raiseError($definition, $file, $line);
+            $errors[] = $this->buildError($definition, $file, $line);
         }
 
-        return array_values($this->errors);
+        return $errors;
     }
 
     /**
@@ -253,31 +249,17 @@ class DeadMethodRule implements Rule
         return $result;
     }
 
-    private function raiseError(
+    private function buildError(
         MethodDefinition $methodDefinition,
         string $file,
         int $line
-    ): void
+    ): IdentifierRuleError
     {
-        $declaringTraitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
-
-        if ($declaringTraitMethodDefinition !== null) {
-            $declaringTraitReflection = $this->reflectionProvider->getClass($declaringTraitMethodDefinition->className)->getNativeReflection();
-            $declaringTraitMethodKey = $declaringTraitMethodDefinition->toString();
-
-            $this->errors[$declaringTraitMethodKey] = RuleErrorBuilder::message("Unused {$declaringTraitMethodKey}")
-                ->file($declaringTraitReflection->getFileName()) // @phpstan-ignore-line
-                ->line($declaringTraitReflection->getMethod($methodDefinition->methodName)->getStartLine()) // @phpstan-ignore-line
-                ->identifier('shipmonk.deadMethod')
-                ->build();
-
-        } else {
-            $this->errors[$methodDefinition->toString()] = RuleErrorBuilder::message('Unused ' . $methodDefinition->toString())
-                ->file($file)
-                ->line($line)
-                ->identifier('shipmonk.deadMethod')
-                ->build();
-        }
+        return RuleErrorBuilder::message('Unused ' . $methodDefinition->toString())
+            ->file($file)
+            ->line($line)
+            ->identifier('shipmonk.deadMethod')
+            ->build();
     }
 
     private function isEntryPoint(MethodDefinition $methodDefinition): bool
