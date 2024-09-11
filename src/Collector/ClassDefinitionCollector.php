@@ -24,7 +24,7 @@ use function strpos;
  * @implements Collector<ClassLike, array{
  *       kind: string,
  *       name: string,
- *       methods: array<string, array{line: int}>,
+ *       methods: array<string, array{line: int, abstract: bool}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
  *       interfaces: array<string, null>,
@@ -43,7 +43,7 @@ class ClassDefinitionCollector implements Collector
      * @return array{
      *      kind: string,
      *      name: string,
-     *      methods: array<string, array{line: int}>,
+     *      methods: array<string, array{line: int, abstract: bool}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>,
@@ -70,6 +70,7 @@ class ClassDefinitionCollector implements Collector
 
             $methods[$method->name->toString()] = [
                 'line' => $method->getStartLine(),
+                'abstract' => $method->isAbstract() || $node instanceof Interface_,
             ];
         }
 
