@@ -44,7 +44,7 @@ class DeadMethodRule implements Rule
      *      kind: string,
      *      name: string,
      *      file: string,
-     *      methods: array<string, array{line: int}>,
+     *      methods: array<string, array{line: int, abstract: bool}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>
@@ -168,12 +168,15 @@ class DeadMethodRule implements Rule
     private function fillTraitUsages(string $typeName, array $usedTraits): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
-            $traitMethods = array_keys($this->typeDefinitions[$traitName]['methods'] ?? []);
+            $traitMethods = $this->typeDefinitions[$traitName]['methods'] ?? [];
 
             $excludedMethods = $adaptations['excluded'] ?? [];
 
-            foreach ($traitMethods as $traitMethod) {
-                if (isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])) {
+            foreach ($traitMethods as $traitMethod => $traitMethodData) {
+                if (
+                    isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])
+                    && !$traitMethodData['abstract']
+                ) {
                     continue; // overridden trait method, thus not used
                 }
 
