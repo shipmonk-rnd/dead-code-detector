@@ -9,7 +9,7 @@ use PHPStan\BetterReflection\Reflection\ReflectionMethod as BetterReflectionMeth
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\MethodReflection;
-use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 
 /**
  * @implements Collector<InClassNode, list<string>>
@@ -18,12 +18,12 @@ class EntrypointCollector implements Collector
 {
 
     /**
-     * @var list<EntrypointProvider>
+     * @var list<MethodEntrypointProvider>
      */
     private array $entrypointProviders;
 
     /**
-     * @param list<EntrypointProvider> $entrypointProviders
+     * @param list<MethodEntrypointProvider> $entrypointProviders
      */
     public function __construct(
         array $entrypointProviders

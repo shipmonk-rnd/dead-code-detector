@@ -19,7 +19,7 @@ use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
 
-class NetteEntrypointProvider extends MethodBasedEntrypointProvider
+class NetteEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     private ReflectionProvider $reflectionProvider;

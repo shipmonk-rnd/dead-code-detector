@@ -41,6 +41,6 @@ parameters:
                 PHPStan\Rules\Rule: Rule
                 PHPStan\Collectors\Collector: Collector
                 ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase: RuleTest
-                ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider: EntrypointProvider
+                ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider: EntrypointProvider
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4

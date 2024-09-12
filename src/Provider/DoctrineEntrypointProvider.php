@@ -7,7 +7,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use const PHP_VERSION_ID;
 
-class DoctrineEntrypointProvider extends MethodBasedEntrypointProvider
+class DoctrineEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     private bool $enabled;

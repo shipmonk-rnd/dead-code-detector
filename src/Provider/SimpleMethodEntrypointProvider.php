@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\Reflection\ClassReflection;
 use ReflectionMethod;
 
-abstract class MethodBasedEntrypointProvider implements EntrypointProvider
+abstract class SimpleMethodEntrypointProvider implements MethodEntrypointProvider
 {
 
     public function getEntrypoints(ClassReflection $classReflection): array

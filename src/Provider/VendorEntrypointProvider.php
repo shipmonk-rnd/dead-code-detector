@@ -11,7 +11,7 @@ use function strlen;
 use function strpos;
 use function substr;
 
-class VendorEntrypointProvider extends MethodBasedEntrypointProvider
+class VendorEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     /**

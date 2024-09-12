@@ -75,9 +75,9 @@ services:
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodBasedEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 
-class ApiOutputEntrypointProvider extends MethodBasedEntrypointProvider
+class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     public function isEntrypointMethod(ReflectionMethod $method): bool

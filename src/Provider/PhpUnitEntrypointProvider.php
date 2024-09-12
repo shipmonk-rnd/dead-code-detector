@@ -14,7 +14,7 @@ use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitEntrypointProvider implements EntrypointProvider
+class PhpUnitEntrypointProvider implements MethodEntrypointProvider
 {
 
     private bool $enabled;

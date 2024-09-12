@@ -12,7 +12,7 @@ use ReflectionMethod;
 use Reflector;
 use const PHP_VERSION_ID;
 
-class SymfonyEntrypointProvider implements EntrypointProvider
+class SymfonyEntrypointProvider implements MethodEntrypointProvider
 {
 
     private bool $enabled;

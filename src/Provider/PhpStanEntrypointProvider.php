@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\DependencyInjection\Container;
 use ReflectionMethod;
 
-class PhpStanEntrypointProvider extends MethodBasedEntrypointProvider
+class PhpStanEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     private bool $enabled;
