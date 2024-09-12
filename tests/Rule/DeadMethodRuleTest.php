@@ -76,6 +76,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
         yield 'abstract-1' => [__DIR__ . '/data/DeadMethodRule/abstract-1.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
+        yield 'clone' => [__DIR__ . '/data/DeadMethodRule/clone.php'];
         yield 'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'];
         yield 'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'];
         yield 'overwriting-2' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-2.php'];

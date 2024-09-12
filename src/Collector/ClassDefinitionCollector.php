@@ -171,8 +171,12 @@ class ClassDefinitionCollector implements Collector
             return true;
         }
 
-        if ($methodName !== '__construct' && strpos($methodName, '__') === 0) { // magic methods like __toString, __clone, __get, __set etc
-            return true;
+        if (
+            strpos($methodName, '__') === 0
+            && $methodName !== '__construct'
+            && $methodName !== '__clone'
+        ) {
+            return true; // magic methods like __toString, __clone, __get, __set etc
         }
 
         if ($methodName === '__construct' && $method->isPrivate()) { // e.g. classes with "denied" instantiation
