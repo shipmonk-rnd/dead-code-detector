@@ -100,10 +100,10 @@ class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 ## Limitations:
 
 - Only method calls are detected so far
-  - Including **constructors**, static methods, trait methods, interface methods, first class callables, etc.
+  - Including **constructors**, static methods, trait methods, interface methods, first class callables, clone, etc.
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Anonymous classes are ignored ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
-  - Does not check magic methods (`__get`, `__set` etc)
+  - Does not check most magic methods (`__get`, `__set` etc)
   - Call-graph not implemented so far
     - No transitive check is performed (dead method called only from dead method)
     - No dead cycles are detected (e.g. dead method calling itself)

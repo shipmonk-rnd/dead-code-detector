@@ -7,6 +7,7 @@ use PhpParser\Node\Attribute;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\CallLike;
+use PhpParser\Node\Expr\Clone_;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -65,6 +66,10 @@ class MethodCallCollector implements Collector
 
         if ($node instanceof Array_) {
             $this->registerArrayCallable($node, $scope);
+        }
+
+        if ($node instanceof Clone_) {
+            $this->registerClone($node, $scope);
         }
 
         if ($node instanceof Attribute) {
@@ -182,6 +187,17 @@ class MethodCallCollector implements Collector
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
         $this->callsBuffer[] = new Call($scope->resolveName($node->name), '__construct', false);
+    }
+
+    private function registerClone(Clone_ $node, Scope $scope): void
+    {
+        $methodName = '__clone';
+        $callerType = $scope->getType($node->expr);
+
+        foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
+            $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+            $this->callsBuffer[] = new Call($className, $methodName, true);
+        }
     }
 
     /**
