@@ -2,13 +2,11 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
-use Closure;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
-use PHPStan\BetterReflection\Reflection\ReflectionMethod as BetterReflectionMethod;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
-use PHPStan\Reflection\MethodReflection;
+use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 
 /**
@@ -50,28 +48,11 @@ class EntrypointCollector implements Collector
 
         foreach ($this->entrypointProviders as $entrypointProvider) {
             foreach ($entrypointProvider->getEntrypoints($node->getClassReflection()) as $entrypointMethod) {
-                $entrypoints[] = $this->getRealDeclaringMethodKey($entrypointMethod);
+                $entrypoints[] = (new Call($entrypointMethod->getDeclaringClass()->getName(), $entrypointMethod->getName(), false))->toString();
             }
         }
 
         return $entrypoints === [] ? null : $entrypoints;
-    }
-
-    private function getRealDeclaringMethodKey(
-        MethodReflection $methodReflection
-    ): string
-    {
-        // @phpstan-ignore missingType.checkedException (method should always exist)
-        $nativeReflectionMethod = $methodReflection->getDeclaringClass()->getNativeReflection()->getMethod($methodReflection->getName());
-        $betterReflectionMethod = $nativeReflectionMethod->getBetterReflection();
-        $realDeclaringClass = $betterReflectionMethod->getDeclaringClass();
-
-        // when trait method name is aliased, we need the original name
-        $realName = Closure::bind(function (): string {
-            return $this->name;
-        }, $betterReflectionMethod, BetterReflectionMethod::class)();
-
-        return $realDeclaringClass->getName() . "::$realName";
     }
 
 }

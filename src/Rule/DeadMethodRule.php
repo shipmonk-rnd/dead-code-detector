@@ -131,7 +131,11 @@ class DeadMethodRule implements Rule
         foreach ($entrypointData as $file => $entrypointsInFile) {
             foreach ($entrypointsInFile as $entrypoints) {
                 foreach ($entrypoints as $entrypoint) {
-                    unset($declaredMethods[$entrypoint]);
+                    $call = Call::fromString($entrypoint);
+
+                    foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinition) {
+                        unset($declaredMethods[$methodDefinition->toString()]);
+                    }
                 }
             }
         }
