@@ -5,17 +5,15 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
-use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
-use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
-use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 use function array_keys;
 use function array_merge;
 use function in_array;
@@ -26,8 +24,6 @@ use function strpos;
  */
 class DeadMethodRule implements Rule
 {
-
-    private ReflectionProvider $reflectionProvider;
 
     private ClassHierarchy $classHierarchy;
 
@@ -51,23 +47,11 @@ class DeadMethodRule implements Rule
      */
     private array $methodsToMarkAsUsedCache = [];
 
-    /**
-     * @var list<EntrypointProvider>
-     */
-    private array $entrypointProviders;
-
-    /**
-     * @param list<EntrypointProvider> $entrypointProviders
-     */
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        ClassHierarchy $classHierarchy,
-        array $entrypointProviders
+        ClassHierarchy $classHierarchy
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
         $this->classHierarchy = $classHierarchy;
-        $this->entrypointProviders = $entrypointProviders;
     }
 
     public function getNodeType(): string
@@ -90,6 +74,7 @@ class DeadMethodRule implements Rule
 
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
+        $entrypointData = $node->get(EntrypointCollector::class);
 
         $declaredMethods = [];
 
@@ -143,15 +128,18 @@ class DeadMethodRule implements Rule
 
         unset($methodCallData);
 
+        foreach ($entrypointData as $file => $entrypointsInFile) {
+            foreach ($entrypointsInFile as $entrypoints) {
+                foreach ($entrypoints as $entrypoint) {
+                    unset($declaredMethods[$entrypoint]);
+                }
+            }
+        }
+
         $errors = [];
 
         foreach ($declaredMethods as $definitionString => [$file, $line]) {
             $definition = MethodDefinition::fromString($definitionString);
-
-            if ($this->isEntryPoint($definition)) {
-                continue;
-            }
-
             $errors[] = $this->buildError($definition, $file, $line);
         }
 
@@ -236,11 +224,7 @@ class DeadMethodRule implements Rule
             $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
 
             if ($traitMethodDefinition !== null) {
-                $result = array_merge(
-                    $result,
-                    [$traitMethodDefinition],
-                    $this->classHierarchy->getMethodTraitUsages($traitMethodDefinition),
-                );
+                $result[] = $traitMethodDefinition;
             }
         }
 
@@ -260,40 +244,6 @@ class DeadMethodRule implements Rule
             ->line($line)
             ->identifier('shipmonk.deadMethod')
             ->build();
-    }
-
-    private function isEntryPoint(MethodDefinition $methodDefinition): bool
-    {
-        if (!$this->reflectionProvider->hasClass($methodDefinition->className)) {
-            return false;
-        }
-
-        $reflection = $this->reflectionProvider->getClass($methodDefinition->className);
-
-        // if trait has users, we need to check entrypoint even from their context
-        if ($reflection->isTrait()) {
-            foreach ($this->classHierarchy->getMethodTraitUsages($methodDefinition) as $traitUsage) {
-                if ($this->isEntryPoint($traitUsage)) {
-                    return true;
-                }
-            }
-        }
-
-        try {
-            $methodReflection = $reflection
-                ->getNativeReflection()
-                ->getMethod($methodDefinition->methodName);
-        } catch (ReflectionException $e) {
-            return false; // to be removed once https://github.com/Roave/BetterReflection/pull/1453 is fixed
-        }
-
-        foreach ($this->entrypointProviders as $entrypointProvider) {
-            if ($entrypointProvider->isEntrypoint($methodReflection)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

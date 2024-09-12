@@ -62,24 +62,25 @@ parameters:
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
 - Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
+- You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\MethodBasedEntrypointProvider`
 
 ```neon
 # phpstan.neon.dist
 services:
     -
-        class: App\MyEntrypointProvider
+        class: App\ApiOutputEntrypointProvider
         tags:
             - shipmonk.deadCode.entrypointProvider
 ```
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 
-class MyEntrypointProvider implements EntrypointProvider
+class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->implementsInterface(ApiOutput::class));
     }

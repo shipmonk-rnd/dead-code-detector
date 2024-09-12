@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\DependencyInjection\Container;
 use ReflectionMethod;
 
-class PhpStanEntrypointProvider implements EntrypointProvider
+class PhpStanEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     private bool $enabled;
@@ -18,7 +18,7 @@ class PhpStanEntrypointProvider implements EntrypointProvider
         $this->container = $container;
     }
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;

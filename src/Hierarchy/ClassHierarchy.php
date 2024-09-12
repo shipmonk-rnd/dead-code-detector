@@ -16,13 +16,6 @@ class ClassHierarchy
     private array $classDescendants = [];
 
     /**
-     * traitMethodKey => traitUserMethodKey[]
-     *
-     * @var array<string, list<MethodDefinition>>
-     */
-    private array $methodTraitUsages = [];
-
-    /**
      * traitUserMethodKey => declaringTraitMethodKey
      *
      * @var array<string, MethodDefinition>
@@ -39,7 +32,6 @@ class ClassHierarchy
         MethodDefinition $traitUsageMethodKey
     ): void
     {
-        $this->methodTraitUsages[$declaringTraitMethodKey->toString()][] = $traitUsageMethodKey;
         $this->declaringTraits[$traitUsageMethodKey->toString()] = $declaringTraitMethodKey;
     }
 
@@ -51,14 +43,6 @@ class ClassHierarchy
         return isset($this->classDescendants[$className])
             ? array_keys($this->classDescendants[$className])
             : [];
-    }
-
-    /**
-     * @return list<MethodDefinition>
-     */
-    public function getMethodTraitUsages(MethodDefinition $definition): array
-    {
-        return $this->methodTraitUsages[$definition->toString()] ?? [];
     }
 
     public function getDeclaringTraitMethodDefinition(MethodDefinition $definition): ?MethodDefinition

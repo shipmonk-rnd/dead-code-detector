@@ -46,11 +46,15 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
+    -
+        class: ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector
+        tags:
+            - phpstan.collector
+        arguments:
+            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
-        arguments:
-            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
         tags:
             - phpstan.rules.rule
 

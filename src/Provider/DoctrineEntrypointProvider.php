@@ -7,7 +7,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use const PHP_VERSION_ID;
 
-class DoctrineEntrypointProvider implements EntrypointProvider
+class DoctrineEntrypointProvider extends SimpleMethodEntrypointProvider
 {
 
     private bool $enabled;
@@ -17,7 +17,7 @@ class DoctrineEntrypointProvider implements EntrypointProvider
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
 
-    public function isEntrypoint(ReflectionMethod $method): bool
+    public function isEntrypointMethod(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;
