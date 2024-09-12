@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Hierarchy;
 
-use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use function array_keys;
 
 class ClassHierarchy
@@ -18,7 +17,7 @@ class ClassHierarchy
     /**
      * traitUserMethodKey => declaringTraitMethodKey
      *
-     * @var array<string, MethodDefinition>
+     * @var array<string, string>
      */
     private array $declaringTraits = [];
 
@@ -28,11 +27,11 @@ class ClassHierarchy
     }
 
     public function registerMethodTraitUsage(
-        MethodDefinition $declaringTraitMethodKey,
-        MethodDefinition $traitUsageMethodKey
+        string $declaringTraitMethodKey,
+        string $traitUsageMethodKey
     ): void
     {
-        $this->declaringTraits[$traitUsageMethodKey->toString()] = $declaringTraitMethodKey;
+        $this->declaringTraits[$traitUsageMethodKey] = $declaringTraitMethodKey;
     }
 
     /**
@@ -45,9 +44,9 @@ class ClassHierarchy
             : [];
     }
 
-    public function getDeclaringTraitMethodDefinition(MethodDefinition $definition): ?MethodDefinition
+    public function getDeclaringTraitMethodKey(string $definition): ?string
     {
-        return $this->declaringTraits[$definition->toString()] ?? null;
+        return $this->declaringTraits[$definition] ?? null;
     }
 
 }

@@ -12,7 +12,6 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
-use ShipMonk\PHPStan\DeadCode\Crate\MethodDefinition;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_keys;
 use function array_merge;
@@ -43,7 +42,7 @@ class DeadMethodRule implements Rule
     private array $typeDefinitions = [];
 
     /**
-     * @var array<string, list<MethodDefinition>>
+     * @var array<string, list<string>>
      */
     private array $methodsToMarkAsUsedCache = [];
 
@@ -103,8 +102,8 @@ class DeadMethodRule implements Rule
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
-                $definition = new MethodDefinition($typeName, $methodName);
-                $declaredMethods[$definition->toString()] = [$file, $methodData['line']];
+                $definition = $this->getMethodKey($typeName, $methodName);
+                $declaredMethods[$definition] = [$file, $methodData['line']];
             }
         }
 
@@ -120,7 +119,7 @@ class DeadMethodRule implements Rule
                     }
 
                     foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinitionToMarkAsUsed) {
-                        unset($declaredMethods[$methodDefinitionToMarkAsUsed->toString()]);
+                        unset($declaredMethods[$methodDefinitionToMarkAsUsed]);
                     }
                 }
             }
@@ -134,7 +133,7 @@ class DeadMethodRule implements Rule
                     $call = Call::fromString($entrypoint);
 
                     foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinition) {
-                        unset($declaredMethods[$methodDefinition->toString()]);
+                        unset($declaredMethods[$methodDefinition]);
                     }
                 }
             }
@@ -143,8 +142,7 @@ class DeadMethodRule implements Rule
         $errors = [];
 
         foreach ($declaredMethods as $definitionString => [$file, $line]) {
-            $definition = MethodDefinition::fromString($definitionString);
-            $errors[] = $this->buildError($definition, $file, $line);
+            $errors[] = $this->buildError($definitionString, $file, $line);
         }
 
         return $errors;
@@ -165,12 +163,12 @@ class DeadMethodRule implements Rule
             );
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
-                $declaringTraitMethodDefinition = new MethodDefinition($traitName, $traitMethod);
+                $declaringTraitMethodDefinition = $this->getMethodKey($traitName, $traitMethod);
                 $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
 
                 // both method names need to work
                 if ($aliasMethodName !== null) {
-                    $aliasMethodDefinition = new MethodDefinition($typeName, $aliasMethodName);
+                    $aliasMethodDefinition = $this->getMethodKey($typeName, $aliasMethodName);
                     $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
                 }
 
@@ -179,7 +177,7 @@ class DeadMethodRule implements Rule
                 }
 
                 $overriddenMethods[] = $traitMethod;
-                $usedTraitMethodDefinition = new MethodDefinition($typeName, $traitMethod);
+                $usedTraitMethodDefinition = $this->getMethodKey($typeName, $traitMethod);
                 $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
             }
 
@@ -206,7 +204,7 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @return list<MethodDefinition>
+     * @return list<string>
      */
     private function getMethodsToMarkAsUsed(Call $call): array
     {
@@ -214,22 +212,20 @@ class DeadMethodRule implements Rule
             return $this->methodsToMarkAsUsedCache[$call->toString()];
         }
 
-        $definition = $call->getDefinition();
-
-        $result = [$definition];
+        $result = [$this->getMethodKey($call->className, $call->methodName)];
 
         if ($call->possibleDescendantCall) {
-            foreach ($this->classHierarchy->getClassDescendants($definition->className) as $descendantName) {
-                $result[] = new MethodDefinition($descendantName, $definition->methodName);
+            foreach ($this->classHierarchy->getClassDescendants($call->className) as $descendantName) {
+                $result[] = $this->getMethodKey($descendantName, $call->methodName);
             }
         }
 
         // each descendant can be a trait user
         foreach ($result as $methodDefinition) {
-            $traitMethodDefinition = $this->classHierarchy->getDeclaringTraitMethodDefinition($methodDefinition);
+            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($methodDefinition);
 
-            if ($traitMethodDefinition !== null) {
-                $result[] = $traitMethodDefinition;
+            if ($traitMethodKey !== null) {
+                $result[] = $traitMethodKey;
             }
         }
 
@@ -239,12 +235,12 @@ class DeadMethodRule implements Rule
     }
 
     private function buildError(
-        MethodDefinition $methodDefinition,
+        string $methodKey,
         string $file,
         int $line
     ): IdentifierRuleError
     {
-        return RuleErrorBuilder::message('Unused ' . $methodDefinition->toString())
+        return RuleErrorBuilder::message('Unused ' . $methodKey)
             ->file($file)
             ->line($line)
             ->identifier('shipmonk.deadMethod')
@@ -277,6 +273,11 @@ class DeadMethodRule implements Rule
     private function getTraitUsages(string $typeName): array
     {
         return $this->typeDefinitions[$typeName]['traits'] ?? [];
+    }
+
+    private function getMethodKey(string $typeName, string $methodName): string
+    {
+        return $typeName . '::' . $methodName;
     }
 
 }

@@ -29,11 +29,6 @@ class Call
         $this->possibleDescendantCall = $possibleDescendantCall;
     }
 
-    public function getDefinition(): MethodDefinition
-    {
-        return new MethodDefinition($this->className, $this->methodName);
-    }
-
     public function toString(): string
     {
         return "{$this->className}::{$this->methodName}::" . ($this->possibleDescendantCall ? '1' : '');
