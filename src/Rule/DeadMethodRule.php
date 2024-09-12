@@ -99,7 +99,7 @@ class DeadMethodRule implements Rule
 
             $ancestorNames = $this->getAncestorNames($typeName);
 
-            $this->fillTraitUsages($typeName, $this->getTraitUsages($typeName));
+            $this->fillTraitUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeMethods($typeName));
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
@@ -152,19 +152,19 @@ class DeadMethodRule implements Rule
 
     /**
      * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
+     * @param list<string> $overriddenMethods
      */
-    private function fillTraitUsages(string $typeName, array $usedTraits): void
+    private function fillTraitUsages(string $typeName, array $usedTraits, array $overriddenMethods): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
             $traitMethods = $this->typeDefinitions[$traitName]['methods'] ?? [];
 
-            $excludedMethods = $adaptations['excluded'] ?? [];
+            $excludedMethods = array_merge(
+                $overriddenMethods,
+                $adaptations['excluded'] ?? [],
+            );
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
-                if (isset($this->typeDefinitions[$typeName]['methods'][$traitMethod])) {
-                    continue; // overridden trait method, thus not used
-                }
-
                 $declaringTraitMethodDefinition = new MethodDefinition($traitName, $traitMethod);
                 $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
 
@@ -178,11 +178,12 @@ class DeadMethodRule implements Rule
                     continue; // was replaced by insteadof
                 }
 
+                $overriddenMethods[] = $traitMethod;
                 $usedTraitMethodDefinition = new MethodDefinition($typeName, $traitMethod);
                 $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
             }
 
-            $this->fillTraitUsages($typeName, $this->getTraitUsages($traitName));
+            $this->fillTraitUsages($typeName, $this->getTraitUsages($traitName), $overriddenMethods);
         }
     }
 
@@ -260,6 +261,14 @@ class DeadMethodRule implements Rule
             array_keys($this->typeDefinitions[$typeName]['traits'] ?? []),
             array_keys($this->typeDefinitions[$typeName]['interfaces'] ?? []),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getTypeMethods(string $typeName): array
+    {
+        return array_keys($this->typeDefinitions[$typeName]['methods'] ?? []);
     }
 
     /**
