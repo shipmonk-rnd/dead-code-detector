@@ -12,7 +12,7 @@ use PHPStan\Reflection\MethodReflection;
 use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
 
 /**
- * @implements Collector<InClassNode, list<string>|null>
+ * @implements Collector<InClassNode, list<string>>
  */
 class EntrypointCollector implements Collector
 {

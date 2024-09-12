@@ -70,7 +70,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public static function provideFiles(): iterable
     {
-        yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 80_000];
+        yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
@@ -117,10 +117,10 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
         yield 'unknown-class' => [__DIR__ . '/data/DeadMethodRule/unknown-class.php'];
         yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
-        yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 80_000];
-        yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 80_000];
-        yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 80_000];
-        yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php', 80_000];
+        yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 8_00_00];
+        yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 8_00_00];
+        yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 8_00_00];
+        yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/DeadMethodRule/providers/nette.php'];
     }
 

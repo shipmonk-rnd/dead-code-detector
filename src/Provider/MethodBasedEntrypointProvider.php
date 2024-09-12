@@ -8,26 +8,25 @@ use ReflectionMethod;
 abstract class MethodBasedEntrypointProvider implements EntrypointProvider
 {
 
-    public function getEntrypoints(ClassReflection $reflection): array
+    public function getEntrypoints(ClassReflection $classReflection): array
     {
-        $nativeReflection = $reflection->getNativeReflection();
+        $nativeClassReflection = $classReflection->getNativeReflection();
 
         $entrypoints = [];
 
-        foreach ($nativeReflection->getMethods() as $method) {
-            if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
-                continue;
+        foreach ($nativeClassReflection->getMethods() as $nativeMethodReflection) {
+            if ($nativeMethodReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
+                continue; // skip methods from ancestors
             }
 
-            if ($this->isEntrypointMethod($method)) {
-                $entrypoints[] = $reflection->getNativeMethod($method->getName());
+            if ($this->isEntrypointMethod($nativeMethodReflection)) {
+                $entrypoints[] = $classReflection->getNativeMethod($nativeMethodReflection->getName());
             }
         }
 
         return $entrypoints;
     }
 
-    // TODO use PHPStan's MethodReflection?
     abstract protected function isEntrypointMethod(ReflectionMethod $method): bool;
 
 }

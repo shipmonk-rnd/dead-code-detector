@@ -74,9 +74,8 @@ services:
 ```
 ```php
 
-use ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider;
-use PHPStan\Reflection\ClassReflection;
-use PHPStan\Reflection\MethodReflection;
+use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Provider\MethodBasedEntrypointProvider;
 
 class ApiOutputEntrypointProvider extends MethodBasedEntrypointProvider
 {
