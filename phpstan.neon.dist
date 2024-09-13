@@ -44,3 +44,8 @@ parameters:
                 ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider: EntrypointProvider
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4
+
+    ignoreErrors:
+        -
+            message: "#but it's missing from the PHPDoc @throws tag\\.$#" # allow uncatched exceptions in tests
+            path: tests/*

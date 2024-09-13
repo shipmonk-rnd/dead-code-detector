@@ -38,6 +38,13 @@ services:
             enabled: %shipmonkDeadCode.entrypoints.phpstan.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider
+        tags:
+            - shipmonk.deadCode.entrypointProvider
+        arguments:
+            enabled: %shipmonkDeadCode.entrypoints.nette.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
@@ -72,6 +79,8 @@ parameters:
                 enabled: null
             doctrine:
                 enabled: null
+            nette:
+                enabled: null
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -89,6 +98,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             doctrine: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            nette: structure([
                 enabled: schema(bool(), nullable())
             ])
         ])
