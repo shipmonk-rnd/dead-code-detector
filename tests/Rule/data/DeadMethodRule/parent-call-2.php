@@ -4,7 +4,7 @@ namespace ParentCall2;
 
 abstract class AbstractClass
 {
-    public function foo(): void {} // error: Unused ParentCall2\AbstractClass::foo
+    public function foo(): void {}
 }
 
 class Child1 extends AbstractClass

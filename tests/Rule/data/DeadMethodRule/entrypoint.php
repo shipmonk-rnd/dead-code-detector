@@ -9,7 +9,7 @@ class Entrypoint
     {
     }
 
-    public function someUnused(): void
+    public function someUnused(): void // error: Unused DeadEntrypoint\Entrypoint::someUnused
     {
         Dead::usedMethod();
     }

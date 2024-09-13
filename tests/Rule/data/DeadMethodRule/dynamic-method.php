@@ -4,11 +4,11 @@ namespace DynamicMethod;
 
 class Test {
 
-    public static function a(): void {}
-    public static function b(): void {}
+    public static function a(): void {} // error: Unused DynamicMethod\Test::a
+    public static function b(): void {} // error: Unused DynamicMethod\Test::b
 
-    public function c(): void {}
-    public function d(): void {}
+    public function c(): void {} // error: Unused DynamicMethod\Test::c
+    public function d(): void {} // error: Unused DynamicMethod\Test::d
 }
 
 /**

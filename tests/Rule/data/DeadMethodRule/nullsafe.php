@@ -12,7 +12,7 @@ class A {
         return $this;
     }
 
-    public static function secondStatic(): self {
+    public static function secondStatic(): self { // error: Unused Nullsafe\A::secondStatic
         return new self();
     }
 }

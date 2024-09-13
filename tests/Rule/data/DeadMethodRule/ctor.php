@@ -11,7 +11,7 @@ class ParentClass
 
 class Child1 extends ParentClass
 {
-    public function __construct() // error: Unused Ctor\Child1::__construct
+    public function __construct()
     {
     }
 }

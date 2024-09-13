@@ -5,7 +5,7 @@ namespace DeadTrait1;
 trait Trait1 {
 
     public static function used(): void {}
-    public static function unused(): void {} // error: Unused DeadTrait1\Trait1::unused
+    public static function unused(): void {}
 }
 
 class User1

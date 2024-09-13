@@ -1,0 +1,8 @@
+includes:
+    - vendor/tomasvotruba/unused-public/config/extension.neon
+
+parameters:
+    customRulesetUsed: true
+
+    unused_public:
+        methods: true

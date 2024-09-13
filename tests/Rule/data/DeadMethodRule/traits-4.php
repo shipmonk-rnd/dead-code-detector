@@ -4,7 +4,7 @@ namespace DeadTrait4;
 
 trait MyTrait1 {
 
-    public function __construct() // error: Unused DeadTrait4\MyTrait1::__construct
+    public function __construct()
     {
     }
 }

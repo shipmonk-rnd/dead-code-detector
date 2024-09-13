@@ -4,7 +4,7 @@ namespace ClassStringCall;
 
 class ClassWithMethod {
 
-    public static function someMethod(): void {}
+    public static function someMethod(): void {} // error: Unused ClassStringCall\ClassWithMethod::someMethod
 }
 
 /**

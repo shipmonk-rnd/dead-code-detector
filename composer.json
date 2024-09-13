@@ -32,7 +32,8 @@
         "slevomat/coding-standard": "^8.15.0",
         "symfony/contracts": "^2.5 || ^3.0",
         "symfony/event-dispatcher": "^5.4 || ^6.0 || ^7.0",
-        "symfony/routing": "^5.4 || ^6.0 || ^7.0"
+        "symfony/routing": "^5.4 || ^6.0 || ^7.0",
+        "tomasvotruba/unused-public": "^0.3.11"
     },
     "autoload": {
         "psr-4": {

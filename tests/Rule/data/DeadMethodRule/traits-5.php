@@ -5,7 +5,7 @@ namespace DeadTrait5;
 trait MyTrait1 {
 
     // because all children override this method, it is unused
-    public function used(): void {} // error: Unused DeadTrait5\MyTrait1::used
+    public function used(): void {}
 }
 
 interface TraitInterface

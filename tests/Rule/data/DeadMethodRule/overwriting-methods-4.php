@@ -9,7 +9,7 @@ interface Interface1
 
 interface Interface2
 {
-    public function foo(): void; // error: Unused DeadOver4\Interface2::foo
+    public function foo(): void;
 }
 
 abstract class AbstractClass implements Interface1, Interface2

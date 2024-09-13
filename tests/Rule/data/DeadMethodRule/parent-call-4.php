@@ -11,7 +11,7 @@ class RootClass
 
 class AbstractClass extends RootClass
 {
-    public function __construct() // error: Unused ParentCall4\AbstractClass::__construct
+    public function __construct()
     {
     }
 }

@@ -4,7 +4,7 @@ namespace CtorInterface;
 
 interface MyInterface
 {
-    public function __construct(); // error: Unused CtorInterface\MyInterface::__construct
+    public function __construct();
 }
 
 class Child1 implements MyInterface

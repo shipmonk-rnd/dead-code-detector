@@ -19,7 +19,7 @@ class Child1 extends AbstractClass
 
 class Child2 extends AbstractClass
 {
-    public function foo(): void {} // error: Unused ParentCall1\Child2::foo
+    public function foo(): void {}
 }
 
 function testIt(Child1 $child1): void
