@@ -1,6 +1,6 @@
 # Dead code detector for PHP
 
-[PHPStan](https://phpstan.org/) rules to find unused code in your project with ease!
+[PHPStan](https://phpstan.org/) extension to find unused PHP code in your project with ease!
 
 ## Installation:
 
@@ -61,7 +61,7 @@ parameters:
 
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
-- Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\EntrypointProvider`
+- Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider`
 - You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\MethodBasedEntrypointProvider`
 
 ```neon
