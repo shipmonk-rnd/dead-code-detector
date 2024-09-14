@@ -127,6 +127,7 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
         return InstalledVersions::isInstalled('symfony/event-dispatcher')
             || InstalledVersions::isInstalled('symfony/routing')
             || InstalledVersions::isInstalled('symfony/contracts')
+            || InstalledVersions::isInstalled('symfony/console')
             || InstalledVersions::isInstalled('symfony/http-kernel');
     }
 
