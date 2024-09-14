@@ -23,6 +23,7 @@ includes:
 - **constructor calls for DIC services!**
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
 - `#[AsEventListener]` attribute
+- `#[AsCommand]` attribute
 - `#[Required]` attribute
 - `#[Route]` attributes
 - `onKernelResponse`, `onKernelRequest`, etc

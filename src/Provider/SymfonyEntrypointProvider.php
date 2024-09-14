@@ -76,9 +76,11 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
         $class = $method->getDeclaringClass();
 
         return $class->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
+            || ($class->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle') && $method->isConstructor())
             || $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
+            || ($this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand') && $method->isConstructor())
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->isProbablySymfonyListener($methodName);
@@ -124,7 +126,8 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
     {
         return InstalledVersions::isInstalled('symfony/event-dispatcher')
             || InstalledVersions::isInstalled('symfony/routing')
-            || InstalledVersions::isInstalled('symfony/contracts');
+            || InstalledVersions::isInstalled('symfony/contracts')
+            || InstalledVersions::isInstalled('symfony/http-kernel');
     }
 
 }
