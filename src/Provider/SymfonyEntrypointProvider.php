@@ -81,6 +81,7 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
             || ($this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand') && $method->isConstructor())
+            || ($this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController') && $method->isConstructor())
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->isProbablySymfonyListener($methodName);

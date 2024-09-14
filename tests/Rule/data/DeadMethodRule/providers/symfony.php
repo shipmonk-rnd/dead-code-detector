@@ -7,6 +7,7 @@ use ShipMonk\Logging\StaticLogger;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Service\Attribute\Required;
@@ -57,6 +58,12 @@ class SomeSubscriber implements EventSubscriberInterface
         ];
     }
 
+}
+
+#[AsController]
+class HelloController
+{
+    public function __construct() {}
 }
 
 class DicClassParent { // not present in DIC, but ctor is not dead
