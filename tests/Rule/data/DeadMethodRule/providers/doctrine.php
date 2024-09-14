@@ -2,6 +2,10 @@
 
 namespace Doctrine;
 
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
+
 class MyEntity
 {
 
@@ -17,6 +21,17 @@ class MyListener {
     public function afterUpdate(): void {}
 
     public function postPersist(): void {}
+
+}
+
+class FooRepository extends EntityRepository {
+
+    public function __construct(
+        EntityManagerInterface $em,
+        ClassMetadata $class
+    ) {
+        parent::__construct($em, $class);
+    }
 
 }
 
