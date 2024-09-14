@@ -34,6 +34,7 @@ class DoctrineEntrypointProvider extends SimpleMethodEntrypointProvider
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PrePersist')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreRemove')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreUpdate')
+            || $this->isEntityRepositoryConstructor($class, $method)
             || $this->isPartOfAsEntityListener($class, $methodName)
             || $this->isProbablyDoctrineListener($methodName);
     }
@@ -86,6 +87,18 @@ class DoctrineEntrypointProvider extends SimpleMethodEntrypointProvider
         }
 
         return false;
+    }
+
+    /**
+     * @param ReflectionClass<object> $class
+     */
+    private function isEntityRepositoryConstructor(ReflectionClass $class, ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor()) {
+            return false;
+        }
+
+        return $class->isSubclassOf('Doctrine\ORM\EntityRepository');
     }
 
     private function isDoctrineInstalled(): bool
