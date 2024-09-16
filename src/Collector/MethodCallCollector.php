@@ -41,7 +41,7 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @return list<string>|null
+     * @return non-empty-list<string>|null
      */
     public function processNode(
         Node $node,
