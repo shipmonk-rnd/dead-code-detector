@@ -43,10 +43,6 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
         $entrypoints = [];
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
-            if ($method->getDeclaringClass()->getName() !== $classReflection->getName()) {
-                continue;
-            }
-
             $dataProviders = array_merge(
                 $this->getDataProvidersFromAnnotations($method->getDocComment()),
                 $this->getDataProvidersFromAttributes($method),
