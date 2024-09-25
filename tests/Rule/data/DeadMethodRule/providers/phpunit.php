@@ -80,3 +80,21 @@ class SomeTest extends TestCase
     }
 
 }
+
+abstract class TestCaseBase extends TestCase
+{
+    abstract public static function providerTest(): array;
+
+    #[DataProvider('providerTest')]
+    public function testFoo(string|null $phpValue, string|null $serialized): void
+    {
+    }
+}
+
+final class SomeExtendingTest extends TestCaseBase
+{
+    public static function providerTest(): array
+    {
+        return [];
+    }
+}
