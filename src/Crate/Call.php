@@ -7,43 +7,81 @@ use function count;
 use function explode;
 
 /**
- * @readonly
+ * @immutable
  */
 class Call
 {
 
-    public string $className;
+    public ?Method $caller;
 
-    public string $methodName;
+    public Method $callee;
 
     public bool $possibleDescendantCall;
 
     public function __construct(
-        string $className,
-        string $methodName,
+        ?Method $caller,
+        Method $callee,
         bool $possibleDescendantCall
     )
     {
-        $this->className = $className;
-        $this->methodName = $methodName;
+        $this->caller = $caller;
+        $this->callee = $callee;
         $this->possibleDescendantCall = $possibleDescendantCall;
     }
 
     public function toString(): string
     {
-        return "{$this->className}::{$this->methodName}::" . ($this->possibleDescendantCall ? '1' : '');
+        $callerRef = $this->caller === null ? '' : "{$this->caller->className}::{$this->caller->methodName}";
+        $calleeRef = "{$this->callee->className}::{$this->callee->methodName}";
+
+        return "{$callerRef}->$calleeRef;" . ($this->possibleDescendantCall ? '1' : '');
     }
 
-    public static function fromString(string $methodKey): self
+    public static function fromString(string $callKey): self
     {
-        $exploded = explode('::', $methodKey);
+        $split1 = explode(';', $callKey);
 
-        if (count($exploded) !== 3) {
-            throw new LogicException("Invalid method key: $methodKey");
+        if (count($split1) !== 2) {
+            throw new LogicException("Invalid method key: $callKey");
         }
 
-        [$className, $methodName, $possibleDescendantCall] = $exploded;
-        return new self($className, $methodName, $possibleDescendantCall === '1');
+        [$edgeKey, $possibleDescendantCall] = $split1;
+
+        $split2 = explode('->', $edgeKey);
+
+        if (count($split2) !== 2) {
+            throw new LogicException("Invalid method key: $callKey");
+        }
+
+        [$callerKey, $calleeKey] = $split2;
+
+        $calleeSplit = explode('::', $calleeKey);
+
+        if (count($calleeSplit) !== 2) {
+            throw new LogicException("Invalid method key: $callKey");
+        }
+
+        [$calleeClassName, $calleeMethodName] = $calleeSplit;
+        $callee = new Method($calleeClassName, $calleeMethodName);
+
+        if ($callerKey === '') {
+            $caller = null;
+        } else {
+            $callerSplit = explode('::', $callerKey);
+
+            if (count($callerSplit) !== 2) {
+                throw new LogicException("Invalid method key: $callKey");
+            }
+
+            [$callerClassName, $callerMethodName] = $callerSplit;
+            $caller = new Method($callerClassName, $callerMethodName);
+        }
+
+        return new self(
+            $caller,
+            $callee,
+            $possibleDescendantCall === '1',
+        );
     }
 
 }
