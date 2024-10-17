@@ -4,7 +4,7 @@ namespace DeadFirstClassCallable;
 
 class A {
 
-    public function unused(): void // error: Unused DeadFirstClassCallable\A::unused
+    public function used(): void
     {
         $callback = $this->usedByFirstClassCallable(...);
     }
@@ -14,3 +14,5 @@ class A {
 
     }
 }
+
+(new A())->used();

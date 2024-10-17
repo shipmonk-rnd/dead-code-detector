@@ -74,6 +74,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
+        yield 'cycles' => [__DIR__ . '/data/DeadMethodRule/cycles.php'];
         yield 'abstract-1' => [__DIR__ . '/data/DeadMethodRule/abstract-1.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
         yield 'clone' => [__DIR__ . '/data/DeadMethodRule/clone.php'];

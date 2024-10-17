@@ -13,6 +13,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
+use function array_key_exists;
 use function array_keys;
 use function array_merge;
 use function in_array;
@@ -75,7 +76,9 @@ class DeadMethodRule implements Rule
         $methodCallData = $node->get(MethodCallCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
 
-        $declaredMethods = [];
+        /** @var array<string, list<string>> $callGraph caller => callee[] */
+        $callGraph = [];
+        $deadMethods = [];
 
         foreach ($methodDeclarationData as $file => $data) {
             foreach ($data as $typeData) {
@@ -103,7 +106,7 @@ class DeadMethodRule implements Rule
 
             foreach ($methods as $methodName => $methodData) {
                 $definition = $this->getMethodKey($typeName, $methodName);
-                $declaredMethods[$definition] = [$file, $methodData['line']];
+                $deadMethods[$definition] = [$file, $methodData['line']];
             }
         }
 
@@ -118,8 +121,10 @@ class DeadMethodRule implements Rule
                         continue;
                     }
 
-                    foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinitionToMarkAsUsed) {
-                        unset($declaredMethods[$methodDefinitionToMarkAsUsed]);
+                    $callerKey = $call->caller === null ? '' : $call->caller->toString();
+
+                    foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
+                        $callGraph[$callerKey][] = $possibleCalleeKey;
                     }
                 }
             }
@@ -127,13 +132,27 @@ class DeadMethodRule implements Rule
 
         unset($methodCallData);
 
+        $globalCallers = $callGraph[''] ?? []; // no caller is a global caller for now
+
+        foreach ($globalCallers as $globalCalleeKey) {
+            unset($deadMethods[$globalCalleeKey]);
+
+            foreach ($this->getTransitiveCalleeKeys($globalCalleeKey, $callGraph) as $subCallKey) {
+                unset($deadMethods[$subCallKey]);
+            }
+        }
+
         foreach ($entrypointData as $file => $entrypointsInFile) {
             foreach ($entrypointsInFile as $entrypoints) {
                 foreach ($entrypoints as $entrypoint) {
                     $call = Call::fromString($entrypoint);
 
-                    foreach ($this->getMethodsToMarkAsUsed($call) as $methodDefinition) {
-                        unset($declaredMethods[$methodDefinition]);
+                    foreach ($this->getAlternativeCalleeKeys($call) as $methodDefinition) {
+                        unset($deadMethods[$methodDefinition]);
+                    }
+
+                    foreach ($this->getTransitiveCalleeKeys($call->callee->toString(), $callGraph) as $subCallKey) {
+                        unset($deadMethods[$subCallKey]);
                     }
                 }
             }
@@ -141,7 +160,7 @@ class DeadMethodRule implements Rule
 
         $errors = [];
 
-        foreach ($declaredMethods as $definitionString => [$file, $line]) {
+        foreach ($deadMethods as $definitionString => [$file, $line]) {
             $errors[] = $this->buildError($definitionString, $file, $line);
         }
 
@@ -210,7 +229,7 @@ class DeadMethodRule implements Rule
     /**
      * @return list<string>
      */
-    private function getMethodsToMarkAsUsed(Call $call): array
+    private function getAlternativeCalleeKeys(Call $call): array
     {
         $calleeCacheKey = "{$call->callee->className}::{$call->callee->methodName}";
 
@@ -236,6 +255,29 @@ class DeadMethodRule implements Rule
         }
 
         $this->methodsToMarkAsUsedCache[$calleeCacheKey] = $result;
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, list<string>> $callGraph
+     * @param array<string, null> $visitedKeys
+     * @return list<string>
+     */
+    private function getTransitiveCalleeKeys(string $callerKey, array $callGraph, array $visitedKeys = []): array
+    {
+        $result = [];
+        $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
+        $calleeKeys = $callGraph[$callerKey] ?? [];
+
+        foreach ($calleeKeys as $calleeKey) {
+            if (array_key_exists($calleeKey, $visitedKeys)) {
+                continue;
+            }
+
+            $result[] = $calleeKey;
+            $result = array_merge($result, $this->getTransitiveCalleeKeys($calleeKey, $callGraph, array_merge($visitedKeys, [$calleeKey => null])));
+        }
 
         return $result;
     }
