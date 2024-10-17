@@ -19,9 +19,11 @@ use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\MethodReflection;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use function array_map;
 
 /**
@@ -126,7 +128,11 @@ class MethodCallCollector implements Collector
                 }
 
                 $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-                $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+                $this->callsBuffer[] = new Call(
+                    $this->getCaller($scope),
+                    new Method($className, $methodName),
+                    $possibleDescendantCall,
+                );
             }
         }
     }
@@ -154,7 +160,11 @@ class MethodCallCollector implements Collector
                 }
 
                 $className = $classReflection->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-                $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+                $this->callsBuffer[] = new Call(
+                    $this->getCaller($scope),
+                    new Method($className, $methodName),
+                    $possibleDescendantCall,
+                );
             }
         }
     }
@@ -177,7 +187,11 @@ class MethodCallCollector implements Collector
 
                     foreach ($this->getReflectionsWithMethod($caller, $methodName) as $classWithMethod) {
                         $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-                        $this->callsBuffer[] = new Call($className, $methodName, $possibleDescendantCall);
+                        $this->callsBuffer[] = new Call(
+                            $this->getCaller($scope),
+                            new Method($className, $methodName),
+                            $possibleDescendantCall,
+                        );
                     }
                 }
             }
@@ -186,7 +200,11 @@ class MethodCallCollector implements Collector
 
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
-        $this->callsBuffer[] = new Call($scope->resolveName($node->name), '__construct', false);
+        $this->callsBuffer[] = new Call(
+            null, // TODO what about new in attributes?
+            new Method($scope->resolveName($node->name), '__construct'),
+            false,
+        );
     }
 
     private function registerClone(Clone_ $node, Scope $scope): void
@@ -196,7 +214,11 @@ class MethodCallCollector implements Collector
 
         foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
             $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
-            $this->callsBuffer[] = new Call($className, $methodName, true);
+            $this->callsBuffer[] = new Call(
+                $this->getCaller($scope),
+                new Method($className, $methodName),
+                true,
+            );
         }
     }
 
@@ -237,6 +259,19 @@ class MethodCallCollector implements Collector
                 yield $classReflection;
             }
         }
+    }
+
+    private function getCaller(Scope $scope): ?Method
+    {
+        if (!$scope->isInClass()) {
+            return null;
+        }
+
+        if (!$scope->getFunction() instanceof MethodReflection) {
+            return null;
+        }
+
+        return new Method($scope->getClassReflection()->getName(), $scope->getFunction()->getName());
     }
 
 }

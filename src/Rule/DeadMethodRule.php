@@ -114,7 +114,7 @@ class DeadMethodRule implements Rule
                 foreach ($calls as $callString) {
                     $call = Call::fromString($callString);
 
-                    if ($this->isAnonymousClass($call)) {
+                    if ($this->containsAnonymousClass($call)) {
                         continue;
                     }
 
@@ -197,10 +197,14 @@ class DeadMethodRule implements Rule
         }
     }
 
-    private function isAnonymousClass(Call $call): bool
+    private function containsAnonymousClass(Call $call): bool
     {
+        $callerClassName = $call->caller === null ? '' : $call->caller->className;
+        $calleeClassName = $call->callee->className;
+
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return strpos($call->className, 'AnonymousClass') === 0;
+        return strpos($callerClassName, 'AnonymousClass') === 0
+            || strpos($calleeClassName, 'AnonymousClass') === 0;
     }
 
     /**
@@ -208,15 +212,17 @@ class DeadMethodRule implements Rule
      */
     private function getMethodsToMarkAsUsed(Call $call): array
     {
-        if (isset($this->methodsToMarkAsUsedCache[$call->toString()])) {
-            return $this->methodsToMarkAsUsedCache[$call->toString()];
+        $calleeCacheKey = "{$call->callee->className}::{$call->callee->methodName}";
+
+        if (isset($this->methodsToMarkAsUsedCache[$calleeCacheKey])) {
+            return $this->methodsToMarkAsUsedCache[$calleeCacheKey];
         }
 
-        $result = [$this->getMethodKey($call->className, $call->methodName)];
+        $result = [$this->getMethodKey($call->callee->className, $call->callee->methodName)];
 
         if ($call->possibleDescendantCall) {
-            foreach ($this->classHierarchy->getClassDescendants($call->className) as $descendantName) {
-                $result[] = $this->getMethodKey($descendantName, $call->methodName);
+            foreach ($this->classHierarchy->getClassDescendants($call->callee->className) as $descendantName) {
+                $result[] = $this->getMethodKey($descendantName, $call->callee->methodName);
             }
         }
 
@@ -229,7 +235,7 @@ class DeadMethodRule implements Rule
             }
         }
 
-        $this->methodsToMarkAsUsedCache[$call->toString()] = $result;
+        $this->methodsToMarkAsUsedCache[$calleeCacheKey] = $result;
 
         return $result;
     }

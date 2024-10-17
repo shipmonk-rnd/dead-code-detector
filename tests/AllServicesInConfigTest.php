@@ -9,6 +9,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use function array_keys;
@@ -42,6 +43,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $missingClassNames = [];
         $excluded = [
             Call::class,
+            Method::class,
             Kind::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,

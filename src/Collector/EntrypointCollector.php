@@ -7,6 +7,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 
 /**
@@ -48,7 +49,12 @@ class EntrypointCollector implements Collector
 
         foreach ($this->entrypointProviders as $entrypointProvider) {
             foreach ($entrypointProvider->getEntrypoints($node->getClassReflection()) as $entrypointMethod) {
-                $entrypoints[] = (new Call($entrypointMethod->getDeclaringClass()->getName(), $entrypointMethod->getName(), false))->toString();
+                $call = new Call(
+                    null,
+                    new Method($entrypointMethod->getDeclaringClass()->getName(), $entrypointMethod->getName()),
+                    false,
+                );
+                $entrypoints[] = $call->toString();
             }
         }
 
