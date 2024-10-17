@@ -21,4 +21,9 @@ class Method
         $this->methodName = $methodName;
     }
 
+    public function toString(): string
+    {
+        return $this->className . '::' . $this->methodName;
+    }
+
 }
