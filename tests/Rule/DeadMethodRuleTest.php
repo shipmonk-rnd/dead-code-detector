@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
+use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
@@ -33,10 +34,17 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
+    private ?bool $emitErrorsInGroups = null;
+
+    private bool $unwrapGroupedErrors = true;
+
     protected function getRule(): DeadMethodRule
     {
+        self::assertNotNull($this->emitErrorsInGroups);
+
         return new DeadMethodRule(
             new ClassHierarchy(),
+            !$this->emitErrorsInGroups,
         );
     }
 
@@ -58,11 +66,60 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public function testDead($files, ?int $lowestPhpVersion = null): void
     {
+        $this->emitErrorsInGroups = false;
+        $this->doTestDead($files, $lowestPhpVersion);
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     * @dataProvider provideFiles
+     */
+    public function testDeadWithGroups($files, ?int $lowestPhpVersion = null): void
+    {
+        $this->emitErrorsInGroups = true;
+        $this->doTestDead($files, $lowestPhpVersion);
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     */
+    private function doTestDead($files, ?int $lowestPhpVersion = null): void
+    {
         if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
             self::markTestSkipped('Requires PHP ' . $lowestPhpVersion);
         }
 
         $this->analyseFiles(is_array($files) ? $files : [$files]);
+    }
+
+    public function testGrouping(): void
+    {
+        $this->emitErrorsInGroups = true;
+        $this->unwrapGroupedErrors = false;
+
+        $this->analyse([__DIR__ . '/data/DeadMethodRule/grouping/default.php'], [
+            [
+                'Unused Grouping\Example::foo',
+                20,
+                "• Thus Grouping\Example::bar is transitively also unused\n" .
+                '• Thus Grouping\Example::bag is transitively also unused',
+            ],
+            [
+                'Unused Grouping\Example::boo',
+                26,
+                "• Thus Grouping\Example::bag is transitively also unused\n" .
+                '• Thus Grouping\Example::bar is transitively also unused',
+            ],
+            [
+                'Unused Grouping\Example::recur',
+                43,
+            ],
+            [
+                'Unused Grouping\Example::recur1',
+                50,
+                'Thus Grouping\Example::recur2 is transitively also unused',
+            ],
+        ]);
     }
 
     /**
@@ -204,6 +261,41 @@ class DeadMethodRuleTest extends RuleTestCase
             ->willReturn($serviceMapMock);
 
         return $factoryMock;
+    }
+
+    public function gatherAnalyserErrors(array $files): array
+    {
+        if (!$this->unwrapGroupedErrors) {
+            return parent::gatherAnalyserErrors($files);
+        }
+
+        $result = [];
+        $errors = parent::gatherAnalyserErrors($files);
+
+        foreach ($errors as $error) {
+            $result[] = $error;
+
+            /** @var array<string, array{file: string, line: int}> $metadata */
+            $metadata = $error->getMetadata();
+
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line]) {
+                // @phpstan-ignore phpstanApi.constructor
+                $result[] = new Error(
+                    "Unused $alsoDead", // TODO distinguish in test asserts?
+                    $file,
+                    $line,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    $error->getIdentifier(),
+                );
+            }
+        }
+
+        return $result;
     }
 
 }
