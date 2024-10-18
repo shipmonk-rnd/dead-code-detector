@@ -47,11 +47,15 @@ class DeadMethodRule implements Rule
      */
     private array $methodsToMarkAsUsedCache = [];
 
+    private bool $reportTransitivelyDeadMethodAsSeparateError;
+
     public function __construct(
-        ClassHierarchy $classHierarchy
+        ClassHierarchy $classHierarchy,
+        bool $reportTransitivelyDeadMethodAsSeparateError = false
     )
     {
         $this->classHierarchy = $classHierarchy;
+        $this->reportTransitivelyDeadMethodAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
     }
 
     public function getNodeType(): string
@@ -160,8 +164,25 @@ class DeadMethodRule implements Rule
 
         $errors = [];
 
-        foreach ($deadMethods as $definitionString => [$file, $line]) {
-            $errors[] = $this->buildError($definitionString, $file, $line);
+        if ($this->reportTransitivelyDeadMethodAsSeparateError) {
+            foreach ($deadMethods as $deadMethodKey => [$file, $line]) {
+                $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
+            }
+
+            return $errors;
+        }
+
+        $deadGroups = $this->groupDeadMethods($deadMethods, $callGraph);
+
+        foreach ($deadGroups as $deadGroupKey => $deadSubgroupKeys) {
+            [$file, $line] = $deadMethods[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
+            $subGroupMap = [];
+
+            foreach ($deadSubgroupKeys as $deadSubgroupKey) {
+                $subGroupMap[$deadSubgroupKey] = $deadMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
+            }
+
+            $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
         }
 
         return $errors;
@@ -282,17 +303,103 @@ class DeadMethodRule implements Rule
         return $result;
     }
 
+    /**
+     * @param array<string, mixed> $deadMethods
+     * @param array<string, list<string>> $callGraph
+     * @return array<string, list<string>>
+     */
+    private function groupDeadMethods(array $deadMethods, array $callGraph): array
+    {
+        $deadGroups = [];
+
+        /** @var array<string, true> $deadMethodsWithCaller */
+        $deadMethodsWithCaller = [];
+
+        foreach ($callGraph as $caller => $callees) {
+            if (!array_key_exists($caller, $deadMethods)) {
+                continue;
+            }
+
+            foreach ($callees as $callee) {
+                if (array_key_exists($callee, $deadMethods)) {
+                    $deadMethodsWithCaller[$callee] = true;
+                }
+            }
+        }
+
+        $methodsGrouped = [];
+
+        foreach ($deadMethods as $deadMethodKey => $_) {
+            if (isset($methodsGrouped[$deadMethodKey])) {
+                continue;
+            }
+
+            if (isset($deadMethodsWithCaller[$deadMethodKey])) {
+                continue; // has a caller, thus should be part of a group, not a group representative
+            }
+
+            $deadGroups[$deadMethodKey] = [];
+            $methodsGrouped[$deadMethodKey] = true;
+
+            foreach ($this->getTransitiveCalleeKeys($deadMethodKey, $callGraph) as $transitiveMethodKey) {
+                if (!isset($deadMethods[$transitiveMethodKey])) {
+                    continue;
+                }
+
+                $deadGroups[$deadMethodKey][] = $transitiveMethodKey;
+                $methodsGrouped[$transitiveMethodKey] = true;
+            }
+        }
+
+        // now only cycles remain, lets pick group representatives based on first occurrence
+        foreach ($deadMethods as $deadMethodKey => $_) {
+            if (isset($methodsGrouped[$deadMethodKey])) {
+                continue;
+            }
+
+            $transitiveDeadMethods = $this->getTransitiveCalleeKeys($deadMethodKey, $callGraph);
+
+            $deadGroups[$deadMethodKey] = []; // TODO provide info to some Tip that those are cycles?
+            $methodsGrouped[$deadMethodKey] = true;
+
+            foreach ($transitiveDeadMethods as $transitiveDeadMethodKey) {
+                $deadGroups[$deadMethodKey][] = $transitiveDeadMethodKey;
+                $methodsGrouped[$transitiveDeadMethodKey] = true;
+            }
+        }
+
+        return $deadGroups;
+    }
+
+    /**
+     * @param array<string, array{string, int}> $transitiveDeadMethodKeys
+     */
     private function buildError(
-        string $methodKey,
+        string $deadMethodKey,
+        array $transitiveDeadMethodKeys,
         string $file,
         int $line
     ): IdentifierRuleError
     {
-        return RuleErrorBuilder::message('Unused ' . $methodKey)
+        $builder = RuleErrorBuilder::message('Unused ' . $deadMethodKey)
             ->file($file)
             ->line($line)
-            ->identifier('shipmonk.deadMethod')
-            ->build();
+            ->identifier('shipmonk.deadMethod');
+
+        $metadata = [];
+
+        foreach ($transitiveDeadMethodKeys as $transitiveDeadMethodKey => [$transitiveDeadMethodFile, $transitiveDeadMethodLine]) {
+            $builder->addTip("Thus $transitiveDeadMethodKey is transitively also unused");
+
+            $metadata[$transitiveDeadMethodKey] = [
+                'file' => $transitiveDeadMethodFile,
+                'line' => $transitiveDeadMethodLine,
+            ];
+        }
+
+        $builder->metadata($metadata);
+
+        return $builder->build();
     }
 
     /**
