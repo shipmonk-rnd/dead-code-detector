@@ -12,6 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
@@ -116,6 +117,8 @@ class DeadMethodRule implements Rule
 
         unset($methodDeclarationData);
 
+        $whiteCallees = [];
+
         foreach ($methodCallData as $file => $callsInFile) {
             foreach ($callsInFile as $calls) {
                 foreach ($calls as $callString) {
@@ -126,9 +129,14 @@ class DeadMethodRule implements Rule
                     }
 
                     $callerKey = $call->caller === null ? '' : $call->caller->toString();
+                    $isWhite = $call->caller === null || Method::isUnsupported($call->caller->methodName);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
                         $callGraph[$callerKey][] = $possibleCalleeKey;
+
+                        if ($isWhite) {
+                            $whiteCallees[] = $possibleCalleeKey;
+                        }
                     }
                 }
             }
@@ -136,12 +144,10 @@ class DeadMethodRule implements Rule
 
         unset($methodCallData);
 
-        $globalCallers = $callGraph[''] ?? []; // no caller is a global caller for now
+        foreach ($whiteCallees as $whiteCalleeKey) {
+            unset($deadMethods[$whiteCalleeKey]);
 
-        foreach ($globalCallers as $globalCalleeKey) {
-            unset($deadMethods[$globalCalleeKey]);
-
-            foreach ($this->getTransitiveCalleeKeys($globalCalleeKey, $callGraph) as $subCallKey) {
+            foreach ($this->getTransitiveCalleeKeys($whiteCalleeKey, $callGraph) as $subCallKey) {
                 unset($deadMethods[$subCallKey]);
             }
         }

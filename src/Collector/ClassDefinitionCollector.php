@@ -16,9 +16,9 @@ use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use function array_fill_keys;
 use function array_map;
-use function strpos;
 
 /**
  * @implements Collector<ClassLike, array{
@@ -167,16 +167,8 @@ class ClassDefinitionCollector implements Collector
     {
         $methodName = $method->name->toString();
 
-        if ($methodName === '__destruct') {
+        if (Method::isUnsupported($methodName)) {
             return true;
-        }
-
-        if (
-            strpos($methodName, '__') === 0
-            && $methodName !== '__construct'
-            && $methodName !== '__clone'
-        ) {
-            return true; // magic methods like __toString, __get, __set etc
         }
 
         if ($methodName === '__construct' && $method->isPrivate()) { // e.g. classes with "denied" instantiation
