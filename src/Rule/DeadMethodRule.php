@@ -50,6 +50,16 @@ class DeadMethodRule implements Rule
 
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
+    /**
+     * @var array<string, array{string, int}> methodKey => [file, line]
+     */
+    private array $deadMethods = [];
+
+    /**
+     * @var array<string, list<string>> caller => callee[]
+     */
+    private array $callGraph = [];
+
     public function __construct(
         ClassHierarchy $classHierarchy,
         bool $reportTransitivelyDeadMethodAsSeparateError = false
@@ -81,10 +91,6 @@ class DeadMethodRule implements Rule
         $methodCallData = $node->get(MethodCallCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
 
-        /** @var array<string, list<string>> $callGraph caller => callee[] */
-        $callGraph = [];
-        $deadMethods = [];
-
         foreach ($methodDeclarationData as $file => $data) {
             foreach ($data as $typeData) {
                 $typeName = $typeData['name'];
@@ -111,7 +117,7 @@ class DeadMethodRule implements Rule
 
             foreach ($methods as $methodName => $methodData) {
                 $definition = $this->getMethodKey($typeName, $methodName);
-                $deadMethods[$definition] = [$file, $methodData['line']];
+                $this->deadMethods[$definition] = [$file, $methodData['line']];
             }
         }
 
@@ -132,7 +138,7 @@ class DeadMethodRule implements Rule
                     $isWhite = $call->caller === null || Method::isUnsupported($call->caller->methodName);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
-                        $callGraph[$callerKey][] = $possibleCalleeKey;
+                        $this->callGraph[$callerKey][] = $possibleCalleeKey;
 
                         if ($isWhite) {
                             $whiteCallees[] = $possibleCalleeKey;
@@ -145,11 +151,7 @@ class DeadMethodRule implements Rule
         unset($methodCallData);
 
         foreach ($whiteCallees as $whiteCalleeKey) {
-            unset($deadMethods[$whiteCalleeKey]);
-
-            foreach ($this->getTransitiveCalleeKeys($whiteCalleeKey, $callGraph) as $subCallKey) {
-                unset($deadMethods[$subCallKey]);
-            }
+            $this->markTransitiveCallsWhite($whiteCalleeKey);
         }
 
         foreach ($entrypointData as $file => $entrypointsInFile) {
@@ -158,12 +160,10 @@ class DeadMethodRule implements Rule
                     $call = Call::fromString($entrypoint);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $methodDefinition) {
-                        unset($deadMethods[$methodDefinition]);
+                        unset($this->deadMethods[$methodDefinition]);
                     }
 
-                    foreach ($this->getTransitiveCalleeKeys($call->callee->toString(), $callGraph) as $subCallKey) {
-                        unset($deadMethods[$subCallKey]);
-                    }
+                    $this->markTransitiveCallsWhite($call->callee->toString());
                 }
             }
         }
@@ -171,21 +171,21 @@ class DeadMethodRule implements Rule
         $errors = [];
 
         if ($this->reportTransitivelyDeadMethodAsSeparateError) {
-            foreach ($deadMethods as $deadMethodKey => [$file, $line]) {
+            foreach ($this->deadMethods as $deadMethodKey => [$file, $line]) {
                 $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
             }
 
             return $errors;
         }
 
-        $deadGroups = $this->groupDeadMethods($deadMethods, $callGraph);
+        $deadGroups = $this->groupDeadMethods();
 
         foreach ($deadGroups as $deadGroupKey => $deadSubgroupKeys) {
-            [$file, $line] = $deadMethods[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
+            [$file, $line] = $this->deadMethods[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
             $subGroupMap = [];
 
             foreach ($deadSubgroupKeys as $deadSubgroupKey) {
-                $subGroupMap[$deadSubgroupKey] = $deadMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
+                $subGroupMap[$deadSubgroupKey] = $this->deadMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
             }
 
             $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
@@ -287,47 +287,75 @@ class DeadMethodRule implements Rule
     }
 
     /**
-     * @param array<string, list<string>> $callGraph
      * @param array<string, null> $visitedKeys
-     * @return list<string>
      */
-    private function getTransitiveCalleeKeys(string $callerKey, array $callGraph, array $visitedKeys = []): array
+    private function markTransitiveCallsWhite(string $callerKey, array $visitedKeys = []): void
     {
-        $result = [];
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $callGraph[$callerKey] ?? [];
+        $calleeKeys = $this->callGraph[$callerKey] ?? [];
+
+        unset($this->deadMethods[$callerKey]);
 
         foreach ($calleeKeys as $calleeKey) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
                 continue;
             }
 
+            if (!isset($this->deadMethods[$calleeKey])) {
+                continue;
+            }
+
+            $this->markTransitiveCallsWhite($calleeKey, array_merge($visitedKeys, [$calleeKey => null]));
+        }
+    }
+
+    /**
+     * @param array<string, null> $visitedKeys
+     * @return list<string>
+     */
+    private function getTransitiveDeadCalls(string $callerKey, array $visitedKeys = []): array
+    {
+        $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
+        $calleeKeys = $this->callGraph[$callerKey] ?? [];
+
+        $result = [];
+
+        foreach ($calleeKeys as $calleeKey) {
+            if (array_key_exists($calleeKey, $visitedKeys)) {
+                continue;
+            }
+
+            if (!isset($this->deadMethods[$calleeKey])) {
+                continue;
+            }
+
             $result[] = $calleeKey;
-            $result = array_merge($result, $this->getTransitiveCalleeKeys($calleeKey, $callGraph, array_merge($visitedKeys, [$calleeKey => null])));
+
+            foreach ($this->getTransitiveDeadCalls($calleeKey, array_merge($visitedKeys, [$calleeKey => null])) as $transitiveDead) {
+                $result[] = $transitiveDead;
+            }
         }
 
         return $result;
     }
 
     /**
-     * @param array<string, mixed> $deadMethods
-     * @param array<string, list<string>> $callGraph
      * @return array<string, list<string>>
      */
-    private function groupDeadMethods(array $deadMethods, array $callGraph): array
+    private function groupDeadMethods(): array
     {
         $deadGroups = [];
 
         /** @var array<string, true> $deadMethodsWithCaller */
         $deadMethodsWithCaller = [];
 
-        foreach ($callGraph as $caller => $callees) {
-            if (!array_key_exists($caller, $deadMethods)) {
+        foreach ($this->callGraph as $caller => $callees) {
+            if (!array_key_exists($caller, $this->deadMethods)) {
                 continue;
             }
 
             foreach ($callees as $callee) {
-                if (array_key_exists($callee, $deadMethods)) {
+                if (array_key_exists($callee, $this->deadMethods)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
             }
@@ -335,7 +363,7 @@ class DeadMethodRule implements Rule
 
         $methodsGrouped = [];
 
-        foreach ($deadMethods as $deadMethodKey => $_) {
+        foreach ($this->deadMethods as $deadMethodKey => $_) {
             if (isset($methodsGrouped[$deadMethodKey])) {
                 continue;
             }
@@ -347,23 +375,21 @@ class DeadMethodRule implements Rule
             $deadGroups[$deadMethodKey] = [];
             $methodsGrouped[$deadMethodKey] = true;
 
-            foreach ($this->getTransitiveCalleeKeys($deadMethodKey, $callGraph) as $transitiveMethodKey) {
-                if (!isset($deadMethods[$transitiveMethodKey])) {
-                    continue;
-                }
+            $transitiveMethodKeys = $this->getTransitiveDeadCalls($deadMethodKey);
 
+            foreach ($transitiveMethodKeys as $transitiveMethodKey) {
                 $deadGroups[$deadMethodKey][] = $transitiveMethodKey;
                 $methodsGrouped[$transitiveMethodKey] = true;
             }
         }
 
         // now only cycles remain, lets pick group representatives based on first occurrence
-        foreach ($deadMethods as $deadMethodKey => $_) {
+        foreach ($this->deadMethods as $deadMethodKey => $_) {
             if (isset($methodsGrouped[$deadMethodKey])) {
                 continue;
             }
 
-            $transitiveDeadMethods = $this->getTransitiveCalleeKeys($deadMethodKey, $callGraph);
+            $transitiveDeadMethods = $this->getTransitiveDeadCalls($deadMethodKey);
 
             $deadGroups[$deadMethodKey] = []; // TODO provide info to some Tip that those are cycles?
             $methodsGrouped[$deadMethodKey] = true;
