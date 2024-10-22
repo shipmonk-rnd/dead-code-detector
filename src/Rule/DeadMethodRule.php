@@ -13,6 +13,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
@@ -66,7 +67,7 @@ class DeadMethodRule implements Rule
     /**
      * @var array<string, list<string>>
      */
-    private array $methodsToMarkAsUsedCache = [];
+    private array $methodAlternativesCache = [];
 
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
@@ -149,17 +150,18 @@ class DeadMethodRule implements Rule
             foreach ($callsInFile as $calls) {
                 foreach ($calls as $callString) {
                     $call = Call::fromString($callString);
-
-                    $callerKey = $call->caller === null || $this->isAnonymousClass($call->caller->className)
-                        ? ''
-                        : $call->caller->toString();
                     $isWhite = $this->isConsideredWhite($call);
 
-                    foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
-                        $this->callGraph[$callerKey][] = $possibleCalleeKey;
+                    $alternativeCalleeKeys = $this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall);
+                    $alternativeCallerKeys = $call->caller !== null ? $this->getAlternativeMethodKeys($call->caller, false) : [];
+
+                    foreach ($alternativeCalleeKeys as $alternativeCalleeKey) {
+                        foreach ($alternativeCallerKeys as $alternativeCallerKey) {
+                            $this->callGraph[$alternativeCallerKey][] = $alternativeCalleeKey;
+                        }
 
                         if ($isWhite) {
-                            $whiteCallees[] = $possibleCalleeKey;
+                            $whiteCallees[] = $alternativeCalleeKey;
                         }
                     }
                 }
@@ -177,8 +179,8 @@ class DeadMethodRule implements Rule
                 foreach ($entrypoints as $entrypoint) {
                     $call = Call::fromString($entrypoint);
 
-                    foreach ($this->getAlternativeCalleeKeys($call) as $methodDefinition) {
-                        unset($this->blackMethods[$methodDefinition]);
+                    foreach ($this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall) as $alternativeCalleeKey) {
+                        unset($this->blackMethods[$alternativeCalleeKey]);
                     }
 
                     $this->markTransitiveCallsWhite($call->callee->toString());
@@ -276,32 +278,32 @@ class DeadMethodRule implements Rule
     /**
      * @return list<string>
      */
-    private function getAlternativeCalleeKeys(Call $call): array
+    private function getAlternativeMethodKeys(Method $method, bool $possibleDescendant): array
     {
-        $calleeCacheKey = "{$call->callee->className}::{$call->callee->methodName}";
+        $methodKey = $method->toString();
 
-        if (isset($this->methodsToMarkAsUsedCache[$calleeCacheKey])) {
-            return $this->methodsToMarkAsUsedCache[$calleeCacheKey];
+        if (isset($this->methodAlternativesCache[$methodKey])) {
+            return $this->methodAlternativesCache[$methodKey];
         }
 
-        $result = [$this->getMethodKey($call->callee->className, $call->callee->methodName)];
+        $result = [$methodKey];
 
-        if ($call->possibleDescendantCall) {
-            foreach ($this->classHierarchy->getClassDescendants($call->callee->className) as $descendantName) {
-                $result[] = $this->getMethodKey($descendantName, $call->callee->methodName);
+        if ($possibleDescendant) {
+            foreach ($this->classHierarchy->getClassDescendants($method->className) as $descendantName) {
+                $result[] = $this->getMethodKey($descendantName, $method->methodName);
             }
         }
 
         // each descendant can be a trait user
-        foreach ($result as $methodDefinition) {
-            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($methodDefinition);
+        foreach ($result as $resultKey) {
+            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($resultKey);
 
             if ($traitMethodKey !== null) {
                 $result[] = $traitMethodKey;
             }
         }
 
-        $this->methodsToMarkAsUsedCache[$calleeCacheKey] = $result;
+        $this->methodAlternativesCache[$methodKey] = $result;
 
         return $result;
     }
