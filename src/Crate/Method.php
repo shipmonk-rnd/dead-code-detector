@@ -2,8 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Crate;
 
-use function strpos;
-
 /**
  * @immutable
  */
@@ -26,23 +24,6 @@ class Method
     public function toString(): string
     {
         return $this->className . '::' . $this->methodName;
-    }
-
-    public static function isUnsupported(string $methodName): bool
-    {
-        if ($methodName === '__destruct') {
-            return true;
-        }
-
-        if (
-            strpos($methodName, '__') === 0
-            && $methodName !== '__construct'
-            && $methodName !== '__clone'
-        ) {
-            return true; // magic methods like __toString, __get, __set etc
-        }
-
-        return false;
     }
 
 }

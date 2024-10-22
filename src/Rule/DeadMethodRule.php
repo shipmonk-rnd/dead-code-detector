@@ -12,11 +12,13 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
-use ShipMonk\PHPStan\DeadCode\Crate\Method;
+use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
+use function explode;
 use function in_array;
 use function strpos;
 
@@ -25,6 +27,24 @@ use function strpos;
  */
 class DeadMethodRule implements Rule
 {
+
+    private const UNSUPPORTED_MAGIC_METHODS = [
+        '__invoke' => null,
+        '__toString' => null,
+        '__destruct' => null,
+        '__call' => null,
+        '__callStatic' => null,
+        '__get' => null,
+        '__set' => null,
+        '__isset' => null,
+        '__unset' => null,
+        '__sleep' => null,
+        '__wakeup' => null,
+        '__serialize' => null,
+        '__unserialize' => null,
+        '__set_state' => null,
+        '__debugInfo' => null,
+    ];
 
     private ClassHierarchy $classHierarchy;
 
@@ -35,7 +55,7 @@ class DeadMethodRule implements Rule
      *      kind: string,
      *      name: string,
      *      file: string,
-     *      methods: array<string, array{line: int, abstract: bool}>,
+     *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>
@@ -53,7 +73,7 @@ class DeadMethodRule implements Rule
     /**
      * @var array<string, array{string, int}> methodKey => [file, line]
      */
-    private array $deadMethods = [];
+    private array $blackMethods = [];
 
     /**
      * @var array<string, list<string>> caller => callee[]
@@ -117,7 +137,7 @@ class DeadMethodRule implements Rule
 
             foreach ($methods as $methodName => $methodData) {
                 $definition = $this->getMethodKey($typeName, $methodName);
-                $this->deadMethods[$definition] = [$file, $methodData['line']];
+                $this->blackMethods[$definition] = [$file, $methodData['line']];
             }
         }
 
@@ -133,9 +153,7 @@ class DeadMethodRule implements Rule
                     $callerKey = $call->caller === null || $this->isAnonymousClass($call->caller->className)
                         ? ''
                         : $call->caller->toString();
-                    $isWhite = $call->caller === null
-                        || $this->isAnonymousClass($call->caller->className)
-                        || Method::isUnsupported($call->caller->methodName);
+                    $isWhite = $this->isConsideredWhite($call);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
                         $this->callGraph[$callerKey][] = $possibleCalleeKey;
@@ -160,7 +178,7 @@ class DeadMethodRule implements Rule
                     $call = Call::fromString($entrypoint);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $methodDefinition) {
-                        unset($this->deadMethods[$methodDefinition]);
+                        unset($this->blackMethods[$methodDefinition]);
                     }
 
                     $this->markTransitiveCallsWhite($call->callee->toString());
@@ -168,10 +186,16 @@ class DeadMethodRule implements Rule
             }
         }
 
+        foreach ($this->blackMethods as $blackMethodKey => $_) {
+            if ($this->isNeverReportedAsDead($blackMethodKey)) {
+                unset($this->blackMethods[$blackMethodKey]);
+            }
+        }
+
         $errors = [];
 
         if ($this->reportTransitivelyDeadMethodAsSeparateError) {
-            foreach ($this->deadMethods as $deadMethodKey => [$file, $line]) {
+            foreach ($this->blackMethods as $deadMethodKey => [$file, $line]) {
                 $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
             }
 
@@ -181,11 +205,11 @@ class DeadMethodRule implements Rule
         $deadGroups = $this->groupDeadMethods();
 
         foreach ($deadGroups as $deadGroupKey => $deadSubgroupKeys) {
-            [$file, $line] = $this->deadMethods[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
+            [$file, $line] = $this->blackMethods[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
             $subGroupMap = [];
 
             foreach ($deadSubgroupKeys as $deadSubgroupKey) {
-                $subGroupMap[$deadSubgroupKey] = $this->deadMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
+                $subGroupMap[$deadSubgroupKey] = $this->blackMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
             }
 
             $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
@@ -290,14 +314,14 @@ class DeadMethodRule implements Rule
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
         $calleeKeys = $this->callGraph[$callerKey] ?? [];
 
-        unset($this->deadMethods[$callerKey]);
+        unset($this->blackMethods[$callerKey]);
 
         foreach ($calleeKeys as $calleeKey) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
                 continue;
             }
 
-            if (!isset($this->deadMethods[$calleeKey])) {
+            if (!isset($this->blackMethods[$calleeKey])) {
                 continue;
             }
 
@@ -321,7 +345,7 @@ class DeadMethodRule implements Rule
                 continue;
             }
 
-            if (!isset($this->deadMethods[$calleeKey])) {
+            if (!isset($this->blackMethods[$calleeKey])) {
                 continue;
             }
 
@@ -346,12 +370,12 @@ class DeadMethodRule implements Rule
         $deadMethodsWithCaller = [];
 
         foreach ($this->callGraph as $caller => $callees) {
-            if (!array_key_exists($caller, $this->deadMethods)) {
+            if (!array_key_exists($caller, $this->blackMethods)) {
                 continue;
             }
 
             foreach ($callees as $callee) {
-                if (array_key_exists($callee, $this->deadMethods)) {
+                if (array_key_exists($callee, $this->blackMethods)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
             }
@@ -359,7 +383,7 @@ class DeadMethodRule implements Rule
 
         $methodsGrouped = [];
 
-        foreach ($this->deadMethods as $deadMethodKey => $_) {
+        foreach ($this->blackMethods as $deadMethodKey => $_) {
             if (isset($methodsGrouped[$deadMethodKey])) {
                 continue;
             }
@@ -380,7 +404,7 @@ class DeadMethodRule implements Rule
         }
 
         // now only cycles remain, lets pick group representatives based on first occurrence
-        foreach ($this->deadMethods as $deadMethodKey => $_) {
+        foreach ($this->blackMethods as $deadMethodKey => $_) {
             if (isset($methodsGrouped[$deadMethodKey])) {
                 continue;
             }
@@ -461,6 +485,39 @@ class DeadMethodRule implements Rule
     private function getMethodKey(string $typeName, string $methodName): string
     {
         return $typeName . '::' . $methodName;
+    }
+
+    private function isConsideredWhite(Call $call): bool
+    {
+        return $call->caller === null
+            || $this->isAnonymousClass($call->caller->className)
+            || array_key_exists($call->caller->methodName, self::UNSUPPORTED_MAGIC_METHODS);
+    }
+
+    private function isNeverReportedAsDead(string $methodKey): bool
+    {
+        [$typeName, $methodName] = explode('::', $methodKey); // @phpstan-ignore offsetAccess.notFound
+
+        $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
+        $abstract = $this->typeDefinitions[$typeName]['methods'][$methodName]['abstract'] ?? false;
+        $visibility = $this->typeDefinitions[$typeName]['methods'][$methodName]['visibility'] ?? 0;
+
+        if ($kind === Kind::TRAIT && $abstract) {
+            // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
+            // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
+            return true;
+        }
+
+        if ($methodName === '__construct' && ($visibility & Visibility::PRIVATE) !== 0) {
+            // private constructors are often used to deny instantiation
+            return true;
+        }
+
+        if (array_key_exists($methodName, self::UNSUPPORTED_MAGIC_METHODS)) {
+            return true;
+        }
+
+        return false;
     }
 
 }

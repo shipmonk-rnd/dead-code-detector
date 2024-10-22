@@ -4,6 +4,15 @@ namespace DeadMagic;
 
 
 class Magic {
+
+    public static function create(): self {
+        return new self();
+    }
+
+    private function __construct() {
+        $this->calledFromPrivateConstruct();
+    }
+
     public function __invoke() {
         $this->calledFromInvoke();
     }
@@ -18,20 +27,13 @@ class Magic {
         $this->calledFromGet();
     }
 
-    public function calledFromInvoke() {
-
-    }
-
-    public function calledFromDestruct() {
-
-    }
-
-    public function calledFromGet() {
-
-    }
+    public function calledFromInvoke() {}
+    public function calledFromDestruct() {}
+    public function calledFromPrivateConstruct() {}
+    public function calledFromGet() {}
 
 }
 
-$invokable = new Magic();
+$invokable = Magic::create();
 $invokable->magic();
 $invokable();

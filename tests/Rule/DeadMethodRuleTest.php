@@ -132,6 +132,8 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
+        yield 'ctor-private' => [__DIR__ . '/data/DeadMethodRule/ctor-private.php'];
+        yield 'ctor-denied' => [__DIR__ . '/data/DeadMethodRule/ctor-denied.php'];
         yield 'cycles' => [__DIR__ . '/data/DeadMethodRule/cycles.php'];
         yield 'abstract-1' => [__DIR__ . '/data/DeadMethodRule/abstract-1.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
@@ -143,6 +145,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'overwriting-3' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-3.php'];
         yield 'overwriting-4' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-4.php'];
         yield 'overwriting-5' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-5.php'];
+        yield 'trait-abstract' => [__DIR__ . '/data/DeadMethodRule/traits-abstract-method.php'];
         yield 'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'];
         yield 'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'];
         yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];

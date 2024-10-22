@@ -10,6 +10,7 @@ use RecursiveIteratorIterator;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
+use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use function array_keys;
@@ -45,6 +46,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             Call::class,
             Method::class,
             Kind::class,
+            Visibility::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,
         ];
