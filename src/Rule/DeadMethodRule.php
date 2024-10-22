@@ -130,12 +130,12 @@ class DeadMethodRule implements Rule
                 foreach ($calls as $callString) {
                     $call = Call::fromString($callString);
 
-                    if ($this->containsAnonymousClass($call)) {
-                        continue;
-                    }
-
-                    $callerKey = $call->caller === null ? '' : $call->caller->toString();
-                    $isWhite = $call->caller === null || Method::isUnsupported($call->caller->methodName);
+                    $callerKey = $call->caller === null || $this->isAnonymousClass($call->caller->className)
+                        ? ''
+                        : $call->caller->toString();
+                    $isWhite = $call->caller === null
+                        || $this->isAnonymousClass($call->caller->className)
+                        || Method::isUnsupported($call->caller->methodName);
 
                     foreach ($this->getAlternativeCalleeKeys($call) as $possibleCalleeKey) {
                         $this->callGraph[$callerKey][] = $possibleCalleeKey;
@@ -243,14 +243,10 @@ class DeadMethodRule implements Rule
         }
     }
 
-    private function containsAnonymousClass(Call $call): bool
+    private function isAnonymousClass(string $className): bool
     {
-        $callerClassName = $call->caller === null ? '' : $call->caller->className;
-        $calleeClassName = $call->callee->className;
-
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return strpos($callerClassName, 'AnonymousClass') === 0
-            || strpos($calleeClassName, 'AnonymousClass') === 0;
+        return strpos($className, 'AnonymousClass') === 0;
     }
 
     /**

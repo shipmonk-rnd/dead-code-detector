@@ -127,6 +127,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public static function provideFiles(): iterable
     {
+        yield 'anonym' => [__DIR__ . '/data/DeadMethodRule/anonym.php'];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
