@@ -281,9 +281,10 @@ class DeadMethodRule implements Rule
     private function getAlternativeMethodKeys(Method $method, bool $possibleDescendant): array
     {
         $methodKey = $method->toString();
+        $cacheKey = $methodKey . ';' . ($possibleDescendant ? '1' : '0');
 
-        if (isset($this->methodAlternativesCache[$methodKey])) {
-            return $this->methodAlternativesCache[$methodKey];
+        if (isset($this->methodAlternativesCache[$cacheKey])) {
+            return $this->methodAlternativesCache[$cacheKey];
         }
 
         $result = [$methodKey];
@@ -303,7 +304,7 @@ class DeadMethodRule implements Rule
             }
         }
 
-        $this->methodAlternativesCache[$methodKey] = $result;
+        $this->methodAlternativesCache[$cacheKey] = $result;
 
         return $result;
     }
