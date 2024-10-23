@@ -119,7 +119,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'call-on-class-string' => [__DIR__ . '/data/DeadMethodRule/class-string.php'];
         yield 'array-map-1' => [__DIR__ . '/data/DeadMethodRule/array-map-1.php'];
         yield 'unknown-class' => [__DIR__ . '/data/DeadMethodRule/unknown-class.php'];
-        yield 'provider-default' => [__DIR__ . '/data/DeadMethodRule/providers/default.php'];
+        yield 'provider-vendor' => [__DIR__ . '/data/DeadMethodRule/providers/vendor.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/DeadMethodRule/providers/symfony.php', 8_00_00];
         yield 'provider-phpunit' => [__DIR__ . '/data/DeadMethodRule/providers/phpunit.php', 8_00_00];
         yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 8_00_00];
