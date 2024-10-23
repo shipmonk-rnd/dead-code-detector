@@ -414,7 +414,7 @@ class DeadMethodRule implements Rule
 
             $transitiveDeadMethods = $this->getTransitiveDeadCalls($deadMethodKey);
 
-            $deadGroups[$deadMethodKey] = []; // TODO provide info to some Tip that those are cycles?
+            $deadGroups[$deadMethodKey] = [];
             $methodsGrouped[$deadMethodKey] = true;
 
             foreach ($transitiveDeadMethods as $transitiveDeadMethodKey) {

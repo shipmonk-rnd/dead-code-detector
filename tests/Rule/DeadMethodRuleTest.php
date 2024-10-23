@@ -289,7 +289,7 @@ class DeadMethodRuleTest extends RuleTestCase
             foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line]) {
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    "Unused $alsoDead", // TODO distinguish in test asserts?
+                    "Unused $alsoDead",
                     $file,
                     $line,
                     true,
