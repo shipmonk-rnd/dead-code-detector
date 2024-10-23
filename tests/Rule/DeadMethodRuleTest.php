@@ -129,6 +129,7 @@ class DeadMethodRuleTest extends RuleTestCase
     {
         yield 'anonym' => [__DIR__ . '/data/DeadMethodRule/anonym.php'];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
+        yield 'callables' => [__DIR__ . '/data/DeadMethodRule/callables.php'];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
