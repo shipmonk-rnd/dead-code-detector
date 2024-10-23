@@ -201,7 +201,7 @@ class MethodCallCollector implements Collector
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
         $this->callsBuffer[] = new Call(
-            null, // TODO what about new in attributes?
+            null,
             new Method($scope->resolveName($node->name), '__construct'),
             false,
         );
