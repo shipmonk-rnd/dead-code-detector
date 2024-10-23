@@ -3,7 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\Autoload\ClassLoader;
-use ReflectionException;
+use ReflectionClass;
 use ReflectionMethod;
 use function array_keys;
 use function str_starts_with;
@@ -33,18 +33,42 @@ class VendorEntrypointProvider extends SimpleMethodEntrypointProvider
             return false;
         }
 
-        try {
-            $methodPrototype = $method->getPrototype();
-        } catch (ReflectionException $e) {
-            return false; // hasPrototype available since PHP 8.2
-        }
+        $reflectionClass = $method->getDeclaringClass();
+        $methodName = $method->getName();
 
-        return $this->isForeignMethod($methodPrototype);
+        do {
+            if ($this->isForeignMethod($reflectionClass, $methodName)) {
+                return true;
+            }
+
+            foreach ($reflectionClass->getInterfaces() as $interface) {
+                if ($this->isForeignMethod($interface, $methodName)) {
+                    return true;
+                }
+            }
+
+            foreach ($reflectionClass->getTraits() as $trait) {
+                if ($this->isForeignMethod($trait, $methodName)) {
+                    return true;
+                }
+            }
+
+            $reflectionClass = $reflectionClass->getParentClass();
+        } while ($reflectionClass !== false);
+
+        return false;
     }
 
-    private function isForeignMethod(ReflectionMethod $methodPrototype): bool
+    /**
+     * @param ReflectionClass<object> $reflectionClass
+     */
+    private function isForeignMethod(ReflectionClass $reflectionClass, string $methodName): bool
     {
-        $filePath = $methodPrototype->getDeclaringClass()->getFileName();
+        if (!$reflectionClass->hasMethod($methodName)) {
+            return false;
+        }
+
+        $filePath = $reflectionClass->getFileName();
 
         if ($filePath === false) {
             return true; // php core or extension
