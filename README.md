@@ -89,6 +89,32 @@ class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 }
 ```
 
+## Dead cycles & transitively dead methods
+- This library automatically detects dead cycles and transitively dead methods (methods that are only called from dead methods)
+- By default, it reports only the first dead method in the subtree and the rest as a tip:
+
+```
+ ------ ------------------------------------------------------------------------
+  Line   src/App/Facade/UserFacade.php
+ ------ ------------------------------------------------------------------------
+  26     Unused App\Facade\UserFacade::updateUserAddress
+         🪪  shipmonk.deadMethod
+         💡 Thus App\Entity\User::updateAddress is transitively also unused
+         💡 Thus App\Entity\Address::setPostalCode is transitively also unused
+         💡 Thus App\Entity\Address::setCountry is transitively also unused
+         💡 Thus App\Entity\Address::setStreet is transitively also unused
+         💡 Thus App\Entity\Address::setZip is transitively also unused
+ ------ ------------------------------------------------------------------------
+```
+
+- If you want to report all dead methods individually, you can enable it in your `phpstan.neon.dist`:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        reportTransitivelyDeadMethodAsSeparateError: true
+```
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:
@@ -104,11 +130,8 @@ class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 - Only method calls are detected so far
   - Including **constructors**, static methods, trait methods, interface methods, first class callables, clone, etc.
   - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
-  - Anonymous classes are ignored ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
-  - Does not check most magic methods (`__get`, `__set` etc)
-  - Call-graph not implemented so far
-    - No transitive check is performed (dead method called only from dead method)
-    - No dead cycles are detected (e.g. dead method calling itself)
+  - Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
+  - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
 
 ## Contributing
 - Check your code by `composer check`
