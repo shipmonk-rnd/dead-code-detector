@@ -83,8 +83,11 @@ class DicClass3 {
     public function __construct(DicClass1 $class1, DicClass2 $class2) {}
 }
 
-class DicClass4 { // is in DIC, but not used in any other ctor, thus is dead
-    public function __construct() {} // error: Unused Symfony\DicClass4::__construct
+class DicClass4 {
+    public function __construct() {
+        // in theory dead as it is in DIC, but not used in any other ctor or $container->get(),
+        // but that precise analysis is not yet implemented
+    }
 }
 
 class DicClass5 {}

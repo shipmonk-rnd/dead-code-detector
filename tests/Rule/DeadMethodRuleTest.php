@@ -26,7 +26,6 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ShadowMethodCallProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SymfonyShadowCallProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
 use function is_array;
 use const PHP_VERSION_ID;
@@ -202,9 +201,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     private function getShadowCallProviders(): array
     {
-        return [
-            new SymfonyShadowCallProvider($this->createServiceMapFactoryMock()),
-        ];
+        return [];
     }
 
     /**
@@ -231,6 +228,7 @@ class DeadMethodRuleTest extends RuleTestCase
                 self::getContainer()->getByType(Lexer::class),
             ),
             new SymfonyEntrypointProvider(
+                $this->createServiceMapFactoryMock(),
                 true,
             ),
             new DoctrineEntrypointProvider(

@@ -46,11 +46,6 @@ services:
 
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyShadowCallProvider
-        tags:
-            - shipmonk.deadCode.shadowCallProvider
-
-    -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector

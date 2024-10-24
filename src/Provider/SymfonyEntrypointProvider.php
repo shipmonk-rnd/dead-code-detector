@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use Composer\InstalledVersions;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -16,18 +17,43 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
 
     private bool $enabled;
 
-    public function __construct(?bool $enabled)
+    /**
+     * @var array<string, true>
+     */
+    private array $dicClasses = [];
+
+    public function __construct(
+        ?ServiceMapFactory $serviceMapFactory,
+        ?bool $enabled
+    )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
+
+        if ($serviceMapFactory !== null) {
+            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
+                $dicClass = $service->getClass(); // @phpstan-ignore phpstanApi.method
+
+                if ($dicClass === null) {
+                    continue;
+                }
+
+                $this->dicClasses[$dicClass] = true;
+            }
+        }
     }
 
     public function getEntrypoints(ClassReflection $classReflection): array
     {
         $nativeReflection = $classReflection->getNativeReflection();
+        $className = $classReflection->getName();
 
         $entrypoints = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
+            if ($method->isConstructor() && isset($this->dicClasses[$className])) {
+                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+            }
+
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
                 continue;
             }
