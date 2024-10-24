@@ -44,11 +44,16 @@ services:
         arguments:
             enabled: %shipmonkDeadCode.entrypoints.nette.enabled%
 
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyShadowCallProvider
+        tags:
+            - shipmonk.deadCode.shadowCallProvider
+
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
-
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
@@ -59,6 +64,13 @@ services:
             - phpstan.collector
         arguments:
             entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
+    -
+        class: ShipMonk\PHPStan\DeadCode\Collector\ShadowCallCollector
+        tags:
+            - phpstan.collector
+        arguments:
+            shadowCallProviders: tagged(shipmonk.deadCode.shadowCallProvider)
+
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule

@@ -77,3 +77,14 @@ class DicClass1 extends DicClassParent {
 class DicClass2 {
     public function __construct() {}
 }
+
+#[\Symfony\Component\HttpKernel\Attribute\AsController]
+class DicClass3 {
+    public function __construct(DicClass1 $class1, DicClass2 $class2) {}
+}
+
+class DicClass4 { // is in DIC, but not used in any other ctor, thus is dead
+    public function __construct() {} // error: Unused Symfony\DicClass4::__construct
+}
+
+class DicClass5 {}
