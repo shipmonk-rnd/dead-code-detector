@@ -39,22 +39,28 @@ final class TestChild extends TestParent {
         $class->commonMethod();
         $class->differentMethod();
         $this->overwrittenParentMethodUsedByChild();
+        $this->childMethodNowUsed();
     }
 
-    public function childMethodUnused(TestInterface|TestA $class, TestInterface $interface): void // error: Unused DeadBasic\TestChild::childMethodUnused
+    public function childMethodNowUsed(TestInterface|TestA $class, TestInterface $interface): void
     {
-        $class->differentMethod(); // TODO this is unused since the caller is unused
+        $class->differentMethod();
         $interface->interfaceMethod();
+    }
+
+    public function childMethodUnused(): void // error: Unused DeadBasic\TestChild::childMethodUnused
+    {
+
     }
 
     public function childMethodUsed(): void
     {
-        $this->parentMethodUsed($this);
+
     }
 
     public function overwrittenParentMethodUsedByChild(): void
     {
-
+        $this->parentMethodUsed($this);
     }
 }
 
@@ -97,13 +103,6 @@ trait TestTrait {
     public function traitMethodUnused(): void // error: Unused DeadBasic\TestTrait::traitMethodUnused
     {
 
-    }
-}
-
-class StaticClass {
-
-    private function __construct()
-    {
     }
 }
 

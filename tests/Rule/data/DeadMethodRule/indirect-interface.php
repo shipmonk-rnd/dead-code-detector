@@ -9,10 +9,14 @@ interface FooInterface
 
 abstract class FooAbstract
 {
+    public function __construct()
+    {
+        $this->foo();
+    }
 
     public function foo(): void
     {
-        $this->foo();
+
     }
 }
 
@@ -20,3 +24,5 @@ class Foo extends FooAbstract implements FooInterface
 {
 
 }
+
+new Foo();

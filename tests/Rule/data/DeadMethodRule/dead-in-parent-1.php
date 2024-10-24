@@ -20,9 +20,11 @@ class B extends A
     /**
      * @inheritDoc
      */
-    public function __construct() // error: Unused DeadParent\B::__construct
+    public function __construct()
     {
         parent::__construct();
     }
 
 }
+
+new B();

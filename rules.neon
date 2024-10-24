@@ -64,10 +64,13 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
         tags:
             - phpstan.rules.rule
+        arguments:
+            reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
 
 parameters:
     shipmonkDeadCode:
+        reportTransitivelyDeadMethodAsSeparateError: false
         entrypoints:
             vendor:
                 enabled: true
@@ -84,6 +87,7 @@ parameters:
 
 parametersSchema:
     shipmonkDeadCode: structure([
+        reportTransitivelyDeadMethodAsSeparateError: bool()
         entrypoints: structure([
             vendor: structure([
                 enabled: bool()

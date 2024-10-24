@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
+use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
@@ -33,10 +34,17 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
+    private ?bool $emitErrorsInGroups = null;
+
+    private bool $unwrapGroupedErrors = true;
+
     protected function getRule(): DeadMethodRule
     {
+        self::assertNotNull($this->emitErrorsInGroups);
+
         return new DeadMethodRule(
             new ClassHierarchy(),
+            !$this->emitErrorsInGroups,
         );
     }
 
@@ -58,6 +66,25 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public function testDead($files, ?int $lowestPhpVersion = null): void
     {
+        $this->emitErrorsInGroups = false;
+        $this->doTestDead($files, $lowestPhpVersion);
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     * @dataProvider provideFiles
+     */
+    public function testDeadWithGroups($files, ?int $lowestPhpVersion = null): void
+    {
+        $this->emitErrorsInGroups = true;
+        $this->doTestDead($files, $lowestPhpVersion);
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     */
+    private function doTestDead($files, ?int $lowestPhpVersion = null): void
+    {
         if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
             self::markTestSkipped('Requires PHP ' . $lowestPhpVersion);
         }
@@ -65,24 +92,62 @@ class DeadMethodRuleTest extends RuleTestCase
         $this->analyseFiles(is_array($files) ? $files : [$files]);
     }
 
+    public function testGrouping(): void
+    {
+        $this->emitErrorsInGroups = true;
+        $this->unwrapGroupedErrors = false;
+
+        $this->analyse([__DIR__ . '/data/DeadMethodRule/grouping/default.php'], [
+            [
+                'Unused Grouping\Example::foo',
+                20,
+                "• Thus Grouping\Example::bar is transitively also unused\n" .
+                '• Thus Grouping\Example::bag is transitively also unused',
+            ],
+            [
+                'Unused Grouping\Example::boo',
+                26,
+                "• Thus Grouping\Example::bag is transitively also unused\n" .
+                '• Thus Grouping\Example::bar is transitively also unused',
+            ],
+            [
+                'Unused Grouping\Example::recur',
+                43,
+            ],
+            [
+                'Unused Grouping\Example::recur1',
+                50,
+                'Thus Grouping\Example::recur2 is transitively also unused',
+            ],
+        ]);
+    }
+
     /**
      * @return array<string, array{0: string|list<string>, 1?: int}>
      */
     public static function provideFiles(): iterable
     {
+        yield 'anonym' => [__DIR__ . '/data/DeadMethodRule/anonym.php'];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
+        yield 'callables' => [__DIR__ . '/data/DeadMethodRule/callables.php'];
         yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
+        yield 'ctor-private' => [__DIR__ . '/data/DeadMethodRule/ctor-private.php'];
+        yield 'ctor-denied' => [__DIR__ . '/data/DeadMethodRule/ctor-denied.php'];
+        yield 'cycles' => [__DIR__ . '/data/DeadMethodRule/cycles.php'];
         yield 'abstract-1' => [__DIR__ . '/data/DeadMethodRule/abstract-1.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
         yield 'clone' => [__DIR__ . '/data/DeadMethodRule/clone.php'];
+        yield 'magic' => [__DIR__ . '/data/DeadMethodRule/magic.php'];
+        yield 'new-in-initializers' => [__DIR__ . '/data/DeadMethodRule/new-in-initializers.php'];
         yield 'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'];
         yield 'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'];
         yield 'overwriting-2' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-2.php'];
         yield 'overwriting-3' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-3.php'];
         yield 'overwriting-4' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-4.php'];
         yield 'overwriting-5' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-5.php'];
+        yield 'trait-abstract' => [__DIR__ . '/data/DeadMethodRule/traits-abstract-method.php'];
         yield 'trait-1' => [__DIR__ . '/data/DeadMethodRule/traits-1.php'];
         yield 'trait-2' => [__DIR__ . '/data/DeadMethodRule/traits-2.php'];
         yield 'trait-3' => [__DIR__ . '/data/DeadMethodRule/traits-3.php'];
@@ -105,6 +170,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'trait-20' => [__DIR__ . '/data/DeadMethodRule/traits-20.php'];
         yield 'trait-21' => [__DIR__ . '/data/DeadMethodRule/traits-21.php'];
         yield 'trait-22' => [__DIR__ . '/data/DeadMethodRule/traits-22.php'];
+        yield 'trait-23' => [__DIR__ . '/data/DeadMethodRule/traits-23.php'];
         yield 'nullsafe' => [__DIR__ . '/data/DeadMethodRule/nullsafe.php'];
         yield 'dead-in-parent-1' => [__DIR__ . '/data/DeadMethodRule/dead-in-parent-1.php'];
         yield 'indirect-interface' => [__DIR__ . '/data/DeadMethodRule/indirect-interface.php'];
@@ -203,6 +269,41 @@ class DeadMethodRuleTest extends RuleTestCase
             ->willReturn($serviceMapMock);
 
         return $factoryMock;
+    }
+
+    public function gatherAnalyserErrors(array $files): array
+    {
+        if (!$this->unwrapGroupedErrors) {
+            return parent::gatherAnalyserErrors($files);
+        }
+
+        $result = [];
+        $errors = parent::gatherAnalyserErrors($files);
+
+        foreach ($errors as $error) {
+            $result[] = $error;
+
+            /** @var array<string, array{file: string, line: int}> $metadata */
+            $metadata = $error->getMetadata();
+
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line]) {
+                // @phpstan-ignore phpstanApi.constructor
+                $result[] = new Error(
+                    "Unused $alsoDead",
+                    $file,
+                    $line,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    $error->getIdentifier(),
+                );
+            }
+        }
+
+        return $result;
     }
 
 }

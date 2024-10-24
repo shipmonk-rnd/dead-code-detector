@@ -7,7 +7,6 @@ use PhpParser\Node;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
-use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Enum_;
 use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\Trait_;
@@ -16,15 +15,15 @@ use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
+use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use function array_fill_keys;
 use function array_map;
-use function strpos;
 
 /**
  * @implements Collector<ClassLike, array{
  *       kind: string,
  *       name: string,
- *       methods: array<string, array{line: int, abstract: bool}>,
+ *       methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
  *       interfaces: array<string, null>,
@@ -43,7 +42,7 @@ class ClassDefinitionCollector implements Collector
      * @return array{
      *      kind: string,
      *      name: string,
-     *      methods: array<string, array{line: int, abstract: bool}>,
+     *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>,
@@ -64,13 +63,10 @@ class ClassDefinitionCollector implements Collector
         $methods = [];
 
         foreach ($node->getMethods() as $method) {
-            if ($this->isUnsupportedMethod($node, $method)) {
-                continue;
-            }
-
             $methods[$method->name->toString()] = [
                 'line' => $method->getStartLine(),
                 'abstract' => $method->isAbstract() || $node instanceof Interface_,
+                'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
             ];
         }
 
@@ -161,35 +157,6 @@ class ClassDefinitionCollector implements Collector
         }
 
         return $traits;
-    }
-
-    private function isUnsupportedMethod(ClassLike $class, ClassMethod $method): bool
-    {
-        $methodName = $method->name->toString();
-
-        if ($methodName === '__destruct') {
-            return true;
-        }
-
-        if (
-            strpos($methodName, '__') === 0
-            && $methodName !== '__construct'
-            && $methodName !== '__clone'
-        ) {
-            return true; // magic methods like __toString, __get, __set etc
-        }
-
-        if ($methodName === '__construct' && $method->isPrivate()) { // e.g. classes with "denied" instantiation
-            return true;
-        }
-
-        // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
-        // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
-        if ($class instanceof Trait_ && $method->isAbstract()) {
-            return true;
-        }
-
-        return false;
     }
 
     private function getKind(ClassLike $node): string

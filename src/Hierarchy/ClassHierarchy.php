@@ -44,9 +44,9 @@ class ClassHierarchy
             : [];
     }
 
-    public function getDeclaringTraitMethodKey(string $definition): ?string
+    public function getDeclaringTraitMethodKey(string $methodKey): ?string
     {
-        return $this->declaringTraits[$definition] ?? null;
+        return $this->declaringTraits[$methodKey] ?? null;
     }
 
 }
