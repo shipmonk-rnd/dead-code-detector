@@ -11,6 +11,7 @@ use PHPStan\Rules\RuleErrorBuilder;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ShadowCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
@@ -19,6 +20,7 @@ use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
+use function array_merge_recursive;
 use function explode;
 use function in_array;
 use function strpos;
@@ -110,6 +112,7 @@ class DeadMethodRule implements Rule
 
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
+        $shadowCallData = $node->get(ShadowCallCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
 
         foreach ($methodDeclarationData as $file => $data) {
@@ -146,7 +149,10 @@ class DeadMethodRule implements Rule
 
         $whiteCallees = [];
 
-        foreach ($methodCallData as $file => $callsInFile) {
+        /** @var array<string, list<list<string>>> $callData */
+        $callData = array_merge_recursive($methodCallData, $shadowCallData, $entrypointData);
+
+        foreach ($callData as $file => $callsInFile) {
             foreach ($callsInFile as $calls) {
                 foreach ($calls as $callString) {
                     $call = Call::fromString($callString);
@@ -172,20 +178,6 @@ class DeadMethodRule implements Rule
 
         foreach ($whiteCallees as $whiteCalleeKey) {
             $this->markTransitiveCallsWhite($whiteCalleeKey);
-        }
-
-        foreach ($entrypointData as $file => $entrypointsInFile) {
-            foreach ($entrypointsInFile as $entrypoints) {
-                foreach ($entrypoints as $entrypoint) {
-                    $call = Call::fromString($entrypoint);
-
-                    foreach ($this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall) as $alternativeCalleeKey) {
-                        unset($this->blackMethods[$alternativeCalleeKey]);
-                    }
-
-                    $this->markTransitiveCallsWhite($call->callee->toString());
-                }
-            }
         }
 
         foreach ($this->blackMethods as $blackMethodKey => $_) {

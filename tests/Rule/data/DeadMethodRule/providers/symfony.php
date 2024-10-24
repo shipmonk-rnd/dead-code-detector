@@ -77,3 +77,17 @@ class DicClass1 extends DicClassParent {
 class DicClass2 {
     public function __construct() {}
 }
+
+#[\Symfony\Component\HttpKernel\Attribute\AsController]
+class DicClass3 {
+    public function __construct(DicClass1 $class1, DicClass2 $class2) {}
+}
+
+class DicClass4 {
+    public function __construct() {
+        // in theory dead as it is in DIC, but not used in any other ctor or $container->get(),
+        // but that precise analysis is not yet implemented
+    }
+}
+
+class DicClass5 {}

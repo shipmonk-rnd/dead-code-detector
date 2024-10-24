@@ -16,12 +16,14 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ShadowCallCollector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ShadowMethodCallProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
@@ -57,6 +59,7 @@ class DeadMethodRuleTest extends RuleTestCase
             new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
             new MethodCallCollector(),
+            new ShadowCallCollector($this->getShadowCallProviders()),
         ];
     }
 
@@ -194,6 +197,14 @@ class DeadMethodRuleTest extends RuleTestCase
     }
 
     /**
+     * @return list<ShadowMethodCallProvider>
+     */
+    private function getShadowCallProviders(): array
+    {
+        return [];
+    }
+
+    /**
      * @return list<MethodEntrypointProvider>
      */
     private function getEntrypointProviders(): array
@@ -260,9 +271,21 @@ class DeadMethodRuleTest extends RuleTestCase
         $service2Mock->method('getClass')
             ->willReturn('Symfony\DicClass2');
 
+        $service3Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service3Mock->method('getClass')
+            ->willReturn('Symfony\DicClass3');
+
+        $service4Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service4Mock->method('getClass')
+            ->willReturn('Symfony\DicClass4');
+
+        $service5Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service5Mock->method('getClass')
+            ->willReturn('Symfony\DicClass5');
+
         $serviceMapMock = $this->createMock(ServiceMap::class); // @phpstan-ignore phpstanApi.classConstant
         $serviceMapMock->method('getServices')
-            ->willReturn([$service1Mock, $service2Mock]);
+            ->willReturn([$service1Mock, $service2Mock, $service3Mock, $service4Mock, $service5Mock]);
 
         $factoryMock = $this->createMock(ServiceMapFactory::class); // @phpstan-ignore phpstanApi.classConstant
         $factoryMock->method('create')

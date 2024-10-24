@@ -12,6 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Crate\Kind;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ShadowMethodCallProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use function array_keys;
 use function array_merge;
@@ -48,6 +49,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             Kind::class,
             Visibility::class,
             MethodEntrypointProvider::class,
+            ShadowMethodCallProvider::class,
             SimpleMethodEntrypointProvider::class,
         ];
 
