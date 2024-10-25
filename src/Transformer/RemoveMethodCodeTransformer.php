@@ -24,7 +24,7 @@ class RemoveMethodCodeTransformer
     private PhpPrinter $phpPrinter;
 
     /**
-     * @param array<string, mixed> $deadMethodKeys
+     * @param list<string> $deadMethodKeys
      */
     public function __construct(array $deadMethodKeys)
     {

@@ -2,5 +2,6 @@
 
 interface Remove
 {
-    public function dead(): void; // error: Unused Remove::dead
+    public function dead(): void // error: Unused Remove::dead
+    ;
 }

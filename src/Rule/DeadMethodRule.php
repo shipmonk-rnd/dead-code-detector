@@ -16,8 +16,6 @@ use ShipMonk\PHPStan\DeadCode\Crate\Kind;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
-use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
-use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodCodeTransformer;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
@@ -31,6 +29,7 @@ use function strpos;
 class DeadMethodRule implements Rule
 {
 
+    public const ERROR_IDENTIFIER = 'shipmonk.deadMethod';
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,
         '__toString' => null,
@@ -48,8 +47,6 @@ class DeadMethodRule implements Rule
         '__set_state' => null,
         '__debugInfo' => null,
     ];
-
-    private FileSystem $fileSystem;
 
     private ClassHierarchy $classHierarchy;
 
@@ -73,8 +70,6 @@ class DeadMethodRule implements Rule
      */
     private array $methodAlternativesCache = [];
 
-    private bool $removeDeadCode;
-
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
     /**
@@ -88,15 +83,11 @@ class DeadMethodRule implements Rule
     private array $callGraph = [];
 
     public function __construct(
-        FileSystem $fileSystem,
         ClassHierarchy $classHierarchy,
-        bool $removeDeadCode,
         bool $reportTransitivelyDeadMethodAsSeparateError
     )
     {
-        $this->fileSystem = $fileSystem;
         $this->classHierarchy = $classHierarchy;
-        $this->removeDeadCode = $removeDeadCode;
         $this->reportTransitivelyDeadMethodAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
     }
 
@@ -211,7 +202,6 @@ class DeadMethodRule implements Rule
                 $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
             }
 
-            $this->removeDeadCode();
             return $errors;
         }
 
@@ -228,7 +218,6 @@ class DeadMethodRule implements Rule
             $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
         }
 
-        $this->removeDeadCode();
         return $errors;
     }
 
@@ -451,9 +440,14 @@ class DeadMethodRule implements Rule
         $builder = RuleErrorBuilder::message('Unused ' . $deadMethodKey)
             ->file($file)
             ->line($line)
-            ->identifier('shipmonk.deadMethod');
+            ->identifier(self::ERROR_IDENTIFIER);
 
         $metadata = [];
+        $metadata[$deadMethodKey] = [
+            'file' => $file,
+            'line' => $line,
+            'transitive' => false,
+        ];
 
         foreach ($transitiveDeadMethodKeys as $transitiveDeadMethodKey => [$transitiveDeadMethodFile, $transitiveDeadMethodLine]) {
             $builder->addTip("Thus $transitiveDeadMethodKey is transitively also unused");
@@ -461,6 +455,7 @@ class DeadMethodRule implements Rule
             $metadata[$transitiveDeadMethodKey] = [
                 'file' => $transitiveDeadMethodFile,
                 'line' => $transitiveDeadMethodLine,
+                'transitive' => true,
             ];
         }
 
@@ -533,34 +528,6 @@ class DeadMethodRule implements Rule
         }
 
         return false;
-    }
-
-    /**
-     * @return array<string, array<string, true>>
-     */
-    private function groupBlackMethodsByFiles(): array
-    {
-        $result = [];
-
-        foreach ($this->blackMethods as $methodKey => [$file, $_]) {
-            $result[$file][$methodKey] = true;
-        }
-
-        return $result;
-    }
-
-    private function removeDeadCode(): void
-    {
-        if (!$this->removeDeadCode) {
-            return;
-        }
-
-        foreach ($this->groupBlackMethodsByFiles() as $file => $blackMethodsInFile) {
-            $transformer = new RemoveMethodCodeTransformer($this->blackMethods);
-            $oldCode = $this->fileSystem->read($file);
-            $newCode = $transformer->transformCode($oldCode);
-            $this->fileSystem->write($file, $newCode);
-        }
     }
 
 }

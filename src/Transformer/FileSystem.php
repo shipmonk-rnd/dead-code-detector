@@ -22,7 +22,11 @@ class FileSystem
 
     public function write(string $path, string $content): void
     {
-        file_put_contents($path, $content);
+        $success = file_put_contents($path, $content);
+
+        if ($success === false) {
+            throw new LogicException('Could not write to file: ' . $path);
+        }
     }
 
 }

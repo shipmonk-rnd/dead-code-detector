@@ -6,7 +6,9 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
+use function array_fill_keys;
 use function ltrim;
 
 class RemoveMethodVisitor extends NodeVisitorAbstract
@@ -17,16 +19,16 @@ class RemoveMethodVisitor extends NodeVisitorAbstract
     private string $currentClass = '';
 
     /**
-     * @var array<string, mixed>
+     * @var array<string, true>
      */
     private array $deadMethods;
 
     /**
-     * @param array<string, mixed> $deadMethods
+     * @param list<string> $deadMethods
      */
     public function __construct(array $deadMethods)
     {
-        $this->deadMethods = $deadMethods;
+        $this->deadMethods = array_fill_keys($deadMethods, true);
     }
 
     public function enterNode(Node $node): ?Node
@@ -47,7 +49,7 @@ class RemoveMethodVisitor extends NodeVisitorAbstract
             $methodKey = ltrim($this->currentNamespace . '\\' . $this->currentClass, '\\') . '::' . $node->name->name;
 
             if (isset($this->deadMethods[$methodKey])) {
-                return 3;
+                return NodeTraverser::REMOVE_NODE;
             }
         }
 

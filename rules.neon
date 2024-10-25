@@ -1,4 +1,7 @@
 services:
+    errorFormatter.removeDeadCode:
+        class: ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter
+
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
@@ -67,13 +70,11 @@ services:
         tags:
             - phpstan.rules.rule
         arguments:
-            removeDeadCode: %shipmonkDeadCode.removeDeadCode%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
 
 parameters:
     shipmonkDeadCode:
-        removeDeadCode: false
         reportTransitivelyDeadMethodAsSeparateError: false
         entrypoints:
             vendor:
@@ -91,7 +92,6 @@ parameters:
 
 parametersSchema:
     shipmonkDeadCode: structure([
-        removeDeadCode: bool()
         reportTransitivelyDeadMethodAsSeparateError: bool()
         entrypoints: structure([
             vendor: structure([

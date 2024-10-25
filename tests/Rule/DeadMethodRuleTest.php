@@ -5,6 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
+use PHPStan\Command\AnalysisResult;
+use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
@@ -16,6 +18,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
@@ -41,16 +44,10 @@ class DeadMethodRuleTest extends RuleTestCase
 
     private bool $unwrapGroupedErrors = true;
 
-    private bool $removeDeadCode = false;
-
-    private ?FileSystem $fileSystem = null;
-
     protected function getRule(): DeadMethodRule
     {
         return new DeadMethodRule(
-            $this->fileSystem ?? $this->createMock(FileSystem::class),
             new ClassHierarchy(),
-            $this->removeDeadCode,
             !$this->emitErrorsInGroups,
         );
     }
@@ -103,8 +100,8 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
-        $mock = $this->createMock(FileSystem::class);
-        $mock->expects(self::any())
+        $fileSystem = $this->createMock(FileSystem::class);
+        $fileSystem->expects(self::once())
             ->method('read')
             ->willReturnCallback(
                 static function (string $file): string {
@@ -112,7 +109,7 @@ class DeadMethodRuleTest extends RuleTestCase
                     return file_get_contents($file); // @phpstan-ignore return.type
                 },
             );
-        $mock->expects(self::any())
+        $fileSystem->expects(self::once())
             ->method('write')
             ->willReturnCallback(
                 function (string $file, string $content): void {
@@ -123,18 +120,27 @@ class DeadMethodRuleTest extends RuleTestCase
                     self::assertSame($expectedNewCode, $content);
                 },
             );
-        $this->fileSystem = $mock;
 
-        $this->analyseFiles([$file]);
+        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+
+        $formatter = new RemoveDeadCodeFormatter($fileSystem);
+        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $this->createOutput());
     }
 
     /**
-     * @dataProvider provideAutoRemoveFiles
+     * @param list<Error> $errors
      */
-    public function testAutoRemoveNoMore(string $file): void
+    private function createAnalysisResult(array $errors): AnalysisResult
     {
-        $transformedFile = $this->getTransformedFilePath($file);
-        $this->analyseFiles([$transformedFile]);
+        $result = $this->createMock(AnalysisResult::class);
+        $result->method('getInternalErrorObjects')->willReturn([]);
+        $result->method('getFileSpecificErrors')->willReturn($errors);
+        return $result;
+    }
+
+    private function createOutput(): Output
+    {
+        return $this->createMock(Output::class);
     }
 
     public function testGrouping(): void
@@ -344,7 +350,11 @@ class DeadMethodRuleTest extends RuleTestCase
             /** @var array<string, array{file: string, line: int}> $metadata */
             $metadata = $error->getMetadata();
 
-            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line]) {
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive]) {
+                if (!$transitive) {
+                    continue;
+                }
+
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
                     "Unused $alsoDead",

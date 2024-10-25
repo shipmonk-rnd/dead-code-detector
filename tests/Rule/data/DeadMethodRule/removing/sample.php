@@ -4,22 +4,27 @@ namespace Removal;
 
 interface Interface1
 {
-    public function foo(): void; // error: Unused Removal\Interface1::foo
+    public function foo(): void // error: Unused Removal\Interface1::foo
+    ;
 }
 
 interface Interface2
 {
-    public function foo(): void; // error: Unused Removal\Interface2::foo
+    public function foo(): void // error: Unused Removal\Interface2::foo
+    ;
 }
 
 abstract class AbstractClass implements Interface1, Interface2
 {
-    public abstract function foo(): void; // error: Unused Removal\AbstractClass::foo
+    public abstract function foo(): void // error: Unused Removal\AbstractClass::foo
+    ;
 }
 
 class Child1 extends AbstractClass
 {
-    public function foo(): void {} // error: Unused Removal\Child1::foo
+    public function foo(): void // error: Unused Removal\Child1::foo
+    {
+    }
 }
 
 class Child2 extends AbstractClass

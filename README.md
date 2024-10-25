@@ -116,12 +116,10 @@ parameters:
 ```
 
 ## Automatic removal of dead code
-- If you are sure that the reported methods are dead, you can configure this tool remove it for you:
+- If you are sure that the reported methods are dead, you can automatically remove them by running PHPStan with `removeDeadCode` error format:
 
-```neon
-parameters:
-    shipmonkDeadCode:
-        removeDeadCode: true
+```bash
+vendor/bin/phpstan analyse --error-format removeDeadCode
 ```
 
 ```php
