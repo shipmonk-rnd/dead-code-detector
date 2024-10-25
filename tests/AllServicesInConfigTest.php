@@ -13,6 +13,8 @@ use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodCodeTransformer;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodVisitor;
 use function array_keys;
 use function array_merge;
 use function class_exists;
@@ -49,6 +51,8 @@ class AllServicesInConfigTest extends PHPStanTestCase
             Visibility::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,
+            RemoveMethodCodeTransformer::class,
+            RemoveMethodVisitor::class,
         ];
 
         /** @var DirectoryIterator $file */

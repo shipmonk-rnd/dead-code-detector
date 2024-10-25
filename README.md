@@ -115,6 +115,32 @@ parameters:
         reportTransitivelyDeadMethodAsSeparateError: true
 ```
 
+## Automatic removal of dead code
+- If you are sure that the reported methods are dead, you can configure this tool remove it for you:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        removeDeadCode: true
+```
+
+```php
+// before
+class UserFacade
+{
+    public function deadMethod(): void
+    {
+    }
+}
+```
+
+```php
+// after
+class UserFacade
+{
+}
+```
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:

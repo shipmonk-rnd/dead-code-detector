@@ -16,6 +16,8 @@ use ShipMonk\PHPStan\DeadCode\Crate\Kind;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
+use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodCodeTransformer;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
@@ -47,6 +49,8 @@ class DeadMethodRule implements Rule
         '__debugInfo' => null,
     ];
 
+    private FileSystem $fileSystem;
+
     private ClassHierarchy $classHierarchy;
 
     /**
@@ -69,6 +73,8 @@ class DeadMethodRule implements Rule
      */
     private array $methodAlternativesCache = [];
 
+    private bool $removeDeadCode;
+
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
     /**
@@ -82,11 +88,15 @@ class DeadMethodRule implements Rule
     private array $callGraph = [];
 
     public function __construct(
+        FileSystem $fileSystem,
         ClassHierarchy $classHierarchy,
-        bool $reportTransitivelyDeadMethodAsSeparateError = false
+        bool $removeDeadCode,
+        bool $reportTransitivelyDeadMethodAsSeparateError
     )
     {
+        $this->fileSystem = $fileSystem;
         $this->classHierarchy = $classHierarchy;
+        $this->removeDeadCode = $removeDeadCode;
         $this->reportTransitivelyDeadMethodAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
     }
 
@@ -201,6 +211,7 @@ class DeadMethodRule implements Rule
                 $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
             }
 
+            $this->removeDeadCode();
             return $errors;
         }
 
@@ -217,6 +228,7 @@ class DeadMethodRule implements Rule
             $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
         }
 
+        $this->removeDeadCode();
         return $errors;
     }
 
@@ -521,6 +533,34 @@ class DeadMethodRule implements Rule
         }
 
         return false;
+    }
+
+    /**
+     * @return array<string, array<string, true>>
+     */
+    private function groupBlackMethodsByFiles(): array
+    {
+        $result = [];
+
+        foreach ($this->blackMethods as $methodKey => [$file, $_]) {
+            $result[$file][$methodKey] = true;
+        }
+
+        return $result;
+    }
+
+    private function removeDeadCode(): void
+    {
+        if (!$this->removeDeadCode) {
+            return;
+        }
+
+        foreach ($this->groupBlackMethodsByFiles() as $file => $blackMethodsInFile) {
+            $transformer = new RemoveMethodCodeTransformer($this->blackMethods);
+            $oldCode = $this->fileSystem->read($file);
+            $newCode = $transformer->transformCode($oldCode);
+            $this->fileSystem->write($file, $newCode);
+        }
     }
 
 }

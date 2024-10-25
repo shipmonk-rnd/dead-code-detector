@@ -1,6 +1,8 @@
 services:
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
+    -
+        class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
@@ -65,11 +67,13 @@ services:
         tags:
             - phpstan.rules.rule
         arguments:
+            removeDeadCode: %shipmonkDeadCode.removeDeadCode%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
 
 parameters:
     shipmonkDeadCode:
+        removeDeadCode: false
         reportTransitivelyDeadMethodAsSeparateError: false
         entrypoints:
             vendor:
@@ -87,6 +91,7 @@ parameters:
 
 parametersSchema:
     shipmonkDeadCode: structure([
+        removeDeadCode: bool()
         reportTransitivelyDeadMethodAsSeparateError: bool()
         entrypoints: structure([
             vendor: structure([

@@ -25,7 +25,10 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use function file_get_contents;
 use function is_array;
+use function str_replace;
 use const PHP_VERSION_ID;
 
 /**
@@ -34,16 +37,20 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
-    private ?bool $emitErrorsInGroups = null;
+    private bool $emitErrorsInGroups = true;
 
     private bool $unwrapGroupedErrors = true;
 
+    private bool $removeDeadCode = false;
+
+    private ?FileSystem $fileSystem = null;
+
     protected function getRule(): DeadMethodRule
     {
-        self::assertNotNull($this->emitErrorsInGroups);
-
         return new DeadMethodRule(
+            $this->fileSystem ?? $this->createMock(FileSystem::class),
             new ClassHierarchy(),
+            $this->removeDeadCode,
             !$this->emitErrorsInGroups,
         );
     }
@@ -76,7 +83,6 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public function testDeadWithGroups($files, ?int $lowestPhpVersion = null): void
     {
-        $this->emitErrorsInGroups = true;
         $this->doTestDead($files, $lowestPhpVersion);
     }
 
@@ -92,9 +98,47 @@ class DeadMethodRuleTest extends RuleTestCase
         $this->analyseFiles(is_array($files) ? $files : [$files]);
     }
 
+    /**
+     * @dataProvider provideAutoRemoveFiles
+     */
+    public function testAutoRemove(string $file): void
+    {
+        $mock = $this->createMock(FileSystem::class);
+        $mock->expects(self::any())
+            ->method('read')
+            ->willReturnCallback(
+                static function (string $file): string {
+                    self::assertFileExists($file);
+                    return file_get_contents($file); // @phpstan-ignore return.type
+                },
+            );
+        $mock->expects(self::any())
+            ->method('write')
+            ->willReturnCallback(
+                function (string $file, string $content): void {
+                    $expectedFile = $this->getTransformedFilePath($file);
+                    self::assertFileExists($expectedFile);
+
+                    $expectedNewCode = file_get_contents($expectedFile);
+                    self::assertSame($expectedNewCode, $content);
+                },
+            );
+        $this->fileSystem = $mock;
+
+        $this->analyseFiles([$file]);
+    }
+
+    /**
+     * @dataProvider provideAutoRemoveFiles
+     */
+    public function testAutoRemoveNoMore(string $file): void
+    {
+        $transformedFile = $this->getTransformedFilePath($file);
+        $this->analyseFiles([$transformedFile]);
+    }
+
     public function testGrouping(): void
     {
-        $this->emitErrorsInGroups = true;
         $this->unwrapGroupedErrors = false;
 
         $this->analyse([__DIR__ . '/data/DeadMethodRule/grouping/default.php'], [
@@ -191,6 +235,20 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'provider-doctrine' => [__DIR__ . '/data/DeadMethodRule/providers/doctrine.php', 8_00_00];
         yield 'provider-phpstan' => [__DIR__ . '/data/DeadMethodRule/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/DeadMethodRule/providers/nette.php'];
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public function provideAutoRemoveFiles(): iterable
+    {
+        yield 'sample' => [__DIR__ . '/data/DeadMethodRule/removing/sample.php'];
+        yield 'no-namespace' => [__DIR__ . '/data/DeadMethodRule/removing/no-namespace.php'];
+    }
+
+    private function getTransformedFilePath(string $file): string
+    {
+        return str_replace('.php', '.transformed.php', $file);
     }
 
     /**
