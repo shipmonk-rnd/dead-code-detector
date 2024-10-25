@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eea713d2b76e8c43f703a5abc371ed7b",
+    "content-hash": "cf36dec258f73b48f890a46b76b3cd83",
     "packages": [
         {
             "name": "phpstan/phpstan",
-            "version": "1.12.1",
+            "version": "1.12.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2"
+                "reference": "dc2b9976bd8b0f84ec9b0e50cc35378551de7af0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2",
-                "reference": "d8ed7fffa66de1db0d2972267d8ed1d8fa0fe5a2",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/dc2b9976bd8b0f84ec9b0e50cc35378551de7af0",
+                "reference": "dc2b9976bd8b0f84ec9b0e50cc35378551de7af0",
                 "shasum": ""
             },
             "require": {
@@ -62,7 +62,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-09-03T19:55:22+00:00"
+            "time": "2024-10-18T11:12:07+00:00"
         }
     ],
     "packages-dev": [
