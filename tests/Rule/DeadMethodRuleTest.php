@@ -40,6 +40,8 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
+    private bool $trackMixedCalls = true;
+
     private bool $emitErrorsInGroups = true;
 
     private bool $unwrapGroupedErrors = true;
@@ -60,7 +62,7 @@ class DeadMethodRuleTest extends RuleTestCase
         return [
             new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
-            new MethodCallCollector(),
+            new MethodCallCollector($this->trackMixedCalls),
         ];
     }
 
@@ -93,6 +95,17 @@ class DeadMethodRuleTest extends RuleTestCase
         }
 
         $this->analyseFiles(is_array($files) ? $files : [$files]);
+    }
+
+    public function testMixedCallsTracked(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/mixed/tracked.php']);
+    }
+
+    public function testMixedCallsNotTracked(): void
+    {
+        $this->trackMixedCalls = false;
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/mixed/untracked.php']);
     }
 
     /**
@@ -191,7 +204,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];
         yield 'clone' => [__DIR__ . '/data/DeadMethodRule/clone.php'];
         yield 'magic' => [__DIR__ . '/data/DeadMethodRule/magic.php'];
-        yield 'mixed' => [__DIR__ . '/data/DeadMethodRule/mixed.php'];
+        yield 'mixed' => [__DIR__ . '/data/DeadMethodRule/mixed/tracked.php'];
         yield 'new-in-initializers' => [__DIR__ . '/data/DeadMethodRule/new-in-initializers.php'];
         yield 'first-class-callable' => [__DIR__ . '/data/DeadMethodRule/first-class-callable.php'];
         yield 'overwriting-1' => [__DIR__ . '/data/DeadMethodRule/overwriting-methods-1.php'];

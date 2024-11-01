@@ -139,6 +139,17 @@ class UserFacade
 }
 ```
 
+## Calls over unknown types
+- In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
+  - Such behaviour might not be desired for strictly typed codebases, because e.g. single `new $unknown()` will mark all constructors as used
+  - Thus, you can disable this feature in your `phpstan.neon.dist`:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        trackMixedCalls: false
+```
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:

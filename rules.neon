@@ -53,6 +53,8 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
+        arguments:
+            trackMixedCalls: %shipmonkDeadCode.trackMixedCalls%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
@@ -75,6 +77,7 @@ services:
 
 parameters:
     shipmonkDeadCode:
+        trackMixedCalls: true
         reportTransitivelyDeadMethodAsSeparateError: false
         entrypoints:
             vendor:
@@ -92,6 +95,7 @@ parameters:
 
 parametersSchema:
     shipmonkDeadCode: structure([
+        trackMixedCalls: bool()
         reportTransitivelyDeadMethodAsSeparateError: bool()
         entrypoints: structure([
             vendor: structure([

@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace DeadMixed;
+namespace DeadMixed1;
 
 
 class Clazz {
@@ -8,12 +8,12 @@ class Clazz {
     public function getter1() {}
     public function getter2() {}
     public function getter3() {}
-    public function getter4() {} // error: Unused DeadMixed\Clazz::getter4
+    public function getter4() {} // error: Unused DeadMixed1\Clazz::getter4
     public function getter5() {}
-    public function getter6() {} // error: Unused DeadMixed\Clazz::getter6
+    public function getter6() {} // error: Unused DeadMixed1\Clazz::getter6
 
-    public function someMethod() {} // error: Unused DeadMixed\Clazz::someMethod
-    public function nonStaticMethod() {} // error: Unused DeadMixed\Clazz::nonStaticMethod
+    public function someMethod() {} // error: Unused DeadMixed1\Clazz::someMethod
+    public function nonStaticMethod() {} // error: Unused DeadMixed1\Clazz::nonStaticMethod
     public static function staticMethod() {}
 
 }
@@ -24,7 +24,7 @@ interface IFace {
     public function getter2();
     public function getter3();
     public function getter4();
-    public function getter5(); // error: Unused DeadMixed\IFace::getter5
+    public function getter5(); // error: Unused DeadMixed1\IFace::getter5
 
 }
 
@@ -34,7 +34,7 @@ class Implementor implements IFace {
     public function getter2() {}
     public function getter3() {}
     public function getter4() {}
-    public function getter5() {} // error: Unused DeadMixed\Implementor::getter5
+    public function getter5() {} // error: Unused DeadMixed1\Implementor::getter5
     public function getter6() {}
 
 }
