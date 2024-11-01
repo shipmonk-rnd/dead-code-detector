@@ -115,6 +115,30 @@ parameters:
         reportTransitivelyDeadMethodAsSeparateError: true
 ```
 
+## Automatic removal of dead code
+- If you are sure that the reported methods are dead, you can automatically remove them by running PHPStan with `removeDeadCode` error format:
+
+```bash
+vendor/bin/phpstan analyse --error-format removeDeadCode
+```
+
+```php
+// before
+class UserFacade
+{
+    public function deadMethod(): void
+    {
+    }
+}
+```
+
+```php
+// after
+class UserFacade
+{
+}
+```
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:

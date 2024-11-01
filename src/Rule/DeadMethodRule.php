@@ -29,6 +29,7 @@ use function strpos;
 class DeadMethodRule implements Rule
 {
 
+    public const ERROR_IDENTIFIER = 'shipmonk.deadMethod';
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,
         '__toString' => null,
@@ -83,7 +84,7 @@ class DeadMethodRule implements Rule
 
     public function __construct(
         ClassHierarchy $classHierarchy,
-        bool $reportTransitivelyDeadMethodAsSeparateError = false
+        bool $reportTransitivelyDeadMethodAsSeparateError
     )
     {
         $this->classHierarchy = $classHierarchy;
@@ -439,9 +440,14 @@ class DeadMethodRule implements Rule
         $builder = RuleErrorBuilder::message('Unused ' . $deadMethodKey)
             ->file($file)
             ->line($line)
-            ->identifier('shipmonk.deadMethod');
+            ->identifier(self::ERROR_IDENTIFIER);
 
         $metadata = [];
+        $metadata[$deadMethodKey] = [
+            'file' => $file,
+            'line' => $line,
+            'transitive' => false,
+        ];
 
         foreach ($transitiveDeadMethodKeys as $transitiveDeadMethodKey => [$transitiveDeadMethodFile, $transitiveDeadMethodLine]) {
             $builder->addTip("Thus $transitiveDeadMethodKey is transitively also unused");
@@ -449,6 +455,7 @@ class DeadMethodRule implements Rule
             $metadata[$transitiveDeadMethodKey] = [
                 'file' => $transitiveDeadMethodFile,
                 'line' => $transitiveDeadMethodLine,
+                'transitive' => true,
             ];
         }
 

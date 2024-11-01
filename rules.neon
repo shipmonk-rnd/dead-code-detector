@@ -1,6 +1,11 @@
 services:
+    errorFormatter.removeDeadCode:
+        class: ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter
+
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
+    -
+        class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider

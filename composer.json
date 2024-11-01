@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": "^7.4 || ^8.0",
-        "phpstan/phpstan": "^1.11.0"
+        "phpstan/phpstan": "^1.11.5"
     },
     "require-dev": {
         "doctrine/orm": "^2.19 || ^3.0",
@@ -22,6 +22,7 @@
         "nette/application": "^3.1",
         "nette/component-model": "^3.0",
         "nette/utils": "^3.0 || ^4.0",
+        "nikic/php-parser": "^4.19",
         "phpstan/phpstan-phpunit": "^1.1.1",
         "phpstan/phpstan-strict-rules": "^1.2.3",
         "phpstan/phpstan-symfony": "^1.4",

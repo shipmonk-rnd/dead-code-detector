@@ -5,6 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
+use PHPStan\Command\AnalysisResult;
+use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
@@ -16,6 +18,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
@@ -25,7 +28,10 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use function file_get_contents;
 use function is_array;
+use function str_replace;
 use const PHP_VERSION_ID;
 
 /**
@@ -34,14 +40,12 @@ use const PHP_VERSION_ID;
 class DeadMethodRuleTest extends RuleTestCase
 {
 
-    private ?bool $emitErrorsInGroups = null;
+    private bool $emitErrorsInGroups = true;
 
     private bool $unwrapGroupedErrors = true;
 
     protected function getRule(): DeadMethodRule
     {
-        self::assertNotNull($this->emitErrorsInGroups);
-
         return new DeadMethodRule(
             new ClassHierarchy(),
             !$this->emitErrorsInGroups,
@@ -76,7 +80,6 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     public function testDeadWithGroups($files, ?int $lowestPhpVersion = null): void
     {
-        $this->emitErrorsInGroups = true;
         $this->doTestDead($files, $lowestPhpVersion);
     }
 
@@ -92,9 +95,56 @@ class DeadMethodRuleTest extends RuleTestCase
         $this->analyseFiles(is_array($files) ? $files : [$files]);
     }
 
+    /**
+     * @dataProvider provideAutoRemoveFiles
+     */
+    public function testAutoRemove(string $file): void
+    {
+        $fileSystem = $this->createMock(FileSystem::class);
+        $fileSystem->expects(self::once())
+            ->method('read')
+            ->willReturnCallback(
+                static function (string $file): string {
+                    self::assertFileExists($file);
+                    return file_get_contents($file); // @phpstan-ignore return.type
+                },
+            );
+        $fileSystem->expects(self::once())
+            ->method('write')
+            ->willReturnCallback(
+                function (string $file, string $content): void {
+                    $expectedFile = $this->getTransformedFilePath($file);
+                    self::assertFileExists($expectedFile);
+
+                    $expectedNewCode = file_get_contents($expectedFile);
+                    self::assertSame($expectedNewCode, $content);
+                },
+            );
+
+        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+
+        $formatter = new RemoveDeadCodeFormatter($fileSystem);
+        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $this->createOutput());
+    }
+
+    /**
+     * @param list<Error> $errors
+     */
+    private function createAnalysisResult(array $errors): AnalysisResult
+    {
+        $result = $this->createMock(AnalysisResult::class);
+        $result->method('getInternalErrorObjects')->willReturn([]);
+        $result->method('getFileSpecificErrors')->willReturn($errors);
+        return $result;
+    }
+
+    private function createOutput(): Output
+    {
+        return $this->createMock(Output::class);
+    }
+
     public function testGrouping(): void
     {
-        $this->emitErrorsInGroups = true;
         $this->unwrapGroupedErrors = false;
 
         $this->analyse([__DIR__ . '/data/DeadMethodRule/grouping/default.php'], [
@@ -194,6 +244,20 @@ class DeadMethodRuleTest extends RuleTestCase
     }
 
     /**
+     * @return iterable<string, array{0: string}>
+     */
+    public function provideAutoRemoveFiles(): iterable
+    {
+        yield 'sample' => [__DIR__ . '/data/DeadMethodRule/removing/sample.php'];
+        yield 'no-namespace' => [__DIR__ . '/data/DeadMethodRule/removing/no-namespace.php'];
+    }
+
+    private function getTransformedFilePath(string $file): string
+    {
+        return str_replace('.php', '.transformed.php', $file);
+    }
+
+    /**
      * @return list<MethodEntrypointProvider>
      */
     private function getEntrypointProviders(): array
@@ -286,7 +350,11 @@ class DeadMethodRuleTest extends RuleTestCase
             /** @var array<string, array{file: string, line: int}> $metadata */
             $metadata = $error->getMetadata();
 
-            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line]) {
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive]) {
+                if (!$transitive) {
+                    continue;
+                }
+
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
                     "Unused $alsoDead",
