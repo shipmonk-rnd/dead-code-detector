@@ -185,6 +185,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
         yield 'ctor-private' => [__DIR__ . '/data/DeadMethodRule/ctor-private.php'];
         yield 'ctor-denied' => [__DIR__ . '/data/DeadMethodRule/ctor-denied.php'];
+        yield 'ctor-missing' => [__DIR__ . '/data/DeadMethodRule/ctor-missing.php'];
         yield 'cycles' => [__DIR__ . '/data/DeadMethodRule/cycles.php'];
         yield 'abstract-1' => [__DIR__ . '/data/DeadMethodRule/abstract-1.php'];
         yield 'entrypoint' => [__DIR__ . '/data/DeadMethodRule/entrypoint.php'];

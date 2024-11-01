@@ -3,8 +3,9 @@
 namespace DeadTrait18;
 
 trait A {
-    // method1 is not dead, this is better-reflection bug: https://github.com/Roave/BetterReflection/pull/1453
-    public function method1() {} // error: Unused DeadTrait18\A::method1
+    // alias1 is not detected a method of User due to better-reflection bug: https://github.com/Roave/BetterReflection/pull/1453
+    // this method is not reported as dead just because we support "unknown" method calls
+    public function method1() {}
     public function method2() {} // error: Unused DeadTrait18\A::method2
 }
 

@@ -253,6 +253,9 @@ class MethodCallCollector implements Collector
         foreach ($classReflections as $classReflection) {
             if ($classReflection->hasMethod($methodName)) {
                 $result[] = $classReflection->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+
+            } else { // call of unknown method (might be present on children)
+                $result[] = $classReflection->getName();
             }
         }
 
