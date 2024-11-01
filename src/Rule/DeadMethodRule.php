@@ -80,7 +80,7 @@ class DeadMethodRule implements Rule
     private array $blackMethods = [];
 
     /**
-     * @var array<string, Call> methodName => Call
+     * @var array<string, list<Call>> methodName => Call[]
      */
     private array $mixedCalls = [];
 
@@ -132,7 +132,7 @@ class DeadMethodRule implements Rule
                     $call = Call::fromString($callString);
 
                     if ($call->callee->className === null) {
-                        $this->mixedCalls[$call->callee->methodName] = $call;
+                        $this->mixedCalls[$call->callee->methodName][] = $call;
                         continue;
                     }
 
@@ -172,12 +172,13 @@ class DeadMethodRule implements Rule
                 $this->blackMethods[$definition] = [$file, $methodData['line']];
 
                 if (isset($this->mixedCalls[$methodName])) {
-                    $originalCall = $this->mixedCalls[$methodName];
-                    $calls[] = new Call(
-                        $originalCall->caller,
-                        new Method($typeName, $methodName),
-                        $originalCall->possibleDescendantCall,
-                    );
+                    foreach ($this->mixedCalls[$methodName] as $originalCall) {
+                        $calls[] = new Call(
+                            $originalCall->caller,
+                            new Method($typeName, $methodName),
+                            $originalCall->possibleDescendantCall,
+                        );
+                    }
                 }
             }
         }
