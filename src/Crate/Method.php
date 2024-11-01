@@ -8,12 +8,14 @@ namespace ShipMonk\PHPStan\DeadCode\Crate;
 class Method
 {
 
-    public string $className;
+    public const UNKNOWN_CLASS = '*';
+
+    public ?string $className;
 
     public string $methodName;
 
     public function __construct(
-        string $className,
+        ?string $className,
         string $methodName
     )
     {
@@ -23,7 +25,8 @@ class Method
 
     public function toString(): string
     {
-        return $this->className . '::' . $this->methodName;
+        $classRef = $this->className ?? self::UNKNOWN_CLASS;
+        return $classRef . '::' . $this->methodName;
     }
 
 }

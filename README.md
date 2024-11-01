@@ -151,9 +151,8 @@ class UserFacade
 
 ## Limitations:
 
-- Only method calls are detected so far
+- Only dead method calls are detected so far
   - Including **constructors**, static methods, trait methods, interface methods, first class callables, clone, etc.
-  - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
   - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
 
