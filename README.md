@@ -147,7 +147,7 @@ class UserFacade
 ```neon
 parameters:
     shipmonkDeadCode:
-        trackMixedCalls: false
+        trackCallsOnMixed: false
 ```
 
 ## Comparison with tomasvotruba/unused-public
