@@ -131,22 +131,15 @@ parameters:
 vendor/bin/phpstan analyse --error-format removeDeadCode
 ```
 
-```php
-// before
+```diff
 class UserFacade
 {
-    public function deadMethod(): void
-    {
-    }
+-    public function deadMethod(): void
+-    {
+-    }
 }
 ```
 
-```php
-// after
-class UserFacade
-{
-}
-```
 
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
@@ -176,13 +169,36 @@ Found 2 methods called over unknown type:
   - It has almost no built-it library extensions
   - It ignores trait methods
   - Is lacks many minor features like class-string calls, dynamic method calls, array callbacks, nullsafe call chains etc
+  - It cannot detect dead cycles nor transitively dead methods
+  - It has no built-in dead code removal
 
 ## Limitations:
+- Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
+- Abstract trait methods are never reported as dead
+- Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
+    - Only supported are: `__construct`, `__clone`
+ 
+### Other problematic cases:
 
-- Only dead method calls are detected so far
-  - Including **constructors**, static methods, trait methods, interface methods, first class callables, clone, etc.
-  - Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
-  - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
+#### Constructors:
+- For symfony apps & PHPStan extensions, we simplify the detection by assuming all DIC classes have used constructor.
+- For other apps, you may get false-positives if services are created magically.
+  - To avoid those, you can easily disable consructor analysis with single ignore:
+
+```neon
+parameters:
+    ignoreErrors:
+        - '#^Unused .*?::__construct$#'
+```
+
+#### Private constructors:
+- Those are never reported as dead as those are often used to deny class instantiation
+
+ 
+## Future scope:
+- Dead class constant detection
+- Dead class property detection
+- Dead class detection
 
 ## Contributing
 - Check your code by `composer check`
