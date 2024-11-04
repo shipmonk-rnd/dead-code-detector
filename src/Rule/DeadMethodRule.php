@@ -79,6 +79,8 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
+    private bool $trackCallsOnMixed;
+
     /**
      * @var array<string, array{string, int}> methodKey => [file, line]
      */
@@ -96,11 +98,13 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
     public function __construct(
         ClassHierarchy $classHierarchy,
-        bool $reportTransitivelyDeadMethodAsSeparateError
+        bool $reportTransitivelyDeadMethodAsSeparateError,
+        bool $trackCallsOnMixed
     )
     {
         $this->classHierarchy = $classHierarchy;
         $this->reportTransitivelyDeadMethodAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
+        $this->trackCallsOnMixed = $trackCallsOnMixed;
     }
 
     public function getNodeType(): string
@@ -558,7 +562,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
     public function print(Output $output): void
     {
-        if ($this->mixedCalls === [] || !$output->isDebug()) {
+        if ($this->mixedCalls === [] || !$output->isDebug() || !$this->trackCallsOnMixed) {
             return;
         }
 
