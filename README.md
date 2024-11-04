@@ -2,6 +2,15 @@
 
 [PHPStan](https://phpstan.org/) extension to find unused PHP code in your project with ease!
 
+## Summary:
+
+- ✅ **PHPStan** extension
+- ♻️ **Dead cycles** detection
+- 🔗 **Transitive dead** method detection
+- 🧹 **Automatic removal** of unused code
+- 📚 **Popular libraries** support
+- ✨ **Customizable** entrypoints
+
 ## Installation:
 
 ```sh
