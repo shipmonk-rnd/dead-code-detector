@@ -131,22 +131,15 @@ parameters:
 vendor/bin/phpstan analyse --error-format removeDeadCode
 ```
 
-```php
-// before
+```diff
 class UserFacade
 {
-    public function deadMethod(): void
-    {
-    }
+-    public function deadMethod(): void
+-    {
+-    }
 }
 ```
 
-```php
-// after
-class UserFacade
-{
-}
-```
 
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
