@@ -46,12 +46,18 @@ class DeadMethodRuleTest extends RuleTestCase
 
     private bool $unwrapGroupedErrors = true;
 
+    private ?DeadMethodRule $rule = null;
+
     protected function getRule(): DeadMethodRule
     {
-        return new DeadMethodRule(
-            new ClassHierarchy(),
-            !$this->emitErrorsInGroups,
-        );
+        if ($this->rule === null) {
+            $this->rule = new DeadMethodRule(
+                new ClassHierarchy(),
+                !$this->emitErrorsInGroups,
+            );
+        }
+
+        return $this->rule;
     }
 
     /**
@@ -106,6 +112,49 @@ class DeadMethodRuleTest extends RuleTestCase
     {
         $this->trackMixedCalls = false;
         $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/mixed/untracked.php']);
+    }
+
+    public function testDiagnoseMixedCalls(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/mixed/tracked.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $output = $this->createMock(Output::class);
+        $output->expects(self::once())
+            ->method('isDebug')
+            ->willReturn(true);
+        $output->expects(self::atLeastOnce())
+            ->method('writeFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message;
+                },
+            );
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message . "\n";
+                },
+            );
+
+        $rule->print($output);
+
+        $ec = ''; // hack editorconfig checker to ignore wrong indentation
+        $expectedOutput = <<<"OUTPUT"
+        <fg=red>Found 4 methods called over unknown type</>:
+        $ec • <fg=white>getter1</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter2</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter3</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>staticMethod</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
+
+        Thus, any method named the same is considered used, no matter its declaring class!
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $actualOutput);
     }
 
     /**
