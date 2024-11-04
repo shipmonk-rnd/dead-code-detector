@@ -71,6 +71,7 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
         tags:
             - phpstan.rules.rule
+            - phpstan.diagnoseExtension
         arguments:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 

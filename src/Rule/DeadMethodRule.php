@@ -5,6 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use PHPStan\Command\Output;
+use PHPStan\Diagnose\DiagnoseExtension;
 use PHPStan\Node\CollectedDataNode;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
@@ -21,14 +23,17 @@ use function array_key_exists;
 use function array_keys;
 use function array_merge;
 use function array_merge_recursive;
+use function array_slice;
+use function count;
 use function explode;
 use function in_array;
+use function sprintf;
 use function strpos;
 
 /**
  * @implements Rule<CollectedDataNode>
  */
-class DeadMethodRule implements Rule
+class DeadMethodRule implements Rule, DiagnoseExtension
 {
 
     public const ERROR_IDENTIFIER = 'shipmonk.deadMethod';
@@ -549,6 +554,50 @@ class DeadMethodRule implements Rule
         }
 
         return false;
+    }
+
+    public function print(Output $output): void
+    {
+        if ($this->mixedCalls === [] || !$output->isDebug()) {
+            return;
+        }
+
+        $maxExamplesToShow = 20;
+        $output->writeLineFormatted(sprintf('<fg=red>Found %d methods called over unknown type</>:', count($this->mixedCalls)));
+
+        foreach (array_slice($this->mixedCalls, 0, $maxExamplesToShow) as $methodName => $calls) {
+            $output->writeFormatted(sprintf(' • <fg=white>%s</>', $methodName));
+
+            $exampleCaller = $this->getExampleCaller($calls);
+
+            if ($exampleCaller !== null) {
+                $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
+            }
+
+            $output->writeLineFormatted('');
+        }
+
+        if (count($this->mixedCalls) > $maxExamplesToShow) {
+            $output->writeLineFormatted(sprintf('... and %d more', count($this->mixedCalls) - $maxExamplesToShow));
+        }
+
+        $output->writeLineFormatted('');
+        $output->writeLineFormatted('Thus, any method named the same is considered used, no matter its declaring class!');
+        $output->writeLineFormatted('');
+    }
+
+    /**
+     * @param list<Call> $calls
+     */
+    private function getExampleCaller(array $calls): ?string
+    {
+        foreach ($calls as $call) {
+            if ($call->caller !== null) {
+                return $call->caller->toString();
+            }
+        }
+
+        return null;
     }
 
 }
