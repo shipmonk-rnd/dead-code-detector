@@ -139,6 +139,17 @@ class UserFacade
 }
 ```
 
+## Calls over unknown types
+- In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
+  - Such behaviour might not be desired for strictly typed codebases, because e.g. single `new $unknown()` will mark all constructors as used
+  - Thus, you can disable this feature in your `phpstan.neon.dist`:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        trackCallsOnMixed: false
+```
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:
@@ -151,9 +162,8 @@ class UserFacade
 
 ## Limitations:
 
-- Only method calls are detected so far
+- Only dead method calls are detected so far
   - Including **constructors**, static methods, trait methods, interface methods, first class callables, clone, etc.
-  - Any calls on mixed types are not detected, e.g. `$unknownClass->method()`
   - Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
   - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
 

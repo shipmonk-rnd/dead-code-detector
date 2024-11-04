@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\CollectedDataNode;
@@ -79,6 +80,11 @@ class DeadMethodRule implements Rule
     private array $blackMethods = [];
 
     /**
+     * @var array<string, list<Call>> methodName => Call[]
+     */
+    private array $mixedCalls = [];
+
+    /**
      * @var array<string, list<string>> caller => callee[]
      */
     private array $callGraph = [];
@@ -110,9 +116,30 @@ class DeadMethodRule implements Rule
             return [];
         }
 
+        /** @var list<Call> $calls */
+        $calls = [];
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
+
+        /** @var array<string, list<list<string>>> $callData */
+        $callData = array_merge_recursive($methodCallData, $entrypointData);
+        unset($methodCallData, $entrypointData);
+
+        foreach ($callData as $callsPerFile) {
+            foreach ($callsPerFile as $callStrings) {
+                foreach ($callStrings as $callString) {
+                    $call = Call::fromString($callString);
+
+                    if ($call->callee->className === null) {
+                        $this->mixedCalls[$call->callee->methodName][] = $call;
+                        continue;
+                    }
+
+                    $calls[] = $call;
+                }
+            }
+        }
 
         foreach ($methodDeclarationData as $file => $data) {
             foreach ($data as $typeData) {
@@ -129,6 +156,8 @@ class DeadMethodRule implements Rule
             }
         }
 
+        unset($methodDeclarationData);
+
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
             $file = $typeDefinition['file'];
@@ -141,39 +170,37 @@ class DeadMethodRule implements Rule
             foreach ($methods as $methodName => $methodData) {
                 $definition = $this->getMethodKey($typeName, $methodName);
                 $this->blackMethods[$definition] = [$file, $methodData['line']];
-            }
-        }
 
-        unset($methodDeclarationData);
-
-        $whiteCallees = [];
-
-        /** @var array<string, list<list<string>>> $callData */
-        $callData = array_merge_recursive($methodCallData, $entrypointData);
-
-        foreach ($callData as $file => $callsInFile) {
-            foreach ($callsInFile as $calls) {
-                foreach ($calls as $callString) {
-                    $call = Call::fromString($callString);
-                    $isWhite = $this->isConsideredWhite($call);
-
-                    $alternativeCalleeKeys = $this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall);
-                    $alternativeCallerKeys = $call->caller !== null ? $this->getAlternativeMethodKeys($call->caller, false) : [];
-
-                    foreach ($alternativeCalleeKeys as $alternativeCalleeKey) {
-                        foreach ($alternativeCallerKeys as $alternativeCallerKey) {
-                            $this->callGraph[$alternativeCallerKey][] = $alternativeCalleeKey;
-                        }
-
-                        if ($isWhite) {
-                            $whiteCallees[] = $alternativeCalleeKey;
-                        }
+                if (isset($this->mixedCalls[$methodName])) {
+                    foreach ($this->mixedCalls[$methodName] as $originalCall) {
+                        $calls[] = new Call(
+                            $originalCall->caller,
+                            new Method($typeName, $methodName),
+                            $originalCall->possibleDescendantCall,
+                        );
                     }
                 }
             }
         }
 
-        unset($methodCallData, $entrypointData);
+        $whiteCallees = [];
+
+        foreach ($calls as $call) {
+            $isWhite = $this->isConsideredWhite($call);
+
+            $alternativeCalleeKeys = $this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall);
+            $alternativeCallerKeys = $call->caller !== null ? $this->getAlternativeMethodKeys($call->caller, false) : [];
+
+            foreach ($alternativeCalleeKeys as $alternativeCalleeKey) {
+                foreach ($alternativeCallerKeys as $alternativeCallerKey) {
+                    $this->callGraph[$alternativeCallerKey][] = $alternativeCalleeKey;
+                }
+
+                if ($isWhite) {
+                    $whiteCallees[] = $alternativeCalleeKey;
+                }
+            }
+        }
 
         foreach ($whiteCallees as $whiteCalleeKey) {
             $this->markTransitiveCallsWhite($whiteCalleeKey);
@@ -260,10 +287,10 @@ class DeadMethodRule implements Rule
         }
     }
 
-    private function isAnonymousClass(string $className): bool
+    private function isAnonymousClass(?string $className): bool
     {
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return strpos($className, 'AnonymousClass') === 0;
+        return $className !== null && strpos($className, 'AnonymousClass') === 0;
     }
 
     /**
@@ -271,6 +298,10 @@ class DeadMethodRule implements Rule
      */
     private function getAlternativeMethodKeys(Method $method, bool $possibleDescendant): array
     {
+        if ($method->className === null) {
+            throw new LogicException('Those were eliminated above, should never happen');
+        }
+
         $methodKey = $method->toString();
         $cacheKey = $methodKey . ';' . ($possibleDescendant ? '1' : '0');
 

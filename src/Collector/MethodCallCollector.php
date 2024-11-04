@@ -18,10 +18,11 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
-use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\TrinaryLogic;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
+use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Crate\Call;
 use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use function array_map;
@@ -36,6 +37,13 @@ class MethodCallCollector implements Collector
      * @var list<Call>
      */
     private array $callsBuffer = [];
+
+    private bool $trackCallsOnMixed;
+
+    public function __construct(bool $trackCallsOnMixed)
+    {
+        $this->trackCallsOnMixed = $trackCallsOnMixed;
+    }
 
     public function getNodeType(): string
     {
@@ -122,12 +130,7 @@ class MethodCallCollector implements Collector
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
-                if (!$classWithMethod->hasMethod($methodName)) {
-                    continue;
-                }
-
-                $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+            foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
                 $this->callsBuffer[] = new Call(
                     $this->getCaller($scope),
                     new Method($className, $methodName),
@@ -154,12 +157,7 @@ class MethodCallCollector implements Collector
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classReflection) {
-                if (!$classReflection->hasMethod($methodName)) {
-                    continue;
-                }
-
-                $className = $classReflection->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+            foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
                 $this->callsBuffer[] = new Call(
                     $this->getCaller($scope),
                     new Method($className, $methodName),
@@ -185,8 +183,7 @@ class MethodCallCollector implements Collector
                     // currently always true, see https://github.com/phpstan/phpstan-src/pull/3372
                     $possibleDescendantCall = !$caller->isClassStringType()->yes();
 
-                    foreach ($this->getReflectionsWithMethod($caller, $methodName) as $classWithMethod) {
-                        $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+                    foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
                         $this->callsBuffer[] = new Call(
                             $this->getCaller($scope),
                             new Method($className, $methodName),
@@ -212,8 +209,7 @@ class MethodCallCollector implements Collector
         $methodName = '__clone';
         $callerType = $scope->getType($node->expr);
 
-        foreach ($this->getReflectionsWithMethod($callerType, $methodName) as $classWithMethod) {
-            $className = $classWithMethod->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+        foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
             $this->callsBuffer[] = new Call(
                 $this->getCaller($scope),
                 new Method($className, $methodName),
@@ -246,19 +242,40 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @return iterable<ClassReflection>
+     * @return list<class-string<object>|null>
      */
-    private function getReflectionsWithMethod(Type $type, string $methodName): iterable
+    private function getDeclaringTypesWithMethod(
+        Scope $scope,
+        Type $type,
+        string $methodName,
+        TrinaryLogic $isStaticCall
+    ): array
     {
-        // remove null to support nullsafe calls
-        $typeNoNull = TypeCombinator::removeNull($type);
-        $classReflections = $typeNoNull->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        $typeNoNull = TypeCombinator::removeNull($type); // remove null to support nullsafe calls
+        $typeNormalized = TypeUtils::toBenevolentUnion($typeNoNull); // extract possible calls even from Class|int
+        $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+
+        $result = [];
 
         foreach ($classReflections as $classReflection) {
             if ($classReflection->hasMethod($methodName)) {
-                yield $classReflection;
+                $result[] = $classReflection->getMethod($methodName, $scope)->getDeclaringClass()->getName();
+
+            } else { // call of unknown method (might be present on children)
+                $result[] = $classReflection->getName();
             }
         }
+
+        if ($this->trackCallsOnMixed) {
+            $canBeObjectCall = !$typeNoNull->isObject()->no() && !$isStaticCall->yes();
+            $canBeClassStringCall = !$typeNoNull->isClassStringType()->no() && !$isStaticCall->no();
+
+            if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
+                $result[] = null; // call over unknown type
+            }
+        }
+
+        return $result;
     }
 
     private function getCaller(Scope $scope): ?Method

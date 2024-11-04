@@ -31,8 +31,8 @@ class Call
 
     public function toString(): string
     {
-        $callerRef = $this->caller === null ? '' : "{$this->caller->className}::{$this->caller->methodName}";
-        $calleeRef = "{$this->callee->className}::{$this->callee->methodName}";
+        $callerRef = $this->caller === null ? '' : $this->caller->toString();
+        $calleeRef = $this->callee->toString();
 
         return "{$callerRef}->$calleeRef;" . ($this->possibleDescendantCall ? '1' : '');
     }
@@ -62,7 +62,10 @@ class Call
         }
 
         [$calleeClassName, $calleeMethodName] = $calleeSplit;
-        $callee = new Method($calleeClassName, $calleeMethodName);
+        $callee = new Method(
+            $calleeClassName === Method::UNKNOWN_CLASS ? null : $calleeClassName,
+            $calleeMethodName,
+        );
 
         if ($callerKey === '') {
             $caller = null;
