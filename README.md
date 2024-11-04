@@ -159,12 +159,12 @@ parameters:
         trackCallsOnMixed: false
 ```
 
-- If you want to check how many of those cases are present in your codebase, you can run PHPStan with `-vvv` and you will see some diagnostics:
+- If you want to check how many of those cases are present in your codebase, you can run PHPStan analysis with `-vvv` and you will see some diagnostics:
 
 ```
 Found 2 methods called over unknown type:
- • setCountry, called in App\Entity\User::updateAddress
- • setStreet, called in App\Entity\User::updateAddress and 1 more time
+ • setCountry, for example in App\Entity\User::updateAddress
+ • setStreet, for example in App\Entity\User::updateAddress
 ```
 
 ## Comparison with tomasvotruba/unused-public
