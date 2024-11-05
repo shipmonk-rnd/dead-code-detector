@@ -195,10 +195,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     private function createAnalysisResult(array $errors): AnalysisResult
     {
-        $result = $this->createMock(AnalysisResult::class);
-        $result->method('getInternalErrorObjects')->willReturn([]);
-        $result->method('getFileSpecificErrors')->willReturn($errors);
-        return $result;
+        return new AnalysisResult($errors, [], [], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor
     }
 
     private function createOutput(): Output

@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": "^7.4 || ^8.0",
-        "phpstan/phpstan": "^1.11.7"
+        "phpstan/phpstan": "^2.0"
     },
     "require-dev": {
         "doctrine/orm": "^2.19 || ^3.0",
@@ -22,20 +22,22 @@
         "nette/application": "^3.1",
         "nette/component-model": "^3.0",
         "nette/utils": "^3.0 || ^4.0",
-        "nikic/php-parser": "^4.19",
-        "phpstan/phpstan-phpunit": "^1.1.1",
-        "phpstan/phpstan-strict-rules": "^1.2.3",
-        "phpstan/phpstan-symfony": "^1.4",
+        "nikic/php-parser": "^5.3.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
         "phpunit/phpunit": "^9.5.20",
         "shipmonk/composer-dependency-analyser": "^1.6",
         "shipmonk/name-collision-detector": "^2.0.0",
-        "shipmonk/phpstan-rules": "^3.1",
+        "shipmonk/phpstan-rules": "dev-phpstan-20",
         "slevomat/coding-standard": "^8.15.0",
         "symfony/contracts": "^2.5 || ^3.0",
         "symfony/event-dispatcher": "^5.4 || ^6.0 || ^7.0",
         "symfony/http-kernel": "^5.4 || ^6.0 || ^7.0",
         "symfony/routing": "^5.4 || ^6.0 || ^7.0"
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "ShipMonk\\PHPStan\\DeadCode\\": "src/"
