@@ -54,6 +54,7 @@ class DeadMethodRuleTest extends RuleTestCase
             $this->rule = new DeadMethodRule(
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
+                true,
             );
         }
 

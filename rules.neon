@@ -74,6 +74,7 @@ services:
             - phpstan.diagnoseExtension
         arguments:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
+            trackCallsOnMixed: %shipmonkDeadCode.trackCallsOnMixed%
 
 
 parameters:
