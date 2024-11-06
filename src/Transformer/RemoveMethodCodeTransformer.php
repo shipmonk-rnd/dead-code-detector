@@ -48,7 +48,7 @@ class RemoveMethodCodeTransformer
             throw new LogicException('Failed to parse the code');
         }
 
-        $oldTokens = $this->phpLexer->tokenize($oldCode);
+        $oldTokens = $this->phpParser->getTokens();
         $newAst = $this->removingTraverser->traverse($this->cloningTraverser->traverse($oldAst));
         return $this->phpPrinter->printFormatPreserving($newAst, $oldAst, $oldTokens);
     }
