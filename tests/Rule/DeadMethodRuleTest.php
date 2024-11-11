@@ -378,15 +378,15 @@ class DeadMethodRuleTest extends RuleTestCase
 
     private function createServiceMapFactoryMock(): ServiceMapFactory
     {
-        $service1Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service1Mock = $this->createMock(ServiceDefinition::class);
         $service1Mock->method('getClass')
             ->willReturn('Symfony\DicClass1');
 
-        $service2Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service2Mock = $this->createMock(ServiceDefinition::class);
         $service2Mock->method('getClass')
             ->willReturn('Symfony\DicClass2');
 
-        $serviceMapMock = $this->createMock(ServiceMap::class); // @phpstan-ignore phpstanApi.classConstant
+        $serviceMapMock = $this->createMock(ServiceMap::class);
         $serviceMapMock->method('getServices')
             ->willReturn([$service1Mock, $service2Mock]);
 

@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1fd5a180775cfb358fdbf41b4be7e4ce",
+    "content-hash": "486207f6b23134ea81a8f3676d41a9f7",
     "packages": [
         {
             "name": "phpstan/phpstan",
-            "version": "2.0.x-dev",
+            "version": "2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "2f87c876698fd39c537c00dd535e8269f449c3c8"
+                "reference": "72115ab2bf1e40af1f9b238938d493ba7f3221e7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/2f87c876698fd39c537c00dd535e8269f449c3c8",
-                "reference": "2f87c876698fd39c537c00dd535e8269f449c3c8",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/72115ab2bf1e40af1f9b238938d493ba7f3221e7",
+                "reference": "72115ab2bf1e40af1f9b238938d493ba7f3221e7",
                 "shasum": ""
             },
             "require": {
@@ -26,7 +26,6 @@
             "conflict": {
                 "phpstan/phpstan-shim": "*"
             },
-            "default-branch": true,
             "bin": [
                 "phpstan",
                 "phpstan.phar"
@@ -63,7 +62,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-11-05T08:34:49+00:00"
+            "time": "2024-11-11T07:06:55+00:00"
         }
     ],
     "packages-dev": [
@@ -2222,7 +2221,7 @@
         },
         {
             "name": "phpstan/phpstan-phpunit",
-            "version": "2.0.x-dev",
+            "version": "2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-phpunit.git",
@@ -2246,7 +2245,6 @@
                 "phpstan/phpstan-strict-rules": "^2.0",
                 "phpunit/phpunit": "^9.6"
             },
-            "default-branch": true,
             "type": "phpstan-extension",
             "extra": {
                 "phpstan": {
@@ -2268,13 +2266,13 @@
             "description": "PHPUnit extensions and rules for PHPStan",
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-phpunit/issues",
-                "source": "https://github.com/phpstan/phpstan-phpunit/tree/2.0.x"
+                "source": "https://github.com/phpstan/phpstan-phpunit/tree/2.0.0"
             },
             "time": "2024-10-14T03:16:27+00:00"
         },
         {
             "name": "phpstan/phpstan-strict-rules",
-            "version": "2.0.x-dev",
+            "version": "2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-strict-rules.git",
@@ -2296,7 +2294,6 @@
                 "phpstan/phpstan-phpunit": "^2.0",
                 "phpunit/phpunit": "^9.6"
             },
-            "default-branch": true,
             "type": "phpstan-extension",
             "extra": {
                 "phpstan": {
@@ -2317,22 +2314,22 @@
             "description": "Extra strict and opinionated rules for PHPStan",
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-strict-rules/issues",
-                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.0.x"
+                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.0.0"
             },
             "time": "2024-10-26T16:04:33+00:00"
         },
         {
             "name": "phpstan/phpstan-symfony",
-            "version": "2.0.x-dev",
+            "version": "2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-symfony.git",
-                "reference": "55ff7b7640c14e3daf0f25f65f183855b9950fff"
+                "reference": "1ef4dce2baabd464c2dd3109d051bad94efa1e79"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-symfony/zipball/55ff7b7640c14e3daf0f25f65f183855b9950fff",
-                "reference": "55ff7b7640c14e3daf0f25f65f183855b9950fff",
+                "url": "https://api.github.com/repos/phpstan/phpstan-symfony/zipball/1ef4dce2baabd464c2dd3109d051bad94efa1e79",
+                "reference": "1ef4dce2baabd464c2dd3109d051bad94efa1e79",
                 "shasum": ""
             },
             "require": {
@@ -2360,7 +2357,6 @@
                 "symfony/serializer": "^5.4",
                 "symfony/service-contracts": "^2.2.0"
             },
-            "default-branch": true,
             "type": "phpstan-extension",
             "extra": {
                 "phpstan": {
@@ -2389,9 +2385,9 @@
             "description": "Symfony Framework extensions and rules for PHPStan",
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-symfony/issues",
-                "source": "https://github.com/phpstan/phpstan-symfony/tree/2.0.x"
+                "source": "https://github.com/phpstan/phpstan-symfony/tree/2.0.0"
             },
-            "time": "2024-10-30T12:08:07+00:00"
+            "time": "2024-11-06T10:13:40+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -4106,16 +4102,16 @@
         },
         {
             "name": "shipmonk/phpstan-rules",
-            "version": "dev-phpstan-20",
+            "version": "4.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/phpstan-rules.git",
-                "reference": "e35c36a9fc3eca15c50acfa7765ea01224fb1f95"
+                "reference": "09c002af22947697e7ed6382867b030ece421a90"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-rules/zipball/e35c36a9fc3eca15c50acfa7765ea01224fb1f95",
-                "reference": "e35c36a9fc3eca15c50acfa7765ea01224fb1f95",
+                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-rules/zipball/09c002af22947697e7ed6382867b030ece421a90",
+                "reference": "09c002af22947697e7ed6382867b030ece421a90",
                 "shasum": ""
             },
             "require": {
@@ -4124,15 +4120,14 @@
             },
             "require-dev": {
                 "editorconfig-checker/editorconfig-checker": "^10.6.0",
-                "ergebnis/composer-normalize": "^2.28",
-                "nette/neon": "^3.3.1",
-                "phpstan/phpstan-deprecation-rules": "^2.0",
-                "phpstan/phpstan-phpunit": "^2.0",
-                "phpstan/phpstan-strict-rules": "^2.0",
-                "phpunit/phpunit": "^9.5.20",
-                "shipmonk/composer-dependency-analyser": "^1.3.0",
-                "shipmonk/name-collision-detector": "^2.0.0",
-                "slevomat/coding-standard": "^8.0.1"
+                "ergebnis/composer-normalize": "^2.44",
+                "phpstan/phpstan-deprecation-rules": "^2.0.0",
+                "phpstan/phpstan-phpunit": "^2.0.0",
+                "phpstan/phpstan-strict-rules": "^2.0.0",
+                "phpunit/phpunit": "^9.6.21",
+                "shipmonk/composer-dependency-analyser": "^1.7.0",
+                "shipmonk/name-collision-detector": "^2.1.1",
+                "slevomat/coding-standard": "^8.15.0"
             },
             "type": "phpstan-extension",
             "extra": {
@@ -4158,9 +4153,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/phpstan-rules/issues",
-                "source": "https://github.com/shipmonk-rnd/phpstan-rules/tree/phpstan-20"
+                "source": "https://github.com/shipmonk-rnd/phpstan-rules/tree/4.0.0"
             },
-            "time": "2024-10-02T14:22:31+00:00"
+            "time": "2024-11-11T12:01:59+00:00"
         },
         {
             "name": "slevomat/coding-standard",
@@ -5614,11 +5609,9 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "dev",
-    "stability-flags": {
-        "shipmonk/phpstan-rules": 20
-    },
-    "prefer-stable": true,
+    "minimum-stability": "stable",
+    "stability-flags": {},
+    "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
         "php": "^7.4 || ^8.0"

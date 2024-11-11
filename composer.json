@@ -23,21 +23,19 @@
         "nette/component-model": "^3.0",
         "nette/utils": "^3.0 || ^4.0",
         "nikic/php-parser": "^5.3.1",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "phpstan/phpstan-strict-rules": "^2.0",
-        "phpstan/phpstan-symfony": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0.0",
+        "phpstan/phpstan-strict-rules": "^2.0.0",
+        "phpstan/phpstan-symfony": "^2.0.0",
         "phpunit/phpunit": "^9.5.20",
         "shipmonk/composer-dependency-analyser": "^1.6",
         "shipmonk/name-collision-detector": "^2.0.0",
-        "shipmonk/phpstan-rules": "dev-phpstan-20",
+        "shipmonk/phpstan-rules": "^4.0.0",
         "slevomat/coding-standard": "^8.15.0",
         "symfony/contracts": "^2.5 || ^3.0",
         "symfony/event-dispatcher": "^5.4 || ^6.0 || ^7.0",
         "symfony/http-kernel": "^5.4 || ^6.0 || ^7.0",
         "symfony/routing": "^5.4 || ^6.0 || ^7.0"
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "ShipMonk\\PHPStan\\DeadCode\\": "src/"
