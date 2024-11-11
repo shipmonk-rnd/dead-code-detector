@@ -181,7 +181,7 @@ class MethodCallCollector implements Collector
                     $methodName = $typeAndName->getMethod();
 
                     // currently always true, see https://github.com/phpstan/phpstan-src/pull/3372
-                    $possibleDescendantCall = !$caller->isClassStringType()->yes();
+                    $possibleDescendantCall = !$caller->isClassString()->yes();
 
                     foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
                         $this->callsBuffer[] = new Call(
@@ -268,7 +268,7 @@ class MethodCallCollector implements Collector
 
         if ($this->trackCallsOnMixed) {
             $canBeObjectCall = !$typeNoNull->isObject()->no() && !$isStaticCall->yes();
-            $canBeClassStringCall = !$typeNoNull->isClassStringType()->no() && !$isStaticCall->no();
+            $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
 
             if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
                 $result[] = null; // call over unknown type

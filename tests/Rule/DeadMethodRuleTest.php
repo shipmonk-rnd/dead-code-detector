@@ -195,10 +195,7 @@ class DeadMethodRuleTest extends RuleTestCase
      */
     private function createAnalysisResult(array $errors): AnalysisResult
     {
-        $result = $this->createMock(AnalysisResult::class);
-        $result->method('getInternalErrorObjects')->willReturn([]);
-        $result->method('getFileSpecificErrors')->willReturn($errors);
-        return $result;
+        return new AnalysisResult($errors, [], [], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor
     }
 
     private function createOutput(): Output
@@ -381,15 +378,15 @@ class DeadMethodRuleTest extends RuleTestCase
 
     private function createServiceMapFactoryMock(): ServiceMapFactory
     {
-        $service1Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service1Mock = $this->createMock(ServiceDefinition::class);
         $service1Mock->method('getClass')
             ->willReturn('Symfony\DicClass1');
 
-        $service2Mock = $this->createMock(ServiceDefinition::class); // @phpstan-ignore phpstanApi.classConstant
+        $service2Mock = $this->createMock(ServiceDefinition::class);
         $service2Mock->method('getClass')
             ->willReturn('Symfony\DicClass2');
 
-        $serviceMapMock = $this->createMock(ServiceMap::class); // @phpstan-ignore phpstanApi.classConstant
+        $serviceMapMock = $this->createMock(ServiceMap::class);
         $serviceMapMock->method('getServices')
             ->willReturn([$service1Mock, $service2Mock]);
 

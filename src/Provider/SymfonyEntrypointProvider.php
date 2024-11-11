@@ -30,8 +30,8 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
 
         if ($serviceMapFactory !== null) {
-            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method, phpstanApi.method
-                $dicClass = $service->getClass(); // @phpstan-ignore phpstanApi.method
+            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
+                $dicClass = $service->getClass();
 
                 if ($dicClass === null) {
                     continue;

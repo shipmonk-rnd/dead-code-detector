@@ -7,7 +7,7 @@ use PhpParser\Lexer;
 use PhpParser\NodeTraverser as PhpTraverser;
 use PhpParser\NodeVisitor\CloningVisitor;
 use PhpParser\Parser;
-use PhpParser\Parser\Php7;
+use PhpParser\Parser\Php8;
 use PhpParser\PrettyPrinter\Standard as PhpPrinter;
 
 class RemoveMethodCodeTransformer
@@ -28,16 +28,8 @@ class RemoveMethodCodeTransformer
      */
     public function __construct(array $deadMethodKeys)
     {
-        $this->phpLexer = new Lexer([
-            'usedAttributes' => [
-                'comments',
-                'startLine',
-                'endLine',
-                'startTokenPos',
-                'endTokenPos',
-            ],
-        ]);
-        $this->phpParser = new Php7($this->phpLexer);
+        $this->phpLexer = new Lexer();
+        $this->phpParser = new Php8($this->phpLexer);
 
         $this->cloningTraverser = new PhpTraverser();
         $this->cloningTraverser->addVisitor(new CloningVisitor());
@@ -56,7 +48,7 @@ class RemoveMethodCodeTransformer
             throw new LogicException('Failed to parse the code');
         }
 
-        $oldTokens = $this->phpLexer->getTokens();
+        $oldTokens = $this->phpParser->getTokens();
         $newAst = $this->removingTraverser->traverse($this->cloningTraverser->traverse($oldAst));
         return $this->phpPrinter->printFormatPreserving($newAst, $oldAst, $oldTokens);
     }
