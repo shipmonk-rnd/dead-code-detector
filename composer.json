@@ -26,7 +26,7 @@
         "phpstan/phpstan-phpunit": "^2.0.0",
         "phpstan/phpstan-strict-rules": "^2.0.0",
         "phpstan/phpstan-symfony": "^2.0.0",
-        "phpunit/phpunit": "^9.5.20",
+        "phpunit/phpunit": "^9.6.21",
         "shipmonk/composer-dependency-analyser": "^1.6",
         "shipmonk/name-collision-detector": "^2.0.0",
         "shipmonk/phpstan-rules": "^4.0.0",
