@@ -2,10 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use Composer\Autoload\ClassLoader;
 use ReflectionClass;
 use ReflectionMethod;
-use function array_keys;
 use function str_starts_with;
 use function strlen;
 use function strpos;
@@ -21,9 +19,12 @@ class VendorEntrypointProvider extends SimpleMethodEntrypointProvider
 
     private bool $enabled;
 
-    public function __construct(bool $enabled)
+    /**
+     * @param list<string> $composerAutoloaderProjectPaths
+     */
+    public function __construct(bool $enabled, array $composerAutoloaderProjectPaths)
     {
-        $this->vendorDirs = array_keys(ClassLoader::getRegisteredLoaders());
+        $this->vendorDirs = $composerAutoloaderProjectPaths;
         $this->enabled = $enabled;
     }
 

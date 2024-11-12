@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use Composer\Autoload\ClassLoader;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
@@ -29,6 +30,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use function array_keys;
 use function file_get_contents;
 use function is_array;
 use function str_replace;
@@ -336,6 +338,7 @@ class DeadMethodRuleTest extends RuleTestCase
             },
             new VendorEntrypointProvider(
                 true,
+                array_keys(ClassLoader::getRegisteredLoaders()),
             ),
             new PhpUnitEntrypointProvider(
                 true,

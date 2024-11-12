@@ -13,6 +13,7 @@ services:
             - shipmonk.deadCode.entrypointProvider
         arguments:
             enabled: %shipmonkDeadCode.entrypoints.vendor.enabled%
+            composerAutoloaderProjectPaths: %composerAutoloaderProjectPaths%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider
