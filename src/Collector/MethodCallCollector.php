@@ -94,7 +94,7 @@ class MethodCallCollector implements Collector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (ClassMethodCall $call): string => $call->toString(),
+                    static fn (ClassMethodCall $call): string => $call->serialize(),
                     $data,
                 );
         }

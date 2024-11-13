@@ -16,6 +16,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
@@ -32,6 +33,7 @@ use function explode;
 use function in_array;
 use function sprintf;
 use function strpos;
+use function substr;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -79,19 +81,19 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     /**
      * @var array<string, list<string>>
      */
-    private array $methodAlternativesCache = [];
+    private array $memberAlternativesCache = [];
 
     private bool $reportTransitivelyDeadMethodAsSeparateError;
 
     private bool $trackCallsOnMixed;
 
     /**
-     * @var array<string, array{string, int}> methodKey => [file, line]
+     * @var array<string, array{string, int, string, string}> methodKey => [file, line, typename, methodname]
      */
     private array $blackMethods = [];
 
     /**
-     * @var array<string, array{string, int}> constantKey => [file, line]
+     * @var array<string, array{string, int, string, string}> constantKey => [file, line, typename, constantname]
      */
     private array $blackConstants = [];
 
@@ -156,7 +158,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         foreach ($callData as $callsPerFile) {
             foreach ($callsPerFile as $callStrings) {
                 foreach ($callStrings as $callString) {
-                    $call = ClassMethodCall::fromString($callString);
+                    $call = ClassMethodCall::deserialize($callString);
 
                     if ($call->callee->className === null) {
                         $this->mixedCalls[$call->callee->memberName][] = $call;
@@ -164,19 +166,6 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
                     }
 
                     $calls[] = $call;
-                }
-            }
-        }
-
-        foreach ($constFetchData as $file => $data) {
-            foreach ($data as $constantData) {
-                foreach ($constantData as $constantKey) {
-                    $fetch = ClassConstantFetch::fromString($constantKey);
-                    $fetches[] = $fetch;
-
-                    if ($fetch->origin !== null) {
-                        $this->constantFetches[$fetch->origin->toString()][] = $fetch->fetch->toString();
-                    }
                 }
             }
         }
@@ -206,12 +195,13 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
 
             $ancestorNames = $this->getAncestorNames($typeName);
 
-            $this->fillTraitUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeMethods($typeName));
+            $this->fillTraitMethodUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeMethods($typeName));
+            $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeConstants($typeName));
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
-                $definition = $this->getMethodKey($typeName, $methodName);
-                $this->blackMethods[$definition] = [$file, $methodData['line']];
+                $definition = ClassMethodRef::buildKey($typeName, $methodName);
+                $this->blackMethods[$definition] = [$file, $methodData['line'], $typeName, $methodName];
 
                 if (isset($this->mixedCalls[$methodName])) {
                     foreach ($this->mixedCalls[$methodName] as $originalCall) {
@@ -225,8 +215,28 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             }
 
             foreach ($constants as $constantName => $constantData) {
-                $definition = $typeName . '::' . $constantName;
-                $this->blackConstants[$definition] = [$file, $constantData['line']];
+                $definition = ClassConstantRef::buildKey($typeName, $constantName);
+                $this->blackConstants[$definition] = [$file, $constantData['line'], $typeName, $constantName];
+            }
+        }
+
+        foreach ($constFetchData as $file => $data) {
+            foreach ($data as $constantData) {
+                foreach ($constantData as $constantKey) {
+                    $fetch = ClassConstantFetch::deserialize($constantKey);
+                    $fetches[] = $fetch;
+
+                    if ($fetch->origin !== null) {
+                        $alternativeOriginKeys = $this->getAlternativeMemberKeys($fetch->origin, false);
+                        $alternativeConstantKeys = $this->getAlternativeMemberKeys($fetch->fetch, $fetch->possibleDescendantFetch);
+
+                        foreach ($alternativeOriginKeys as $alternativeOriginKey) {
+                            foreach ($alternativeConstantKeys as $alternativeConstantKey) {
+                                $this->constantFetches[$alternativeOriginKey][] = $alternativeConstantKey;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -235,8 +245,9 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         foreach ($calls as $call) {
             $isWhite = $this->isConsideredWhite($call);
 
-            $alternativeCalleeKeys = $this->getAlternativeMethodKeys($call->callee, $call->possibleDescendantCall);
-            $alternativeCallerKeys = $call->caller !== null ? $this->getAlternativeMethodKeys($call->caller, false) : [];
+            // TODO unify with consts? include consts to call graph?
+            $alternativeCalleeKeys = $this->getAlternativeMemberKeys($call->callee, $call->possibleDescendantCall);
+            $alternativeCallerKeys = $call->caller !== null ? $this->getAlternativeMemberKeys($call->caller, false) : [];
 
             foreach ($alternativeCalleeKeys as $alternativeCalleeKey) {
                 foreach ($alternativeCallerKeys as $alternativeCallerKey) {
@@ -251,7 +262,11 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
 
         foreach ($fetches as $fetch) {
             if ($fetch->origin === null) {
-                unset($this->blackConstants[$fetch->fetch->toString()]);
+                $alternativeConstantKeys = $this->getAlternativeMemberKeys($fetch->fetch, $fetch->possibleDescendantFetch);
+
+                foreach ($alternativeConstantKeys as $alternativeConstantKey) {
+                    unset($this->blackConstants[$alternativeConstantKey]);
+                }
             }
             // else utilize call-graph traversal via markTransitivesWhite
         }
@@ -260,8 +275,8 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             $this->markTransitivesWhite($whiteCalleeKey);
         }
 
-        foreach ($this->blackMethods as $blackMethodKey => $_) {
-            if ($this->isNeverReportedAsDead($blackMethodKey)) {
+        foreach ($this->blackMethods as $blackMethodKey => [$file, $line, $className, $methodName]) {
+            if ($this->isNeverReportedAsDead($className, $methodName)) {
                 unset($this->blackMethods[$blackMethodKey]);
             }
         }
@@ -269,12 +284,12 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         $errors = [];
 
         if ($this->reportTransitivelyDeadMethodAsSeparateError) {
-            foreach ($this->blackMethods as $deadMethodKey => [$file, $line]) {
-                $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
+            foreach ($this->blackMethods as [$file, $line, $typeName, $methodName]) {
+                $errors[] = $this->buildError($typeName, $methodName, [], $file, $line);
             }
 
-            foreach ($this->blackConstants as $deadConstantKey => [$file, $line]) {
-                $errors[] = $this->buildError($deadConstantKey, [], $file, $line);
+            foreach ($this->blackConstants as [$file, $line, $typeName, $constantName]) {
+                $errors[] = $this->buildError($typeName, $constantName, [], $file, $line);
             }
 
             return $errors;
@@ -290,7 +305,9 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
                 $subGroupMap[$deadSubgroupKey] = $this->blackMethods[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
             }
 
-            $errors[] = $this->buildError($deadGroupKey, $subGroupMap, $file, $line);
+            // @phpstan-ignore offsetAccess.notFound
+            [$typeName, $memberName] = explode('::', substr($deadGroupKey, 2)); // TODO remove this hack
+            $errors[] = $this->buildError($typeName, $memberName, $subGroupMap, $file, $line);
         }
 
         return $errors;
@@ -300,7 +317,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
      * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
      * @param list<string> $overriddenMethods
      */
-    private function fillTraitUsages(string $typeName, array $usedTraits, array $overriddenMethods): void
+    private function fillTraitMethodUsages(string $typeName, array $usedTraits, array $overriddenMethods): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
             $traitMethods = $this->typeDefinitions[$traitName]['methods'] ?? [];
@@ -311,13 +328,13 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             );
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
-                $declaringTraitMethodDefinition = $this->getMethodKey($traitName, $traitMethod);
+                $declaringTraitMethodDefinition = ClassMethodRef::buildKey($traitName, $traitMethod);
                 $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
 
                 // both method names need to work
                 if ($aliasMethodName !== null) {
-                    $aliasMethodDefinition = $this->getMethodKey($typeName, $aliasMethodName);
-                    $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
+                    $aliasMethodDefinition = ClassMethodRef::buildKey($typeName, $aliasMethodName);
+                    $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
                 }
 
                 if (in_array($traitMethod, $excludedMethods, true)) {
@@ -325,11 +342,38 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
                 }
 
                 $overriddenMethods[] = $traitMethod;
-                $usedTraitMethodDefinition = $this->getMethodKey($typeName, $traitMethod);
-                $this->classHierarchy->registerMethodTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
+                $usedTraitMethodDefinition = ClassMethodRef::buildKey($typeName, $traitMethod);
+                $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
             }
 
-            $this->fillTraitUsages($typeName, $this->getTraitUsages($traitName), $overriddenMethods);
+            $this->fillTraitMethodUsages($typeName, $this->getTraitUsages($traitName), $overriddenMethods);
+        }
+    }
+
+    /**
+     * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
+     * @param list<string> $overriddenConstants
+     */
+    private function fillTraitConstantUsages(string $typeName, array $usedTraits, array $overriddenConstants): void
+    {
+        foreach ($usedTraits as $traitName => $_) {
+            $traitConstants = $this->typeDefinitions[$traitName]['constants'] ?? [];
+
+            $excludedConstants = $overriddenConstants;
+
+            foreach ($traitConstants as $traitConstant => $__) {
+                $declaringTraitConstantKey = ClassConstantRef::buildKey($traitName, $traitConstant);
+
+                if (in_array($traitConstant, $excludedConstants, true)) {
+                    continue;
+                }
+
+                $overriddenConstants[] = $traitConstant;
+                $traitUserConstantKey = ClassConstantRef::buildKey($typeName, $traitConstant);
+                $this->classHierarchy->registerTraitUsage($declaringTraitConstantKey, $traitUserConstantKey);
+            }
+
+            $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($traitName), $overriddenConstants);
         }
     }
 
@@ -354,37 +398,37 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     /**
      * @return list<string>
      */
-    private function getAlternativeMethodKeys(ClassMemberRef $method, bool $possibleDescendant): array
+    private function getAlternativeMemberKeys(ClassMemberRef $member, bool $possibleDescendant): array
     {
-        if ($method->className === null) {
+        if ($member->className === null) {
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $methodKey = $method->toString();
-        $cacheKey = $methodKey . ';' . ($possibleDescendant ? '1' : '0');
+        $memberKey = $member->toKey();
+        $cacheKey = $memberKey . ';' . ($possibleDescendant ? '1' : '0');
 
-        if (isset($this->methodAlternativesCache[$cacheKey])) {
-            return $this->methodAlternativesCache[$cacheKey];
+        if (isset($this->memberAlternativesCache[$cacheKey])) {
+            return $this->memberAlternativesCache[$cacheKey];
         }
 
-        $result = [$methodKey];
+        $result = [$memberKey];
 
         if ($possibleDescendant) {
-            foreach ($this->classHierarchy->getClassDescendants($method->className) as $descendantName) {
-                $result[] = $this->getMethodKey($descendantName, $method->memberName);
+            foreach ($this->classHierarchy->getClassDescendants($member->className) as $descendantName) {
+                $result[] = $member::buildKey($descendantName, $member->memberName);
             }
         }
 
         // each descendant can be a trait user
         foreach ($result as $resultKey) {
-            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMethodKey($resultKey);
+            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMemberKey($resultKey);
 
             if ($traitMethodKey !== null) {
                 $result[] = $traitMethodKey;
             }
         }
 
-        $this->methodAlternativesCache[$cacheKey] = $result;
+        $this->memberAlternativesCache[$cacheKey] = $result;
 
         return $result;
     }
@@ -514,26 +558,28 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
      * @param array<string, array{string, int}> $transitiveDeadMethodKeys
      */
     private function buildError(
-        string $deadMethodKey,
+        string $typeName,
+        string $memberName,
         array $transitiveDeadMethodKeys,
         string $file,
         int $line
     ): IdentifierRuleError
     {
-        $builder = RuleErrorBuilder::message('Unused ' . $deadMethodKey)
+        $builder = RuleErrorBuilder::message('Unused ' . $typeName . '::' . $memberName)
             ->file($file)
             ->line($line)
             ->identifier(self::ERROR_IDENTIFIER);
 
         $metadata = [];
-        $metadata[$deadMethodKey] = [
+        $metadata[$typeName . '::' . $memberName] = [
             'file' => $file,
             'line' => $line,
             'transitive' => false,
         ];
 
         foreach ($transitiveDeadMethodKeys as $transitiveDeadMethodKey => [$transitiveDeadMethodFile, $transitiveDeadMethodLine]) {
-            $builder->addTip("Thus $transitiveDeadMethodKey is transitively also unused");
+            $transitiveDeadMethodRef = substr($transitiveDeadMethodKey, 2); // TODO remove this hack
+            $builder->addTip("Thus $transitiveDeadMethodRef is transitively also unused");
 
             $metadata[$transitiveDeadMethodKey] = [
                 'file' => $transitiveDeadMethodFile,
@@ -568,16 +614,19 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     }
 
     /**
+     * @return list<string>
+     */
+    private function getTypeConstants(string $typeName): array
+    {
+        return array_keys($this->typeDefinitions[$typeName]['constants'] ?? []);
+    }
+
+    /**
      * @return array<string, array{excluded?: list<string>, aliases?: array<string, string>}>
      */
     private function getTraitUsages(string $typeName): array
     {
         return $this->typeDefinitions[$typeName]['traits'] ?? [];
-    }
-
-    private function getMethodKey(string $typeName, string $methodName): string
-    {
-        return $typeName . '::' . $methodName;
     }
 
     private function isConsideredWhite(ClassMethodCall $call): bool
@@ -587,10 +636,8 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             || array_key_exists($call->caller->memberName, self::UNSUPPORTED_MAGIC_METHODS);
     }
 
-    private function isNeverReportedAsDead(string $methodKey): bool
+    private function isNeverReportedAsDead(string $typeName, string $methodName): bool
     {
-        [$typeName, $methodName] = explode('::', $methodKey); // @phpstan-ignore offsetAccess.notFound
-
         $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
         $abstract = $this->typeDefinitions[$typeName]['methods'][$methodName]['abstract'] ?? false;
         $visibility = $this->typeDefinitions[$typeName]['methods'][$methodName]['visibility'] ?? 0;
@@ -650,7 +697,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     {
         foreach ($calls as $call) {
             if ($call->caller !== null) {
-                return $call->caller->toString();
+                return $call->caller->toHumanString();
             }
         }
 

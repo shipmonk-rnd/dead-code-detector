@@ -16,4 +16,9 @@ class ClassMethodRef extends ClassMemberRef
         parent::__construct($className, $methodName, ClassMemberRef::TYPE_METHOD);
     }
 
+    public static function buildKey(string $typeName, string $memberName): string
+    {
+        return 'm/' . $typeName . '::' . $memberName;
+    }
+
 }

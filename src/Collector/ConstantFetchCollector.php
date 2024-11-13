@@ -3,18 +3,25 @@
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use function array_map;
+use function count;
+use function current;
+use function explode;
+use function strpos;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -26,6 +33,13 @@ class ConstantFetchCollector implements Collector
      * @var list<ClassConstantFetch>
      */
     private array $accessBuffer = [];
+
+    private ReflectionProvider $reflectionProvider;
+
+    public function __construct(ReflectionProvider $reflectionProvider)
+    {
+        $this->reflectionProvider = $reflectionProvider;
+    }
 
     public function getNodeType(): string
     {
@@ -44,6 +58,10 @@ class ConstantFetchCollector implements Collector
             $this->registerFetch($node, $scope);
         }
 
+        if ($node instanceof FuncCall) {
+            $this->registerFunctionCall($node, $scope);
+        }
+
         if (!$scope->isInClass() || $node instanceof ClassMethodsNode) { // @phpstan-ignore-line ignore BC promise
             $data = $this->accessBuffer;
             $this->accessBuffer = [];
@@ -52,7 +70,7 @@ class ConstantFetchCollector implements Collector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (ClassConstantFetch $fetch): string => $fetch->toString(),
+                    static fn (ClassConstantFetch $fetch): string => $fetch->serialize(),
                     $data,
                 );
         }
@@ -60,11 +78,63 @@ class ConstantFetchCollector implements Collector
         return null;
     }
 
+    private function registerFunctionCall(FuncCall $node, Scope $scope): void
+    {
+        if (count($node->args) !== 1) {
+            return;
+        }
+
+        /** @var Arg $firstArg */
+        $firstArg = current($node->args);
+
+        if ($node->name instanceof Name) {
+            $functionNames = [$node->name->toString()];
+        } else {
+            $nameType = $scope->getType($node->name);
+            $functionNames = array_map(static fn (ConstantStringType $string): string => $string->getValue(), $nameType->getConstantStrings());
+        }
+
+        foreach ($functionNames as $functionName) {
+            if ($functionName !== 'constant') {
+                continue;
+            }
+
+            $argumentType = $scope->getType($firstArg->value);
+
+            foreach ($argumentType->getConstantStrings() as $constantString) {
+                if (strpos($constantString->getValue(), '::') === false) {
+                    continue;
+                }
+
+                // @phpstan-ignore offsetAccess.notFound
+                [$className, $constantName] = explode('::', $constantString->getValue());
+
+                if ($this->reflectionProvider->hasClass($className)) {
+                    $reflection = $this->reflectionProvider->getClass($className);
+
+                    if ($reflection->hasConstant($constantName)) {
+                        $className = $reflection->getConstant($constantName)->getDeclaringClass()->getName();
+                    }
+                }
+
+                $this->accessBuffer[] = new ClassConstantFetch(
+                    $this->getCaller($scope),
+                    new ClassConstantRef($className, $constantName),
+                    true,
+                );
+            }
+        }
+    }
+
     private function registerFetch(ClassConstFetch $node, Scope $scope): void
     {
-        $ownerType = $node->class instanceof Name
-            ? $scope->resolveTypeByName($node->class)
-            : $scope->getType($node->class);
+        if ($node->class instanceof Expr) {
+            $ownerType = $scope->getType($node->class);
+            $possibleDescendantFetch = true;
+        } else {
+            $ownerType = $scope->resolveTypeByName($node->class);
+            $possibleDescendantFetch = $node->class->toString() === 'static';
+        }
 
         $constantNames = $node->name instanceof Expr
             ? array_map(static fn (ConstantStringType $string): string => $string->getValue(), $scope->getType($node->name)->getConstantStrings())
@@ -82,6 +152,7 @@ class ConstantFetchCollector implements Collector
                 $this->accessBuffer[] = new ClassConstantFetch(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName),
+                    $possibleDescendantFetch,
                 );
             }
         }

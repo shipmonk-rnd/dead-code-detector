@@ -33,6 +33,7 @@ use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
 use function str_replace;
+use function substr;
 use const PHP_VERSION_ID;
 
 /**
@@ -71,7 +72,7 @@ class DeadMethodRuleTest extends RuleTestCase
             new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
             new MethodCallCollector($this->trackMixedCalls),
-            new ConstantFetchCollector(),
+            new ConstantFetchCollector(self::createReflectionProvider()),
         ];
     }
 
@@ -238,7 +239,24 @@ class DeadMethodRuleTest extends RuleTestCase
     {
         $this->emitErrorsInGroups = false; // TODO test even groups
         $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/basic.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/constant-function.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/dynamic.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/expr.php']);
         $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/override.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/static.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-1.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-2.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-3.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-5.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-6.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-7.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-9.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-10.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-11-a.php', __DIR__ . '/data/DeadMethodRule/constants/traits-11-b.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-13.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-14.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-21.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/traits-23.php']);
     }
 
     /**
@@ -249,6 +267,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'anonym' => [__DIR__ . '/data/DeadMethodRule/anonym.php'];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
         yield 'callables' => [__DIR__ . '/data/DeadMethodRule/callables.php'];
+        yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
         yield 'ctor-private' => [__DIR__ . '/data/DeadMethodRule/ctor-private.php'];
@@ -425,9 +444,11 @@ class DeadMethodRuleTest extends RuleTestCase
                     continue;
                 }
 
+                $ref = substr($alsoDead, 2); // TODO remove hack
+
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    "Unused $alsoDead",
+                    "Unused $ref",
                     $file,
                     $line,
                     true,

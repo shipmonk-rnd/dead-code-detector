@@ -54,7 +54,7 @@ class EntrypointCollector implements Collector
                     new ClassMethodRef($entrypointMethod->getDeclaringClass()->getName(), $entrypointMethod->getName()),
                     false,
                 );
-                $entrypoints[] = $call->toString();
+                $entrypoints[] = $call->serialize();
             }
         }
 

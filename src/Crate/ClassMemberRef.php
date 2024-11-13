@@ -37,10 +37,18 @@ abstract class ClassMemberRef
         $this->memberType = $memberType;
     }
 
-    public function toString(): string
+    public function toHumanString(): string
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
         return $classRef . '::' . $this->memberName;
     }
+
+    public function toKey(): string
+    {
+        $classRef = $this->className ?? self::UNKNOWN_CLASS;
+        return static::buildKey($classRef, $this->memberName);
+    }
+
+    abstract public static function buildKey(string $typeName, string $memberName): string;
 
 }

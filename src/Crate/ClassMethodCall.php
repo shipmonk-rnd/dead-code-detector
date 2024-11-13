@@ -3,8 +3,8 @@
 namespace ShipMonk\PHPStan\DeadCode\Crate;
 
 use LogicException;
-use function count;
-use function explode;
+use function serialize;
+use function unserialize;
 
 /**
  * @immutable
@@ -29,62 +29,21 @@ class ClassMethodCall
         $this->possibleDescendantCall = $possibleDescendantCall;
     }
 
-    public function toString(): string
+    public function serialize(): string
     {
-        $callerRef = $this->caller === null ? '' : $this->caller->toString();
-        $calleeRef = $this->callee->toString();
-
-        return "{$callerRef}->$calleeRef;" . ($this->possibleDescendantCall ? '1' : '');
+        return serialize($this);
     }
 
-    public static function fromString(string $callKey): self
+    public static function deserialize(string $data): self
     {
-        $split1 = explode(';', $callKey);
+        $result = unserialize($data);
 
-        if (count($split1) !== 2) {
-            throw new LogicException("Invalid method key: $callKey");
+        if (!$result instanceof self) {
+            $self = self::class;
+            throw new LogicException("Invalid string for $self deserialization: $data");
         }
 
-        [$edgeKey, $possibleDescendantCall] = $split1;
-
-        $split2 = explode('->', $edgeKey);
-
-        if (count($split2) !== 2) {
-            throw new LogicException("Invalid method key: $callKey");
-        }
-
-        [$callerKey, $calleeKey] = $split2;
-
-        $calleeSplit = explode('::', $calleeKey);
-
-        if (count($calleeSplit) !== 2) {
-            throw new LogicException("Invalid method key: $callKey");
-        }
-
-        [$calleeClassName, $calleeMethodName] = $calleeSplit;
-        $callee = new ClassMethodRef(
-            $calleeClassName === ClassMemberRef::UNKNOWN_CLASS ? null : $calleeClassName,
-            $calleeMethodName,
-        );
-
-        if ($callerKey === '') {
-            $caller = null;
-        } else {
-            $callerSplit = explode('::', $callerKey);
-
-            if (count($callerSplit) !== 2) {
-                throw new LogicException("Invalid method key: $callKey");
-            }
-
-            [$callerClassName, $callerMethodName] = $callerSplit;
-            $caller = new ClassMethodRef($callerClassName, $callerMethodName);
-        }
-
-        return new self(
-            $caller,
-            $callee,
-            $possibleDescendantCall === '1',
-        );
+        return $result;
     }
 
 }

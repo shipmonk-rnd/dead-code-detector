@@ -16,27 +16,31 @@ class ClassConstantFetch
 
     public ClassConstantRef $fetch;
 
+    public bool $possibleDescendantFetch;
+
     public function __construct(
         ?ClassMethodRef $origin,
-        ClassConstantRef $fetch
+        ClassConstantRef $fetch,
+        bool $possibleDescendantFetch
     )
     {
         $this->origin = $origin;
         $this->fetch = $fetch;
+        $this->possibleDescendantFetch = $possibleDescendantFetch;
     }
 
-    public function toString(): string
+    public function serialize(): string
     {
         return serialize($this);
     }
 
-    public static function fromString(string $callKey): self
+    public static function deserialize(string $data): self
     {
-        $result = unserialize($callKey, ['allowed_classes' => [self::class, ClassMethodRef::class, ClassConstantRef::class]]);
+        $result = unserialize($data, ['allowed_classes' => [self::class, ClassMethodRef::class, ClassConstantRef::class]]);
 
         if (!$result instanceof self) {
             $self = self::class;
-            throw new LogicException("Invalid string for $self deserialization: $callKey");
+            throw new LogicException("Invalid string for $self deserialization: $data");
         }
 
         return $result;
