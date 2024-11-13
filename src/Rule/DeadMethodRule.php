@@ -12,11 +12,14 @@ use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
-use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
@@ -33,7 +36,7 @@ use function strpos;
 /**
  * @implements Rule<CollectedDataNode>
  */
-class DeadMethodRule implements Rule, DiagnoseExtension
+class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCodeRule
 {
 
     public const ERROR_IDENTIFIER = 'shipmonk.deadMethod';
@@ -64,6 +67,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
      *      kind: string,
      *      name: string,
      *      file: string,
+     *      constants: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -87,14 +91,24 @@ class DeadMethodRule implements Rule, DiagnoseExtension
     private array $blackMethods = [];
 
     /**
-     * @var array<string, list<Call>> methodName => Call[]
+     * @var array<string, array{string, int}> constantKey => [file, line]
+     */
+    private array $blackConstants = [];
+
+    /**
+     * @var array<string, list<string>> originMethodKey => constantKey[]
+     */
+    private array $constantFetches = [];
+
+    /**
+     * @var array<string, list<ClassMethodCall>> methodName => Call[]
      */
     private array $mixedCalls = [];
 
     /**
      * @var array<string, list<string>> caller => callee[]
      */
-    private array $callGraph = [];
+    private array $callGraph = []; // TODO include also const fetches?
 
     public function __construct(
         ClassHierarchy $classHierarchy,
@@ -125,10 +139,14 @@ class DeadMethodRule implements Rule, DiagnoseExtension
             return [];
         }
 
-        /** @var list<Call> $calls */
+        /** @var list<ClassMethodCall> $calls */
         $calls = [];
+        /** @var list<ClassConstantFetch> $fetches */
+        $fetches = [];
+
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
+        $constFetchData = $node->get(ConstantFetchCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
 
         /** @var array<string, list<list<string>>> $callData */
@@ -138,14 +156,27 @@ class DeadMethodRule implements Rule, DiagnoseExtension
         foreach ($callData as $callsPerFile) {
             foreach ($callsPerFile as $callStrings) {
                 foreach ($callStrings as $callString) {
-                    $call = Call::fromString($callString);
+                    $call = ClassMethodCall::fromString($callString);
 
                     if ($call->callee->className === null) {
-                        $this->mixedCalls[$call->callee->methodName][] = $call;
+                        $this->mixedCalls[$call->callee->memberName][] = $call;
                         continue;
                     }
 
                     $calls[] = $call;
+                }
+            }
+        }
+
+        foreach ($constFetchData as $file => $data) {
+            foreach ($data as $constantData) {
+                foreach ($constantData as $constantKey) {
+                    $fetch = ClassConstantFetch::fromString($constantKey);
+                    $fetches[] = $fetch;
+
+                    if ($fetch->origin !== null) {
+                        $this->constantFetches[$fetch->origin->toString()][] = $fetch->fetch->toString();
+                    }
                 }
             }
         }
@@ -157,6 +188,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
                     'kind' => $typeData['kind'],
                     'name' => $typeName,
                     'file' => $file,
+                    'constants' => $typeData['constants'],
                     'methods' => $typeData['methods'],
                     'parents' => $typeData['parents'],
                     'traits' => $typeData['traits'],
@@ -169,6 +201,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
+            $constants = $typeDefinition['constants'];
             $file = $typeDefinition['file'];
 
             $ancestorNames = $this->getAncestorNames($typeName);
@@ -182,13 +215,18 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
                 if (isset($this->mixedCalls[$methodName])) {
                     foreach ($this->mixedCalls[$methodName] as $originalCall) {
-                        $calls[] = new Call(
+                        $calls[] = new ClassMethodCall(
                             $originalCall->caller,
-                            new Method($typeName, $methodName),
+                            new ClassMethodRef($typeName, $methodName),
                             $originalCall->possibleDescendantCall,
                         );
                     }
                 }
+            }
+
+            foreach ($constants as $constantName => $constantData) {
+                $definition = $typeName . '::' . $constantName;
+                $this->blackConstants[$definition] = [$file, $constantData['line']];
             }
         }
 
@@ -211,8 +249,15 @@ class DeadMethodRule implements Rule, DiagnoseExtension
             }
         }
 
+        foreach ($fetches as $fetch) {
+            if ($fetch->origin === null) {
+                unset($this->blackConstants[$fetch->fetch->toString()]);
+            }
+            // else utilize call-graph traversal via markTransitivesWhite
+        }
+
         foreach ($whiteCallees as $whiteCalleeKey) {
-            $this->markTransitiveCallsWhite($whiteCalleeKey);
+            $this->markTransitivesWhite($whiteCalleeKey);
         }
 
         foreach ($this->blackMethods as $blackMethodKey => $_) {
@@ -226,6 +271,10 @@ class DeadMethodRule implements Rule, DiagnoseExtension
         if ($this->reportTransitivelyDeadMethodAsSeparateError) {
             foreach ($this->blackMethods as $deadMethodKey => [$file, $line]) {
                 $errors[] = $this->buildError($deadMethodKey, [], $file, $line);
+            }
+
+            foreach ($this->blackConstants as $deadConstantKey => [$file, $line]) {
+                $errors[] = $this->buildError($deadConstantKey, [], $file, $line);
             }
 
             return $errors;
@@ -305,7 +354,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
     /**
      * @return list<string>
      */
-    private function getAlternativeMethodKeys(Method $method, bool $possibleDescendant): array
+    private function getAlternativeMethodKeys(ClassMemberRef $method, bool $possibleDescendant): array
     {
         if ($method->className === null) {
             throw new LogicException('Those were eliminated above, should never happen');
@@ -322,7 +371,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
 
         if ($possibleDescendant) {
             foreach ($this->classHierarchy->getClassDescendants($method->className) as $descendantName) {
-                $result[] = $this->getMethodKey($descendantName, $method->methodName);
+                $result[] = $this->getMethodKey($descendantName, $method->memberName);
             }
         }
 
@@ -343,12 +392,16 @@ class DeadMethodRule implements Rule, DiagnoseExtension
     /**
      * @param array<string, null> $visitedKeys
      */
-    private function markTransitiveCallsWhite(string $callerKey, array $visitedKeys = []): void
+    private function markTransitivesWhite(string $callerKey, array $visitedKeys = []): void
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
         $calleeKeys = $this->callGraph[$callerKey] ?? [];
 
         unset($this->blackMethods[$callerKey]);
+
+        foreach ($this->constantFetches[$callerKey] ?? [] as $constantKey) {
+            unset($this->blackConstants[$constantKey]);
+        }
 
         foreach ($calleeKeys as $calleeKey) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
@@ -359,7 +412,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            $this->markTransitiveCallsWhite($calleeKey, array_merge($visitedKeys, [$calleeKey => null]));
+            $this->markTransitivesWhite($calleeKey, array_merge($visitedKeys, [$calleeKey => null]));
         }
     }
 
@@ -527,11 +580,11 @@ class DeadMethodRule implements Rule, DiagnoseExtension
         return $typeName . '::' . $methodName;
     }
 
-    private function isConsideredWhite(Call $call): bool
+    private function isConsideredWhite(ClassMethodCall $call): bool
     {
         return $call->caller === null
             || $this->isAnonymousClass($call->caller->className)
-            || array_key_exists($call->caller->methodName, self::UNSUPPORTED_MAGIC_METHODS);
+            || array_key_exists($call->caller->memberName, self::UNSUPPORTED_MAGIC_METHODS);
     }
 
     private function isNeverReportedAsDead(string $methodKey): bool
@@ -591,7 +644,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param list<Call> $calls
+     * @param list<ClassMethodCall> $calls
      */
     private function getExampleCaller(array $calls): ?string
     {

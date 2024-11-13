@@ -61,6 +61,10 @@ services:
         tags:
             - phpstan.collector
     -
+        class: ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector
+        tags:
+            - phpstan.collector
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector
         tags:
             - phpstan.collector

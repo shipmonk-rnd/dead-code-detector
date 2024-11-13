@@ -7,9 +7,12 @@ use LogicException;
 use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ShipMonk\PHPStan\DeadCode\Crate\Call;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Method;
 use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
@@ -45,8 +48,11 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $missingClassNames = [];
         $excluded = [
-            Call::class,
-            Method::class,
+            ClassMethodCall::class,
+            ClassMethodRef::class,
+            ClassConstantRef::class,
+            ClassConstantFetch::class,
+            ClassMemberRef::class,
             Kind::class,
             Visibility::class,
             MethodEntrypointProvider::class,

@@ -23,8 +23,8 @@ use PHPStan\TrinaryLogic;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
-use ShipMonk\PHPStan\DeadCode\Crate\Call;
-use ShipMonk\PHPStan\DeadCode\Crate\Method;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use function array_map;
 
 /**
@@ -34,7 +34,7 @@ class MethodCallCollector implements Collector
 {
 
     /**
-     * @var list<Call>
+     * @var list<ClassMethodCall>
      */
     private array $callsBuffer = [];
 
@@ -94,7 +94,7 @@ class MethodCallCollector implements Collector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (Call $call): string => $call->toString(),
+                    static fn (ClassMethodCall $call): string => $call->toString(),
                     $data,
                 );
         }
@@ -131,9 +131,9 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-                $this->callsBuffer[] = new Call(
+                $this->callsBuffer[] = new ClassMethodCall(
                     $this->getCaller($scope),
-                    new Method($className, $methodName),
+                    new ClassMethodRef($className, $methodName),
                     $possibleDescendantCall,
                 );
             }
@@ -158,9 +158,9 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
-                $this->callsBuffer[] = new Call(
+                $this->callsBuffer[] = new ClassMethodCall(
                     $this->getCaller($scope),
-                    new Method($className, $methodName),
+                    new ClassMethodRef($className, $methodName),
                     $possibleDescendantCall,
                 );
             }
@@ -184,9 +184,9 @@ class MethodCallCollector implements Collector
                     $possibleDescendantCall = !$caller->isClassString()->yes();
 
                     foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
-                        $this->callsBuffer[] = new Call(
+                        $this->callsBuffer[] = new ClassMethodCall(
                             $this->getCaller($scope),
-                            new Method($className, $methodName),
+                            new ClassMethodRef($className, $methodName),
                             $possibleDescendantCall,
                         );
                     }
@@ -197,9 +197,9 @@ class MethodCallCollector implements Collector
 
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
-        $this->callsBuffer[] = new Call(
+        $this->callsBuffer[] = new ClassMethodCall(
             null,
-            new Method($scope->resolveName($node->name), '__construct'),
+            new ClassMethodRef($scope->resolveName($node->name), '__construct'),
             false,
         );
     }
@@ -210,9 +210,9 @@ class MethodCallCollector implements Collector
         $callerType = $scope->getType($node->expr);
 
         foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-            $this->callsBuffer[] = new Call(
+            $this->callsBuffer[] = new ClassMethodCall(
                 $this->getCaller($scope),
-                new Method($className, $methodName),
+                new ClassMethodRef($className, $methodName),
                 true,
             );
         }
@@ -278,7 +278,7 @@ class MethodCallCollector implements Collector
         return $result;
     }
 
-    private function getCaller(Scope $scope): ?Method
+    private function getCaller(Scope $scope): ?ClassMethodRef
     {
         if (!$scope->isInClass()) {
             return null;
@@ -288,7 +288,7 @@ class MethodCallCollector implements Collector
             return null;
         }
 
-        return new Method($scope->getClassReflection()->getName(), $scope->getFunction()->getName());
+        return new ClassMethodRef($scope->getClassReflection()->getName(), $scope->getFunction()->getName());
     }
 
 }

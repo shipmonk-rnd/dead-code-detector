@@ -16,6 +16,7 @@ use PHPStan\Symfony\ServiceMap;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
@@ -70,6 +71,7 @@ class DeadMethodRuleTest extends RuleTestCase
             new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
             new MethodCallCollector($this->trackMixedCalls),
+            new ConstantFetchCollector(),
         ];
     }
 
@@ -232,6 +234,13 @@ class DeadMethodRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testConstants(): void
+    {
+        $this->emitErrorsInGroups = false; // TODO test even groups
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/basic.php']);
+        $this->analyseFiles([__DIR__ . '/data/DeadMethodRule/constants/override.php']);
+    }
+
     /**
      * @return array<string, array{0: string|list<string>, 1?: int}>
      */
@@ -240,7 +249,6 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'anonym' => [__DIR__ . '/data/DeadMethodRule/anonym.php'];
         yield 'enum' => [__DIR__ . '/data/DeadMethodRule/enum.php', 8_01_00];
         yield 'callables' => [__DIR__ . '/data/DeadMethodRule/callables.php'];
-        yield 'code' => [__DIR__ . '/data/DeadMethodRule/basic.php'];
         yield 'ctor' => [__DIR__ . '/data/DeadMethodRule/ctor.php'];
         yield 'ctor-interface' => [__DIR__ . '/data/DeadMethodRule/ctor-interface.php'];
         yield 'ctor-private' => [__DIR__ . '/data/DeadMethodRule/ctor-private.php'];

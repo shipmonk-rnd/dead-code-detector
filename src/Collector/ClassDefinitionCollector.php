@@ -23,6 +23,7 @@ use function array_map;
  * @implements Collector<ClassLike, array{
  *       kind: string,
  *       name: string,
+ *       constants: array<string, array{line: int}>,
  *       methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -42,6 +43,7 @@ class ClassDefinitionCollector implements Collector
      * @return array{
      *      kind: string,
      *      name: string,
+     *      constants: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -70,10 +72,21 @@ class ClassDefinitionCollector implements Collector
             ];
         }
 
+        $constants = [];
+
+        foreach ($node->getConstants() as $constant) {
+            foreach ($constant->consts as $const) {
+                $constants[$const->name->toString()] = [
+                    'line' => $const->getStartLine(),
+                ];
+            }
+        }
+
         return [
             'kind' => $kind,
             'name' => $typeName,
             'methods' => $methods,
+            'constants' => $constants,
             'parents' => $this->getParents($node),
             'traits' => $this->getTraits($node),
             'interfaces' => $this->getInterfaces($node),

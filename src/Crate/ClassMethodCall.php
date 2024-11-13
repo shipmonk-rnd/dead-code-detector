@@ -9,18 +9,18 @@ use function explode;
 /**
  * @immutable
  */
-class Call
+class ClassMethodCall
 {
 
-    public ?Method $caller;
+    public ?ClassMethodRef $caller;
 
-    public Method $callee;
+    public ClassMethodRef $callee;
 
     public bool $possibleDescendantCall;
 
     public function __construct(
-        ?Method $caller,
-        Method $callee,
+        ?ClassMethodRef $caller,
+        ClassMethodRef $callee,
         bool $possibleDescendantCall
     )
     {
@@ -62,8 +62,8 @@ class Call
         }
 
         [$calleeClassName, $calleeMethodName] = $calleeSplit;
-        $callee = new Method(
-            $calleeClassName === Method::UNKNOWN_CLASS ? null : $calleeClassName,
+        $callee = new ClassMethodRef(
+            $calleeClassName === ClassMemberRef::UNKNOWN_CLASS ? null : $calleeClassName,
             $calleeMethodName,
         );
 
@@ -77,7 +77,7 @@ class Call
             }
 
             [$callerClassName, $callerMethodName] = $callerSplit;
-            $caller = new Method($callerClassName, $callerMethodName);
+            $caller = new ClassMethodRef($callerClassName, $callerMethodName);
         }
 
         return new self(
