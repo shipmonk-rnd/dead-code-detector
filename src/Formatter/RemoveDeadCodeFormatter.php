@@ -7,7 +7,7 @@ use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
-use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodCodeTransformer;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function count;
 
 class RemoveDeadCodeFormatter implements ErrorFormatter
@@ -37,33 +37,40 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             return 1;
         }
 
-        $deadMethodKeysByFiles = [];
+        $deadMembersByFiles = [];
 
         foreach ($analysisResult->getFileSpecificErrors() as $fileSpecificError) {
-            if ($fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_METHOD) {
+            if (
+                $fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_METHOD
+                && $fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_CONSTANT
+            ) {
                 continue;
             }
 
-            /** @var array<string, array{file: string, line: string}> $metadata */
+            /** @var array<string, array{file: string}> $metadata */
             $metadata = $fileSpecificError->getMetadata();
+            $type = $fileSpecificError->getIdentifier();
 
             foreach ($metadata as $key => $data) {
-                $deadMethodKeysByFiles[$data['file']][] = $key;
+                $deadMembersByFiles[$data['file']][$type][] = $key;
             }
         }
 
         $count = 0;
 
-        foreach ($deadMethodKeysByFiles as $file => $blackMethodKeys) {
-            $count += count($blackMethodKeys);
+        foreach ($deadMembersByFiles as $file => $deadMembersByType) {
+            $deadConstants = $deadMembersByType[DeadMethodRule::IDENTIFIER_CONSTANT] ?? [];
+            $deadMethods = $deadMembersByType[DeadMethodRule::IDENTIFIER_METHOD] ?? [];
 
-            $transformer = new RemoveMethodCodeTransformer($blackMethodKeys);
+            $count += count($deadConstants) + count($deadMethods);
+
+            $transformer = new RemoveDeadCodeTransformer($deadMethods, $deadConstants);
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
         }
 
-        $output->writeLineFormatted('Removed ' . $count . ' dead methods in ' . count($deadMethodKeysByFiles) . ' files.');
+        $output->writeLineFormatted('Removed ' . $count . ' dead methods in ' . count($deadMembersByFiles) . ' files.');
 
         return 0;
     }

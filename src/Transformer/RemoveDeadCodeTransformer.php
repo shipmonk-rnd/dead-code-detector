@@ -10,7 +10,7 @@ use PhpParser\Parser;
 use PhpParser\Parser\Php8;
 use PhpParser\PrettyPrinter\Standard as PhpPrinter;
 
-class RemoveMethodCodeTransformer
+class RemoveDeadCodeTransformer
 {
 
     private Lexer $phpLexer;
@@ -24,9 +24,10 @@ class RemoveMethodCodeTransformer
     private PhpPrinter $phpPrinter;
 
     /**
-     * @param list<string> $deadMethodKeys
+     * @param list<string> $deadMethods
+     * @param list<string> $deadConstants
      */
-    public function __construct(array $deadMethodKeys)
+    public function __construct(array $deadMethods, array $deadConstants)
     {
         $this->phpLexer = new Lexer();
         $this->phpParser = new Php8($this->phpLexer);
@@ -35,7 +36,7 @@ class RemoveMethodCodeTransformer
         $this->cloningTraverser->addVisitor(new CloningVisitor());
 
         $this->removingTraverser = new PhpTraverser();
-        $this->removingTraverser->addVisitor(new RemoveMethodVisitor($deadMethodKeys));
+        $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMethods, $deadConstants));
 
         $this->phpPrinter = new PhpPrinter();
     }

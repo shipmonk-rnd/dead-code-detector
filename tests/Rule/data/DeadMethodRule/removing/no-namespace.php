@@ -2,6 +2,6 @@
 
 interface Remove
 {
-    public function dead(): void // error: Unused Remove::dead
-    ;
+    const DEAD = 1;
+    public function dead(): void;
 }

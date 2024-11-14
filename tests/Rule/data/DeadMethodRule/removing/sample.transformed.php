@@ -20,7 +20,12 @@ class Child1 extends AbstractClass
 
 class Child2 extends AbstractClass
 {
-    public function foo(): void {}
+    const USED_CONST = 1;
+
+    public function foo(): void
+    {
+        echo self::USED_CONST;
+    }
 }
 
 function testIt(Child2 $child2): void
