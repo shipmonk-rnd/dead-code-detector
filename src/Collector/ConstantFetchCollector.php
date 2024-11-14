@@ -122,8 +122,7 @@ class ConstantFetchCollector implements Collector
 
                 $this->accessBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
-                    new ClassConstantRef($className, $constantName),
-                    true,
+                    new ClassConstantRef($className, $constantName, true),
                 );
             }
         }
@@ -147,8 +146,7 @@ class ConstantFetchCollector implements Collector
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
                 $this->accessBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
-                    new ClassConstantRef($className, $constantName),
-                    $possibleDescendantFetch,
+                    new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
                 );
             }
         }
@@ -194,7 +192,11 @@ class ConstantFetchCollector implements Collector
             return null;
         }
 
-        return new ClassMethodRef($scope->getClassReflection()->getName(), $scope->getFunction()->getName());
+        return new ClassMethodRef(
+            $scope->getClassReflection()->getName(),
+            $scope->getFunction()->getName(),
+            false,
+        );
     }
 
 }

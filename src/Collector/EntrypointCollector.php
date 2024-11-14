@@ -51,8 +51,11 @@ class EntrypointCollector implements Collector
             foreach ($entrypointProvider->getEntrypoints($node->getClassReflection()) as $entrypointMethod) {
                 $call = new ClassMethodUsage(
                     null,
-                    new ClassMethodRef($entrypointMethod->getDeclaringClass()->getName(), $entrypointMethod->getName()),
-                    false,
+                    new ClassMethodRef(
+                        $entrypointMethod->getDeclaringClass()->getName(),
+                        $entrypointMethod->getName(),
+                        false,
+                    ),
                 );
                 $entrypoints[] = $call->serialize();
             }

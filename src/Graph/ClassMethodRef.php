@@ -10,10 +10,11 @@ class ClassMethodRef extends ClassMemberRef
 
     public function __construct(
         ?string $className, // TODO nullability to * ?
-        string $methodName
+        string $methodName,
+        bool $possibleDescendant
     )
     {
-        parent::__construct($className, $methodName, ClassMemberRef::TYPE_METHOD);
+        parent::__construct($className, $methodName, $possibleDescendant, ClassMemberRef::TYPE_METHOD);
     }
 
     public static function buildKey(string $typeName, string $memberName): string

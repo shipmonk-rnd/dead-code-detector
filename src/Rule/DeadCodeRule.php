@@ -200,8 +200,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
                     $memberUses[] = new ClassMethodUsage(
                         $originalCall->getOrigin(),
-                        new ClassMethodRef($typeName, $methodName),
-                        $originalCall->isPossibleDescendantUsage(),
+                        new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->possibleDescendant),
                     );
                 }
             }
@@ -213,8 +212,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
                     $memberUses[] = new ClassConstantUsage(
                         $originalFetch->getOrigin(),
-                        new ClassConstantRef($typeName, $constantName),
-                        $originalFetch->isPossibleDescendantUsage(),
+                        new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->possibleDescendant),
                     );
                 }
             }
@@ -225,8 +223,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($memberUses as $memberUse) {
             $isWhite = $this->isConsideredWhite($memberUse);
 
-            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberRef(), $memberUse->isPossibleDescendantUsage());
-            $alternativeOriginKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin(), false) : [];
+            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberRef());
+            $alternativeOriginKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin()) : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
                 foreach ($alternativeOriginKeys as $alternativeOriginKey) {
@@ -360,13 +358,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @return list<string>
      */
-    private function getAlternativeMemberKeys(ClassMemberRef $member, bool $possibleDescendant): array
+    private function getAlternativeMemberKeys(ClassMemberRef $member): array
     {
         if ($member->className === null) {
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
         $memberKey = $member->toKey();
+        $possibleDescendant = $member->possibleDescendant;
         $cacheKey = $memberKey . ';' . ($possibleDescendant ? '1' : '0');
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {

@@ -12,11 +12,10 @@ class ClassMethodUsage extends ClassMemberUsage
 
     public function __construct(
         ?ClassMethodRef $origin,
-        ClassMethodRef $callee,
-        bool $possibleDescendantCall
+        ClassMethodRef $callee
     )
     {
-        parent::__construct($origin, $possibleDescendantCall);
+        parent::__construct($origin);
 
         $this->callee = $callee;
     }

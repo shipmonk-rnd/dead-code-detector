@@ -133,8 +133,7 @@ class MethodCallCollector implements Collector
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
                 $this->callsBuffer[] = new ClassMethodUsage(
                     $this->getCaller($scope),
-                    new ClassMethodRef($className, $methodName),
-                    $possibleDescendantCall,
+                    new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                 );
             }
         }
@@ -160,8 +159,7 @@ class MethodCallCollector implements Collector
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
                 $this->callsBuffer[] = new ClassMethodUsage(
                     $this->getCaller($scope),
-                    new ClassMethodRef($className, $methodName),
-                    $possibleDescendantCall,
+                    new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                 );
             }
         }
@@ -186,8 +184,7 @@ class MethodCallCollector implements Collector
                     foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
                         $this->callsBuffer[] = new ClassMethodUsage(
                             $this->getCaller($scope),
-                            new ClassMethodRef($className, $methodName),
-                            $possibleDescendantCall,
+                            new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                         );
                     }
                 }
@@ -199,8 +196,7 @@ class MethodCallCollector implements Collector
     {
         $this->callsBuffer[] = new ClassMethodUsage(
             null,
-            new ClassMethodRef($scope->resolveName($node->name), '__construct'),
-            false,
+            new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
         );
     }
 
@@ -212,8 +208,7 @@ class MethodCallCollector implements Collector
         foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
             $this->callsBuffer[] = new ClassMethodUsage(
                 $this->getCaller($scope),
-                new ClassMethodRef($className, $methodName),
-                true,
+                new ClassMethodRef($className, $methodName, true),
             );
         }
     }
@@ -288,7 +283,11 @@ class MethodCallCollector implements Collector
             return null;
         }
 
-        return new ClassMethodRef($scope->getClassReflection()->getName(), $scope->getFunction()->getName());
+        return new ClassMethodRef(
+            $scope->getClassReflection()->getName(),
+            $scope->getFunction()->getName(),
+            false,
+        );
     }
 
 }

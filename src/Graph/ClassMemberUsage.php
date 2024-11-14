@@ -17,23 +17,13 @@ abstract class ClassMemberUsage
      */
     private ?ClassMethodRef $origin;
 
-    /**
-     * If true, class of getMemberUsage() may be descendant
-     */
-    private bool $possibleDescendantUsage;
-
-    public function __construct(
-        ?ClassMethodRef $origin,
-        bool $possibleDescendantUsage
-    )
+    public function __construct(?ClassMethodRef $origin)
     {
+        if ($origin !== null && $origin->possibleDescendant) {
+            throw new LogicException('Origin should always be exact place in codebase.');
+        }
+
         $this->origin = $origin;
-        $this->possibleDescendantUsage = $possibleDescendantUsage; // TODO maybe should be part of ClassMethodRef?
-    }
-
-    public function isPossibleDescendantUsage(): bool
-    {
-        return $this->possibleDescendantUsage;
     }
 
     public function getOrigin(): ?ClassMethodRef

@@ -12,11 +12,10 @@ class ClassConstantUsage extends ClassMemberUsage
 
     public function __construct(
         ?ClassMethodRef $origin, // TODO always known class, introduce new type?
-        ClassConstantRef $fetch,
-        bool $possibleDescendantFetch
+        ClassConstantRef $fetch
     )
     {
-        parent::__construct($origin, $possibleDescendantFetch);
+        parent::__construct($origin);
         $this->fetch = $fetch;
     }
 

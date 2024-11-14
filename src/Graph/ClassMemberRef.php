@@ -17,6 +17,8 @@ abstract class ClassMemberRef
 
     public string $memberName;
 
+    public bool $possibleDescendant;
+
     /**
      * @var self::TYPE_*
      */
@@ -28,11 +30,13 @@ abstract class ClassMemberRef
     public function __construct(
         ?string $className,
         string $memberName,
+        bool $possibleDescendant,
         int $memberType
     )
     {
         $this->className = $className;
         $this->memberName = $memberName;
+        $this->possibleDescendant = $possibleDescendant;
         $this->memberType = $memberType;
     }
 
