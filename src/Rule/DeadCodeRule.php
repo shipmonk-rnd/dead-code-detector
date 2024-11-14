@@ -15,14 +15,14 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberUsage;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
-use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
+use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
+use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
@@ -106,7 +106,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @var array<string, list<string>> callerKey => memberUseKey[]
      */
-    private array $callGraph = [];
+    private array $usageGraph = []; // TODO separate to class?
 
     public function __construct(
         ClassHierarchy $classHierarchy,
@@ -154,8 +154,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($useStrings as $useString) {
                     $memberUse = ClassMemberUsage::deserialize($useString);
 
-                    if ($memberUse->getMemberUsage()->className === null) {
-                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberUsage()->memberName][] = $memberUse;
+                    if ($memberUse->getMemberRef()->className === null) {
+                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberRef()->memberName][] = $memberUse;
                         continue;
                     }
 
@@ -198,7 +198,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $this->blackMembers[$definition] = [$file, $methodData['line'], $typeName, $methodName, ClassMemberRef::TYPE_METHOD];
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
-                    $memberUses[] = new ClassMethodCall(
+                    $memberUses[] = new ClassMethodUsage(
                         $originalCall->getOrigin(),
                         new ClassMethodRef($typeName, $methodName),
                         $originalCall->isPossibleDescendantUsage(),
@@ -211,7 +211,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $this->blackMembers[$definition] = [$file, $constantData['line'], $typeName, $constantName, ClassMemberRef::TYPE_CONSTANT];
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
-                    $memberUses[] = new ClassConstantFetch(
+                    $memberUses[] = new ClassConstantUsage(
                         $originalFetch->getOrigin(),
                         new ClassConstantRef($typeName, $constantName),
                         $originalFetch->isPossibleDescendantUsage(),
@@ -225,12 +225,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($memberUses as $memberUse) {
             $isWhite = $this->isConsideredWhite($memberUse);
 
-            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberUsage(), $memberUse->isPossibleDescendantUsage());
-            $alternativeCallerKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin(), false) : [];
+            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberRef(), $memberUse->isPossibleDescendantUsage());
+            $alternativeOriginKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin(), false) : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
-                foreach ($alternativeCallerKeys as $alternativeCallerKey) {
-                    $this->callGraph[$alternativeCallerKey][] = $alternativeMemberKey;
+                foreach ($alternativeOriginKeys as $alternativeOriginKey) {
+                    $this->usageGraph[$alternativeOriginKey][] = $alternativeMemberKey;
                 }
 
                 if ($isWhite) {
@@ -401,7 +401,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function markTransitivesWhite(string $callerKey, array $visitedKeys = []): void
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->callGraph[$callerKey] ?? [];
+        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
 
         unset($this->blackMembers[$callerKey]);
 
@@ -425,7 +425,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function getTransitiveDeadCalls(string $callerKey, array $visitedKeys = []): array
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->callGraph[$callerKey] ?? [];
+        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
 
         $result = [];
 
@@ -458,7 +458,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         /** @var array<string, true> $deadMethodsWithCaller */
         $deadMethodsWithCaller = [];
 
-        foreach ($this->callGraph as $caller => $callees) {
+        foreach ($this->usageGraph as $caller => $callees) {
             if (!array_key_exists($caller, $this->blackMembers)) {
                 continue;
             }
@@ -594,7 +594,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     {
         return $memberUse->getOrigin() === null
             || $this->isAnonymousClass($memberUse->getOrigin()->className)
-            || (array_key_exists($memberUse->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUse instanceof ClassMethodCall);
+            || (array_key_exists($memberUse->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUse instanceof ClassMethodUsage);
     }
 
     /**
@@ -610,7 +610,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $abstract = $this->typeDefinitions[$typeName]['methods'][$memberName]['abstract'] ?? false;
         $visibility = $this->typeDefinitions[$typeName]['methods'][$memberName]['visibility'] ?? 0;
 
-        if ($kind === Kind::TRAIT && $abstract) {
+        if ($kind === ClassLikeKind::TRAIT && $abstract) {
             // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
             // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
             return true;

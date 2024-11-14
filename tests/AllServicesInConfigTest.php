@@ -7,14 +7,14 @@ use LogicException;
 use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberUsage;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
-use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
+use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
+use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
@@ -49,13 +49,13 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $missingClassNames = [];
         $excluded = [
-            ClassMethodCall::class,
+            ClassMethodUsage::class,
             ClassMethodRef::class,
             ClassConstantRef::class,
-            ClassConstantFetch::class,
+            ClassConstantUsage::class,
             ClassMemberRef::class,
             ClassMemberUsage::class,
-            Kind::class,
+            ClassLikeKind::class,
             Visibility::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,

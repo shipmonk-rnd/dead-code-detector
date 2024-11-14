@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 /**
  * @immutable
@@ -9,7 +9,7 @@ class ClassMethodRef extends ClassMemberRef
 {
 
     public function __construct(
-        ?string $className,
+        ?string $className, // TODO nullability to * ?
         string $methodName
     )
     {

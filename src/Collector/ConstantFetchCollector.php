@@ -17,9 +17,9 @@ use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use function array_map;
 use function count;
 use function current;
@@ -33,7 +33,7 @@ class ConstantFetchCollector implements Collector
 {
 
     /**
-     * @var list<ClassConstantFetch>
+     * @var list<ClassConstantUsage>
      */
     private array $accessBuffer = [];
 
@@ -73,7 +73,7 @@ class ConstantFetchCollector implements Collector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (ClassConstantFetch $fetch): string => $fetch->serialize(),
+                    static fn (ClassConstantUsage $fetch): string => $fetch->serialize(),
                     $data,
                 );
         }
@@ -120,7 +120,7 @@ class ConstantFetchCollector implements Collector
                     }
                 }
 
-                $this->accessBuffer[] = new ClassConstantFetch(
+                $this->accessBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName),
                     true,
@@ -145,7 +145,7 @@ class ConstantFetchCollector implements Collector
 
         foreach ($constantNames as $constantName) {
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
-                $this->accessBuffer[] = new ClassConstantFetch(
+                $this->accessBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName),
                     $possibleDescendantFetch,

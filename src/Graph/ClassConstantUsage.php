@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 /**
  * @immutable
  */
-class ClassConstantFetch extends ClassMemberUsage
+class ClassConstantUsage extends ClassMemberUsage
 {
 
     private ClassConstantRef $fetch;
@@ -28,7 +28,7 @@ class ClassConstantFetch extends ClassMemberUsage
         return ClassMemberRef::TYPE_CONSTANT;
     }
 
-    public function getMemberUsage(): ClassConstantRef
+    public function getMemberRef(): ClassConstantRef
     {
         return $this->fetch;
     }

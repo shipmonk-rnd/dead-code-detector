@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use LogicException;
 use function serialize;
@@ -28,7 +28,7 @@ abstract class ClassMemberUsage
     )
     {
         $this->origin = $origin;
-        $this->possibleDescendantUsage = $possibleDescendantUsage;
+        $this->possibleDescendantUsage = $possibleDescendantUsage; // TODO maybe should be part of ClassMethodRef?
     }
 
     public function isPossibleDescendantUsage(): bool
@@ -46,7 +46,7 @@ abstract class ClassMemberUsage
      */
     abstract public function getMemberType(): int;
 
-    abstract public function getMemberUsage(): ClassMemberRef;
+    abstract public function getMemberRef(): ClassMemberRef;
 
     public function serialize(): string
     {

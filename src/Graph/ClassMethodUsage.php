@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 /**
  * @immutable
  */
-class ClassMethodCall extends ClassMemberUsage
+class ClassMethodUsage extends ClassMemberUsage
 {
 
     private ClassMethodRef $callee;
@@ -29,7 +29,7 @@ class ClassMethodCall extends ClassMemberUsage
         return ClassMemberRef::TYPE_METHOD;
     }
 
-    public function getMemberUsage(): ClassMethodRef
+    public function getMemberRef(): ClassMethodRef
     {
         return $this->callee;
     }

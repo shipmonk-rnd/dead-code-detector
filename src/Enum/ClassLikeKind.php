@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Enum;
 
-interface Kind
+interface ClassLikeKind
 {
 
     public const TRAIT = 'trait';

@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Crate;
+namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 /**
  * @immutable
@@ -8,7 +8,7 @@ namespace ShipMonk\PHPStan\DeadCode\Crate;
 abstract class ClassMemberRef
 {
 
-    public const TYPE_METHOD = 1;
+    public const TYPE_METHOD = 1; // TODO ideally not used
     public const TYPE_CONSTANT = 2;
 
     public const UNKNOWN_CLASS = '*';

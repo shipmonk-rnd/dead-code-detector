@@ -14,8 +14,8 @@ use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
-use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
+use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
+use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use function array_fill_keys;
 use function array_map;
 
@@ -175,19 +175,19 @@ class ClassDefinitionCollector implements Collector
     private function getKind(ClassLike $node): string
     {
         if ($node instanceof Class_) {
-            return Kind::CLASSS;
+            return ClassLikeKind::CLASSS;
         }
 
         if ($node instanceof Interface_) {
-            return Kind::INTERFACE;
+            return ClassLikeKind::INTERFACE;
         }
 
         if ($node instanceof Trait_) {
-            return Kind::TRAIT;
+            return ClassLikeKind::TRAIT;
         }
 
         if ($node instanceof Enum_) {
-            return Kind::ENUM;
+            return ClassLikeKind::ENUM;
         }
 
         throw new LogicException('Unknown class-like node');
