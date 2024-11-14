@@ -4,6 +4,9 @@ namespace Grouping;
 
 class Example
 {
+    const USED_CONST = 1;
+    const UNUSED_CONST = 2;
+    const TRANSITIVELY_UNUSED_CONST = 3;
 
     public function __construct(
     )
@@ -13,7 +16,7 @@ class Example
 
     public function baz(): void // the only used
     {
-
+        echo self::USED_CONST;
     }
 
 
@@ -36,6 +39,7 @@ class Example
     public function bag(): void
     {
         $this->bar(); // loop back
+        echo self::TRANSITIVELY_UNUSED_CONST;
     }
 
 

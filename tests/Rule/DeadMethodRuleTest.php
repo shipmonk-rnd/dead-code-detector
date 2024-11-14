@@ -213,23 +213,29 @@ class DeadMethodRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/DeadMethodRule/grouping/default.php'], [
             [
                 'Unused Grouping\Example::foo',
-                20,
+                23,
                 "• Thus Grouping\Example::bar is transitively also unused\n" .
-                '• Thus Grouping\Example::bag is transitively also unused',
+                "• Thus Grouping\Example::bag is transitively also unused\n" .
+                '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
             ],
             [
                 'Unused Grouping\Example::boo',
-                26,
+                29,
                 "• Thus Grouping\Example::bag is transitively also unused\n" .
-                '• Thus Grouping\Example::bar is transitively also unused',
+                "• Thus Grouping\Example::bar is transitively also unused\n" .
+                '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+            ],
+            [
+                'Unused Grouping\Example::UNUSED_CONST',
+                8,
             ],
             [
                 'Unused Grouping\Example::recur',
-                43,
+                47,
             ],
             [
                 'Unused Grouping\Example::recur1',
-                50,
+                54,
                 'Thus Grouping\Example::recur2 is transitively also unused',
             ],
         ]);
