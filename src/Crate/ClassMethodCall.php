@@ -21,9 +21,12 @@ class ClassMethodCall extends ClassMemberUse
         $this->callee = $callee;
     }
 
-    public function getCallee(): ClassMethodRef
+    /**
+     * @return ClassMemberRef::TYPE_METHOD
+     */
+    public function getMemberType(): int
     {
-        return $this->callee;
+        return ClassMemberRef::TYPE_METHOD;
     }
 
     public function getMemberUse(): ClassMethodRef

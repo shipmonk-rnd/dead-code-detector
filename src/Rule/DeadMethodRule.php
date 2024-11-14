@@ -26,10 +26,10 @@ use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function array_merge;
 use function array_merge_recursive;
-use function array_slice;
-use function count;
+use function array_sum;
 use function in_array;
 use function sprintf;
 use function strpos;
@@ -90,14 +90,18 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     private bool $trackCallsOnMixed;
 
     /**
-     * @var array<string, array{string, int, string, string, ClassMemberRef::TYPE_*}> memberKey => [file, line, typeName, memberName, memberType]
+     * memberKey => [file, line, typeName, memberName, memberType]
+     *
+     * @var array<string, array{string, int, string, string, ClassMemberRef::TYPE_*}>
      */
     private array $blackMembers = [];
 
     /**
-     * @var array<string, list<ClassMethodCall>> methodName => ClassMethodCall[]
+     * memberType => [memberName => ClassMemberUse[]]
+     *
+     * @var array<ClassMemberRef::TYPE_*, array<string, list<ClassMemberUse>>>
      */
-    private array $mixedCalls = [];
+    private array $mixedMemberUses = [];
 
     /**
      * @var array<string, list<string>> callerKey => memberUseKey[]
@@ -141,21 +145,21 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         $constFetchData = $node->get(ConstantFetchCollector::class);
         $entrypointData = $node->get(EntrypointCollector::class);
 
-        /** @var array<string, list<list<string>>> $callData */
-        $callData = array_merge_recursive($methodCallData, $entrypointData);
-        unset($methodCallData, $entrypointData);
+        /** @var array<string, list<list<string>>> $memberUseData */
+        $memberUseData = array_merge_recursive($methodCallData, $entrypointData, $constFetchData);
+        unset($methodCallData, $entrypointData, $constFetchData);
 
-        foreach ($callData as $callsPerFile) {
-            foreach ($callsPerFile as $callStrings) {
-                foreach ($callStrings as $callString) {
-                    $call = ClassMethodCall::deserialize($callString);
+        foreach ($memberUseData as $usesPerFile) {
+            foreach ($usesPerFile as $useStrings) {
+                foreach ($useStrings as $useString) {
+                    $memberUse = ClassMemberUse::deserialize($useString);
 
-                    if ($call->getCallee()->className === null) {
-                        $this->mixedCalls[$call->getCallee()->memberName][] = $call;
+                    if ($memberUse->getMemberUse()->className === null) {
+                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberUse()->memberName][] = $memberUse;
                         continue;
                     }
 
-                    $memberUses[] = $call;
+                    $memberUses[] = $memberUse;
                 }
             }
         }
@@ -189,32 +193,29 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeConstants($typeName));
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
-            foreach ($methods as $memberName => $methodData) {
-                $definition = ClassMethodRef::buildKey($typeName, $memberName);
-                $this->blackMembers[$definition] = [$file, $methodData['line'], $typeName, $memberName, ClassMemberRef::TYPE_METHOD];
+            foreach ($methods as $methodName => $methodData) {
+                $definition = ClassMethodRef::buildKey($typeName, $methodName);
+                $this->blackMembers[$definition] = [$file, $methodData['line'], $typeName, $methodName, ClassMemberRef::TYPE_METHOD];
 
-                if (isset($this->mixedCalls[$memberName])) {
-                    foreach ($this->mixedCalls[$memberName] as $originalCall) {
-                        $memberUses[] = new ClassMethodCall(
-                            $originalCall->getCaller(),
-                            new ClassMethodRef($typeName, $memberName),
-                            $originalCall->isPossibleDescendantUse(),
-                        );
-                    }
+                foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
+                    $memberUses[] = new ClassMethodCall(
+                        $originalCall->getCaller(),
+                        new ClassMethodRef($typeName, $methodName),
+                        $originalCall->isPossibleDescendantUse(),
+                    );
                 }
             }
 
             foreach ($constants as $constantName => $constantData) {
                 $definition = ClassConstantRef::buildKey($typeName, $constantName);
                 $this->blackMembers[$definition] = [$file, $constantData['line'], $typeName, $constantName, ClassMemberRef::TYPE_CONSTANT];
-            }
-        }
 
-        foreach ($constFetchData as $file => $data) {
-            foreach ($data as $constantData) {
-                foreach ($constantData as $constantKey) {
-                    $fetch = ClassConstantFetch::deserialize($constantKey);
-                    $memberUses[] = $fetch;
+                foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
+                    $memberUses[] = new ClassConstantFetch(
+                        $originalFetch->getCaller(),
+                        new ClassConstantRef($typeName, $constantName),
+                        $originalFetch->isPossibleDescendantUse(),
+                    );
                 }
             }
         }
@@ -629,40 +630,50 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
 
     public function print(Output $output): void
     {
-        if ($this->mixedCalls === [] || !$output->isDebug() || !$this->trackCallsOnMixed) {
+        if ($this->mixedMemberUses === [] || !$output->isDebug() || !$this->trackCallsOnMixed) {
             return;
         }
 
+        $totalCount = array_sum(array_map('count', $this->mixedMemberUses));
         $maxExamplesToShow = 20;
-        $output->writeLineFormatted(sprintf('<fg=red>Found %d methods called over unknown type</>:', count($this->mixedCalls)));
+        $examplesShown = 0;
+        $output->writeLineFormatted(sprintf('<fg=red>Found %d usages over unknown type</>:', $totalCount));
 
-        foreach (array_slice($this->mixedCalls, 0, $maxExamplesToShow) as $methodName => $calls) {
-            $output->writeFormatted(sprintf(' • <fg=white>%s</>', $methodName));
+        foreach ($this->mixedMemberUses as $memberType => $memberUses) {
+            foreach ($memberUses as $memberName => $uses) {
+                $examplesShown++;
+                $memberTypeString = $memberType === ClassMemberRef::TYPE_METHOD ? 'method' : 'constant';
+                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
 
-            $exampleCaller = $this->getExampleCaller($calls);
+                $exampleCaller = $this->getExampleCaller($uses);
 
-            if ($exampleCaller !== null) {
-                $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
+                if ($exampleCaller !== null) {
+                    $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
+                }
+
+                $output->writeLineFormatted('');
+
+                if ($examplesShown >= $maxExamplesToShow) {
+                    break 2;
+                }
             }
-
-            $output->writeLineFormatted('');
         }
 
-        if (count($this->mixedCalls) > $maxExamplesToShow) {
-            $output->writeLineFormatted(sprintf('... and %d more', count($this->mixedCalls) - $maxExamplesToShow));
+        if ($totalCount > $maxExamplesToShow) {
+            $output->writeLineFormatted(sprintf('... and %d more', $totalCount - $maxExamplesToShow));
         }
 
         $output->writeLineFormatted('');
-        $output->writeLineFormatted('Thus, any method named the same is considered used, no matter its declaring class!');
+        $output->writeLineFormatted('Thus, any member named the same is considered used, no matter its declaring class!');
         $output->writeLineFormatted('');
     }
 
     /**
-     * @param list<ClassMethodCall> $calls
+     * @param list<ClassMemberUse> $uses
      */
-    private function getExampleCaller(array $calls): ?string
+    private function getExampleCaller(array $uses): ?string
     {
-        foreach ($calls as $call) {
+        foreach ($uses as $call) {
             if ($call->getCaller() !== null) {
                 return $call->getCaller()->toHumanString();
             }

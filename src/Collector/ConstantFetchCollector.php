@@ -14,6 +14,9 @@ use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
+use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
@@ -140,15 +143,8 @@ class ConstantFetchCollector implements Collector
             ? array_map(static fn (ConstantStringType $string): string => $string->getValue(), $scope->getType($node->name)->getConstantStrings())
             : [$node->name->toString()];
 
-        foreach ($ownerType->getObjectClassReflections() as $classReflection) {
-            foreach ($constantNames as $constantName) {
-                if ($classReflection->hasConstant($constantName)) {
-                    $className = $classReflection->getConstant($constantName)->getDeclaringClass()->getName();
-
-                } else { // call of unknown const (might be present on children)
-                    $className = $classReflection->getName(); // TODO untested yet
-                }
-
+        foreach ($constantNames as $constantName) {
+            foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
                 $this->accessBuffer[] = new ClassConstantFetch(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName),
@@ -156,6 +152,36 @@ class ConstantFetchCollector implements Collector
                 );
             }
         }
+    }
+
+    /**
+     * @return list<class-string<object>|null>
+     */
+    private function getDeclaringTypesWithConstant(
+        Type $type,
+        string $constantName
+    ): array
+    {
+        $typeNoNull = TypeCombinator::removeNull($type); // TODO needed ?
+        $typeNormalized = TypeUtils::toBenevolentUnion($typeNoNull); // extract possible calls even from Class|int
+        $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+
+        $result = [];
+
+        foreach ($classReflections as $classReflection) {
+            if ($classReflection->hasConstant($constantName)) {
+                $result[] = $classReflection->getConstant($constantName)->getDeclaringClass()->getName();
+
+            } else { // unknown constant fetch (might be present on children)
+                $result[] = $classReflection->getName(); // TODO untested yet ?
+            }
+        }
+
+        if ($result === []) { // TODO trackFetchesOnMixed
+            $result[] = null; // call over unknown type
+        }
+
+        return $result;
     }
 
     private function getCaller(Scope $scope): ?ClassMethodRef

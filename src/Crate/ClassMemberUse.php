@@ -9,7 +9,7 @@ use function unserialize;
 /**
  * @immutable
  */
-abstract class ClassMemberUse
+abstract class ClassMemberUse // TODO rename to ClassMemberUsage ?
 {
 
     /**
@@ -40,6 +40,11 @@ abstract class ClassMemberUse
     {
         return $this->caller;
     }
+
+    /**
+     * @return ClassMemberRef::TYPE_*
+     */
+    abstract public function getMemberType(): int;
 
     abstract public function getMemberUse(): ClassMemberRef;
 

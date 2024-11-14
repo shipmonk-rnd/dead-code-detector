@@ -20,6 +20,14 @@ class ClassConstantFetch extends ClassMemberUse
         $this->fetch = $fetch;
     }
 
+    /**
+     * @return ClassMemberRef::TYPE_CONSTANT
+     */
+    public function getMemberType(): int
+    {
+        return ClassMemberRef::TYPE_CONSTANT;
+    }
+
     public function getMemberUse(): ClassConstantRef
     {
         return $this->fetch;

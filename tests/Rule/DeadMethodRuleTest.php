@@ -147,13 +147,13 @@ class DeadMethodRuleTest extends RuleTestCase
 
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
-        <fg=red>Found 4 methods called over unknown type</>:
-        $ec • <fg=white>getter1</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter2</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter3</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>staticMethod</>, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        <fg=red>Found 4 usages over unknown type</>:
+        $ec • <fg=white>getter1</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter2</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter3</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>staticMethod</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
 
-        Thus, any method named the same is considered used, no matter its declaring class!
+        Thus, any member named the same is considered used, no matter its declaring class!
 
 
         OUTPUT;
@@ -311,6 +311,7 @@ class DeadMethodRuleTest extends RuleTestCase
         yield 'const-function' => [__DIR__ . '/data/DeadMethodRule/constants/constant-function.php'];
         yield 'const-dynamic' => [__DIR__ . '/data/DeadMethodRule/constants/dynamic.php'];
         yield 'const-expr' => [__DIR__ . '/data/DeadMethodRule/constants/expr.php'];
+        yield 'const-mixed' => [__DIR__ . '/data/DeadMethodRule/constants/mixed.php'];
         yield 'const-override' => [__DIR__ . '/data/DeadMethodRule/constants/override.php'];
         yield 'const-static' => [__DIR__ . '/data/DeadMethodRule/constants/static.php'];
         yield 'const-traits-1' => [__DIR__ . '/data/DeadMethodRule/constants/traits-1.php'];
