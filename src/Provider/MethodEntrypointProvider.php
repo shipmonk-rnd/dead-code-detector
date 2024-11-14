@@ -19,8 +19,6 @@ use PHPStan\Reflection\MethodReflection;
 interface MethodEntrypointProvider
 {
 
-    public const TAG_ENTRYPOINT_PROVIDER = 'shipmonk.deadCode.entrypointProvider';
-
     /**
      * @return list<MethodReflection>
      */

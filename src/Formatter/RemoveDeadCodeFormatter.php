@@ -40,7 +40,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
         $deadMethodKeysByFiles = [];
 
         foreach ($analysisResult->getFileSpecificErrors() as $fileSpecificError) {
-            if ($fileSpecificError->getIdentifier() !== DeadMethodRule::ERROR_IDENTIFIER) {
+            if ($fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_METHOD) {
                 continue;
             }
 

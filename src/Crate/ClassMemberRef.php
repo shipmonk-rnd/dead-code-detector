@@ -9,8 +9,7 @@ abstract class ClassMemberRef
 {
 
     public const TYPE_METHOD = 1;
-    public const TYPE_PROPERTY = 2;
-    public const TYPE_CONSTANT = 3;
+    public const TYPE_CONSTANT = 2;
 
     public const UNKNOWN_CLASS = '*';
 

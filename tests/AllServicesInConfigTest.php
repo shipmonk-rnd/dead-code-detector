@@ -10,6 +10,7 @@ use RecursiveIteratorIterator;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberUse;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
@@ -53,6 +54,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassConstantRef::class,
             ClassConstantFetch::class,
             ClassMemberRef::class,
+            ClassMemberUse::class,
             Kind::class,
             Visibility::class,
             MethodEntrypointProvider::class,

@@ -2,21 +2,13 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Crate;
 
-use LogicException;
-use function serialize;
-use function unserialize;
-
 /**
  * @immutable
  */
-class ClassMethodCall
+class ClassMethodCall extends ClassMemberUse
 {
 
-    public ?ClassMethodRef $caller;
-
-    public ClassMethodRef $callee;
-
-    public bool $possibleDescendantCall;
+    private ClassMethodRef $callee;
 
     public function __construct(
         ?ClassMethodRef $caller,
@@ -24,26 +16,19 @@ class ClassMethodCall
         bool $possibleDescendantCall
     )
     {
-        $this->caller = $caller;
+        parent::__construct($caller, $possibleDescendantCall);
+
         $this->callee = $callee;
-        $this->possibleDescendantCall = $possibleDescendantCall;
     }
 
-    public function serialize(): string
+    public function getCallee(): ClassMethodRef
     {
-        return serialize($this);
+        return $this->callee;
     }
 
-    public static function deserialize(string $data): self
+    public function getMemberUse(): ClassMethodRef
     {
-        $result = unserialize($data);
-
-        if (!$result instanceof self) {
-            $self = self::class;
-            throw new LogicException("Invalid string for $self deserialization: $data");
-        }
-
-        return $result;
+        return $this->callee;
     }
 
 }
