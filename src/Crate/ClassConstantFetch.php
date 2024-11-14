@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Crate;
 /**
  * @immutable
  */
-class ClassConstantFetch extends ClassMemberUse
+class ClassConstantFetch extends ClassMemberUsage
 {
 
     private ClassConstantRef $fetch;
@@ -28,7 +28,7 @@ class ClassConstantFetch extends ClassMemberUse
         return ClassMemberRef::TYPE_CONSTANT;
     }
 
-    public function getMemberUse(): ClassConstantRef
+    public function getMemberUsage(): ClassConstantRef
     {
         return $this->fetch;
     }

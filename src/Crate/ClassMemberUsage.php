@@ -9,36 +9,36 @@ use function unserialize;
 /**
  * @immutable
  */
-abstract class ClassMemberUse // TODO rename to ClassMemberUsage ?
+abstract class ClassMemberUsage
 {
 
     /**
-     * Origin method of the use, "where it was called from"
+     * Origin method of the usage, "where it was called from"
      */
-    private ?ClassMethodRef $caller;
+    private ?ClassMethodRef $origin;
 
     /**
-     * If true, class of getMemberUse() may be descendant
+     * If true, class of getMemberUsage() may be descendant
      */
-    private bool $possibleDescendantUse;
+    private bool $possibleDescendantUsage;
 
     public function __construct(
-        ?ClassMethodRef $caller,
-        bool $possibleDescendantUse
+        ?ClassMethodRef $origin,
+        bool $possibleDescendantUsage
     )
     {
-        $this->caller = $caller;
-        $this->possibleDescendantUse = $possibleDescendantUse;
+        $this->origin = $origin;
+        $this->possibleDescendantUsage = $possibleDescendantUsage;
     }
 
-    public function isPossibleDescendantUse(): bool
+    public function isPossibleDescendantUsage(): bool
     {
-        return $this->possibleDescendantUse;
+        return $this->possibleDescendantUsage;
     }
 
-    public function getCaller(): ?ClassMethodRef
+    public function getOrigin(): ?ClassMethodRef
     {
-        return $this->caller;
+        return $this->origin;
     }
 
     /**
@@ -46,7 +46,7 @@ abstract class ClassMemberUse // TODO rename to ClassMemberUsage ?
      */
     abstract public function getMemberType(): int;
 
-    abstract public function getMemberUse(): ClassMemberRef;
+    abstract public function getMemberUsage(): ClassMemberRef;
 
     public function serialize(): string
     {

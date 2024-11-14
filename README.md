@@ -177,7 +177,7 @@ Found 2 methods called over unknown type:
 - Abstract trait methods are never reported as dead
 - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
     - Only supported are: `__construct`, `__clone`
- 
+
 ### Other problematic cases:
 
 #### Constructors:
@@ -209,7 +209,7 @@ class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodEntrypointProvider
 }
 ```
 
- 
+
 ## Future scope:
 - Dead class constant detection
 - Dead class property detection

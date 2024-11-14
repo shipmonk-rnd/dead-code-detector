@@ -72,7 +72,7 @@ services:
             entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
+        class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule
         tags:
             - phpstan.rules.rule
             - phpstan.diagnoseExtension

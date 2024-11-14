@@ -5,18 +5,18 @@ namespace ShipMonk\PHPStan\DeadCode\Crate;
 /**
  * @immutable
  */
-class ClassMethodCall extends ClassMemberUse
+class ClassMethodCall extends ClassMemberUsage
 {
 
     private ClassMethodRef $callee;
 
     public function __construct(
-        ?ClassMethodRef $caller,
+        ?ClassMethodRef $origin,
         ClassMethodRef $callee,
         bool $possibleDescendantCall
     )
     {
-        parent::__construct($caller, $possibleDescendantCall);
+        parent::__construct($origin, $possibleDescendantCall);
 
         $this->callee = $callee;
     }
@@ -29,7 +29,7 @@ class ClassMethodCall extends ClassMemberUse
         return ClassMemberRef::TYPE_METHOD;
     }
 
-    public function getMemberUse(): ClassMethodRef
+    public function getMemberUsage(): ClassMethodRef
     {
         return $this->callee;
     }

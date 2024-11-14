@@ -18,7 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantFetch;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberRef;
-use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberUse;
+use ShipMonk\PHPStan\DeadCode\Crate\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodCall;
 use ShipMonk\PHPStan\DeadCode\Crate\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Crate\Kind;
@@ -38,7 +38,7 @@ use function substr;
 /**
  * @implements Rule<CollectedDataNode>
  */
-class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCodeRule
+class DeadCodeRule implements Rule, DiagnoseExtension
 {
 
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';
@@ -99,7 +99,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     /**
      * memberType => [memberName => ClassMemberUse[]]
      *
-     * @var array<ClassMemberRef::TYPE_*, array<string, list<ClassMemberUse>>>
+     * @var array<ClassMemberRef::TYPE_*, array<string, list<ClassMemberUsage>>>
      */
     private array $mixedMemberUses = [];
 
@@ -137,7 +137,7 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
             return [];
         }
 
-        /** @var list<ClassMemberUse> $memberUses */
+        /** @var list<ClassMemberUsage> $memberUses */
         $memberUses = [];
 
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
@@ -152,10 +152,10 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         foreach ($memberUseData as $usesPerFile) {
             foreach ($usesPerFile as $useStrings) {
                 foreach ($useStrings as $useString) {
-                    $memberUse = ClassMemberUse::deserialize($useString);
+                    $memberUse = ClassMemberUsage::deserialize($useString);
 
-                    if ($memberUse->getMemberUse()->className === null) {
-                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberUse()->memberName][] = $memberUse;
+                    if ($memberUse->getMemberUsage()->className === null) {
+                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberUsage()->memberName][] = $memberUse;
                         continue;
                     }
 
@@ -199,9 +199,9 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
                     $memberUses[] = new ClassMethodCall(
-                        $originalCall->getCaller(),
+                        $originalCall->getOrigin(),
                         new ClassMethodRef($typeName, $methodName),
-                        $originalCall->isPossibleDescendantUse(),
+                        $originalCall->isPossibleDescendantUsage(),
                     );
                 }
             }
@@ -212,9 +212,9 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
                     $memberUses[] = new ClassConstantFetch(
-                        $originalFetch->getCaller(),
+                        $originalFetch->getOrigin(),
                         new ClassConstantRef($typeName, $constantName),
-                        $originalFetch->isPossibleDescendantUse(),
+                        $originalFetch->isPossibleDescendantUsage(),
                     );
                 }
             }
@@ -225,8 +225,8 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         foreach ($memberUses as $memberUse) {
             $isWhite = $this->isConsideredWhite($memberUse);
 
-            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberUse(), $memberUse->isPossibleDescendantUse());
-            $alternativeCallerKeys = $memberUse->getCaller() !== null ? $this->getAlternativeMemberKeys($memberUse->getCaller(), false) : [];
+            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberUsage(), $memberUse->isPossibleDescendantUsage());
+            $alternativeCallerKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin(), false) : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
                 foreach ($alternativeCallerKeys as $alternativeCallerKey) {
@@ -590,11 +590,11 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
         return $this->typeDefinitions[$typeName]['traits'] ?? [];
     }
 
-    private function isConsideredWhite(ClassMemberUse $memberUse): bool
+    private function isConsideredWhite(ClassMemberUsage $memberUse): bool
     {
-        return $memberUse->getCaller() === null
-            || $this->isAnonymousClass($memberUse->getCaller()->className)
-            || (array_key_exists($memberUse->getCaller()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUse instanceof ClassMethodCall);
+        return $memberUse->getOrigin() === null
+            || $this->isAnonymousClass($memberUse->getOrigin()->className)
+            || (array_key_exists($memberUse->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUse instanceof ClassMethodCall);
     }
 
     /**
@@ -669,13 +669,13 @@ class DeadMethodRule implements Rule, DiagnoseExtension // TODO rename to DeadCo
     }
 
     /**
-     * @param list<ClassMemberUse> $uses
+     * @param list<ClassMemberUsage> $uses
      */
     private function getExampleCaller(array $uses): ?string
     {
         foreach ($uses as $call) {
-            if ($call->getCaller() !== null) {
-                return $call->getCaller()->toHumanString();
+            if ($call->getOrigin() !== null) {
+                return $call->getOrigin()->toHumanString();
             }
         }
 

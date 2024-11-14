@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
-use ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule;
+use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function count;
@@ -41,8 +41,8 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
         foreach ($analysisResult->getFileSpecificErrors() as $fileSpecificError) {
             if (
-                $fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_METHOD
-                && $fileSpecificError->getIdentifier() !== DeadMethodRule::IDENTIFIER_CONSTANT
+                $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_METHOD
+                && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_CONSTANT
             ) {
                 continue;
             }
@@ -59,8 +59,8 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
         $count = 0;
 
         foreach ($deadMembersByFiles as $file => $deadMembersByType) {
-            $deadConstants = $deadMembersByType[DeadMethodRule::IDENTIFIER_CONSTANT] ?? [];
-            $deadMethods = $deadMembersByType[DeadMethodRule::IDENTIFIER_METHOD] ?? [];
+            $deadConstants = $deadMembersByType[DeadCodeRule::IDENTIFIER_CONSTANT] ?? [];
+            $deadMethods = $deadMembersByType[DeadCodeRule::IDENTIFIER_METHOD] ?? [];
 
             $count += count($deadConstants) + count($deadMethods);
 
