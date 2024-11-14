@@ -15,7 +15,6 @@ use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
-use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -160,8 +159,7 @@ class ConstantFetchCollector implements Collector
         string $constantName
     ): array
     {
-        $typeNoNull = TypeCombinator::removeNull($type); // TODO needed ?
-        $typeNormalized = TypeUtils::toBenevolentUnion($typeNoNull); // extract possible calls even from Class|int
+        $typeNormalized = TypeUtils::toBenevolentUnion($type); // extract possible calls even from Class|int
         $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         $result = [];
@@ -171,7 +169,7 @@ class ConstantFetchCollector implements Collector
                 $result[] = $classReflection->getConstant($constantName)->getDeclaringClass()->getName();
 
             } else { // unknown constant fetch (might be present on children)
-                $result[] = $classReflection->getName(); // TODO untested yet ?
+                $result[] = $classReflection->getName();
             }
         }
 

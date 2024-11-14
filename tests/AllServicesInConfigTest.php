@@ -9,6 +9,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
@@ -57,6 +58,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassMemberUsage::class,
             ClassLikeKind::class,
             Visibility::class,
+            BlackMember::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,
             RemoveDeadCodeTransformer::class,

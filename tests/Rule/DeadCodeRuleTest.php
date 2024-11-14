@@ -33,7 +33,6 @@ use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
 use function str_replace;
-use function substr;
 use const PHP_VERSION_ID;
 
 /**
@@ -451,11 +450,9 @@ class DeadCodeRuleTest extends RuleTestCase
                     continue;
                 }
 
-                $ref = substr($alsoDead, 2); // TODO remove hack
-
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    "Unused $ref",
+                    "Unused $alsoDead",
                     $file,
                     $line,
                     true,

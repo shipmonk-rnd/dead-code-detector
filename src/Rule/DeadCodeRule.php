@@ -17,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
@@ -29,11 +30,12 @@ use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_merge_recursive;
+use function array_slice;
 use function array_sum;
+use function array_values;
 use function in_array;
 use function sprintf;
 use function strpos;
-use function substr;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -85,14 +87,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private array $memberAlternativesCache = [];
 
-    private bool $reportTransitivelyDeadMethodAsSeparateError;
+    private bool $reportTransitivelyDeadAsSeparateError;
 
     private bool $trackCallsOnMixed;
 
     /**
-     * memberKey => [file, line, typeName, memberName, memberType]
+     * memberKey => DeadMember
      *
-     * @var array<string, array{string, int, string, string, ClassMemberRef::TYPE_*}>
+     * @var array<string, BlackMember>
      */
     private array $blackMembers = [];
 
@@ -115,7 +117,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     )
     {
         $this->classHierarchy = $classHierarchy;
-        $this->reportTransitivelyDeadMethodAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
+        $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
         $this->trackCallsOnMixed = $trackCallsOnMixed;
     }
 
@@ -194,8 +196,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
-                $definition = ClassMethodRef::buildKey($typeName, $methodName);
-                $this->blackMembers[$definition] = [$file, $methodData['line'], $typeName, $methodName, ClassMemberRef::TYPE_METHOD];
+                $methodRef = new ClassMethodRef($typeName, $methodName, false);
+                $methodKey = $methodRef->toKey();
+
+                $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
                     $memberUses[] = new ClassMethodUsage(
@@ -206,8 +210,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($constants as $constantName => $constantData) {
-                $definition = ClassConstantRef::buildKey($typeName, $constantName);
-                $this->blackMembers[$definition] = [$file, $constantData['line'], $typeName, $constantName, ClassMemberRef::TYPE_CONSTANT];
+                $constantRef = new ClassConstantRef($typeName, $constantName, false);
+                $constantKey = $constantRef->toKey();
+
+                $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
 
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
                     $memberUses[] = new ClassConstantUsage(
@@ -241,33 +247,22 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $this->markTransitivesWhite($whiteCalleeKey);
         }
 
-        foreach ($this->blackMembers as $blackMethodKey => [$file, $line, $className, $memberName, $memberType]) {
-            if ($this->isNeverReportedAsDead($className, $memberName, $memberType)) {
-                unset($this->blackMembers[$blackMethodKey]);
+        foreach ($this->blackMembers as $blackMemberKey => $blackMember) {
+            if ($this->isNeverReportedAsDead($blackMember)) {
+                unset($this->blackMembers[$blackMemberKey]);
             }
+        }
+
+        if ($this->reportTransitivelyDeadAsSeparateError) {
+            $errorGroups = array_map(static fn (BlackMember $member): array => [$member], $this->blackMembers);
+        } else {
+            $errorGroups = $this->groupDeadMembers();
         }
 
         $errors = [];
 
-        if ($this->reportTransitivelyDeadMethodAsSeparateError) {
-            foreach ($this->blackMembers as [$file, $line, $typeName, $memberName, $memberType]) {
-                $errors[] = $this->buildError($memberType, $typeName, $memberName, [], $file, $line);
-            }
-
-            return $errors;
-        }
-
-        $deadGroups = $this->groupDeadMethods();
-
-        foreach ($deadGroups as $deadGroupKey => $deadSubgroupKeys) {
-            [$file, $line, $typeName, $memberName, $memberType] = $this->blackMembers[$deadGroupKey]; // @phpstan-ignore offsetAccess.notFound
-            $subGroupMap = [];
-
-            foreach ($deadSubgroupKeys as $deadSubgroupKey) {
-                $subGroupMap[$deadSubgroupKey] = $this->blackMembers[$deadSubgroupKey]; // @phpstan-ignore offsetAccess.notFound
-            }
-
-            $errors[] = $this->buildError($memberType, $typeName, $memberName, $subGroupMap, $file, $line);
+        foreach ($errorGroups as $deadGroup) {
+            $errors[] = $this->buildError($deadGroup);
         }
 
         return $errors;
@@ -448,9 +443,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return list<non-empty-list<BlackMember>>
      */
-    private function groupDeadMethods(): array
+    private function groupDeadMembers(): array
     {
         $deadGroups = [];
 
@@ -471,79 +466,73 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         $methodsGrouped = [];
 
-        foreach ($this->blackMembers as $deadMethodKey => $_) {
-            if (isset($methodsGrouped[$deadMethodKey])) {
+        foreach ($this->blackMembers as $deadMemberKey => $blackMember) {
+            if (isset($methodsGrouped[$deadMemberKey])) {
                 continue;
             }
 
-            if (isset($deadMethodsWithCaller[$deadMethodKey])) {
+            if (isset($deadMethodsWithCaller[$deadMemberKey])) {
                 continue; // has a caller, thus should be part of a group, not a group representative
             }
 
-            $deadGroups[$deadMethodKey] = [];
-            $methodsGrouped[$deadMethodKey] = true;
+            $deadGroups[$deadMemberKey][] = $blackMember;
+            $methodsGrouped[$deadMemberKey] = true;
 
-            $transitiveMethodKeys = $this->getTransitiveDeadCalls($deadMethodKey);
+            $transitiveMethodKeys = $this->getTransitiveDeadCalls($deadMemberKey);
 
             foreach ($transitiveMethodKeys as $transitiveMethodKey) {
-                $deadGroups[$deadMethodKey][] = $transitiveMethodKey;
+                $deadGroups[$deadMemberKey][] = $this->blackMembers[$transitiveMethodKey]; // @phpstan-ignore offsetAccess.notFound
                 $methodsGrouped[$transitiveMethodKey] = true;
             }
         }
 
         // now only cycles remain, lets pick group representatives based on first occurrence
-        foreach ($this->blackMembers as $deadMethodKey => $_) {
-            if (isset($methodsGrouped[$deadMethodKey])) {
+        foreach ($this->blackMembers as $deadMemberKey => $blackMember) {
+            if (isset($methodsGrouped[$deadMemberKey])) {
                 continue;
             }
 
-            $transitiveDeadMethods = $this->getTransitiveDeadCalls($deadMethodKey);
+            $transitiveDeadMethods = $this->getTransitiveDeadCalls($deadMemberKey);
 
-            $deadGroups[$deadMethodKey] = [];
-            $methodsGrouped[$deadMethodKey] = true;
+            $deadGroups[$deadMemberKey][] = $blackMember;
+            $methodsGrouped[$deadMemberKey] = true;
 
             foreach ($transitiveDeadMethods as $transitiveDeadMethodKey) {
-                $deadGroups[$deadMethodKey][] = $transitiveDeadMethodKey;
+                $deadGroups[$deadMemberKey][] = $this->blackMembers[$transitiveDeadMethodKey]; // @phpstan-ignore offsetAccess.notFound
                 $methodsGrouped[$transitiveDeadMethodKey] = true;
             }
         }
 
-        return $deadGroups;
+        return array_values($deadGroups);
     }
 
     /**
-     * @param ClassMethodRef::TYPE_* $memberType
-     * @param array<string, array{string, int}> $transitiveDeadMemberKeys
+     * @param non-empty-list<BlackMember> $blackMembersGroup
      */
-    private function buildError(
-        int $memberType,
-        string $typeName,
-        string $memberName,
-        array $transitiveDeadMemberKeys,
-        string $file,
-        int $line
-    ): IdentifierRuleError
+    private function buildError(array $blackMembersGroup): IdentifierRuleError
     {
-        $identifier = $memberType === ClassMemberRef::TYPE_METHOD ? self::IDENTIFIER_METHOD : self::IDENTIFIER_CONSTANT;
-        $builder = RuleErrorBuilder::message('Unused ' . $typeName . '::' . $memberName)
-            ->file($file)
-            ->line($line)
-            ->identifier($identifier);
+        $representative = $blackMembersGroup[0];
+
+        $humanMemberString = $representative->member->toHumanString();
+        $builder = RuleErrorBuilder::message("Unused $humanMemberString")
+            ->file($representative->file)
+            ->line($representative->line)
+            ->identifier($representative->getErrorIdentifier());
 
         $metadata = [];
-        $metadata[$typeName . '::' . $memberName] = [
-            'file' => $file,
-            'line' => $line,
+        $metadata[$humanMemberString] = [
+            'file' => $representative->file,
+            'line' => $representative->line,
             'transitive' => false,
         ];
 
-        foreach ($transitiveDeadMemberKeys as $transitiveDeadMemberKey => [$transitiveDeadMemberFile, $transitiveDeadMemberLine]) {
-            $transitiveDeadMethodRef = substr($transitiveDeadMemberKey, 2); // TODO remove this hack
-            $builder->addTip("Thus $transitiveDeadMethodRef is transitively also unused");
+        foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
+            $transitiveDeadMemberRef = $transitivelyDeadMember->member->toHumanString();
+            $builder->addTip("Thus $transitiveDeadMemberRef is transitively also unused");
 
-            $metadata[$transitiveDeadMemberKey] = [
-                'file' => $transitiveDeadMemberFile,
-                'line' => $transitiveDeadMemberLine,
+            $metadata[$transitiveDeadMemberRef] = [
+                'file' => $transitivelyDeadMember->file,
+                'line' => $transitivelyDeadMember->line,
                 'transitive' => true,
             ];
         }
@@ -589,20 +578,24 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return $this->typeDefinitions[$typeName]['traits'] ?? [];
     }
 
-    private function isConsideredWhite(ClassMemberUsage $memberUse): bool
+    private function isConsideredWhite(ClassMemberUsage $memberUsage): bool
     {
-        return $memberUse->getOrigin() === null
-            || $this->isAnonymousClass($memberUse->getOrigin()->className)
-            || (array_key_exists($memberUse->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUse instanceof ClassMethodUsage);
+        return $memberUsage->getOrigin() === null
+            || $this->isAnonymousClass($memberUsage->getOrigin()->className)
+            || (array_key_exists($memberUsage->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUsage instanceof ClassMethodUsage);
     }
 
-    /**
-     * @param ClassMethodRef::TYPE_* $memberType
-     */
-    private function isNeverReportedAsDead(string $typeName, string $memberName, int $memberType): bool
+    private function isNeverReportedAsDead(BlackMember $blackMember): bool
     {
-        if ($memberType !== ClassMemberRef::TYPE_METHOD) {
+        if (!$blackMember->member instanceof ClassMethodRef) {
             return false;
+        }
+
+        $typeName = $blackMember->member->className;
+        $memberName = $blackMember->member->memberName;
+
+        if ($typeName === null) {
+            throw new LogicException('Ensured by BlackMember constructor');
         }
 
         $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
