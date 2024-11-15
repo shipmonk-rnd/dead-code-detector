@@ -38,11 +38,11 @@ class MethodCallCollector implements Collector
      */
     private array $callsBuffer = [];
 
-    private bool $trackCallsOnMixed;
+    private bool $trackMixedAccess;
 
-    public function __construct(bool $trackCallsOnMixed)
+    public function __construct(bool $trackMixedAccess)
     {
-        $this->trackCallsOnMixed = $trackCallsOnMixed;
+        $this->trackMixedAccess = $trackMixedAccess;
     }
 
     public function getNodeType(): string
@@ -261,7 +261,7 @@ class MethodCallCollector implements Collector
             }
         }
 
-        if ($this->trackCallsOnMixed) {
+        if ($this->trackMixedAccess) {
             $canBeObjectCall = !$typeNoNull->isObject()->no() && !$isStaticCall->yes();
             $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
 

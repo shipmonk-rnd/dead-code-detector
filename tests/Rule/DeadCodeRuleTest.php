@@ -41,7 +41,7 @@ use const PHP_VERSION_ID;
 class DeadCodeRuleTest extends RuleTestCase
 {
 
-    private bool $trackMixedCalls = true;
+    private bool $trackMixedAccess = true;
 
     private bool $emitErrorsInGroups = true;
 
@@ -70,8 +70,8 @@ class DeadCodeRuleTest extends RuleTestCase
         return [
             new EntrypointCollector($this->getEntrypointProviders()),
             new ClassDefinitionCollector(),
-            new MethodCallCollector($this->trackMixedCalls),
-            new ConstantFetchCollector(self::createReflectionProvider()),
+            new MethodCallCollector($this->trackMixedAccess),
+            new ConstantFetchCollector(self::createReflectionProvider(), $this->trackMixedAccess),
         ];
     }
 
@@ -109,12 +109,14 @@ class DeadCodeRuleTest extends RuleTestCase
     public function testMixedCallsTracked(): void
     {
         $this->analyseFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
+        $this->analyseFiles([__DIR__ . '/data/constants/mixed/tracked.php']);
     }
 
     public function testMixedCallsNotTracked(): void
     {
-        $this->trackMixedCalls = false;
+        $this->trackMixedAccess = false;
         $this->analyseFiles([__DIR__ . '/data/methods/mixed/untracked.php']);
+        $this->analyseFiles([__DIR__ . '/data/constants/mixed/untracked.php']);
     }
 
     public function testDiagnoseMixedCalls(): void
@@ -320,7 +322,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-function' => [__DIR__ . '/data/constants/constant-function.php'];
         yield 'const-dynamic' => [__DIR__ . '/data/constants/dynamic.php'];
         yield 'const-expr' => [__DIR__ . '/data/constants/expr.php'];
-        yield 'const-mixed' => [__DIR__ . '/data/constants/mixed.php'];
+        yield 'const-mixed' => [__DIR__ . '/data/constants/mixed/tracked.php'];
         yield 'const-override' => [__DIR__ . '/data/constants/override.php'];
         yield 'const-static' => [__DIR__ . '/data/constants/static.php'];
         yield 'const-traits-1' => [__DIR__ . '/data/constants/traits-1.php'];

@@ -151,7 +151,7 @@ class UserFacade
 ```neon
 parameters:
     shipmonkDeadCode:
-        trackCallsOnMixed: false
+        trackMixedAccess: false
 ```
 
 - If you want to check how many of those cases are present in your codebase, you can run PHPStan analysis with `-vvv` and you will see some diagnostics:

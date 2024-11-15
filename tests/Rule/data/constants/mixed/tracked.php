@@ -56,10 +56,7 @@ class Tester
 
     function testMethodExists(Iface $iface)
     {
-        if (method_exists($iface, 'someMethod')) {
-            echo $iface::SOME_CONST; // does not not mark Clazz
-        }
-
+        echo $iface::SOME_CONST; // does not not mark Clazz
         echo $iface::CONST6; // not defined on Iface, but should mark used on its implementations but not on unrelated Clazz
     }
 }

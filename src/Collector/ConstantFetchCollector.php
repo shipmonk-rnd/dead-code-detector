@@ -38,9 +38,15 @@ class ConstantFetchCollector implements Collector
 
     private ReflectionProvider $reflectionProvider;
 
-    public function __construct(ReflectionProvider $reflectionProvider)
+    private bool $trackMixedAccess;
+
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        bool $trackMixedAccess
+    )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->trackMixedAccess = $trackMixedAccess;
     }
 
     public function getNodeType(): string
@@ -173,7 +179,7 @@ class ConstantFetchCollector implements Collector
             }
         }
 
-        if ($result === []) { // TODO trackFetchesOnMixed
+        if ($this->trackMixedAccess && $result === []) {
             $result[] = null; // call over unknown type
         }
 

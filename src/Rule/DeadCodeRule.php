@@ -89,7 +89,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $reportTransitivelyDeadAsSeparateError;
 
-    private bool $trackCallsOnMixed;
+    private bool $trackMixedAccess;
 
     /**
      * memberKey => DeadMember
@@ -113,12 +113,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     public function __construct(
         ClassHierarchy $classHierarchy,
         bool $reportTransitivelyDeadMethodAsSeparateError,
-        bool $trackCallsOnMixed
+        bool $trackMixedAccess
     )
     {
         $this->classHierarchy = $classHierarchy;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
-        $this->trackCallsOnMixed = $trackCallsOnMixed;
+        $this->trackMixedAccess = $trackMixedAccess;
     }
 
     public function getNodeType(): string
@@ -622,7 +622,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public function print(Output $output): void
     {
-        if ($this->mixedMemberUses === [] || !$output->isDebug() || !$this->trackCallsOnMixed) {
+        if ($this->mixedMemberUses === [] || !$output->isDebug() || !$this->trackMixedAccess) {
             return;
         }
 
