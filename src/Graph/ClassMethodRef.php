@@ -9,7 +9,7 @@ class ClassMethodRef extends ClassMemberRef
 {
 
     public function __construct(
-        ?string $className, // TODO nullability to * ?
+        ?string $className,
         string $methodName,
         bool $possibleDescendant
     )

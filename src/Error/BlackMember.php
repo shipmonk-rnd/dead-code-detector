@@ -29,7 +29,7 @@ class BlackMember
         }
 
         if ($member->possibleDescendant) {
-            throw new LogicException('Using possible descendant does not make sense here'); // TODO another solution?
+            throw new LogicException('Using possible descendant does not make sense here');
         }
 
         $this->member = $member;

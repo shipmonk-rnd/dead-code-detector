@@ -108,7 +108,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @var array<string, list<string>> callerKey => memberUseKey[]
      */
-    private array $usageGraph = []; // TODO separate to class?
+    private array $usageGraph = [];
 
     public function __construct(
         ClassHierarchy $classHierarchy,
