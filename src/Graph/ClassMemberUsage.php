@@ -23,6 +23,10 @@ abstract class ClassMemberUsage
             throw new LogicException('Origin should always be exact place in codebase.');
         }
 
+        if ($origin !== null && $origin->className === null) {
+            throw new LogicException('Origin should always be exact place in codebase, thus className should be known.');
+        }
+
         $this->origin = $origin;
     }
 

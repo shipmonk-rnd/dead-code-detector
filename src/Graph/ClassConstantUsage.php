@@ -11,7 +11,7 @@ class ClassConstantUsage extends ClassMemberUsage
     private ClassConstantRef $fetch;
 
     public function __construct(
-        ?ClassMethodRef $origin, // TODO always known class, introduce new type?
+        ?ClassMethodRef $origin,
         ClassConstantRef $fetch
     )
     {
