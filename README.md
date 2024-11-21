@@ -195,7 +195,7 @@ parameters:
 - Those are never reported as dead as those are often used to deny class instantiation
 
 #### Interface methods:
-- When you never call a method over interface, but only over its implementors, it gets reported as dead
+- If you never call interface method over the interface, but only over its implementors, it gets reported as dead
 - But you may want to keep the interface method to force some unification across implementors
   - The easiest way to ignore it is via custom `MethodEntrypointProvider`:
 
