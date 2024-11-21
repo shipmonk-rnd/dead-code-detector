@@ -194,6 +194,21 @@ parameters:
 #### Private constructors:
 - Those are never reported as dead as those are often used to deny class instantiation
 
+#### Interface methods:
+- If you never call interface method over the interface, but only over its implementors, it gets reported as dead
+- But you may want to keep the interface method to force some unification across implementors
+  - The easiest way to ignore it is via custom `MethodEntrypointProvider`:
+
+```php
+class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodEntrypointProvider
+{
+    public function isEntrypointMethod(ReflectionMethod $method): bool
+    {
+        return $method->getDeclaringClass()->isInterface();
+    }
+}
+```
+
  
 ## Future scope:
 - Dead class constant detection
