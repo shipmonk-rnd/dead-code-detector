@@ -93,7 +93,7 @@ class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
 
     public function isEntrypointMethod(ReflectionMethod $method): bool
     {
-        return $method->getDeclaringClass()->implementsInterface(ApiOutput::class));
+        return $method->getDeclaringClass()->implementsInterface(ApiOutput::class);
     }
 }
 ```
