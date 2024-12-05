@@ -6,7 +6,7 @@
 
 - ✅ **PHPStan** extension
 - ♻️ **Dead cycles** detection
-- 🔗 **Transitive dead** method detection
+- 🔗 **Transitive dead** member detection
 - 🧹 **Automatic removal** of unused code
 - 📚 **Popular libraries** support
 - ✨ **Customizable** entrypoints
@@ -20,6 +20,7 @@ composer require --dev shipmonk/dead-code-detector
 Use [official extension-installer](https://phpstan.org/user-guide/extension-library#installing-extensions) or just load the rules:
 
 ```neon
+# phpstan.neon.dist
 includes:
     - vendor/shipmonk/dead-code-detector/rules.neon
 ```
@@ -112,7 +113,7 @@ class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
          💡 Thus App\Entity\Address::setPostalCode is transitively also unused
          💡 Thus App\Entity\Address::setCountry is transitively also unused
          💡 Thus App\Entity\Address::setStreet is transitively also unused
-         💡 Thus App\Entity\Address::setZip is transitively also unused
+         💡 Thus App\Entity\Address::MAX_STREET_CHARS is transitively also unused
  ------ ------------------------------------------------------------------------
 ```
 
@@ -145,19 +146,20 @@ class UserFacade
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
   - Such behaviour might not be desired for strictly typed codebases, because e.g. single `new $unknown()` will mark all constructors as used
   - Thus, you can disable this feature in your `phpstan.neon.dist`:
+- The same applies to constant fetches over unknown types (e.g. `$unknown::CONSTANT`)
 
 ```neon
 parameters:
     shipmonkDeadCode:
-        trackCallsOnMixed: false
+        trackMixedAccess: false
 ```
 
 - If you want to check how many of those cases are present in your codebase, you can run PHPStan analysis with `-vvv` and you will see some diagnostics:
 
 ```
-Found 2 methods called over unknown type:
- • setCountry, for example in App\Entity\User::updateAddress
- • setStreet, for example in App\Entity\User::updateAddress
+Found 2 usages over unknown type:
+ • setCountry method, for example in App\Entity\User::updateAddress
+ • setStreet method, for example in App\Entity\User::updateAddress
 ```
 
 ## Comparison with tomasvotruba/unused-public
@@ -166,7 +168,7 @@ Found 2 methods called over unknown type:
   - It cannot detect dead constructors
   - It does not properly detect calls within inheritance hierarchy
   - It does not offer any custom adjustments of used methods
-  - It has almost no built-it library extensions
+  - It has almost no built-in library extensions
   - It ignores trait methods
   - Is lacks many minor features like class-string calls, dynamic method calls, array callbacks, nullsafe call chains etc
   - It cannot detect dead cycles nor transitively dead methods
@@ -177,7 +179,7 @@ Found 2 methods called over unknown type:
 - Abstract trait methods are never reported as dead
 - Most magic methods (e.g. `__get`, `__set` etc) are never reported as dead
     - Only supported are: `__construct`, `__clone`
- 
+
 ### Other problematic cases:
 
 #### Constructors:
@@ -209,9 +211,8 @@ class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodEntrypointProvider
 }
 ```
 
- 
+
 ## Future scope:
-- Dead class constant detection
 - Dead class property detection
 - Dead class detection
 

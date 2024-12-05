@@ -7,14 +7,19 @@ use LogicException;
 use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ShipMonk\PHPStan\DeadCode\Crate\Call;
-use ShipMonk\PHPStan\DeadCode\Crate\Kind;
-use ShipMonk\PHPStan\DeadCode\Crate\Method;
-use ShipMonk\PHPStan\DeadCode\Crate\Visibility;
+use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
+use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodCodeTransformer;
-use ShipMonk\PHPStan\DeadCode\Transformer\RemoveMethodVisitor;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
+use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_keys;
 use function array_merge;
 use function class_exists;
@@ -45,14 +50,19 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $missingClassNames = [];
         $excluded = [
-            Call::class,
-            Method::class,
-            Kind::class,
+            ClassMethodUsage::class,
+            ClassMethodRef::class,
+            ClassConstantRef::class,
+            ClassConstantUsage::class,
+            ClassMemberRef::class,
+            ClassMemberUsage::class,
+            ClassLikeKind::class,
             Visibility::class,
+            BlackMember::class,
             MethodEntrypointProvider::class,
             SimpleMethodEntrypointProvider::class,
-            RemoveMethodCodeTransformer::class,
-            RemoveMethodVisitor::class,
+            RemoveDeadCodeTransformer::class,
+            RemoveClassMemberVisitor::class,
         ];
 
         /** @var DirectoryIterator $file */

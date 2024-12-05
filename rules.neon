@@ -54,12 +54,20 @@ services:
         tags:
             - phpstan.collector
         arguments:
-            trackCallsOnMixed: %shipmonkDeadCode.trackCallsOnMixed%
+            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector
+        tags:
+            - phpstan.collector
+        arguments:
+            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
+
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector
         tags:
@@ -68,18 +76,18 @@ services:
             entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Rule\DeadMethodRule
+        class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule
         tags:
             - phpstan.rules.rule
             - phpstan.diagnoseExtension
         arguments:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
-            trackCallsOnMixed: %shipmonkDeadCode.trackCallsOnMixed%
+            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
 
 
 parameters:
     shipmonkDeadCode:
-        trackCallsOnMixed: true
+        trackMixedAccess: true
         reportTransitivelyDeadMethodAsSeparateError: false
         entrypoints:
             vendor:
@@ -97,7 +105,7 @@ parameters:
 
 parametersSchema:
     shipmonkDeadCode: structure([
-        trackCallsOnMixed: bool()
+        trackMixedAccess: bool()
         reportTransitivelyDeadMethodAsSeparateError: bool()
         entrypoints: structure([
             vendor: structure([
