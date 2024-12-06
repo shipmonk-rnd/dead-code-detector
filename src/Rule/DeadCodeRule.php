@@ -582,7 +582,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     {
         return $memberUsage->getOrigin() === null
             || $this->isAnonymousClass($memberUsage->getOrigin()->className)
-            || (array_key_exists($memberUsage->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS) && $memberUsage instanceof ClassMethodUsage);
+            || (array_key_exists($memberUsage->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS));
     }
 
     private function isNeverReportedAsDead(BlackMember $blackMember): bool
