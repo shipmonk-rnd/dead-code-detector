@@ -8,46 +8,46 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.vendor.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.vendor.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.phpunit.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.phpunit.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.symfony.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.doctrine.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.doctrine.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.phpstan.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.phpstan.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.entrypoints.nette.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
@@ -69,11 +69,12 @@ services:
             - phpstan.collector
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector
+        class: ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector
         tags:
             - phpstan.collector
         arguments:
-            entrypointProviders: tagged(shipmonk.deadCode.entrypointProvider)
+            methodUsageProviders: tagged(shipmonk.deadCode.methodUsageProvider)
+            constantUsageProviders: tagged(shipmonk.deadCode.constantUsageProvider)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule
@@ -89,7 +90,7 @@ parameters:
     shipmonkDeadCode:
         trackMixedAccess: true
         reportTransitivelyDeadMethodAsSeparateError: false
-        entrypoints:
+        usageProviders:
             vendor:
                 enabled: true
             phpstan:
@@ -107,7 +108,7 @@ parametersSchema:
     shipmonkDeadCode: structure([
         trackMixedAccess: bool()
         reportTransitivelyDeadMethodAsSeparateError: bool()
-        entrypoints: structure([
+        usageProviders: structure([
             vendor: structure([
                 enabled: bool()
             ])
