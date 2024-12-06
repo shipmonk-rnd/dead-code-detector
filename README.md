@@ -9,7 +9,7 @@
 - 🔗 **Transitive dead** member detection
 - 🧹 **Automatic removal** of unused code
 - 📚 **Popular libraries** support
-- ✨ **Customizable** entrypoints
+- ✨ **Customizable** usage providers
 
 ## Installation:
 
@@ -38,7 +38,6 @@ includes:
 - `#[Required]` attribute
 - `#[Route]` attributes
 - `onKernelResponse`, `onKernelRequest`, etc
-- class constants referenced in `containerXmlPath` via `!php/const:`
 
 #### Doctrine:
 - `#[AsEntityListener]` attribute
@@ -67,7 +66,7 @@ All those libraries are autoenabled when found within your composer dependencies
 # phpstan.neon.dist
 parameters:
     shipmonkDeadCode:
-        entrypoints:
+        usageProviders:
             phpunit:
                 enabled: true
 ```
@@ -95,7 +94,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
 class ApiOutputMethodUsageProvider extends SimpleMethodUsageProvider
 {
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->implementsInterface(ApiOutput::class);
     }
@@ -205,12 +204,12 @@ parameters:
 #### Interface methods:
 - If you never call interface method over the interface, but only over its implementors, it gets reported as dead
 - But you may want to keep the interface method to force some unification across implementors
-  - The easiest way to ignore it is via custom `MethodEntrypointProvider`:
+  - The easiest way to ignore it is via custom `MethodUsageProvider`:
 
 ```php
-class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodEntrypointProvider
+class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodUsageProvider
 {
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->isInterface();
     }
