@@ -38,6 +38,7 @@ includes:
 - `#[Required]` attribute
 - `#[Route]` attributes
 - `onKernelResponse`, `onKernelRequest`, etc
+- class constants referenced in `containerXmlPath` via `!php/const:`
 
 #### Doctrine:
 - `#[AsEntityListener]` attribute
@@ -72,24 +73,26 @@ parameters:
 ```
 
 ## Customization:
-- If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
-- Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider`
-- You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider`
+- If your application does some magic calls unknown to this library, you can implement your own usage provider.
+- Just tag it with `shipmonk.deadCode.methodUsageProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider`
+- You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider`
+- Similar classes and interfaces are also available for constant usages
 
 ```neon
 # phpstan.neon.dist
 services:
     -
-        class: App\ApiOutputEntrypointProvider
+        class: App\ApiOutputMethodUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
 ```
+
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
 
-class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
+class ApiOutputMethodUsageProvider extends SimpleMethodUsageProvider
 {
 
     public function isEntrypointMethod(ReflectionMethod $method): bool

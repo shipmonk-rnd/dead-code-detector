@@ -5,28 +5,28 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\Reflection\ClassReflection;
 use ReflectionMethod;
 
-abstract class SimpleMethodEntrypointProvider implements MethodEntrypointProvider
+abstract class SimpleMethodUsageProvider implements MethodUsageProvider
 {
 
-    public function getEntrypoints(ClassReflection $classReflection): array
+    public function getMethodUsages(ClassReflection $classReflection): array
     {
         $nativeClassReflection = $classReflection->getNativeReflection();
 
-        $entrypoints = [];
+        $usages = [];
 
         foreach ($nativeClassReflection->getMethods() as $nativeMethodReflection) {
             if ($nativeMethodReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
                 continue; // skip methods from ancestors
             }
 
-            if ($this->isEntrypointMethod($nativeMethodReflection)) {
-                $entrypoints[] = $classReflection->getNativeMethod($nativeMethodReflection->getName());
+            if ($this->shouldMarkMethodAsUsed($nativeMethodReflection)) {
+                $usages[] = $classReflection->getNativeMethod($nativeMethodReflection->getName());
             }
         }
 
-        return $entrypoints;
+        return $usages;
     }
 
-    abstract protected function isEntrypointMethod(ReflectionMethod $method): bool;
+    abstract protected function shouldMarkMethodAsUsed(ReflectionMethod $method): bool;
 
 }
