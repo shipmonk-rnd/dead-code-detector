@@ -322,6 +322,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-function' => [__DIR__ . '/data/constants/constant-function.php'];
         yield 'const-dynamic' => [__DIR__ . '/data/constants/dynamic.php'];
         yield 'const-expr' => [__DIR__ . '/data/constants/expr.php'];
+        yield 'const-magic' => [__DIR__ . '/data/constants/magic.php'];
         yield 'const-mixed' => [__DIR__ . '/data/constants/mixed/tracked.php'];
         yield 'const-override' => [__DIR__ . '/data/constants/override.php'];
         yield 'const-static' => [__DIR__ . '/data/constants/static.php'];
