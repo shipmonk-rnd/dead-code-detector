@@ -17,18 +17,19 @@ use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
-use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
-use ShipMonk\PHPStan\DeadCode\Provider\DoctrineEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\NetteEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\PhpStanEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SymfonyEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\VendorEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ConstantUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
@@ -68,7 +69,7 @@ class DeadCodeRuleTest extends RuleTestCase
     protected function getCollectors(): array
     {
         return [
-            new EntrypointCollector($this->getEntrypointProviders()),
+            new ProvidedUsagesCollector($this->getMethodUsageProviders(), $this->getConstantUsageProviders()),
             new ClassDefinitionCollector(),
             new MethodCallCollector($this->trackMixedAccess),
             new ConstantFetchCollector(self::createReflectionProvider(), $this->trackMixedAccess),
@@ -356,44 +357,64 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return list<MethodEntrypointProvider>
+     * @return list<MethodUsageProvider>
      */
-    private function getEntrypointProviders(): array
+    private function getMethodUsageProviders(): array
     {
         return [
-            new class extends SimpleMethodEntrypointProvider
+            new class extends SimpleMethodUsageProvider
             {
 
-                public function isEntrypointMethod(ReflectionMethod $method): bool
+                public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
                 {
                     return $method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint';
                 }
 
             },
-            new VendorEntrypointProvider(
+            new VendorUsageProvider(
                 true,
             ),
-            new PhpUnitEntrypointProvider(
+            new PhpUnitUsageProvider(
                 true,
                 self::getContainer()->getByType(PhpDocParser::class),
                 self::getContainer()->getByType(Lexer::class),
             ),
-            new SymfonyEntrypointProvider(
-                $this->createServiceMapFactoryMock(),
+            new DoctrineUsageProvider(
                 true,
             ),
-            new DoctrineEntrypointProvider(
-                true,
-            ),
-            new PhpStanEntrypointProvider(
+            new PhpStanUsageProvider(
                 true,
                 $this->createPhpStanContainerMock(),
             ),
-            new NetteEntrypointProvider(
+            new NetteUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
                 true,
             ),
+            $this->createSymfonyUsageProvider(),
         ];
+    }
+
+    /**
+     * @return list<ConstantUsageProvider>
+     */
+    private function getConstantUsageProviders(): array
+    {
+        return [];
+    }
+
+    private function createSymfonyUsageProvider(): SymfonyUsageProvider
+    {
+        /** @var SymfonyUsageProvider|null $cache */
+        static $cache = null;
+
+        if ($cache === null) {
+            $cache = new SymfonyUsageProvider(
+                $this->createServiceMapFactoryMock(),
+                true,
+            );
+        }
+
+        return $cache;
     }
 
     private function createPhpStanContainerMock(): Container

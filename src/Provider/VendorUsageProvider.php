@@ -11,7 +11,7 @@ use function strlen;
 use function strpos;
 use function substr;
 
-class VendorEntrypointProvider extends SimpleMethodEntrypointProvider
+class VendorUsageProvider extends SimpleMethodUsageProvider
 {
 
     /**
@@ -27,7 +27,7 @@ class VendorEntrypointProvider extends SimpleMethodEntrypointProvider
         $this->enabled = $enabled;
     }
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;

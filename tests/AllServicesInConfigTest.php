@@ -16,8 +16,10 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ConstantUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleConstantUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_keys;
@@ -59,8 +61,10 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassLikeKind::class,
             Visibility::class,
             BlackMember::class,
-            MethodEntrypointProvider::class,
-            SimpleMethodEntrypointProvider::class,
+            MethodUsageProvider::class,
+            ConstantUsageProvider::class,
+            SimpleMethodUsageProvider::class,
+            SimpleConstantUsageProvider::class,
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
         ];

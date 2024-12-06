@@ -12,7 +12,7 @@ use ReflectionMethod;
 use Reflector;
 use const PHP_VERSION_ID;
 
-class SymfonyEntrypointProvider implements MethodEntrypointProvider
+class SymfonyUsageProvider implements MethodUsageProvider
 {
 
     private bool $enabled;
@@ -30,43 +30,48 @@ class SymfonyEntrypointProvider implements MethodEntrypointProvider
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
 
         if ($serviceMapFactory !== null) {
-            foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
-                $dicClass = $service->getClass();
-
-                if ($dicClass === null) {
-                    continue;
-                }
-
-                $this->dicClasses[$dicClass] = true;
-            }
+            $this->fillDicClasses($serviceMapFactory);
         }
     }
 
-    public function getEntrypoints(ClassReflection $classReflection): array
+    private function fillDicClasses(ServiceMapFactory $serviceMapFactory): void
+    {
+        foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
+            $dicClass = $service->getClass();
+
+            if ($dicClass === null) {
+                continue;
+            }
+
+            $this->dicClasses[$dicClass] = true;
+        }
+    }
+
+    public function getMethodUsages(ClassReflection $classReflection): array
     {
         $nativeReflection = $classReflection->getNativeReflection();
         $className = $classReflection->getName();
 
-        $entrypoints = [];
+        $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
             if ($method->isConstructor() && isset($this->dicClasses[$className])) {
-                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $classReflection->getNativeMethod($method->getName());
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
                 continue;
             }
 
-            if ($this->isEntrypointMethod($method)) {
-                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+            if ($this->shouldMarkAsUsed($method)) {
+                $usages[] = $classReflection->getNativeMethod($method->getName());
             }
         }
 
-        return $entrypoints;
+        return $usages;
     }
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkAsUsed(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;

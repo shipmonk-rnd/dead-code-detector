@@ -14,7 +14,7 @@ use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitEntrypointProvider implements MethodEntrypointProvider
+class PhpUnitUsageProvider implements MethodUsageProvider
 {
 
     private bool $enabled;
@@ -30,7 +30,7 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function getEntrypoints(ClassReflection $classReflection): array
+    public function getMethodUsages(ClassReflection $classReflection): array
     {
         if (!$this->enabled) {
             return [];
@@ -40,7 +40,7 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
             return [];
         }
 
-        $entrypoints = [];
+        $usages = [];
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
             $dataProviders = array_merge(
@@ -50,16 +50,16 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
 
             foreach ($dataProviders as $dataProvider) {
                 if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $entrypoints[] = $classReflection->getNativeMethod($dataProvider);
+                    $usages[] = $classReflection->getNativeMethod($dataProvider);
                 }
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $classReflection->getNativeMethod($method->getName());
             }
         }
 
-        return $entrypoints;
+        return $usages;
     }
 
     private function isTestCaseMethod(ReflectionMethod $method): bool

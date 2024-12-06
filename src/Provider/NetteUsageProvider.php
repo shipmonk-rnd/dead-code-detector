@@ -19,7 +19,7 @@ use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
 
-class NetteEntrypointProvider extends SimpleMethodEntrypointProvider
+class NetteUsageProvider extends SimpleMethodUsageProvider
 {
 
     private ReflectionProvider $reflectionProvider;
@@ -40,7 +40,7 @@ class NetteEntrypointProvider extends SimpleMethodEntrypointProvider
         $this->enabled = $enabled ?? $this->isNetteInstalled();
     }
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         if (!$this->enabled) {
             return false;
