@@ -3,18 +3,23 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use PhpParser\Node;
+use PHPStan\Analyser\Scope;
+use PHPStan\Node\InClassNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use function array_merge;
 use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitUsageProvider implements MethodUsageProvider
+class PhpUnitUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -30,11 +35,13 @@ class PhpUnitUsageProvider implements MethodUsageProvider
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function getMethodUsages(ClassReflection $classReflection): array
+    public function getUsages(Node $node, Scope $scope): array
     {
-        if (!$this->enabled) {
+        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
+
+        $classReflection = $node->getClassReflection();
 
         if (!$classReflection->is(TestCase::class)) {
             return [];
@@ -50,12 +57,12 @@ class PhpUnitUsageProvider implements MethodUsageProvider
 
             foreach ($dataProviders as $dataProvider) {
                 if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $usages[] = $classReflection->getNativeMethod($dataProvider);
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider));
                 }
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $usages[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
         }
 
@@ -137,6 +144,18 @@ class PhpUnitUsageProvider implements MethodUsageProvider
         }
 
         return strpos($method->getDocComment(), $string) !== false;
+    }
+
+    private function createUsage(ExtendedMethodReflection $getNativeMethod): ClassMethodUsage
+    {
+        return new ClassMethodUsage(
+            null,
+            new ClassMethodRef(
+                $getNativeMethod->getDeclaringClass()->getName(),
+                $getNativeMethod->getName(),
+                false,
+            ),
+        );
     }
 
 }

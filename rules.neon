@@ -10,42 +10,42 @@ services:
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.vendor.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.phpunit.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.doctrine.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.phpstan.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider
         tags:
-            - shipmonk.deadCode.methodUsageProvider
+            - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
@@ -73,8 +73,7 @@ services:
         tags:
             - phpstan.collector
         arguments:
-            methodUsageProviders: tagged(shipmonk.deadCode.methodUsageProvider)
-            constantUsageProviders: tagged(shipmonk.deadCode.constantUsageProvider)
+            memberUsageProviders: tagged(shipmonk.deadCode.memberUsageProvider)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule

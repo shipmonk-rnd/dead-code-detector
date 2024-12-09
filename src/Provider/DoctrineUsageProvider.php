@@ -7,7 +7,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use const PHP_VERSION_ID;
 
-class DoctrineUsageProvider extends SimpleMethodUsageProvider
+class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     private bool $enabled;

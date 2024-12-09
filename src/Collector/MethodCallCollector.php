@@ -15,7 +15,6 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
-use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\Reflection\MethodReflection;
@@ -25,7 +24,6 @@ use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use function array_map;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -33,10 +31,7 @@ use function array_map;
 class MethodCallCollector implements Collector
 {
 
-    /**
-     * @var list<ClassMethodUsage>
-     */
-    private array $callsBuffer = [];
+    use BufferedUsageCollector;
 
     private bool $trackMixedAccess;
 
@@ -86,20 +81,7 @@ class MethodCallCollector implements Collector
             $this->registerAttribute($node, $scope);
         }
 
-        if (!$scope->isInClass() || $node instanceof ClassMethodsNode) { // @phpstan-ignore-line ignore BC promise
-            $data = $this->callsBuffer;
-            $this->callsBuffer = [];
-
-            // collect data once per class to save memory & resultCache size
-            return $data === []
-                ? null
-                : array_map(
-                    static fn (ClassMethodUsage $call): string => $call->serialize(),
-                    $data,
-                );
-        }
-
-        return null;
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     /**
@@ -131,7 +113,7 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-                $this->callsBuffer[] = new ClassMethodUsage(
+                $this->usageBuffer[] = new ClassMethodUsage(
                     $this->getCaller($scope),
                     new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                 );
@@ -157,7 +139,7 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
-                $this->callsBuffer[] = new ClassMethodUsage(
+                $this->usageBuffer[] = new ClassMethodUsage(
                     $this->getCaller($scope),
                     new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                 );
@@ -182,7 +164,7 @@ class MethodCallCollector implements Collector
                     $possibleDescendantCall = !$caller->isClassString()->yes();
 
                     foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
-                        $this->callsBuffer[] = new ClassMethodUsage(
+                        $this->usageBuffer[] = new ClassMethodUsage(
                             $this->getCaller($scope),
                             new ClassMethodRef($className, $methodName, $possibleDescendantCall),
                         );
@@ -194,7 +176,7 @@ class MethodCallCollector implements Collector
 
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
-        $this->callsBuffer[] = new ClassMethodUsage(
+        $this->usageBuffer[] = new ClassMethodUsage(
             null,
             new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
         );
@@ -206,7 +188,7 @@ class MethodCallCollector implements Collector
         $callerType = $scope->getType($node->expr);
 
         foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-            $this->callsBuffer[] = new ClassMethodUsage(
+            $this->usageBuffer[] = new ClassMethodUsage(
                 $this->getCaller($scope),
                 new ClassMethodRef($className, $methodName, true),
             );

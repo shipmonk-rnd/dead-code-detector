@@ -3,16 +3,21 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use PhpParser\Node;
+use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
-use PHPStan\Reflection\ClassReflection;
+use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use const PHP_VERSION_ID;
 
-class SymfonyUsageProvider implements MethodUsageProvider
+class SymfonyUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -47,8 +52,13 @@ class SymfonyUsageProvider implements MethodUsageProvider
         }
     }
 
-    public function getMethodUsages(ClassReflection $classReflection): array
+    public function getUsages(Node $node, Scope $scope): array
     {
+        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            return [];
+        }
+
+        $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
         $className = $classReflection->getName();
 
@@ -56,7 +66,7 @@ class SymfonyUsageProvider implements MethodUsageProvider
 
         foreach ($nativeReflection->getMethods() as $method) {
             if ($method->isConstructor() && isset($this->dicClasses[$className])) {
-                $usages[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -64,7 +74,7 @@ class SymfonyUsageProvider implements MethodUsageProvider
             }
 
             if ($this->shouldMarkAsUsed($method)) {
-                $usages[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
         }
 
@@ -73,10 +83,6 @@ class SymfonyUsageProvider implements MethodUsageProvider
 
     public function shouldMarkAsUsed(ReflectionMethod $method): bool
     {
-        if (!$this->enabled) {
-            return false;
-        }
-
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
 
@@ -135,6 +141,18 @@ class SymfonyUsageProvider implements MethodUsageProvider
             || InstalledVersions::isInstalled('symfony/contracts')
             || InstalledVersions::isInstalled('symfony/console')
             || InstalledVersions::isInstalled('symfony/http-kernel');
+    }
+
+    private function createUsage(ExtendedMethodReflection $getNativeMethod): ClassMethodUsage
+    {
+        return new ClassMethodUsage(
+            null,
+            new ClassMethodRef(
+                $getNativeMethod->getDeclaringClass()->getName(),
+                $getNativeMethod->getName(),
+                false,
+            ),
+        );
     }
 
 }
