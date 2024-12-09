@@ -89,9 +89,9 @@ services:
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 
-class ApiOutputMethodUsageProvider extends SimpleMethodUsageProvider
+class ApiOutputMethodUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool

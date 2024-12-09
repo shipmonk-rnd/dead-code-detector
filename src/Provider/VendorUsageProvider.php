@@ -11,7 +11,7 @@ use function strlen;
 use function strpos;
 use function substr;
 
-class VendorUsageProvider extends SimpleMethodUsageProvider
+class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     /**

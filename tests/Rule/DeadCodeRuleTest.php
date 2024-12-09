@@ -21,13 +21,12 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
-use ShipMonk\PHPStan\DeadCode\Provider\ConstantUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
@@ -68,11 +67,16 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     protected function getCollectors(): array
     {
+        $reflectionProvider = self::createReflectionProvider();
+
         return [
-            new ProvidedUsagesCollector($this->getMethodUsageProviders(), $this->getConstantUsageProviders()),
+            new ProvidedUsagesCollector(
+                $reflectionProvider,
+                $this->getMethodUsageProviders(),
+            ),
             new ClassDefinitionCollector(),
             new MethodCallCollector($this->trackMixedAccess),
-            new ConstantFetchCollector(self::createReflectionProvider(), $this->trackMixedAccess),
+            new ConstantFetchCollector($reflectionProvider, $this->trackMixedAccess),
         ];
     }
 
@@ -357,12 +361,12 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return list<MethodUsageProvider>
+     * @return list<MemberUsageProvider>
      */
     private function getMethodUsageProviders(): array
     {
         return [
-            new class extends SimpleMethodUsageProvider
+            new class extends ReflectionBasedMemberUsageProvider
             {
 
                 public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
@@ -392,14 +396,6 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             $this->createSymfonyUsageProvider(),
         ];
-    }
-
-    /**
-     * @return list<ConstantUsageProvider>
-     */
-    private function getConstantUsageProviders(): array
-    {
-        return [];
     }
 
     private function createSymfonyUsageProvider(): SymfonyUsageProvider

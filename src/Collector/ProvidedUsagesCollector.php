@@ -2,53 +2,51 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
-use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Provider\ConstantUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
+use function get_class;
+use function sprintf;
 
 /**
- * @implements Collector<InClassNode, list<string>>
+ * @implements Collector<Node, list<string>>
  */
 class ProvidedUsagesCollector implements Collector
 {
 
-    /**
-     * @var list<MethodUsageProvider>
-     */
-    private array $methodUsageProviders;
+    use BufferedUsageCollector;
+
+    private ReflectionProvider $reflectionProvider;
 
     /**
-     * @var list<ConstantUsageProvider>
+     * @var list<MemberUsageProvider>
      */
-    private array $constantUsageProviders;
+    private array $memberUsageProviders;
 
     /**
-     * @param list<MethodUsageProvider> $methodUsageProviders
-     * @param list<ConstantUsageProvider> $constantUsageProviders
+     * @param list<MemberUsageProvider> $memberUsageProviders
      */
     public function __construct(
-        array $methodUsageProviders,
-        array $constantUsageProviders
+        ReflectionProvider $reflectionProvider,
+        array $memberUsageProviders
     )
     {
-        $this->methodUsageProviders = $methodUsageProviders;
-        $this->constantUsageProviders = $constantUsageProviders;
+        $this->reflectionProvider = $reflectionProvider;
+        $this->memberUsageProviders = $memberUsageProviders;
     }
 
     public function getNodeType(): string
     {
-        return InClassNode::class;
+        return Node::class;
     }
 
     /**
-     * @param InClassNode $node
      * @return non-empty-list<string>|null
      */
     public function processNode(
@@ -56,37 +54,66 @@ class ProvidedUsagesCollector implements Collector
         Scope $scope
     ): ?array
     {
-        $usages = [];
+        foreach ($this->memberUsageProviders as $memberUsageProvider) {
+            $newUsages = $memberUsageProvider->getUsages($node, $scope);
 
-        foreach ($this->methodUsageProviders as $methodUsageProvider) {
-            foreach ($methodUsageProvider->getMethodUsages($node->getClassReflection()) as $usedMethod) {
-                $methodUsage = new ClassMethodUsage(
-                    null,
-                    new ClassMethodRef(
-                        $usedMethod->getDeclaringClass()->getName(),
-                        $usedMethod->getName(),
-                        false,
-                    ),
-                );
-                $usages[] = $methodUsage->serialize();
+            foreach ($newUsages as $newUsage) {
+                $this->validateUsage($newUsage, $memberUsageProvider, $node, $scope);
+                $this->usageBuffer[] = $newUsage;
             }
         }
 
-        foreach ($this->constantUsageProviders as $constantUsageProvider) {
-            foreach ($constantUsageProvider->getConstantUsages($node->getClassReflection()) as $usedConstant) {
-                $constantUsage = new ClassConstantUsage(
-                    null,
-                    new ClassConstantRef(
-                        $usedConstant->getDeclaringClass()->getName(),
-                        $usedConstant->getName(),
-                        false,
-                    ),
-                );
-                $usages[] = $constantUsage->serialize();
+        return $this->tryFlushBuffer($node, $scope);
+    }
+
+    private function validateUsage(
+        ClassMemberUsage $usage,
+        MemberUsageProvider $provider,
+        Node $node,
+        Scope $scope
+    ): void
+    {
+        $memberRef = $usage->getMemberRef();
+        $memberRefClass = $memberRef->className;
+
+        $originRef = $usage->getOrigin();
+        $originRefClass = $originRef->className ?? null;
+
+        $context = sprintf(
+            "It was emitted as %s by %s for node '%s' in '%s' on line %s",
+            $usage->toHumanString(),
+            get_class($provider),
+            get_class($node),
+            $scope->getFile(),
+            $node->getStartLine(),
+        );
+
+        if ($memberRefClass !== null) {
+            if (!$this->reflectionProvider->hasClass($memberRefClass)) {
+                throw new LogicException("Class '$memberRefClass' does not exist. $context");
+            }
+
+            if ($memberRef instanceof ClassMethodRef && !$this->reflectionProvider->getClass($memberRefClass)->hasMethod($memberRef->memberName)) {
+                throw new LogicException("Method '{$memberRef->memberName}' does not exist in class '$memberRefClass'. $context");
+            }
+
+            if ($memberRef instanceof ClassConstantRef && !$this->reflectionProvider->getClass($memberRefClass)->hasConstant($memberRef->memberName)) {
+                throw new LogicException("Constant '{$memberRef->memberName}' does not exist in class '$memberRefClass'. $context");
             }
         }
 
-        return $usages === [] ? null : $usages;
+        if (
+            $originRef !== null
+            && $originRefClass !== null
+        ) {
+            if (!$this->reflectionProvider->hasClass($originRefClass)) {
+                throw new LogicException("Class '{$originRefClass}' does not exist. $context");
+            }
+
+            if (!$this->reflectionProvider->getClass($originRefClass)->hasMethod($originRef->memberName)) {
+                throw new LogicException("Method '{$originRef->memberName}' does not exist in class '$originRefClass'. $context");
+            }
+        }
     }
 
 }
