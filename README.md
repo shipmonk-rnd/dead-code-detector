@@ -9,7 +9,7 @@
 - 🔗 **Transitive dead** member detection
 - 🧹 **Automatic removal** of unused code
 - 📚 **Popular libraries** support
-- ✨ **Customizable** entrypoints
+- ✨ **Customizable** usage providers
 
 ## Installation:
 
@@ -66,33 +66,35 @@ All those libraries are autoenabled when found within your composer dependencies
 # phpstan.neon.dist
 parameters:
     shipmonkDeadCode:
-        entrypoints:
+        usageProviders:
             phpunit:
                 enabled: true
 ```
 
 ## Customization:
-- If your application does some magic calls unknown to this library, you can implement your own entrypoint provider.
-- Just tag it with `shipmonk.deadCode.entrypointProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider`
-- You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider`
+- If your application does some magic calls unknown to this library, you can implement your own usage provider.
+- Just tag it with `shipmonk.deadCode.methodUsageProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MethodUsageProvider`
+- You can simplify your implementation by extending `ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodUsageProvider`
+- Similar classes and interfaces are also available for constant usages
 
 ```neon
 # phpstan.neon.dist
 services:
     -
-        class: App\ApiOutputEntrypointProvider
+        class: App\ApiOutputMethodUsageProvider
         tags:
-            - shipmonk.deadCode.entrypointProvider
+            - shipmonk.deadCode.methodUsageProvider
 ```
+
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 
-class ApiOutputEntrypointProvider extends SimpleMethodEntrypointProvider
+class ApiOutputMethodUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->implementsInterface(ApiOutput::class);
     }
@@ -199,12 +201,12 @@ parameters:
 #### Interface methods:
 - If you never call interface method over the interface, but only over its implementors, it gets reported as dead
 - But you may want to keep the interface method to force some unification across implementors
-  - The easiest way to ignore it is via custom `MethodEntrypointProvider`:
+  - The easiest way to ignore it is via custom `MethodUsageProvider`:
 
 ```php
-class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodEntrypointProvider
+class IgnoreDeadInterfaceMethodsProvider extends SimpleMethodUsageProvider
 {
-    public function isEntrypointMethod(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
         return $method->getDeclaringClass()->isInterface();
     }

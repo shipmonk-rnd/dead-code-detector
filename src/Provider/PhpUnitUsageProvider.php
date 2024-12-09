@@ -3,18 +3,23 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use PhpParser\Node;
+use PHPStan\Analyser\Scope;
+use PHPStan\Node\InClassNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use function array_merge;
 use function is_string;
 use function strpos;
 use const PHP_VERSION_ID;
 
-class PhpUnitEntrypointProvider implements MethodEntrypointProvider
+class PhpUnitUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -30,17 +35,19 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function getEntrypoints(ClassReflection $classReflection): array
+    public function getUsages(Node $node, Scope $scope): array
     {
-        if (!$this->enabled) {
+        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
+
+        $classReflection = $node->getClassReflection();
 
         if (!$classReflection->is(TestCase::class)) {
             return [];
         }
 
-        $entrypoints = [];
+        $usages = [];
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
             $dataProviders = array_merge(
@@ -50,16 +57,16 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
 
             foreach ($dataProviders as $dataProvider) {
                 if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $entrypoints[] = $classReflection->getNativeMethod($dataProvider);
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider));
                 }
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $entrypoints[] = $classReflection->getNativeMethod($method->getName());
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
         }
 
-        return $entrypoints;
+        return $usages;
     }
 
     private function isTestCaseMethod(ReflectionMethod $method): bool
@@ -137,6 +144,18 @@ class PhpUnitEntrypointProvider implements MethodEntrypointProvider
         }
 
         return strpos($method->getDocComment(), $string) !== false;
+    }
+
+    private function createUsage(ExtendedMethodReflection $getNativeMethod): ClassMethodUsage
+    {
+        return new ClassMethodUsage(
+            null,
+            new ClassMethodRef(
+                $getNativeMethod->getDeclaringClass()->getName(),
+                $getNativeMethod->getName(),
+                false,
+            ),
+        );
     }
 
 }

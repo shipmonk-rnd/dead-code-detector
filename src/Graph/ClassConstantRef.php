@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 /**
  * @immutable
  */
-class ClassConstantRef extends ClassMemberRef
+final class ClassConstantRef extends ClassMemberRef
 {
 
     public function __construct(
