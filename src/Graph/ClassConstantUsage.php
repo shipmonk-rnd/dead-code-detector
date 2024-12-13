@@ -5,11 +5,15 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 /**
  * @immutable
  */
-class ClassConstantUsage extends ClassMemberUsage
+final class ClassConstantUsage extends ClassMemberUsage
 {
 
     private ClassConstantRef $fetch;
 
+    /**
+     * @param ClassMethodRef|null $origin The method where the call occurs
+     * @param ClassConstantRef $fetch The fetch of the constant
+     */
     public function __construct(
         ?ClassMethodRef $origin,
         ClassConstantRef $fetch

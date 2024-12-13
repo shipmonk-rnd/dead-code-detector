@@ -42,6 +42,14 @@ abstract class ClassMemberUsage
 
     abstract public function getMemberRef(): ClassMemberRef;
 
+    public function toHumanString(): string
+    {
+        $origin = $this->origin !== null ? $this->origin->toHumanString() : 'unknown';
+        $callee = $this->getMemberRef()->toHumanString();
+
+        return "$origin -> $callee";
+    }
+
     public function serialize(): string
     {
         return serialize($this);
