@@ -135,8 +135,11 @@ vendor/bin/phpstan analyse --error-format removeDeadCode
 ```diff
 class UserFacade
 {
+-    public const TRANSITIVELY_DEAD = 1;
+-
 -    public function deadMethod(): void
 -    {
+-        echo self::TRANSITIVELY_DEAD;
 -    }
 }
 ```
