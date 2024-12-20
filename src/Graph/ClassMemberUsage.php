@@ -19,11 +19,11 @@ abstract class ClassMemberUsage
 
     public function __construct(?ClassMethodRef $origin)
     {
-        if ($origin !== null && $origin->possibleDescendant) {
+        if ($origin !== null && $origin->isPossibleDescendant()) {
             throw new LogicException('Origin should always be exact place in codebase.');
         }
 
-        if ($origin !== null && $origin->className === null) {
+        if ($origin !== null && $origin->getClassName() === null) {
             throw new LogicException('Origin should always be exact place in codebase, thus className should be known.');
         }
 

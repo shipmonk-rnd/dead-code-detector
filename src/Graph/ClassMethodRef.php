@@ -18,7 +18,7 @@ final class ClassMethodRef extends ClassMemberRef
         bool $possibleDescendant
     )
     {
-        parent::__construct($className, $methodName, $possibleDescendant, ClassMemberRef::TYPE_METHOD);
+        parent::__construct($className, $methodName, $possibleDescendant);
     }
 
     public static function buildKey(string $typeName, string $memberName): string

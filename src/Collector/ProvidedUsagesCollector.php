@@ -74,10 +74,10 @@ class ProvidedUsagesCollector implements Collector
     ): void
     {
         $memberRef = $usage->getMemberRef();
-        $memberRefClass = $memberRef->className;
+        $memberRefClass = $memberRef->getClassName();
 
         $originRef = $usage->getOrigin();
-        $originRefClass = $originRef->className ?? null;
+        $originRefClass = $originRef === null ? null : $originRef->getClassName();
 
         $context = sprintf(
             "It was emitted as %s by %s for node '%s' in '%s' on line %s",
@@ -93,12 +93,12 @@ class ProvidedUsagesCollector implements Collector
                 throw new LogicException("Class '$memberRefClass' does not exist. $context");
             }
 
-            if ($memberRef instanceof ClassMethodRef && !$this->reflectionProvider->getClass($memberRefClass)->hasMethod($memberRef->memberName)) {
-                throw new LogicException("Method '{$memberRef->memberName}' does not exist in class '$memberRefClass'. $context");
+            if ($memberRef instanceof ClassMethodRef && !$this->reflectionProvider->getClass($memberRefClass)->hasMethod($memberRef->getMemberName())) {
+                throw new LogicException("Method '{$memberRef->getMemberName()}' does not exist in class '$memberRefClass'. $context");
             }
 
-            if ($memberRef instanceof ClassConstantRef && !$this->reflectionProvider->getClass($memberRefClass)->hasConstant($memberRef->memberName)) {
-                throw new LogicException("Constant '{$memberRef->memberName}' does not exist in class '$memberRefClass'. $context");
+            if ($memberRef instanceof ClassConstantRef && !$this->reflectionProvider->getClass($memberRefClass)->hasConstant($memberRef->getMemberName())) {
+                throw new LogicException("Constant '{$memberRef->getMemberName()}' does not exist in class '$memberRefClass'. $context");
             }
         }
 
@@ -110,8 +110,8 @@ class ProvidedUsagesCollector implements Collector
                 throw new LogicException("Class '{$originRefClass}' does not exist. $context");
             }
 
-            if (!$this->reflectionProvider->getClass($originRefClass)->hasMethod($originRef->memberName)) {
-                throw new LogicException("Method '{$originRef->memberName}' does not exist in class '$originRefClass'. $context");
+            if (!$this->reflectionProvider->getClass($originRefClass)->hasMethod($originRef->getMemberName())) {
+                throw new LogicException("Method '{$originRef->getMemberName()}' does not exist in class '$originRefClass'. $context");
             }
         }
     }
