@@ -15,6 +15,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.vendor.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.reflection.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -97,6 +104,8 @@ parameters:
         usageProviders:
             vendor:
                 enabled: true
+            reflection:
+                enabled: true
             phpstan:
                 enabled: true
             phpunit:
@@ -114,6 +123,9 @@ parametersSchema:
         reportTransitivelyDeadMethodAsSeparateError: bool()
         usageProviders: structure([
             vendor: structure([
+                enabled: bool()
+            ])
+            reflection: structure([
                 enabled: bool()
             ])
             phpstan: structure([

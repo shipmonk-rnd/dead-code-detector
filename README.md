@@ -25,9 +25,7 @@ includes:
     - vendor/shipmonk/dead-code-detector/rules.neon
 ```
 
-## Supported libraries
-- Any overridden method that originates in `vendor` is not reported as dead
-- We also support many magic calls in following libraries:
+## Supported libraries:
 
 #### Symfony:
 - **constructor calls for DIC services!**
@@ -71,6 +69,18 @@ parameters:
             phpunit:
                 enabled: true
 ```
+
+## Generic usage providers:
+
+#### Reflection:
+- Any constant or method accessed via `ReflectionClass` is detected as used
+  - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, ...
+
+#### Vendor:
+- Any overridden method that originates in `vendor` is not reported as dead
+  - e.g. implementing `Psr\Log\LoggerInterface::log` is automatically considered used
+
+Those providers are enabled by default, but you can disable them if needed.
 
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own usage provider.
