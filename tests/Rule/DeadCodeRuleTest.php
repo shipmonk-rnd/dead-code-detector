@@ -319,7 +319,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         // method providers
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
-        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php'];
+        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', 8_01_00];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', 8_00_00];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', 8_00_00];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', 8_00_00];
