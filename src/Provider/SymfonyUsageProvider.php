@@ -4,10 +4,12 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
 use PhpParser\Node;
+use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\MethodReflection;
 use PHPStan\Symfony\ServiceMapFactory;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -41,10 +43,115 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     public function getUsages(Node $node, Scope $scope): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$this->enabled) {
             return [];
         }
 
+        $usages = [];
+
+        if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesFromReflection($node),
+            ];
+        }
+
+        if ($node instanceof Return_) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesOfEventSubscriber($node, $scope),
+            ];
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesOfEventSubscriber(Return_ $node, Scope $scope): array
+    {
+        if ($node->expr === null) {
+            return [];
+        }
+
+        if (!$scope->isInClass()) {
+            return [];
+        }
+
+        if (!$scope->getFunction() instanceof MethodReflection) {
+            return [];
+        }
+
+        if ($scope->getFunction()->getName() !== 'getSubscribedEvents') {
+            return [];
+        }
+
+        if (!$scope->getClassReflection()->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')) {
+            return [];
+        }
+
+        $className = $scope->getClassReflection()->getName();
+
+        $usages = [];
+
+        // phpcs:disable Squiz.PHP.CommentedOutCode.Found
+        foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
+            foreach ($rootArray->getValuesArray()->getValueTypes() as $eventConfig) {
+                // ['eventName' => 'methodName']
+                foreach ($eventConfig->getConstantStrings() as $subscriberMethodString) {
+                    $usages[] = new ClassMethodUsage(
+                        null,
+                        new ClassMethodRef(
+                            $className,
+                            $subscriberMethodString->getValue(),
+                            true,
+                        ),
+                    );
+                }
+
+                // ['eventName' => ['methodName', $priority]]
+                foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    foreach ($subscriberMethodArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
+                        $usages[] = new ClassMethodUsage(
+                            null,
+                            new ClassMethodRef(
+                                $className,
+                                $subscriberMethodString->getValue(),
+                                true,
+                            ),
+                        );
+                    }
+                }
+
+                // ['eventName' => [['methodName', $priority], ['methodName', $priority]]]
+                foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    foreach ($subscriberMethodArray->getIterableValueType()->getConstantArrays() as $innerArray) {
+                        foreach ($innerArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
+                            $usages[] = new ClassMethodUsage(
+                                null,
+                                new ClassMethodRef(
+                                    $className,
+                                    $subscriberMethodString->getValue(),
+                                    true,
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // phpcs:enable // phpcs:disable Squiz.PHP.CommentedOutCode.Found
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromReflection(InClassNode $node): array
+    {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
         $className = $classReflection->getName();
@@ -70,8 +177,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     protected function shouldMarkAsUsed(ReflectionMethod $method): bool
     {
-        return $this->isEventSubscriberMethod($method)
-            || $this->isBundleConstructor($method)
+        return $this->isBundleConstructor($method)
             || $this->isEventListenerMethodWithAsEventListenerAttribute($method)
             || $this->isAutowiredWithRequiredAttribute($method)
             || $this->isConstructorWithAsCommandAttribute($method)
@@ -91,12 +197,6 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
             $this->dicClasses[$dicClass] = true;
         }
-    }
-
-    protected function isEventSubscriberMethod(ReflectionMethod $method): bool
-    {
-        // this is simplification, we should deduce that from AST of getSubscribedEvents() method
-        return $method->getDeclaringClass()->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface');
     }
 
     protected function isBundleConstructor(ReflectionMethod $method): bool

@@ -9,6 +9,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Service\Attribute\Required;
 
@@ -47,18 +49,28 @@ class FooBundle extends Bundle {
 class SomeSubscriber implements EventSubscriberInterface
 {
 
-    public function onKernelRequest(): void
+    public function string(): void
     {
     }
 
-    public function onNonsense(): void
+    public function stringInArray(): void
+    {
+    }
+
+    public function stringInArrayArray(): void
+    {
+    }
+
+    public function onNonsense(): void // error: Unused Symfony\SomeSubscriber::onNonsense
     {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            'kernel.request' => [['onKernelRequest', 0]],
+            'kernel.exception' => 'string',
+            'kernel.controller' => ['stringInArray', 1],
+            'kernel.request' => [['stringInArrayArray', 0]],
         ];
     }
 
