@@ -13,8 +13,9 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
-use ShipMonk\PHPStan\DeadCode\Collector\EntrypointCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
+use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
@@ -113,12 +114,15 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     public function __construct(
         ClassHierarchy $classHierarchy,
         bool $reportTransitivelyDeadMethodAsSeparateError,
-        bool $trackMixedAccess
+        bool $trackMixedAccess,
+        BackwardCompatibilityChecker $checker
     )
     {
         $this->classHierarchy = $classHierarchy;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
         $this->trackMixedAccess = $trackMixedAccess;
+
+        $checker->check();
     }
 
     public function getNodeType(): string
@@ -145,11 +149,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
         $constFetchData = $node->get(ConstantFetchCollector::class);
-        $entrypointData = $node->get(EntrypointCollector::class);
+        $providedUsagesData = $node->get(ProvidedUsagesCollector::class);
 
         /** @var array<string, list<list<string>>> $memberUseData */
-        $memberUseData = array_merge_recursive($methodCallData, $entrypointData, $constFetchData);
-        unset($methodCallData, $entrypointData, $constFetchData);
+        $memberUseData = array_merge_recursive($methodCallData, $providedUsagesData, $constFetchData);
+        unset($methodCallData, $providedUsagesData, $constFetchData);
 
         foreach ($memberUseData as $usesPerFile) {
             foreach ($usesPerFile as $useStrings) {

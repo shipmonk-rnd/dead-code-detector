@@ -7,6 +7,7 @@ use LogicException;
 use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use ShipMonk\PHPStan\DeadCode\Collector\BufferedUsageCollector;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
@@ -16,8 +17,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Provider\MethodEntrypointProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\SimpleMethodEntrypointProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_keys;
@@ -27,6 +28,7 @@ use function implode;
 use function in_array;
 use function interface_exists;
 use function str_replace;
+use function trait_exists;
 
 class AllServicesInConfigTest extends PHPStanTestCase
 {
@@ -59,8 +61,9 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassLikeKind::class,
             Visibility::class,
             BlackMember::class,
-            MethodEntrypointProvider::class,
-            SimpleMethodEntrypointProvider::class,
+            MemberUsageProvider::class,
+            BufferedUsageCollector::class,
+            ReflectionBasedMemberUsageProvider::class,
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
         ];
@@ -98,7 +101,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $relativePath = str_replace(__DIR__ . '/../src/', '', $pathname);
         $classString = $namespace . str_replace('/', '\\', str_replace([__DIR__ . '/../src', '.php'], '', $relativePath));
 
-        if (!class_exists($classString) && !interface_exists($classString)) {
+        if (!class_exists($classString) && !interface_exists($classString) && !trait_exists($classString)) {
             throw new LogicException('Class ' . $classString . ' does not exist');
         }
 

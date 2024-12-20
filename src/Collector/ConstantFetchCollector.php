@@ -10,7 +10,6 @@ use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
-use PHPStan\Node\ClassMethodsNode;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
@@ -31,10 +30,7 @@ use function strpos;
 class ConstantFetchCollector implements Collector
 {
 
-    /**
-     * @var list<ClassConstantUsage>
-     */
-    private array $accessBuffer = [];
+    use BufferedUsageCollector;
 
     private ReflectionProvider $reflectionProvider;
 
@@ -70,20 +66,7 @@ class ConstantFetchCollector implements Collector
             $this->registerFunctionCall($node, $scope);
         }
 
-        if (!$scope->isInClass() || $node instanceof ClassMethodsNode) { // @phpstan-ignore-line ignore BC promise
-            $data = $this->accessBuffer;
-            $this->accessBuffer = [];
-
-            // collect data once per class to save memory & resultCache size
-            return $data === []
-                ? null
-                : array_map(
-                    static fn (ClassConstantUsage $fetch): string => $fetch->serialize(),
-                    $data,
-                );
-        }
-
-        return null;
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     private function registerFunctionCall(FuncCall $node, Scope $scope): void
@@ -125,7 +108,7 @@ class ConstantFetchCollector implements Collector
                     }
                 }
 
-                $this->accessBuffer[] = new ClassConstantUsage(
+                $this->usageBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName, true),
                 );
@@ -149,7 +132,7 @@ class ConstantFetchCollector implements Collector
 
         foreach ($constantNames as $constantName) {
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
-                $this->accessBuffer[] = new ClassConstantUsage(
+                $this->usageBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
                     new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
                 );

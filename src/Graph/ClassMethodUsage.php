@@ -5,11 +5,15 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 /**
  * @immutable
  */
-class ClassMethodUsage extends ClassMemberUsage
+final class ClassMethodUsage extends ClassMemberUsage
 {
 
     private ClassMethodRef $callee;
 
+    /**
+     * @param ClassMethodRef|null $origin The method where the call occurs
+     * @param ClassMethodRef $callee The method being called
+     */
     public function __construct(
         ?ClassMethodRef $origin,
         ClassMethodRef $callee
