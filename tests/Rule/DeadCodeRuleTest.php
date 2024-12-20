@@ -28,6 +28,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
@@ -74,7 +75,7 @@ class DeadCodeRuleTest extends RuleTestCase
         return [
             new ProvidedUsagesCollector(
                 $reflectionProvider,
-                $this->getMethodUsageProviders(),
+                $this->getMemberUsageProviders(),
             ),
             new ClassDefinitionCollector(),
             new MethodCallCollector($this->trackMixedAccess),
@@ -318,6 +319,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         // method providers
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
+        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', 8_00_00];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', 8_00_00];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', 8_00_00];
@@ -365,9 +367,10 @@ class DeadCodeRuleTest extends RuleTestCase
     /**
      * @return list<MemberUsageProvider>
      */
-    private function getMethodUsageProviders(): array
+    private function getMemberUsageProviders(): array
     {
         return [
+            new ReflectionUsageProvider(true),
             new class extends ReflectionBasedMemberUsageProvider
             {
 
