@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+
 /**
  * @immutable
  */
@@ -25,11 +27,11 @@ final class ClassMethodUsage extends ClassMemberUsage
     }
 
     /**
-     * @return ClassMemberRef::TYPE_METHOD
+     * @return MemberType::METHOD
      */
     public function getMemberType(): int
     {
-        return ClassMemberRef::TYPE_METHOD;
+        return MemberType::METHOD;
     }
 
     public function getMemberRef(): ClassMethodRef

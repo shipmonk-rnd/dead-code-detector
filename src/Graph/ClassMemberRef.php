@@ -8,9 +8,6 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 abstract class ClassMemberRef
 {
 
-    public const TYPE_METHOD = 1;
-    public const TYPE_CONSTANT = 2;
-
     private const UNKNOWN_CLASS = '*';
 
     private ?string $className;

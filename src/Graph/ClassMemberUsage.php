@@ -2,9 +2,12 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use JsonException;
 use LogicException;
-use function serialize;
-use function unserialize;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use function json_decode;
+use function json_encode;
+use const JSON_THROW_ON_ERROR;
 
 /**
  * @immutable
@@ -36,7 +39,7 @@ abstract class ClassMemberUsage
     }
 
     /**
-     * @return ClassMemberRef::TYPE_*
+     * @return MemberType::*
      */
     abstract public function getMemberType(): int;
 
@@ -52,22 +55,53 @@ abstract class ClassMemberUsage
 
     public function serialize(): string
     {
-        return serialize($this);
+        $origin = $this->getOrigin();
+        $memberRef = $this->getMemberRef();
+
+        $data = [
+            't' => $this->getMemberType(),
+            'o' => $origin === null
+                ? null
+                : [
+                    'c' => $origin->getClassName(),
+                    'm' => $origin->getMemberName(),
+                    'd' => $origin->isPossibleDescendant(),
+                ],
+            'm' => [
+                'c' => $memberRef->getClassName(),
+                'm' => $memberRef->getMemberName(),
+                'd' => $memberRef->isPossibleDescendant(),
+            ],
+        ];
+
+        try {
+            return json_encode($data, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new LogicException('Serialization failure: ' . $e->getMessage(), 0, $e);
+        }
     }
 
-    /**
-     * @return static
-     */
     public static function deserialize(string $data): self
     {
-        $result = unserialize($data);
-
-        if (!$result instanceof static) {
-            $self = static::class;
-            throw new LogicException("Invalid string for $self deserialization: $data");
+        try {
+            /** @var array{t: MemberType::*, o: array{c: string|null, m: string, d: bool}|null, m: array{c: string|null, m: string, d: bool}} $result */
+            $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
         }
 
-        return $result;
+        $memberType = $result['t'];
+        $origin = $result['o'] === null ? null : new ClassMethodRef($result['o']['c'], $result['o']['m'], $result['o']['d']);
+
+        return $memberType === MemberType::CONSTANT
+            ? new ClassConstantUsage(
+                $origin,
+                new ClassConstantRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
+            )
+            : new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
+            );
     }
 
 }

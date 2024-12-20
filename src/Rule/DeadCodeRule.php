@@ -17,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -102,7 +103,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * memberType => [memberName => ClassMemberUse[]]
      *
-     * @var array<ClassMemberRef::TYPE_*, array<string, list<ClassMemberUsage>>>
+     * @var array<MemberType::*, array<string, list<ClassMemberUsage>>>
      */
     private array $mixedMemberUses = [];
 
@@ -205,7 +206,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
                 $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
 
-                foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
+                foreach ($this->mixedMemberUses[MemberType::METHOD][$methodName] ?? [] as $originalCall) {
                     $memberUses[] = new ClassMethodUsage(
                         $originalCall->getOrigin(),
                         new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->isPossibleDescendant()),
@@ -219,7 +220,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
                 $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
 
-                foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
+                foreach ($this->mixedMemberUses[MemberType::CONSTANT][$constantName] ?? [] as $originalFetch) {
                     $memberUses[] = new ClassConstantUsage(
                         $originalFetch->getOrigin(),
                         new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->isPossibleDescendant()),
@@ -638,7 +639,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($this->mixedMemberUses as $memberType => $memberUses) {
             foreach ($memberUses as $memberName => $uses) {
                 $examplesShown++;
-                $memberTypeString = $memberType === ClassMemberRef::TYPE_METHOD ? 'method' : 'constant';
+                $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
                 $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
 
                 $exampleCaller = $this->getExampleCaller($uses);
