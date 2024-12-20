@@ -131,6 +131,10 @@ class ConstantFetchCollector implements Collector
             : [$node->name->toString()];
 
         foreach ($constantNames as $constantName) {
+            if ($constantName === 'class') {
+                continue; // reserved for class name fetching
+            }
+
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
                 $this->usageBuffer[] = new ClassConstantUsage(
                     $this->getCaller($scope),
