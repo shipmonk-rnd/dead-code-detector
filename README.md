@@ -35,6 +35,7 @@ includes:
 - `#[AsCommand]` attribute
 - `#[Required]` attribute
 - `#[Route]` attributes
+- `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
 
 #### Doctrine:
