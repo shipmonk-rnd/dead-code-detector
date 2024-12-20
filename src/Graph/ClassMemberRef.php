@@ -11,33 +11,38 @@ abstract class ClassMemberRef
     public const TYPE_METHOD = 1;
     public const TYPE_CONSTANT = 2;
 
-    public const UNKNOWN_CLASS = '*';
+    private const UNKNOWN_CLASS = '*';
 
-    public ?string $className;
+    private ?string $className;
 
-    public string $memberName;
+    private string $memberName;
 
-    public bool $possibleDescendant;
+    private bool $possibleDescendant;
 
-    /**
-     * @var self::TYPE_*
-     */
-    public int $memberType;
-
-    /**
-     * @param self::TYPE_* $memberType
-     */
     public function __construct(
         ?string $className,
         string $memberName,
-        bool $possibleDescendant,
-        int $memberType
+        bool $possibleDescendant
     )
     {
         $this->className = $className;
         $this->memberName = $memberName;
         $this->possibleDescendant = $possibleDescendant;
-        $this->memberType = $memberType;
+    }
+
+    public function getClassName(): ?string
+    {
+        return $this->className;
+    }
+
+    public function getMemberName(): string
+    {
+        return $this->memberName;
+    }
+
+    public function isPossibleDescendant(): bool
+    {
+        return $this->possibleDescendant;
     }
 
     public function toHumanString(): string

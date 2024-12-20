@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Error;
 
 use LogicException;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 
@@ -24,11 +25,11 @@ class BlackMember
         int $line
     )
     {
-        if ($member->className === null) {
+        if ($member->getClassName() === null) {
             throw new LogicException('Class name must be known');
         }
 
-        if ($member->possibleDescendant) {
+        if ($member->isPossibleDescendant()) {
             throw new LogicException('Using possible descendant does not make sense here');
         }
 
@@ -39,7 +40,7 @@ class BlackMember
 
     public function getErrorIdentifier(): string
     {
-        return $this->member->memberType === ClassMemberRef::TYPE_CONSTANT
+        return $this->member instanceof ClassConstantRef
             ? DeadCodeRule::IDENTIFIER_CONSTANT
             : DeadCodeRule::IDENTIFIER_METHOD;
     }

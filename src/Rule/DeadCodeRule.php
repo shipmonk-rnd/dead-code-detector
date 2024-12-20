@@ -160,8 +160,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($useStrings as $useString) {
                     $memberUse = ClassMemberUsage::deserialize($useString);
 
-                    if ($memberUse->getMemberRef()->className === null) {
-                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberRef()->memberName][] = $memberUse;
+                    if ($memberUse->getMemberRef()->getClassName() === null) {
+                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberRef()->getMemberName()][] = $memberUse;
                         continue;
                     }
 
@@ -208,7 +208,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_METHOD][$methodName] ?? [] as $originalCall) {
                     $memberUses[] = new ClassMethodUsage(
                         $originalCall->getOrigin(),
-                        new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->possibleDescendant),
+                        new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->isPossibleDescendant()),
                     );
                 }
             }
@@ -222,7 +222,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 foreach ($this->mixedMemberUses[ClassMemberRef::TYPE_CONSTANT][$constantName] ?? [] as $originalFetch) {
                     $memberUses[] = new ClassConstantUsage(
                         $originalFetch->getOrigin(),
-                        new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->possibleDescendant),
+                        new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->isPossibleDescendant()),
                     );
                 }
             }
@@ -359,12 +359,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function getAlternativeMemberKeys(ClassMemberRef $member): array
     {
-        if ($member->className === null) {
+        if ($member->getClassName() === null) {
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
         $memberKey = $member->toKey();
-        $possibleDescendant = $member->possibleDescendant;
+        $possibleDescendant = $member->isPossibleDescendant();
         $cacheKey = $memberKey . ';' . ($possibleDescendant ? '1' : '0');
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {
@@ -374,8 +374,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $result = [$memberKey];
 
         if ($possibleDescendant) {
-            foreach ($this->classHierarchy->getClassDescendants($member->className) as $descendantName) {
-                $result[] = $member::buildKey($descendantName, $member->memberName);
+            foreach ($this->classHierarchy->getClassDescendants($member->getClassName()) as $descendantName) {
+                $result[] = $member::buildKey($descendantName, $member->getMemberName());
             }
         }
 
@@ -585,8 +585,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function isConsideredWhite(ClassMemberUsage $memberUsage): bool
     {
         return $memberUsage->getOrigin() === null
-            || $this->isAnonymousClass($memberUsage->getOrigin()->className)
-            || (array_key_exists($memberUsage->getOrigin()->memberName, self::UNSUPPORTED_MAGIC_METHODS));
+            || $this->isAnonymousClass($memberUsage->getOrigin()->getClassName())
+            || (array_key_exists($memberUsage->getOrigin()->getMemberName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
 
     private function isNeverReportedAsDead(BlackMember $blackMember): bool
@@ -595,8 +595,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return false;
         }
 
-        $typeName = $blackMember->member->className;
-        $memberName = $blackMember->member->memberName;
+        $typeName = $blackMember->member->getClassName();
+        $memberName = $blackMember->member->getMemberName();
 
         if ($typeName === null) {
             throw new LogicException('Ensured by BlackMember constructor');

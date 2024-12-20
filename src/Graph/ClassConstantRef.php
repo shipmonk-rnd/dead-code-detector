@@ -14,7 +14,7 @@ final class ClassConstantRef extends ClassMemberRef
         bool $possibleDescendant
     )
     {
-        parent::__construct($className, $constantName, $possibleDescendant, ClassMemberRef::TYPE_CONSTANT);
+        parent::__construct($className, $constantName, $possibleDescendant);
     }
 
     public static function buildKey(string $typeName, string $memberName): string
