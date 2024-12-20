@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+
 /**
  * @immutable
  */
@@ -24,11 +26,11 @@ final class ClassConstantUsage extends ClassMemberUsage
     }
 
     /**
-     * @return ClassMemberRef::TYPE_CONSTANT
+     * @return MemberType::CONSTANT
      */
     public function getMemberType(): int
     {
-        return ClassMemberRef::TYPE_CONSTANT;
+        return MemberType::CONSTANT;
     }
 
     public function getMemberRef(): ClassConstantRef
