@@ -39,19 +39,6 @@ class SymfonyUsageProvider implements MemberUsageProvider
         }
     }
 
-    private function fillDicClasses(ServiceMapFactory $serviceMapFactory): void
-    {
-        foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
-            $dicClass = $service->getClass();
-
-            if ($dicClass === null) {
-                continue;
-            }
-
-            $this->dicClasses[$dicClass] = true;
-        }
-    }
-
     public function getUsages(Node $node, Scope $scope): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -81,28 +68,80 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    private function shouldMarkAsUsed(ReflectionMethod $method): bool
+    protected function shouldMarkAsUsed(ReflectionMethod $method): bool
     {
-        $methodName = $method->getName();
+        return $this->isEventSubscriberMethod($method)
+            || $this->isBundleConstructor($method)
+            || $this->isEventListenerMethodWithAsEventListenerAttribute($method)
+            || $this->isAutowiredWithRequiredAttribute($method)
+            || $this->isConstructorWithAsCommandAttribute($method)
+            || $this->isConstructorWithAsControllerAttribute($method)
+            || $this->isMethodWithRouteAttribute($method)
+            || $this->isProbablySymfonyListener($method);
+    }
+
+    protected function fillDicClasses(ServiceMapFactory $serviceMapFactory): void
+    {
+        foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
+            $dicClass = $service->getClass();
+
+            if ($dicClass === null) {
+                continue;
+            }
+
+            $this->dicClasses[$dicClass] = true;
+        }
+    }
+
+    protected function isEventSubscriberMethod(ReflectionMethod $method): bool
+    {
+        // this is simplification, we should deduce that from AST of getSubscribedEvents() method
+        return $method->getDeclaringClass()->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface');
+    }
+
+    protected function isBundleConstructor(ReflectionMethod $method): bool
+    {
+        return $method->isConstructor() && $method->getDeclaringClass()->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle');
+    }
+
+    protected function isAutowiredWithRequiredAttribute(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required');
+    }
+
+    protected function isEventListenerMethodWithAsEventListenerAttribute(ReflectionMethod $method): bool
+    {
         $class = $method->getDeclaringClass();
 
-        return $class->implementsInterface('Symfony\Component\EventDispatcher\EventSubscriberInterface')
-            || ($class->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle') && $method->isConstructor())
-            || $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
-            || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
-            || $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required')
-            || ($this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand') && $method->isConstructor())
-            || ($this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController') && $method->isConstructor())
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->isProbablySymfonyListener($methodName);
+        return $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
+            || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
+    }
+
+    protected function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+        return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
+    }
+
+    protected function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+        return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
+    }
+
+    protected function isMethodWithRouteAttribute(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
+            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
     }
 
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
-    private function isProbablySymfonyListener(string $methodName): bool
+    protected function isProbablySymfonyListener(ReflectionMethod $method): bool
     {
+        $methodName = $method->getName();
+
         return $methodName === 'onKernelResponse'
             || $methodName === 'onKernelException'
             || $methodName === 'onKernelRequest'
@@ -116,7 +155,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
      * @param ReflectionClass<object>|ReflectionMethod $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
-    private function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
+    protected function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
     {
         if (PHP_VERSION_ID < 8_00_00) {
             return false;
@@ -143,13 +182,13 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/http-kernel');
     }
 
-    private function createUsage(ExtendedMethodReflection $getNativeMethod): ClassMethodUsage
+    private function createUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
     {
         return new ClassMethodUsage(
             null,
             new ClassMethodRef(
-                $getNativeMethod->getDeclaringClass()->getName(),
-                $getNativeMethod->getName(),
+                $methodReflection->getDeclaringClass()->getName(),
+                $methodReflection->getName(),
                 false,
             ),
         );

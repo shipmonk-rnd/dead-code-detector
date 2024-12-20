@@ -51,7 +51,12 @@ class OldListenerHeuristics {
 class MySubscriber implements \Doctrine\Common\EventSubscriber {
 
     public function getSubscribedEvents() {
-        return [];
+        return [
+            'someMethod',
+        ];
     }
+
+    public function someMethod(): void {}
+    public function someMethod2(): void {}
 
 }
