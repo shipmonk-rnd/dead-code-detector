@@ -81,7 +81,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    public function shouldMarkAsUsed(ReflectionMethod $method): bool
+    private function shouldMarkAsUsed(ReflectionMethod $method): bool
     {
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();

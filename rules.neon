@@ -84,6 +84,11 @@ services:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
             trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
 
+    -
+        class: ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker
+        arguments:
+            servicesWithOldTag: tagged(shipmonk.deadCode.entrypointProvider)
+
 
 parameters:
     shipmonkDeadCode:

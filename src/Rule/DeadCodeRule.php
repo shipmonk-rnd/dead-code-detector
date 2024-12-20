@@ -15,6 +15,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
+use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
@@ -113,12 +114,15 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     public function __construct(
         ClassHierarchy $classHierarchy,
         bool $reportTransitivelyDeadMethodAsSeparateError,
-        bool $trackMixedAccess
+        bool $trackMixedAccess,
+        BackwardCompatibilityChecker $checker
     )
     {
         $this->classHierarchy = $classHierarchy;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
         $this->trackMixedAccess = $trackMixedAccess;
+
+        $checker->check();
     }
 
     public function getNodeType(): string

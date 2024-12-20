@@ -19,6 +19,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
+use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
@@ -56,6 +57,7 @@ class DeadCodeRuleTest extends RuleTestCase
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
                 true,
+                new BackwardCompatibilityChecker([]),
             );
         }
 
