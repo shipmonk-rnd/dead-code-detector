@@ -51,6 +51,10 @@ class SomeSubscriber implements EventSubscriberInterface
     {
     }
 
+    public function onNonsense(): void
+    {
+    }
+
     public static function getSubscribedEvents(): array
     {
         return [
@@ -62,6 +66,12 @@ class SomeSubscriber implements EventSubscriberInterface
 
 #[AsController]
 class HelloController
+{
+    public function __construct() {}
+}
+
+#[AsCommand('name')]
+class HelloCommand
 {
     public function __construct() {}
 }

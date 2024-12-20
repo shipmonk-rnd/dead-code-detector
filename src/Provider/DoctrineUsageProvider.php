@@ -26,24 +26,35 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
 
-        return $class->implementsInterface('Doctrine\Common\EventSubscriber')
-            || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostLoad')
+        return $this->isEventSubscriberMethod($method)
+            || $this->isLifecycleEventMethod($method)
+            || $this->isEntityRepositoryConstructor($class, $method)
+            || $this->isPartOfAsEntityListener($class, $methodName)
+            || $this->isProbablyDoctrineListener($methodName);
+    }
+
+    protected function isEventSubscriberMethod(ReflectionMethod $method): bool
+    {
+        // this is simplification, we should deduce that from AST of getSubscribedEvents() method
+        return $method->getDeclaringClass()->implementsInterface('Doctrine\Common\EventSubscriber');
+    }
+
+    protected function isLifecycleEventMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostLoad')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostPersist')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostUpdate')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreFlush')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PrePersist')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreRemove')
-            || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreUpdate')
-            || $this->isEntityRepositoryConstructor($class, $method)
-            || $this->isPartOfAsEntityListener($class, $methodName)
-            || $this->isProbablyDoctrineListener($methodName);
+            || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreUpdate');
     }
 
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      * - see Doctrine\ORM\Events::*
      */
-    private function isProbablyDoctrineListener(string $methodName): bool
+    protected function isProbablyDoctrineListener(string $methodName): bool
     {
         return $methodName === 'preRemove'
             || $methodName === 'postRemove'
@@ -60,7 +71,7 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
             || $methodName === 'onClear';
     }
 
-    private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    protected function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
     {
         if (PHP_VERSION_ID < 8_00_00) {
             return false;
@@ -72,7 +83,7 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClass<object> $class
      */
-    private function isPartOfAsEntityListener(ReflectionClass $class, string $methodName): bool
+    protected function isPartOfAsEntityListener(ReflectionClass $class, string $methodName): bool
     {
         if (PHP_VERSION_ID < 8_00_00) {
             return false;
@@ -92,7 +103,7 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClass<object> $class
      */
-    private function isEntityRepositoryConstructor(ReflectionClass $class, ReflectionMethod $method): bool
+    protected function isEntityRepositoryConstructor(ReflectionClass $class, ReflectionMethod $method): bool
     {
         if (!$method->isConstructor()) {
             return false;
