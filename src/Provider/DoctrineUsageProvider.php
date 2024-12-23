@@ -3,11 +3,19 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use PhpParser\Node;
+use PhpParser\Node\Stmt\Return_;
+use PHPStan\Analyser\Scope;
+use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\MethodReflection;
 use ReflectionClass;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use const PHP_VERSION_ID;
 
-class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
+class DoctrineUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -17,26 +25,110 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    public function getUsages(Node $node, Scope $scope): array
     {
         if (!$this->enabled) {
-            return false;
+            return [];
         }
 
+        $usages = [];
+
+        if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesFromReflection($node),
+            ];
+        }
+
+        if ($node instanceof Return_) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesOfEventSubscriber($node, $scope),
+            ];
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromReflection(InClassNode $node): array
+    {
+        $classReflection = $node->getClassReflection();
+        $nativeReflection = $classReflection->getNativeReflection();
+
+        $usages = [];
+
+        foreach ($nativeReflection->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
+                continue;
+            }
+
+            if ($this->shouldMarkMethodAsUsed($method)) {
+                $usages[] = $this->createMethodUsage($classReflection->getNativeMethod($method->getName()));
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesOfEventSubscriber(Return_ $node, Scope $scope): array
+    {
+        if ($node->expr === null) {
+            return [];
+        }
+
+        if (!$scope->isInClass()) {
+            return [];
+        }
+
+        if (!$scope->getFunction() instanceof MethodReflection) {
+            return [];
+        }
+
+        if ($scope->getFunction()->getName() !== 'getSubscribedEvents') {
+            return [];
+        }
+
+        if (!$scope->getClassReflection()->implementsInterface('Doctrine\Common\EventSubscriber')) {
+            return [];
+        }
+
+        $className = $scope->getClassReflection()->getName();
+
+        $usages = [];
+
+        foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
+            foreach ($rootArray->getValuesArray()->getValueTypes() as $eventConfig) {
+                foreach ($eventConfig->getConstantStrings() as $subscriberMethodString) {
+                    $usages[] = new ClassMethodUsage(
+                        null,
+                        new ClassMethodRef(
+                            $className,
+                            $subscriberMethodString->getValue(),
+                            true,
+                        ),
+                    );
+                }
+            }
+        }
+
+        return $usages;
+    }
+
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    {
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
 
-        return $this->isEventSubscriberMethod($method)
-            || $this->isLifecycleEventMethod($method)
+        return $this->isLifecycleEventMethod($method)
             || $this->isEntityRepositoryConstructor($class, $method)
             || $this->isPartOfAsEntityListener($class, $methodName)
             || $this->isProbablyDoctrineListener($methodName);
-    }
-
-    protected function isEventSubscriberMethod(ReflectionMethod $method): bool
-    {
-        // this is simplification, we should deduce that from AST of getSubscribedEvents() method
-        return $method->getDeclaringClass()->implementsInterface('Doctrine\Common\EventSubscriber');
     }
 
     protected function isLifecycleEventMethod(ReflectionMethod $method): bool
@@ -117,6 +209,18 @@ class DoctrineUsageProvider extends ReflectionBasedMemberUsageProvider
         return InstalledVersions::isInstalled('doctrine/orm')
             || InstalledVersions::isInstalled('doctrine/event-manager')
             || InstalledVersions::isInstalled('doctrine/doctrine-bundle');
+    }
+
+    private function createMethodUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
+    {
+        return new ClassMethodUsage(
+            null,
+            new ClassMethodRef(
+                $methodReflection->getDeclaringClass()->getName(),
+                $methodReflection->getName(),
+                false,
+            ),
+        );
     }
 
 }

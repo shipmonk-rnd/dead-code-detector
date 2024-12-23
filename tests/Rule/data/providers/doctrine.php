@@ -57,6 +57,6 @@ class MySubscriber implements \Doctrine\Common\EventSubscriber {
     }
 
     public function someMethod(): void {}
-    public function someMethod2(): void {}
+    public function someMethod2(): void {} // error: Unused Doctrine\MySubscriber::someMethod2
 
 }
