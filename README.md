@@ -28,7 +28,8 @@ includes:
 ## Supported libraries:
 
 #### Symfony:
-- **constructor calls for DIC services!**
+- **Calls made by DIC over your services!**
+   - constructors, calls, factory methods
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
 - `#[AsEventListener]` attribute
 - `#[AsController]` attribute
