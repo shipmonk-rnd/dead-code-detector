@@ -5,8 +5,9 @@
             <call method="calledViaDic">
             </call>
             <factory class="Symfony\DicClass1" method="calledViaDicFactory"/>
+            <factory service="some.id2" method="calledViaDicFactory"/>
         </service>
-        <service id="Symfony\DicClass2" class="Symfony\DicClass2" public="true" autowire="true" autoconfigure="true">
+        <service id="some.id2" class="Symfony\DicClass2" public="true" autowire="true" autoconfigure="true">
         </service>
     </services>
 </container>

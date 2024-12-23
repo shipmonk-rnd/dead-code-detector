@@ -211,6 +211,8 @@ class SymfonyUsageProvider implements MemberUsageProvider
             throw new LogicException(sprintf('XML %s does not contain container.services.service structure', $containerXmlPath));
         }
 
+        $serviceMap = $this->buildXmlServiceMap($xml->services->service);
+
         foreach ($xml->services->service as $serviceDefinition) {
             /** @var SimpleXMLElement $serviceAttributes */
             $serviceAttributes = $serviceDefinition->attributes();
@@ -237,16 +239,43 @@ class SymfonyUsageProvider implements MemberUsageProvider
             foreach ($serviceDefinition->factory ?? [] as $factoryDefinition) {
                 /** @var SimpleXMLElement $factoryAttributes */
                 $factoryAttributes = $factoryDefinition->attributes();
-                $class = $factoryAttributes->class !== null ? (string) $factoryAttributes->class : null;
-                $method = $factoryAttributes->method !== null ? (string) $factoryAttributes->method : null;
+                $factoryClass = $factoryAttributes->class !== null ? (string) $factoryAttributes->class : null;
+                $factoryService = $factoryAttributes->service !== null ? (string) $factoryAttributes->service : null;
+                $factoryMethod = $factoryAttributes->method !== null ? (string) $factoryAttributes->method : null;
 
-                if ($class === null || $method === null) {
-                    continue;
+                if ($factoryClass !== null && $factoryMethod !== null) {
+                    $this->dicCalls[$factoryClass][$factoryMethod] = true;
                 }
 
-                $this->dicCalls[$class][$method] = true;
+                if ($factoryService !== null && $factoryMethod !== null && isset($serviceMap[$factoryService])) {
+                    $factoryServiceClass = $serviceMap[$factoryService];
+                    $this->dicCalls[$factoryServiceClass][$factoryMethod] = true;
+                }
             }
         }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function buildXmlServiceMap(SimpleXMLElement $serviceDefinitions): array
+    {
+        $serviceMap = [];
+
+        foreach ($serviceDefinitions as $serviceDefinition) {
+            /** @var SimpleXMLElement $serviceAttributes */
+            $serviceAttributes = $serviceDefinition->attributes();
+            $id = isset($serviceAttributes->id) ? (string) $serviceAttributes->id : null;
+            $class = isset($serviceAttributes->class) ? (string) $serviceAttributes->class : null;
+
+            if ($id === null || $class === null) {
+                continue;
+            }
+
+            $serviceMap[$id] = $class;
+        }
+
+        return $serviceMap;
     }
 
     protected function isBundleConstructor(ReflectionMethod $method): bool

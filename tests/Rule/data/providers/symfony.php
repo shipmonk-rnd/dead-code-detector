@@ -99,4 +99,5 @@ class DicClass1 extends DicClassParent {
 
 class DicClass2 {
     public function __construct() {}
+    public function calledViaDicFactory(): void {}
 }
