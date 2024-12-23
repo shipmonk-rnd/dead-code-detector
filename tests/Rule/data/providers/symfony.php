@@ -101,3 +101,10 @@ class DicClass2 {
     public function __construct() {}
     public function calledViaDicFactory(): void {}
 }
+
+class DicClass3 {
+    public function __construct() {}
+    public function create(): self {
+        return new self();
+    }
+}

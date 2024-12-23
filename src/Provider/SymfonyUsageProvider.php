@@ -217,12 +217,13 @@ class SymfonyUsageProvider implements MemberUsageProvider
             /** @var SimpleXMLElement $serviceAttributes */
             $serviceAttributes = $serviceDefinition->attributes();
             $class = isset($serviceAttributes->class) ? (string) $serviceAttributes->class : null;
+            $constructor = isset($serviceAttributes->constructor) ? (string) $serviceAttributes->constructor : '__construct';
 
             if ($class === null) {
                 continue;
             }
 
-            $this->dicCalls[$class]['__construct'] = true;
+            $this->dicCalls[$class][$constructor] = true;
 
             foreach ($serviceDefinition->call ?? [] as $callDefinition) {
                 /** @var SimpleXMLElement $callAttributes */
