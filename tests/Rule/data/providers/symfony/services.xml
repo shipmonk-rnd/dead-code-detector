@@ -4,6 +4,7 @@
         <service id="Symfony\DicClass1" class="Symfony\DicClass1" public="true" autowire="true" autoconfigure="true">
             <call method="calledViaDic">
             </call>
+            <factory class="Symfony\DicClass1" method="calledViaDicFactory"/>
         </service>
         <service id="Symfony\DicClass2" class="Symfony\DicClass2" public="true" autowire="true" autoconfigure="true">
         </service>

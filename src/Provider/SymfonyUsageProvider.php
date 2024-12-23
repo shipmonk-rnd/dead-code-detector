@@ -30,11 +30,11 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private bool $enabled;
 
     /**
-     * class => methods[]
+     * class => [method => true]
      *
      * @var array<string, array<string, true>>
      */
-    private array $dicClasses = [];
+    private array $dicCalls = [];
 
     public function __construct(
         ?PHPStanSymfonyConfiguration $symfonyConfiguration,
@@ -166,7 +166,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if (isset($this->dicClasses[$className][$method->getName()])) {
+            if (isset($this->dicCalls[$className][$method->getName()])) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
 
@@ -220,13 +220,9 @@ class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            $this->dicClasses[$class]['__construct'] = true;
+            $this->dicCalls[$class]['__construct'] = true;
 
-            if (!isset($serviceDefinition->call)) {
-                continue;
-            }
-
-            foreach ($serviceDefinition->call as $callDefinition) {
+            foreach ($serviceDefinition->call ?? [] as $callDefinition) {
                 /** @var SimpleXMLElement $callAttributes */
                 $callAttributes = $callDefinition->attributes();
                 $method = $callAttributes->method !== null ? (string) $callAttributes->method : null;
@@ -235,7 +231,20 @@ class SymfonyUsageProvider implements MemberUsageProvider
                     continue;
                 }
 
-                $this->dicClasses[$class][$method] = true;
+                $this->dicCalls[$class][$method] = true;
+            }
+
+            foreach ($serviceDefinition->factory ?? [] as $factoryDefinition) {
+                /** @var SimpleXMLElement $factoryAttributes */
+                $factoryAttributes = $factoryDefinition->attributes();
+                $class = $factoryAttributes->class !== null ? (string) $factoryAttributes->class : null;
+                $method = $factoryAttributes->method !== null ? (string) $factoryAttributes->method : null;
+
+                if ($class === null || $method === null) {
+                    continue;
+                }
+
+                $this->dicCalls[$class][$method] = true;
             }
         }
     }
