@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<container xmlns="http://symfony.com/schema/dic/services" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services https://symfony.com/schema/dic/services/services-1.0.xsd">
+    <services>
+        <service id="Symfony\DicClass1" class="Symfony\DicClass1" public="true" autowire="true" autoconfigure="true">
+            <call method="calledViaDic">
+            </call>
+        </service>
+        <service id="Symfony\DicClass2" class="Symfony\DicClass2" public="true" autowire="true" autoconfigure="true">
+        </service>
+    </services>
+</container>

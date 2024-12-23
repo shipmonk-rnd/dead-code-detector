@@ -93,7 +93,7 @@ class DicClassParent { // not present in DIC, but ctor is not dead
 }
 
 class DicClass1 extends DicClassParent {
-
+    public function calledViaDic(): void {}
 }
 
 class DicClass2 {

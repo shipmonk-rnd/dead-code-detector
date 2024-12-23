@@ -11,9 +11,7 @@ use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
-use PHPStan\Symfony\ServiceDefinition;
-use PHPStan\Symfony\ServiceMap;
-use PHPStan\Symfony\ServiceMapFactory;
+use PHPStan\Symfony\Configuration;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -410,7 +408,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         if ($cache === null) {
             $cache = new SymfonyUsageProvider(
-                $this->createServiceMapFactoryMock(),
+                new Configuration(['containerXmlPath' => __DIR__ . '/data/providers/symfony/services.xml']), // @phpstan-ignore phpstanApi.constructor
                 true,
             );
         }
@@ -432,27 +430,6 @@ class DeadCodeRuleTest extends RuleTestCase
                 },
             );
         return $mock;
-    }
-
-    private function createServiceMapFactoryMock(): ServiceMapFactory
-    {
-        $service1Mock = $this->createMock(ServiceDefinition::class);
-        $service1Mock->method('getClass')
-            ->willReturn('Symfony\DicClass1');
-
-        $service2Mock = $this->createMock(ServiceDefinition::class);
-        $service2Mock->method('getClass')
-            ->willReturn('Symfony\DicClass2');
-
-        $serviceMapMock = $this->createMock(ServiceMap::class);
-        $serviceMapMock->method('getServices')
-            ->willReturn([$service1Mock, $service2Mock]);
-
-        $factoryMock = $this->createMock(ServiceMapFactory::class); // @phpstan-ignore phpstanApi.classConstant
-        $factoryMock->method('create')
-            ->willReturn($serviceMapMock);
-
-        return $factoryMock;
     }
 
     public function gatherAnalyserErrors(array $files): array

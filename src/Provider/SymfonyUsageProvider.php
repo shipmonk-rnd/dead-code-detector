@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
@@ -10,13 +11,17 @@ use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
-use PHPStan\Symfony\ServiceMapFactory;
+use PHPStan\Symfony\Configuration as PHPStanSymfonyConfiguration;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use SimpleXMLElement;
+use function file_get_contents;
+use function simplexml_load_string;
+use function sprintf;
 use const PHP_VERSION_ID;
 
 class SymfonyUsageProvider implements MemberUsageProvider
@@ -25,19 +30,21 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private bool $enabled;
 
     /**
-     * @var array<string, true>
+     * class => methods[]
+     *
+     * @var array<string, array<string, true>>
      */
     private array $dicClasses = [];
 
     public function __construct(
-        ?ServiceMapFactory $serviceMapFactory,
+        ?PHPStanSymfonyConfiguration $symfonyConfiguration,
         ?bool $enabled
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
 
-        if ($serviceMapFactory !== null) {
-            $this->fillDicClasses($serviceMapFactory);
+        if ($symfonyConfiguration !== null && $symfonyConfiguration->getContainerXmlPath() !== null) { // @phpstan-ignore phpstanApi.method
+            $this->fillDicClasses($symfonyConfiguration->getContainerXmlPath()); // @phpstan-ignore phpstanApi.method
         }
     }
 
@@ -142,7 +149,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
-        // phpcs:enable // phpcs:disable Squiz.PHP.CommentedOutCode.Found
+        // phpcs:disable Squiz.PHP.CommentedOutCode.Found
 
         return $usages;
     }
@@ -159,7 +166,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if ($method->isConstructor() && isset($this->dicClasses[$className])) {
+            if (isset($this->dicClasses[$className][$method->getName()])) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
             }
 
@@ -186,16 +193,50 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->isProbablySymfonyListener($method);
     }
 
-    protected function fillDicClasses(ServiceMapFactory $serviceMapFactory): void
+    protected function fillDicClasses(string $containerXmlPath): void
     {
-        foreach ($serviceMapFactory->create()->getServices() as $service) { // @phpstan-ignore phpstanApi.method
-            $dicClass = $service->getClass();
+        $fileContents = file_get_contents($containerXmlPath);
 
-            if ($dicClass === null) {
+        if ($fileContents === false) {
+            throw new LogicException(sprintf('Container %s does not exist', $containerXmlPath));
+        }
+
+        $xml = @simplexml_load_string($fileContents);
+
+        if ($xml === false) {
+            throw new LogicException(sprintf('Container %s cannot be parsed', $containerXmlPath));
+        }
+
+        if (!isset($xml->services->service)) {
+            throw new LogicException(sprintf('XML %s does not contain container.services.service structure', $containerXmlPath));
+        }
+
+        foreach ($xml->services->service as $serviceDefinition) {
+            /** @var SimpleXMLElement $serviceAttributes */
+            $serviceAttributes = $serviceDefinition->attributes();
+            $class = isset($serviceAttributes->class) ? (string) $serviceAttributes->class : null;
+
+            if ($class === null) {
                 continue;
             }
 
-            $this->dicClasses[$dicClass] = true;
+            $this->dicClasses[$class]['__construct'] = true;
+
+            if (!isset($serviceDefinition->call)) {
+                continue;
+            }
+
+            foreach ($serviceDefinition->call as $callDefinition) {
+                /** @var SimpleXMLElement $callAttributes */
+                $callAttributes = $callDefinition->attributes();
+                $method = $callAttributes->method !== null ? (string) $callAttributes->method : null;
+
+                if ($method === null) {
+                    continue;
+                }
+
+                $this->dicClasses[$class][$method] = true;
+            }
         }
     }
 
