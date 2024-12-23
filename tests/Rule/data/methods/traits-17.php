@@ -3,22 +3,22 @@
 namespace DeadTrait17;
 
 trait A {
-    public function collission1() {} // error: Unused DeadTrait17\A::collission1
-    public function collission2() {}
+    public function collision1() {} // error: Unused DeadTrait17\A::collision1
+    public function collision2() {}
 }
 
 trait B {
-    public function collission1() {}
-    public function collission2() {} // error: Unused DeadTrait17\B::collission2
+    public function collision1() {}
+    public function collision2() {} // error: Unused DeadTrait17\B::collision2
 }
 
 class AliasedTalker {
     use A, B {
-        B::collission1 insteadof A;
-        A::collission2 insteadof B;
+        B::collision1 insteadof A;
+        A::collision2 insteadof B;
     }
 }
 
 $o = new AliasedTalker();
-$o->collission1();
-$o->collission2();
+$o->collision1();
+$o->collision2();
