@@ -80,8 +80,7 @@
                     intval=>null,
                     strval=>null,
                     settype=>null,
-                    exit=>null,
-                    reset=>array_key_first
+                    exit=>null
                 "
             />
         </properties>

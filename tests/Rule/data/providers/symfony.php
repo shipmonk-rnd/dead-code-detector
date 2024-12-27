@@ -108,3 +108,7 @@ class DicClass3 {
         return new self();
     }
 }
+
+class Sftp {
+    const RETRY_LIMIT = 3; // used in yaml via !php/const
+}

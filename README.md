@@ -38,6 +38,7 @@ includes:
 - `#[Route]` attributes
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
+- `!php const` references in `config` yamls
 
 #### Doctrine:
 - `#[AsEntityListener]` attribute
