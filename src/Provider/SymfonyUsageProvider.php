@@ -28,15 +28,18 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use SimpleXMLElement;
 use SplFileInfo;
 use UnexpectedValueException;
-use function array_key_first;
+use function array_filter;
+use function array_keys;
 use function count;
 use function explode;
 use function file_get_contents;
 use function in_array;
 use function is_dir;
 use function preg_match_all;
+use function reset;
 use function simplexml_load_string;
 use function sprintf;
+use function strpos;
 use const PHP_VERSION_ID;
 
 class SymfonyUsageProvider implements MemberUsageProvider
@@ -405,16 +408,19 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     private function autodetectConfigDir(): ?string
     {
-        $classLoaders = ClassLoader::getRegisteredLoaders();
+        $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
+            return strpos($vendorDir, 'phar://') === false;
+        });
 
-        if (count($classLoaders) !== 1) {
+        if (count($vendorDirs) !== 1) {
             return null;
         }
 
-        $vendorDir = array_key_first($classLoaders);
+        $vendorDir = reset($vendorDirs);
+        $configDir = $vendorDir . '/../config';
 
-        if (is_dir($vendorDir . '/../config')) {
-            return $vendorDir . '/config';
+        if (is_dir($configDir)) {
+            return $configDir;
         }
 
         return null;
