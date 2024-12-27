@@ -397,23 +397,12 @@ class DeadCodeRuleTest extends RuleTestCase
                 self::getContainer()->getByType(ReflectionProvider::class),
                 true,
             ),
-            $this->createSymfonyUsageProvider(),
-        ];
-    }
-
-    private function createSymfonyUsageProvider(): SymfonyUsageProvider
-    {
-        /** @var SymfonyUsageProvider|null $cache */
-        static $cache = null;
-
-        if ($cache === null) {
-            $cache = new SymfonyUsageProvider(
+            new SymfonyUsageProvider(
                 new Configuration(['containerXmlPath' => __DIR__ . '/data/providers/symfony/services.xml']), // @phpstan-ignore phpstanApi.constructor
                 true,
-            );
-        }
-
-        return $cache;
+                __DIR__ . '/data/providers/symfony/',
+            ),
+        ];
     }
 
     private function createPhpStanContainerMock(): Container

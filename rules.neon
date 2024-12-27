@@ -112,6 +112,7 @@ parameters:
                 enabled: null
             symfony:
                 enabled: null
+                configDir: null
             doctrine:
                 enabled: null
             nette:
@@ -136,6 +137,7 @@ parametersSchema:
             ])
             symfony: structure([
                 enabled: schema(bool(), nullable())
+                configDir: schema(string(), nullable())
             ])
             doctrine: structure([
                 enabled: schema(bool(), nullable())

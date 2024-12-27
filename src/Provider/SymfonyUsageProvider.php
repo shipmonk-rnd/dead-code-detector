@@ -2,24 +2,39 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use Composer\Autoload\ClassLoader;
 use Composer\InstalledVersions;
+use FilesystemIterator;
 use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Symfony\Configuration as PHPStanSymfonyConfiguration;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use SimpleXMLElement;
+use SplFileInfo;
+use UnexpectedValueException;
+use function array_key_first;
+use function count;
+use function explode;
 use function file_get_contents;
+use function in_array;
+use function is_dir;
+use function preg_match_all;
 use function simplexml_load_string;
 use function sprintf;
 use const PHP_VERSION_ID;
@@ -36,15 +51,28 @@ class SymfonyUsageProvider implements MemberUsageProvider
      */
     private array $dicCalls = [];
 
+    /**
+     * class => [constant]
+     *
+     * @var array<string, list<string>>
+     */
+    private array $dicConstants = [];
+
     public function __construct(
         ?PHPStanSymfonyConfiguration $symfonyConfiguration,
-        ?bool $enabled
+        ?bool $enabled,
+        ?string $configDir
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
+        $resolvedConfigDir = $configDir ?? $this->autodetectConfigDir();
 
-        if ($symfonyConfiguration !== null && $symfonyConfiguration->getContainerXmlPath() !== null) { // @phpstan-ignore phpstanApi.method
+        if ($this->enabled && $symfonyConfiguration !== null && $symfonyConfiguration->getContainerXmlPath() !== null) { // @phpstan-ignore phpstanApi.method
             $this->fillDicClasses($symfonyConfiguration->getContainerXmlPath()); // @phpstan-ignore phpstanApi.method
+        }
+
+        if ($this->enabled && $resolvedConfigDir !== null) {
+            $this->fillDicConstants($resolvedConfigDir);
         }
     }
 
@@ -59,7 +87,8 @@ class SymfonyUsageProvider implements MemberUsageProvider
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [
                 ...$usages,
-                ...$this->getUsagesFromReflection($node),
+                ...$this->getMethodUsagesFromReflection($node),
+                ...$this->getConstantUsages($node->getClassReflection()),
             ];
         }
 
@@ -157,7 +186,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    private function getUsagesFromReflection(InClassNode $node): array
+    private function getMethodUsagesFromReflection(InClassNode $node): array
     {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
@@ -372,6 +401,92 @@ class SymfonyUsageProvider implements MemberUsageProvider
                 false,
             ),
         );
+    }
+
+    private function autodetectConfigDir(): ?string
+    {
+        $classLoaders = ClassLoader::getRegisteredLoaders();
+
+        if (count($classLoaders) !== 1) {
+            return null;
+        }
+
+        $vendorDir = array_key_first($classLoaders);
+
+        if (is_dir($vendorDir . '/../config')) {
+            return $vendorDir . '/config';
+        }
+
+        return null;
+    }
+
+    private function fillDicConstants(string $configDir): void
+    {
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($configDir, FilesystemIterator::SKIP_DOTS),
+            );
+        } catch (UnexpectedValueException $e) {
+            throw new LogicException("Provided config path '$configDir' is not a directory", 0, $e);
+        }
+
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (
+                $file->isFile()
+                && in_array($file->getExtension(), ['yaml', 'yml'], true)
+                && $file->getRealPath() !== false
+            ) {
+                $this->extractYamlConstants($file->getRealPath());
+            }
+        }
+    }
+
+    private function extractYamlConstants(string $yamlFile): void
+    {
+        $dicFileContents = file_get_contents($yamlFile);
+
+        if ($dicFileContents === false) {
+            return;
+        }
+
+        $nameRegex = '[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*'; // https://www.php.net/manual/en/language.oop5.basic.php
+
+        preg_match_all(
+            "~!php/const ($nameRegex(?:\\\\$nameRegex)+::$nameRegex)~",
+            $dicFileContents,
+            $matches,
+        );
+
+        foreach ($matches[1] as $usedConstants) {
+            [$className, $constantName] = explode('::', $usedConstants); // @phpstan-ignore offsetAccess.notFound
+            $this->dicConstants[$className][] = $constantName;
+        }
+    }
+
+    /**
+     * @return list<ClassConstantUsage>
+     */
+    private function getConstantUsages(ClassReflection $classReflection): array
+    {
+        $usages = [];
+
+        foreach ($this->dicConstants[$classReflection->getName()] ?? [] as $constantName) {
+            if (!$classReflection->hasConstant($constantName)) {
+                continue;
+            }
+
+            $usages[] = new ClassConstantUsage(
+                null,
+                new ClassConstantRef(
+                    $classReflection->getName(),
+                    $constantName,
+                    false,
+                ),
+            );
+        }
+
+        return $usages;
     }
 
 }
