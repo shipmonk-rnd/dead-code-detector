@@ -76,7 +76,7 @@ class DeadCodeRuleTest extends RuleTestCase
                 $reflectionProvider,
                 $this->getMemberUsageProviders(),
             ),
-            new ClassDefinitionCollector(),
+            new ClassDefinitionCollector(self::createReflectionProvider()),
             new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess),
             new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess),
         ];

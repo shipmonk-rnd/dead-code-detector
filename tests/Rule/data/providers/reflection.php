@@ -2,6 +2,8 @@
 
 namespace Reflection;
 
+use PHPUnit\Framework\TestCase;
+use ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase;
 
 interface MyParent
 {
@@ -97,5 +99,21 @@ function testMemberOnlyInDescendant(string $fqn) {
 
     if ($classReflection->hasConstant('NOT_IN_PARENT')) {
         echo $classReflection->getConstant('NOT_IN_PARENT');
+    }
+}
+
+class UserOfVendorClass extends RuleTestCase
+{
+    const DUMMY = 1;
+}
+
+/**
+ * @param class-string<TestCase> $testCase
+ */
+function testVendorClassDescendant(string $testCase) {
+    $classReflection = new \ReflectionClass($testCase);
+
+    if ($classReflection->hasConstant('DUMMY')) {
+        echo $classReflection->getConstant('DUMMY');
     }
 }
