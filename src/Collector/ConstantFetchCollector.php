@@ -10,14 +10,13 @@ use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
-use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use function array_map;
 use function count;
 use function current;
@@ -32,17 +31,21 @@ class ConstantFetchCollector implements Collector
 
     use BufferedUsageCollector;
 
+    private UsageOriginDetector $usageOriginDetector;
+
     private ReflectionProvider $reflectionProvider;
 
     private bool $trackMixedAccess;
 
     public function __construct(
+        UsageOriginDetector $usageOriginDetector,
         ReflectionProvider $reflectionProvider,
         bool $trackMixedAccess
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->trackMixedAccess = $trackMixedAccess;
+        $this->usageOriginDetector = $usageOriginDetector;
     }
 
     public function getNodeType(): string
@@ -109,7 +112,7 @@ class ConstantFetchCollector implements Collector
                 }
 
                 $this->usageBuffer[] = new ClassConstantUsage(
-                    $this->getCaller($scope),
+                    $this->usageOriginDetector->detectOrigin($scope),
                     new ClassConstantRef($className, $constantName, true),
                 );
             }
@@ -137,7 +140,7 @@ class ConstantFetchCollector implements Collector
 
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
                 $this->usageBuffer[] = new ClassConstantUsage(
-                    $this->getCaller($scope),
+                    $this->usageOriginDetector->detectOrigin($scope),
                     new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
                 );
             }
@@ -171,23 +174,6 @@ class ConstantFetchCollector implements Collector
         }
 
         return $result;
-    }
-
-    private function getCaller(Scope $scope): ?ClassMethodRef
-    {
-        if (!$scope->isInClass()) {
-            return null;
-        }
-
-        if (!$scope->getFunction() instanceof MethodReflection) {
-            return null;
-        }
-
-        return new ClassMethodRef(
-            $scope->getClassReflection()->getName(),
-            $scope->getFunction()->getName(),
-            false,
-        );
     }
 
 }

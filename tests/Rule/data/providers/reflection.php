@@ -57,6 +57,15 @@ enum EnumHolder1 {
     public function used() {}
 }
 
+enum TransitiveHolder {
+    const TRANSITIVELY_DEAD = 1; // error: Unused Reflection\TransitiveHolder::TRANSITIVELY_DEAD
+
+    public function test() // error: Unused Reflection\TransitiveHolder::test
+    {
+        (new \ReflectionClass(self::class))->getConstant('TRANSITIVELY_DEAD');
+    }
+}
+
 $reflection1 = new \ReflectionClass(Holder1::class);
 $reflection1->getConstants();
 $reflection1->getMethod('used');

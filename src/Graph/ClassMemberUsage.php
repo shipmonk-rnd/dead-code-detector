@@ -17,6 +17,9 @@ abstract class ClassMemberUsage
 
     /**
      * Origin method of the usage, "where it was called from"
+     * This is required for proper transitive dead code detection.
+     *
+     * @see UsageOriginDetector for typical usage
      */
     private ?ClassMethodRef $origin;
 

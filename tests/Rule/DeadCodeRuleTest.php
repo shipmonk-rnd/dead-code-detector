@@ -19,6 +19,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -76,8 +77,8 @@ class DeadCodeRuleTest extends RuleTestCase
                 $this->getMemberUsageProviders(),
             ),
             new ClassDefinitionCollector(),
-            new MethodCallCollector($this->trackMixedAccess),
-            new ConstantFetchCollector($reflectionProvider, $this->trackMixedAccess),
+            new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess),
+            new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess),
         ];
     }
 
@@ -368,7 +369,10 @@ class DeadCodeRuleTest extends RuleTestCase
     private function getMemberUsageProviders(): array
     {
         return [
-            new ReflectionUsageProvider(true),
+            new ReflectionUsageProvider(
+                $this->createUsageOriginDetector(),
+                true,
+            ),
             new class extends ReflectionBasedMemberUsageProvider
             {
 
@@ -419,6 +423,18 @@ class DeadCodeRuleTest extends RuleTestCase
                 },
             );
         return $mock;
+    }
+
+    private function createUsageOriginDetector(): UsageOriginDetector
+    {
+        /** @var UsageOriginDetector|null $detector */
+        static $detector = null;
+
+        if ($detector === null) {
+            $detector = new UsageOriginDetector();
+        }
+
+        return $detector;
     }
 
     public function gatherAnalyserErrors(array $files): array

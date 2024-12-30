@@ -8,6 +8,9 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
