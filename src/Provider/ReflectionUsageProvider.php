@@ -106,10 +106,6 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                if (!$genericReflection->hasConstant($constantString->getValue())) {
-                    continue;
-                }
-
                 $usedConstants[] = $this->createConstantUsage($genericReflection->getName(), $constantString->getValue());
             }
         }
@@ -140,10 +136,6 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                if (!$genericReflection->hasMethod($constantString->getValue())) {
-                    continue;
-                }
-
                 $usedMethods[] = $this->createMethodUsage($genericReflection->getName(), $constantString->getValue());
             }
         }
@@ -189,7 +181,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             new ClassConstantRef(
                 $className,
                 $constantName,
-                false,
+                true,
             ),
         );
     }
@@ -201,7 +193,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                false,
+                true,
             ),
         );
     }

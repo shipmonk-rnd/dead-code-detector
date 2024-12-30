@@ -46,6 +46,12 @@ class Holder5
     public function __construct() {}
 }
 
+abstract class HolderParent {}
+class Holder6 extends HolderParent
+{
+    const NOT_IN_PARENT = 1;
+}
+
 enum EnumHolder1 {
     const CONST1 = 1;
     public function used() {}
@@ -73,3 +79,14 @@ $reflection4->newInstance();
 $enumReflection1 = new \ReflectionClass(EnumHolder1::class);
 $enumReflection1->getConstants();
 $enumReflection1->getMethod('used');
+
+/**
+ * @param class-string<HolderParent> $fqn
+ */
+function testMemberOnlyInDescendant(string $fqn) {
+    $classReflection = new \ReflectionClass($fqn);
+
+    if ($classReflection->hasConstant('NOT_IN_PARENT')) {
+        echo $classReflection->getConstant('NOT_IN_PARENT');
+    }
+}

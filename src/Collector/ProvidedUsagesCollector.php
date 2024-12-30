@@ -7,9 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use function get_class;
 use function sprintf;
@@ -88,18 +86,8 @@ class ProvidedUsagesCollector implements Collector
             $node->getStartLine(),
         );
 
-        if ($memberRefClass !== null) {
-            if (!$this->reflectionProvider->hasClass($memberRefClass)) {
-                throw new LogicException("Class '$memberRefClass' does not exist. $context");
-            }
-
-            if ($memberRef instanceof ClassMethodRef && !$this->reflectionProvider->getClass($memberRefClass)->hasMethod($memberRef->getMemberName())) {
-                throw new LogicException("Method '{$memberRef->getMemberName()}' does not exist in class '$memberRefClass'. $context");
-            }
-
-            if ($memberRef instanceof ClassConstantRef && !$this->reflectionProvider->getClass($memberRefClass)->hasConstant($memberRef->getMemberName())) {
-                throw new LogicException("Constant '{$memberRef->getMemberName()}' does not exist in class '$memberRefClass'. $context");
-            }
+        if (($memberRefClass !== null) && !$this->reflectionProvider->hasClass($memberRefClass)) {
+            throw new LogicException("Class '$memberRefClass' does not exist. $context");
         }
 
         if (
