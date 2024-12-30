@@ -18,6 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use function array_key_first;
 use function count;
 use function in_array;
@@ -25,10 +26,16 @@ use function in_array;
 class ReflectionUsageProvider implements MemberUsageProvider
 {
 
+    private UsageOriginDetector $usageOriginDetector;
+
     private bool $enabled;
 
-    public function __construct(bool $enabled)
+    public function __construct(
+        UsageOriginDetector $usageOriginDetector,
+        bool $enabled
+    )
     {
+        $this->usageOriginDetector = $usageOriginDetector;
         $this->enabled = $enabled;
     }
 
@@ -98,7 +105,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
         if ($methodName === 'getConstants' || $methodName === 'getReflectionConstants') {
             foreach ($genericReflection->getNativeReflection()->getReflectionConstants() as $reflectionConstant) {
-                $usedConstants[] = $this->createConstantUsage($reflectionConstant->getDeclaringClass()->getName(), $reflectionConstant->getName());
+                $usedConstants[] = $this->createConstantUsage($scope, $reflectionConstant->getDeclaringClass()->getName(), $reflectionConstant->getName());
             }
         }
 
@@ -106,7 +113,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedConstants[] = $this->createConstantUsage($genericReflection->getName(), $constantString->getValue());
+                $usedConstants[] = $this->createConstantUsage($scope, $genericReflection->getName(), $constantString->getValue());
             }
         }
 
@@ -128,7 +135,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
         if ($methodName === 'getMethods') {
             foreach ($genericReflection->getNativeReflection()->getMethods() as $reflectionMethod) {
-                $usedMethods[] = $this->createMethodUsage($reflectionMethod->getDeclaringClass()->getName(), $reflectionMethod->getName());
+                $usedMethods[] = $this->createMethodUsage($scope, $reflectionMethod->getDeclaringClass()->getName(), $reflectionMethod->getName());
             }
         }
 
@@ -136,7 +143,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedMethods[] = $this->createMethodUsage($genericReflection->getName(), $constantString->getValue());
+                $usedMethods[] = $this->createMethodUsage($scope, $genericReflection->getName(), $constantString->getValue());
             }
         }
 
@@ -144,7 +151,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $constructor = $genericReflection->getNativeReflection()->getConstructor();
 
             if ($constructor !== null) {
-                $usedMethods[] = $this->createMethodUsage($constructor->getDeclaringClass()->getName(), '__construct');
+                $usedMethods[] = $this->createMethodUsage($scope, $constructor->getDeclaringClass()->getName(), '__construct');
             }
         }
 
@@ -174,10 +181,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
         return [$call->name->toString()];
     }
 
-    private function createConstantUsage(string $className, string $constantName): ClassConstantUsage
+    private function createConstantUsage(Scope $scope, string $className, string $constantName): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            null,
+            $this->usageOriginDetector->detectOrigin($scope),
             new ClassConstantRef(
                 $className,
                 $constantName,
@@ -186,10 +193,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
         );
     }
 
-    private function createMethodUsage(string $className, string $methodName): ClassMethodUsage
+    private function createMethodUsage(Scope $scope, string $className, string $methodName): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            null,
+            $this->usageOriginDetector->detectOrigin($scope),
             new ClassMethodRef(
                 $className,
                 $methodName,
