@@ -32,6 +32,7 @@ use function array_filter;
 use function array_keys;
 use function count;
 use function explode;
+use function extension_loaded;
 use function file_get_contents;
 use function in_array;
 use function is_dir;
@@ -231,6 +232,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($fileContents === false) {
             throw new LogicException(sprintf('Container %s does not exist', $containerXmlPath));
+        }
+
+        if (!extension_loaded('simplexml')) { // should never happen as phpstan-doctrine requires that
+            throw new LogicException('Extension simplexml is required to parse DIC xml');
         }
 
         $xml = @simplexml_load_string($fileContents);
