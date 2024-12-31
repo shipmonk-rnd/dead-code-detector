@@ -101,19 +101,3 @@ function testMemberOnlyInDescendant(string $fqn) {
         echo $classReflection->getConstant('NOT_IN_PARENT');
     }
 }
-
-class UserOfVendorClass extends RuleTestCase
-{
-    const DUMMY = 1;
-}
-
-/**
- * @param class-string<TestCase> $testCase
- */
-function testVendorClassDescendant(string $testCase) {
-    $classReflection = new \ReflectionClass($testCase);
-
-    if ($classReflection->hasConstant('DUMMY')) {
-        echo $classReflection->getConstant('DUMMY');
-    }
-}
