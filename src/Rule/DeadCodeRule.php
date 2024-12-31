@@ -344,8 +344,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     {
         foreach ($ancestorNames as $ancestorName) {
             $this->classHierarchy->registerClassPair($ancestorName, $typeName);
-
-            $this->fillClassHierarchy($typeName, $this->getAncestorNames($ancestorName));
         }
     }
 
@@ -554,7 +552,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     {
         return array_merge(
             array_keys($this->typeDefinitions[$typeName]['parents'] ?? []),
-            array_keys($this->typeDefinitions[$typeName]['traits'] ?? []),
             array_keys($this->typeDefinitions[$typeName]['interfaces'] ?? []),
         );
     }
