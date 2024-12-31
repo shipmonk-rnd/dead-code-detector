@@ -4,7 +4,6 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use LogicException;
 use PhpParser\Node;
-use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\Enum_;
@@ -14,6 +13,8 @@ use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use function array_fill_keys;
@@ -32,6 +33,13 @@ use function array_map;
  */
 class ClassDefinitionCollector implements Collector
 {
+
+    private ReflectionProvider $reflectionProvider;
+
+    public function __construct(ReflectionProvider $reflectionProvider)
+    {
+        $this->reflectionProvider = $reflectionProvider;
+    }
 
     public function getNodeType(): string
     {
@@ -61,6 +69,7 @@ class ClassDefinitionCollector implements Collector
 
         $kind = $this->getKind($node);
         $typeName = $node->namespacedName->toString();
+        $reflection = $this->reflectionProvider->getClass($typeName);
 
         $methods = [];
 
@@ -87,54 +96,32 @@ class ClassDefinitionCollector implements Collector
             'name' => $typeName,
             'methods' => $methods,
             'constants' => $constants,
-            'parents' => $this->getParents($node),
+            'parents' => $this->getParents($reflection),
             'traits' => $this->getTraits($node),
-            'interfaces' => $this->getInterfaces($node),
+            'interfaces' => $this->getInterfaces($reflection),
         ];
     }
 
     /**
      * @return array<string, null>
      */
-    private function getParents(ClassLike $node): array
+    private function getParents(ClassReflection $reflection): array
     {
-        if ($node instanceof Class_) {
-            if ($node->extends === null) {
-                return [];
-            }
+        $parents = [];
 
-            return [$node->extends->toString() => null];
+        foreach ($reflection->getParentClassesNames() as $parent) {
+            $parents[$parent] = null;
         }
 
-        if ($node instanceof Interface_) {
-            return array_fill_keys(
-                array_map(
-                    static fn(Name $name) => $name->toString(),
-                    $node->extends,
-                ),
-                null,
-            );
-        }
-
-        return [];
+        return $parents;
     }
 
     /**
      * @return array<string, null>
      */
-    private function getInterfaces(ClassLike $node): array
+    private function getInterfaces(ClassReflection $reflection): array
     {
-        if ($node instanceof Class_ || $node instanceof Enum_) {
-            return array_fill_keys(
-                array_map(
-                    static fn(Name $name) => $name->toString(),
-                    $node->implements,
-                ),
-                null,
-            );
-        }
-
-        return [];
+        return array_fill_keys(array_map(static fn (ClassReflection $reflection) => $reflection->getName(), $reflection->getInterfaces()), null);
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace Reflection;
 
+use PHPUnit\Framework\TestCase;
+use ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase;
 
 interface MyParent
 {
