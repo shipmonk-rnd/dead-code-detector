@@ -68,6 +68,34 @@ enum TransitiveHolder {
     }
 }
 
+
+abstract class GetAllConstantsParent {
+    public static function getConstants()
+    {
+        // this is not yet supported as we are unaware of children in collectors (and thus in ReflectionUsageProvider)
+        // it might be solvable by making ClassConstantRef::$constantName nullable
+        //  - calling getConstants() should mark all constants as used (on all children as the generic class might be just phpdoc based, not string-literal based)
+        return (new \ReflectionClass(static::class))->getConstants();
+    }
+
+    /**
+     * @param \ReflectionClass<self> $reflection
+     */
+    public static function getConstants2(\ReflectionClass $reflection)
+    {
+        // same problem as above
+        return $reflection->getConstants();
+    }
+}
+
+class GetAllConstantsChild extends GetAllConstantsParent {
+    const CONSTANT = 1; // error: Unused Reflection\GetAllConstantsChild::CONSTANT
+}
+
+GetAllConstantsChild::getConstants();
+GetAllConstantsChild::getConstants2();
+
+
 $reflection1 = new \ReflectionClass(Holder1::class);
 $reflection1->getConstants();
 $reflection1->getMethod('used');
