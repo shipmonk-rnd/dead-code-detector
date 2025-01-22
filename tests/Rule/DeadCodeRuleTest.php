@@ -11,7 +11,6 @@ use PHPStan\DependencyInjection\Container;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
-use PHPStan\Symfony\Configuration;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -403,7 +402,7 @@ class DeadCodeRuleTest extends RuleTestCase
                 true,
             ),
             new SymfonyUsageProvider(
-                new Configuration(['containerXmlPath' => __DIR__ . '/data/providers/symfony/services.xml']), // @phpstan-ignore phpstanApi.constructor
+                $this->createContainerMockWithSymfonyConfig(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),
@@ -475,6 +474,17 @@ class DeadCodeRuleTest extends RuleTestCase
         }
 
         return $result;
+    }
+
+    private function createContainerMockWithSymfonyConfig(): Container
+    {
+        $mock = $this->createMock(Container::class);
+
+        $mock->expects(self::once())
+            ->method('getParameter')
+            ->willReturn(['containerXmlPath' => __DIR__ . '/data/providers/symfony/services.xml']);
+
+        return $mock;
     }
 
 }
