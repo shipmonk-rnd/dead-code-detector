@@ -10,11 +10,12 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
+use PHPStan\DependencyInjection\Container;
+use PHPStan\DependencyInjection\ParameterNotFoundException;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
-use PHPStan\Symfony\Configuration as PHPStanSymfonyConfiguration;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
@@ -63,16 +64,17 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private array $dicConstants = [];
 
     public function __construct(
-        ?PHPStanSymfonyConfiguration $symfonyConfiguration,
+        Container $container,
         ?bool $enabled,
         ?string $configDir
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $resolvedConfigDir = $configDir ?? $this->autodetectConfigDir();
+        $containerXmlPath = $this->getContainerXmlPath($container);
 
-        if ($this->enabled && $symfonyConfiguration !== null && $symfonyConfiguration->getContainerXmlPath() !== null) { // @phpstan-ignore phpstanApi.method
-            $this->fillDicClasses($symfonyConfiguration->getContainerXmlPath()); // @phpstan-ignore phpstanApi.method
+        if ($this->enabled && $containerXmlPath !== null) {
+            $this->fillDicClasses($containerXmlPath);
         }
 
         if ($this->enabled && $resolvedConfigDir !== null) {
@@ -498,6 +500,18 @@ class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    private function getContainerXmlPath(Container $container): ?string
+    {
+        try {
+            /** @var array{containerXmlPath: string|null} $symfonyConfig */
+            $symfonyConfig = $container->getParameter('symfony');
+
+            return $symfonyConfig['containerXmlPath'];
+        } catch (ParameterNotFoundException $e) {
+            return null;
+        }
     }
 
 }
