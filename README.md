@@ -65,7 +65,6 @@ All those libraries are autoenabled when found within your composer dependencies
 If you want to force enable/disable some of them, you can:
 
 ```neon
-# phpstan.neon.dist
 parameters:
     shipmonkDeadCode:
         usageProviders:
@@ -85,12 +84,24 @@ parameters:
 
 Those providers are enabled by default, but you can disable them if needed.
 
+## Excluding usages in tests:
+- By default, all usages within scanned paths can mark members as used
+- But that might not be desirable if class declared in `src` is only used in `tests`
+- You can exclude those usages by enabling `tests` usage excluder:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        usageExcluders:
+            tests:
+                enabled: true
+```
+
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own usage provider.
 - Just tag it with `shipmonk.deadCode.memberUsageProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider`
 
 ```neon
-# phpstan.neon.dist
 services:
     -
         class: App\ApiOutputUsageProvider
@@ -175,6 +186,36 @@ class DeserializationUsageProvider implements MemberUsageProvider
 
 }
 ```
+
+### Excluding usages:
+
+You can exclude any usage based on custom logic, just implement `MemberUsageExcluder` and register it with `shipmonk.deadCode.memberUsageExcluder` tag:
+
+```php
+
+use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
+
+class MyUsageExcluder implements MemberUsageExcluder
+{
+
+    public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+    {
+        // ...
+    }
+
+}
+```
+
+```neon
+# phpstan.neon.dist
+services:
+    -
+        class: App\MyUsageExcluder
+        tags:
+            - shipmonk.deadCode.memberUsageExcluder
+```
+
+The same interface is used for exclusion of test-only usages, see above.
 
 ## Dead cycles & transitively dead methods
 - This library automatically detects dead cycles and transitively dead methods (methods that are only called from dead methods)
