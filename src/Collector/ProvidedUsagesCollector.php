@@ -9,6 +9,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use function get_class;
 use function sprintf;
@@ -65,12 +66,10 @@ class ProvidedUsagesCollector implements Collector
             $newUsages = $memberUsageProvider->getUsages($node, $scope);
 
             foreach ($newUsages as $newUsage) {
-                if ($this->isExcluded($newUsage, $node, $scope)) {
-                    continue;
-                }
+                $collectedUsage = $this->resolveExclusion($newUsage, $node, $scope);
 
                 $this->validateUsage($newUsage, $memberUsageProvider, $node, $scope);
-                $this->usageBuffer[] = $newUsage;
+                $this->usageBuffer[] = $collectedUsage;
             }
         }
 
@@ -117,15 +116,18 @@ class ProvidedUsagesCollector implements Collector
         }
     }
 
-    private function isExcluded(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+    private function resolveExclusion(ClassMemberUsage $usage, Node $node, Scope $scope): CollectedUsage
     {
+        $excluderName = null;
+
         foreach ($this->memberUsageExcluders as $excludedUsageDecider) {
             if ($excludedUsageDecider->shouldExclude($usage, $node, $scope)) {
-                return true;
+                $excluderName = $excludedUsageDecider->getIdentifier();
+                break;
             }
         }
 
-        return false;
+        return new CollectedUsage($usage, $excluderName);
     }
 
 }

@@ -24,6 +24,7 @@ use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 
 /**
@@ -289,13 +290,16 @@ class MethodCallCollector implements Collector
 
     private function registerUsage(ClassMethodUsage $usage, Node $node, Scope $scope): void
     {
+        $excluderName = null;
+
         foreach ($this->memberUsageExcluders as $excludedUsageDecider) {
             if ($excludedUsageDecider->shouldExclude($usage, $node, $scope)) {
-                return;
+                $excluderName = $excludedUsageDecider->getIdentifier();
+                break;
             }
         }
 
-        $this->usageBuffer[] = $usage;
+        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
     }
 
 }
