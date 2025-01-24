@@ -44,6 +44,14 @@ final class CollectedUsage
         return $this->excludedBy;
     }
 
+    public function concretizeMixedUsage(string $className): self
+    {
+        return new self(
+            $this->usage->concretizeMixedUsage($className),
+            $this->excludedBy,
+        );
+    }
+
     public function serialize(): string
     {
         $origin = $this->usage->getOrigin();

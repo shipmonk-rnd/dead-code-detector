@@ -21,11 +21,9 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
@@ -103,11 +101,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $blackMembers = [];
 
     /**
-     * memberType => [memberName => ClassMemberUse[]]
+     * memberType => [memberName => CollectedUsage[]]
      *
-     * @var array<MemberType::*, array<string, list<ClassMemberUsage>>>
+     * @var array<MemberType::*, array<string, list<CollectedUsage>>>
      */
-    private array $mixedMemberUses = [];
+    private array $mixedMemberUsages = [];
 
     /**
      * @var array<string, list<string>> callerKey => memberUseKey[]
@@ -146,11 +144,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return [];
         }
 
-        /** @var list<ClassMemberUsage> $memberUsages */
-        $memberUsages = [];
-
-        /** @var list<CollectedUsage> $excludedMemberUsages */
-        $excludedMemberUsages = [];
+        /** @var list<CollectedUsage> $knownCollectedUsages */
+        $knownCollectedUsages = [];
 
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
@@ -165,19 +160,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             foreach ($usesPerFile as $useStrings) {
                 foreach ($useStrings as $useString) {
                     $collectedUsage = CollectedUsage::deserialize($useString);
-                    $memberUse = $collectedUsage->getUsage();
+                    $memberUsage = $collectedUsage->getUsage();
 
-                    if ($collectedUsage->isExcluded()) {
-                        $excludedMemberUsages[] = $collectedUsage;
+                    if ($memberUsage->getMemberRef()->getClassName() === null) {
+                        $this->mixedMemberUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getMemberName()][] = $collectedUsage;
                         continue;
                     }
 
-                    if ($memberUse->getMemberRef()->getClassName() === null) {
-                        $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberRef()->getMemberName()][] = $memberUse;
-                        continue;
-                    }
-
-                    $memberUsages[] = $memberUse;
+                    $knownCollectedUsages[] = $collectedUsage;
                 }
             }
         }
@@ -217,11 +207,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
                 $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
 
-                foreach ($this->mixedMemberUses[MemberType::METHOD][$methodName] ?? [] as $originalCall) {
-                    $memberUsages[] = new ClassMethodUsage(
-                        $originalCall->getOrigin(),
-                        new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->isPossibleDescendant()),
-                    );
+                foreach ($this->mixedMemberUsages[MemberType::METHOD][$methodName] ?? [] as $mixedUsage) {
+                    $knownCollectedUsages[] = $mixedUsage->concretizeMixedUsage($typeName);
                 }
             }
 
@@ -231,22 +218,28 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
                 $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
 
-                foreach ($this->mixedMemberUses[MemberType::CONSTANT][$constantName] ?? [] as $originalFetch) {
-                    $memberUsages[] = new ClassConstantUsage(
-                        $originalFetch->getOrigin(),
-                        new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->isPossibleDescendant()),
-                    );
+                foreach ($this->mixedMemberUsages[MemberType::CONSTANT][$constantName] ?? [] as $mixedUsage) {
+                    $knownCollectedUsages[] = $mixedUsage->concretizeMixedUsage($typeName);
                 }
             }
         }
 
+        /** @var list<string> $whiteMemberKeys */
         $whiteMemberKeys = [];
+        /** @var list<CollectedUsage> $excludedMemberUsages */
+        $excludedMemberUsages = [];
 
-        foreach ($memberUsages as $memberUse) {
-            $isWhite = $this->isConsideredWhite($memberUse);
+        foreach ($knownCollectedUsages as $collectedUsage) {
+            if ($collectedUsage->isExcluded()) {
+                $excludedMemberUsages[] = $collectedUsage;
+                continue;
+            }
 
-            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberRef());
-            $alternativeOriginKeys = $memberUse->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUse->getOrigin()) : [];
+            $memberUsage = $collectedUsage->getUsage();
+            $isWhite = $this->isConsideredWhite($memberUsage);
+
+            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUsage->getMemberRef());
+            $alternativeOriginKeys = $memberUsage->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUsage->getOrigin()) : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
                 foreach ($alternativeOriginKeys as $alternativeOriginKey) {
@@ -712,22 +705,22 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public function print(Output $output): void
     {
-        if ($this->mixedMemberUses === [] || !$output->isDebug() || !$this->trackMixedAccess) {
+        if ($this->mixedMemberUsages === [] || !$output->isDebug() || !$this->trackMixedAccess) {
             return;
         }
 
-        $totalCount = array_sum(array_map('count', $this->mixedMemberUses));
+        $totalCount = array_sum(array_map('count', $this->mixedMemberUsages));
         $maxExamplesToShow = 20;
         $examplesShown = 0;
         $output->writeLineFormatted(sprintf('<fg=red>Found %d usages over unknown type</>:', $totalCount));
 
-        foreach ($this->mixedMemberUses as $memberType => $memberUses) {
-            foreach ($memberUses as $memberName => $uses) {
+        foreach ($this->mixedMemberUsages as $memberType => $collectedUsages) {
+            foreach ($collectedUsages as $memberName => $usages) {
                 $examplesShown++;
                 $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
                 $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
 
-                $exampleCaller = $this->getExampleCaller($uses);
+                $exampleCaller = $this->getExampleCaller($usages);
 
                 if ($exampleCaller !== null) {
                     $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
@@ -751,13 +744,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param list<ClassMemberUsage> $uses
+     * @param list<CollectedUsage> $usages
      */
-    private function getExampleCaller(array $uses): ?string
+    private function getExampleCaller(array $usages): ?string
     {
-        foreach ($uses as $call) {
-            if ($call->getOrigin() !== null) {
-                return $call->getOrigin()->toHumanString();
+        foreach ($usages as $usage) {
+            if ($usage->getUsage()->getOrigin() !== null) {
+                return $usage->getUsage()->getOrigin()->toHumanString();
             }
         }
 

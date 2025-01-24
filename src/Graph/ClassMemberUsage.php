@@ -44,6 +44,11 @@ abstract class ClassMemberUsage
 
     abstract public function getMemberRef(): ClassMemberRef;
 
+    /**
+     * @return static
+     */
+    abstract public function concretizeMixedUsage(string $className): self;
+
     public function toHumanString(): string
     {
         $origin = $this->origin !== null ? $this->origin->toHumanString() : 'unknown';
