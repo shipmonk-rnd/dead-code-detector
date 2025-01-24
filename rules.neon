@@ -66,6 +66,7 @@ services:
             - shipmonk.deadCode.memberUsageExcluder
         arguments:
             enabled: %shipmonkDeadCode.usageExcluders.tests.enabled%
+            devPaths: %shipmonkDeadCode.usageExcluders.tests.devPaths%
 
 
     -
@@ -135,6 +136,7 @@ parameters:
         usageExcluders:
             tests:
                 enabled: false
+                devPaths: null
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -167,6 +169,7 @@ parametersSchema:
         usageExcluders: structure([
             tests: structure([
                 enabled: bool()
+                devPaths: schema(listOf(string()), nullable())
             ])
         ])
     ])

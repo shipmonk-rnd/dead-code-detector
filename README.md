@@ -95,6 +95,8 @@ parameters:
         usageExcluders:
             tests:
                 enabled: true
+                devPaths: # optional, autodetects from autoload-dev sections of composer.json when omitted
+                    - %currentWorkingDirectory%/tests
 ```
 
 ## Customization:
