@@ -20,6 +20,11 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 interface MemberUsageExcluder
 {
 
+    /**
+     * Will be used in error message to identify why such member is considered unused even when usage(s) exist.
+     */
+    public function getIdentifier(): string;
+
     public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool;
 
 }

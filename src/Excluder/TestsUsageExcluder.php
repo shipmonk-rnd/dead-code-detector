@@ -50,6 +50,11 @@ class TestsUsageExcluder implements MemberUsageExcluder
         $this->enabled = $enabled;
     }
 
+    public function getIdentifier(): string
+    {
+        return 'tests';
+    }
+
     public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
     {
         if (!$this->enabled) {
