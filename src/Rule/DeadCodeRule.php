@@ -26,6 +26,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
@@ -145,8 +146,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return [];
         }
 
-        /** @var list<ClassMemberUsage> $memberUses */
-        $memberUses = [];
+        /** @var list<ClassMemberUsage> $memberUsages */
+        $memberUsages = [];
+
+        /** @var list<CollectedUsage> $excludedMemberUsages */
+        $excludedMemberUsages = [];
 
         $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
@@ -160,14 +164,20 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($memberUseData as $usesPerFile) {
             foreach ($usesPerFile as $useStrings) {
                 foreach ($useStrings as $useString) {
-                    $memberUse = ClassMemberUsage::deserialize($useString);
+                    $collectedUsage = CollectedUsage::deserialize($useString);
+                    $memberUse = $collectedUsage->getUsage();
+
+                    if ($collectedUsage->isExcluded()) {
+                        $excludedMemberUsages[] = $collectedUsage;
+                        continue;
+                    }
 
                     if ($memberUse->getMemberRef()->getClassName() === null) {
                         $this->mixedMemberUses[$memberUse->getMemberType()][$memberUse->getMemberRef()->getMemberName()][] = $memberUse;
                         continue;
                     }
 
-                    $memberUses[] = $memberUse;
+                    $memberUsages[] = $memberUse;
                 }
             }
         }
@@ -208,7 +218,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
 
                 foreach ($this->mixedMemberUses[MemberType::METHOD][$methodName] ?? [] as $originalCall) {
-                    $memberUses[] = new ClassMethodUsage(
+                    $memberUsages[] = new ClassMethodUsage(
                         $originalCall->getOrigin(),
                         new ClassMethodRef($typeName, $methodName, $originalCall->getMemberRef()->isPossibleDescendant()),
                     );
@@ -222,7 +232,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
 
                 foreach ($this->mixedMemberUses[MemberType::CONSTANT][$constantName] ?? [] as $originalFetch) {
-                    $memberUses[] = new ClassConstantUsage(
+                    $memberUsages[] = new ClassConstantUsage(
                         $originalFetch->getOrigin(),
                         new ClassConstantRef($typeName, $constantName, $originalFetch->getMemberRef()->isPossibleDescendant()),
                     );
@@ -232,7 +242,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         $whiteMemberKeys = [];
 
-        foreach ($memberUses as $memberUse) {
+        foreach ($memberUsages as $memberUse) {
             $isWhite = $this->isConsideredWhite($memberUse);
 
             $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUse->getMemberRef());
@@ -257,6 +267,16 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             if ($this->isNeverReportedAsDead($blackMember)) {
                 unset($this->blackMembers[$blackMemberKey]);
             }
+        }
+
+        foreach ($excludedMemberUsages as $excludedMemberUsage) {
+            $memberKey = $excludedMemberUsage->getUsage()->getMemberRef()->toKey();
+
+            if (!isset($this->blackMembers[$memberKey])) {
+                continue;
+            }
+
+            $this->blackMembers[$memberKey]->markHasExcludedUsage($excludedMemberUsage->getExcludedBy());
         }
 
         if ($this->reportTransitivelyDeadAsSeparateError) {
@@ -556,26 +576,30 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     {
         $representative = $blackMembersGroup[0];
 
-        $humanMemberString = $representative->member->toHumanString();
-        $builder = RuleErrorBuilder::message("Unused $humanMemberString")
-            ->file($representative->file)
-            ->line($representative->line)
+        $humanMemberString = $representative->getMember()->toHumanString();
+        $exclusionMessage = $representative->getExclusionMessage();
+
+        $builder = RuleErrorBuilder::message("Unused {$humanMemberString}{$exclusionMessage}")
+            ->file($representative->getFile())
+            ->line($representative->getLine())
             ->identifier($representative->getErrorIdentifier());
 
         $metadata = [];
         $metadata[$humanMemberString] = [
-            'file' => $representative->file,
-            'line' => $representative->line,
+            'file' => $representative->getFile(),
+            'line' => $representative->getLine(),
             'transitive' => false,
         ];
 
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
-            $transitiveDeadMemberRef = $transitivelyDeadMember->member->toHumanString();
-            $builder->addTip("Thus $transitiveDeadMemberRef is transitively also unused");
+            $transitiveDeadMemberRef = $transitivelyDeadMember->getMember()->toHumanString();
+            $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
+
+            $builder->addTip("Thus $transitiveDeadMemberRef is transitively also unused{$exclusionMessage}");
 
             $metadata[$transitiveDeadMemberRef] = [
-                'file' => $transitivelyDeadMember->file,
-                'line' => $transitivelyDeadMember->line,
+                'file' => $transitivelyDeadMember->getFile(),
+                'line' => $transitivelyDeadMember->getLine(),
                 'transitive' => true,
             ];
         }
@@ -653,12 +677,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private function isNeverReportedAsDead(BlackMember $blackMember): bool
     {
-        if (!$blackMember->member instanceof ClassMethodRef) {
+        if (!$blackMember->getMember() instanceof ClassMethodRef) {
             return false;
         }
 
-        $typeName = $blackMember->member->getClassName();
-        $memberName = $blackMember->member->getMemberName();
+        $typeName = $blackMember->getMember()->getClassName();
+        $memberName = $blackMember->getMember()->getMemberName();
 
         if ($typeName === null) {
             throw new LogicException('Ensured by BlackMember constructor');

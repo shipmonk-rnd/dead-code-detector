@@ -6,18 +6,23 @@ use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
+use function array_keys;
+use function count;
+use function implode;
 
-/**
- * @immutable
- */
-class BlackMember
+final class BlackMember
 {
 
-    public ClassMemberRef $member;
+    private ClassMemberRef $member;
 
-    public string $file;
+    private string $file;
 
-    public int $line;
+    private int $line;
+
+    /**
+     * @var array<string, true>
+     */
+    private array $excluders = [];
 
     public function __construct(
         ClassMemberRef $member,
@@ -38,11 +43,43 @@ class BlackMember
         $this->line = $line;
     }
 
+    public function getMember(): ClassMemberRef
+    {
+        return $this->member;
+    }
+
+    public function getFile(): string
+    {
+        return $this->file;
+    }
+
+    public function getLine(): int
+    {
+        return $this->line;
+    }
+
+    public function markHasExcludedUsage(string $excludedBy): void
+    {
+        $this->excluders[$excludedBy] = true;
+    }
+
     public function getErrorIdentifier(): string
     {
         return $this->member instanceof ClassConstantRef
             ? DeadCodeRule::IDENTIFIER_CONSTANT
             : DeadCodeRule::IDENTIFIER_METHOD;
+    }
+
+    public function getExclusionMessage(): string
+    {
+        if (count($this->excluders) === 0) {
+            return '';
+        }
+
+        $excluderNames = implode(', ', array_keys($this->excluders));
+        $plural = count($this->excluders) > 1 ? 's' : '';
+
+        return " (all usages excluded by {$excluderNames} excluder{$plural})";
     }
 
 }

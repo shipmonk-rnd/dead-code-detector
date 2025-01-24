@@ -18,6 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
@@ -60,6 +61,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassMemberRef::class,
             ClassMemberUsage::class,
             ClassLikeKind::class,
+            CollectedUsage::class,
             Visibility::class,
             BlackMember::class,
             MemberUsageProvider::class,

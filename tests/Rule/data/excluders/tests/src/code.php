@@ -1,7 +1,7 @@
 <?php
 
 class DeclaredInSrcUsedInTests {
-    const CONST = 1; // error: Unused DeclaredInSrcUsedInTests::CONST
+    const CONST = 1; // error: Unused DeclaredInSrcUsedInTests::CONST (all usages excluded by tests excluder)
 }
 
 class DeclaredInSrcUsedInBoth {

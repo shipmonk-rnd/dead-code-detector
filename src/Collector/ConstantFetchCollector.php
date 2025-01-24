@@ -17,6 +17,7 @@ use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use function array_map;
 use function count;
@@ -197,13 +198,16 @@ class ConstantFetchCollector implements Collector
 
     private function registerUsage(ClassConstantUsage $usage, Node $node, Scope $scope): void
     {
+        $excluderName = null;
+
         foreach ($this->memberUsageExcluders as $excludedUsageDecider) {
             if ($excludedUsageDecider->shouldExclude($usage, $node, $scope)) {
-                return;
+                $excluderName = $excludedUsageDecider->getIdentifier();
+                break;
             }
         }
 
-        $this->usageBuffer[] = $usage;
+        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
     }
 
 }

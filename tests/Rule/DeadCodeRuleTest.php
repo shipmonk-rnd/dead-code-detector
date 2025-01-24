@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
+use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\Output;
@@ -20,6 +21,7 @@ use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
@@ -394,7 +396,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
 
         // excluders
-        yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/declaration.php', __DIR__ . '/data/excluders/tests/tests/usage.php']];
+        yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/code.php', __DIR__ . '/data/excluders/tests/tests/code.php']];
+        yield 'excluder-mixed' => [__DIR__ . '/data/excluders/mixed/code.php'];
 
         // constants
         yield 'const-basic' => [__DIR__ . '/data/constants/basic.php'];
@@ -491,6 +494,20 @@ class DeadCodeRuleTest extends RuleTestCase
                 true,
                 [__DIR__ . '/data/excluders/tests/tests'],
             ),
+            new class implements MemberUsageExcluder
+            {
+
+                public function getIdentifier(): string
+                {
+                    return 'mixed';
+                }
+
+                public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+                {
+                    return $usage->getMemberRef()->getMemberName() === 'mixed';
+                }
+
+            },
         ];
     }
 
