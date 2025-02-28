@@ -515,13 +515,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue; // has a caller, thus should be part of a group, not a group representative
             }
 
-            $deadGroups[$deadMemberKey][] = $blackMember;
+            $deadGroups[$deadMemberKey][$deadMemberKey] = $blackMember;
             $methodsGrouped[$deadMemberKey] = true;
 
             $transitiveMethodKeys = $this->getTransitiveDeadCalls($deadMemberKey);
 
             foreach ($transitiveMethodKeys as $transitiveMethodKey) {
-                $deadGroups[$deadMemberKey][] = $this->blackMembers[$transitiveMethodKey]; // @phpstan-ignore offsetAccess.notFound
+                $deadGroups[$deadMemberKey][$transitiveMethodKey] = $this->blackMembers[$transitiveMethodKey]; // @phpstan-ignore offsetAccess.notFound
                 $methodsGrouped[$transitiveMethodKey] = true;
             }
         }
@@ -534,16 +534,16 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             $transitiveDeadMethods = $this->getTransitiveDeadCalls($deadMemberKey);
 
-            $deadGroups[$deadMemberKey][] = $blackMember;
+            $deadGroups[$deadMemberKey][$deadMemberKey] = $blackMember;
             $methodsGrouped[$deadMemberKey] = true;
 
             foreach ($transitiveDeadMethods as $transitiveDeadMethodKey) {
-                $deadGroups[$deadMemberKey][] = $this->blackMembers[$transitiveDeadMethodKey]; // @phpstan-ignore offsetAccess.notFound
+                $deadGroups[$deadMemberKey][$transitiveDeadMethodKey] = $this->blackMembers[$transitiveDeadMethodKey]; // @phpstan-ignore offsetAccess.notFound
                 $methodsGrouped[$transitiveDeadMethodKey] = true;
             }
         }
 
-        return array_values($deadGroups);
+        return array_map('array_values', array_values($deadGroups));
     }
 
     /**
