@@ -288,6 +288,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             );
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
+                if ($traitMethodData['abstract']) {
+                    continue; // abstract trait methods are ignored, should correlate with isNeverReportedAsDead
+                }
+
                 $declaringTraitMethodDefinition = ClassMethodRef::buildKey($traitName, $traitMethod);
                 $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
 
@@ -370,26 +374,59 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return $this->memberAlternativesCache[$cacheKey];
         }
 
-        $result = [$memberKey];
+        $descendantsToCheck = $possibleDescendant ? $this->classHierarchy->getClassDescendants($member->getClassName()) : [];
+        $meAndDescendants = [
+            $member->getClassName(),
+            ...$descendantsToCheck,
+        ];
 
-        if ($possibleDescendant) {
-            foreach ($this->classHierarchy->getClassDescendants($member->getClassName()) as $descendantName) {
-                $result[] = $member::buildKey($descendantName, $member->getMemberName());
-            }
-        }
+        $result = [];
 
-        // each descendant can be a trait user
-        foreach ($result as $resultKey) {
-            $traitMethodKey = $this->classHierarchy->getDeclaringTraitMemberKey($resultKey);
+        foreach ($meAndDescendants as $className) {
+            $definerKey = $this->findDefinerMemberKey($member, $className);
 
-            if ($traitMethodKey !== null) {
-                $result[] = $traitMethodKey;
+            if ($definerKey !== null) {
+                $result[] = $definerKey;
             }
         }
 
         $this->memberAlternativesCache[$cacheKey] = $result;
 
         return $result;
+    }
+
+    private function findDefinerMemberKey(
+        ClassMemberRef $origin,
+        string $className,
+        bool $includeParentLookup = true
+    ): ?string
+    {
+        $memberName = $origin->getMemberName();
+        $memberKey = $origin::buildKey($className, $memberName);
+
+        if ($this->hasMember($className, $memberName, $origin->getMemberType())) {
+            return $memberKey;
+        }
+
+        // search for definition in traits
+        $traitMethodKey = $this->classHierarchy->getDeclaringTraitMemberKey($memberKey);
+
+        if ($traitMethodKey !== null) {
+            return $traitMethodKey;
+        }
+
+        if ($includeParentLookup) {
+            // search for definition in parents (and its traits)
+            foreach ($this->getParentNames($className) as $parentName) {
+                $found = $this->findDefinerMemberKey($origin, $parentName, false);
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -548,6 +585,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @return list<string>
      */
+    private function getParentNames(string $typeName): array
+    {
+        return array_keys($this->typeDefinitions[$typeName]['parents'] ?? []);
+    }
+
+    /**
+     * @return list<string>
+     */
     private function getAncestorNames(string $typeName): array
     {
         return array_merge(
@@ -570,6 +615,22 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function getTypeConstants(string $typeName): array
     {
         return array_keys($this->typeDefinitions[$typeName]['constants'] ?? []);
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     */
+    private function hasMember(string $typeName, string $memberName, int $memberType): bool
+    {
+        if ($memberType === MemberType::METHOD) {
+            $key = 'methods';
+        } elseif ($memberType === MemberType::CONSTANT) {
+            $key = 'constants';
+        } else {
+            throw new LogicException('Invalid member type');
+        }
+
+        return array_key_exists($memberName, $this->typeDefinitions[$typeName][$key] ?? []);
     }
 
     /**

@@ -17,9 +17,6 @@ class A
 class B extends A
 {
 
-    /**
-     * @inheritDoc
-     */
     public function __construct()
     {
         parent::__construct();

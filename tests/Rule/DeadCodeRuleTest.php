@@ -265,6 +265,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-ctor-missing' => [__DIR__ . '/data/methods/ctor-missing.php'];
         yield 'method-cycles' => [__DIR__ . '/data/methods/cycles.php'];
         yield 'method-abstract-1' => [__DIR__ . '/data/methods/abstract-1.php'];
+        yield 'method-abstract-2' => [__DIR__ . '/data/methods/abstract-2.php'];
         yield 'method-entrypoint' => [__DIR__ . '/data/methods/entrypoint.php'];
         yield 'method-clone' => [__DIR__ . '/data/methods/clone.php'];
         yield 'method-magic' => [__DIR__ . '/data/methods/magic.php'];
@@ -302,8 +303,16 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-trait-22' => [__DIR__ . '/data/methods/traits-22.php'];
         yield 'method-trait-23' => [__DIR__ . '/data/methods/traits-23.php'];
         yield 'method-nullsafe' => [__DIR__ . '/data/methods/nullsafe.php'];
-        yield 'method-dead-in-parent-1' => [__DIR__ . '/data/methods/dead-in-parent-1.php'];
+        yield 'method-parent-1' => [__DIR__ . '/data/methods/parent-1.php'];
+        yield 'method-parent-2' => [__DIR__ . '/data/methods/parent-2.php'];
         yield 'method-indirect-interface' => [__DIR__ . '/data/methods/indirect-interface.php'];
+        yield 'method-indirect-interface-2' => [__DIR__ . '/data/methods/indirect-interface-2.php'];
+        yield 'method-indirect-interface-3' => [__DIR__ . '/data/methods/indirect-interface-3.php'];
+        yield 'method-indirect-interface-4' => [__DIR__ . '/data/methods/indirect-interface-4.php'];
+        yield 'method-indirect-interface-5' => [__DIR__ . '/data/methods/indirect-interface-5.php'];
+        yield 'method-indirect-interface-6' => [__DIR__ . '/data/methods/indirect-interface-6.php'];
+        yield 'method-indirect-interface-7' => [__DIR__ . '/data/methods/indirect-interface-7.php'];
+        yield 'method-indirect-interface-8' => [__DIR__ . '/data/methods/indirect-interface-8.php'];
         yield 'method-parent-call-1' => [__DIR__ . '/data/methods/parent-call-1.php'];
         yield 'method-parent-call-2' => [__DIR__ . '/data/methods/parent-call-2.php'];
         yield 'method-parent-call-3' => [__DIR__ . '/data/methods/parent-call-3.php'];
