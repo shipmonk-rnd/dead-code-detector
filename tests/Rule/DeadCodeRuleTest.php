@@ -213,39 +213,76 @@ class DeadCodeRuleTest extends RuleTestCase
         return $this->createMock(Output::class);
     }
 
-    public function testGrouping(): void
+    /**
+     * @param list<array{0: string, 1: int, 2?: string|null}> $expectedErrors
+     * @dataProvider provideGroupingFiles
+     */
+    public function testGrouping(string $file, array $expectedErrors): void
     {
         $this->unwrapGroupedErrors = false;
 
-        $this->analyse([__DIR__ . '/data/grouping/default.php'], [
+        $this->analyse([$file], $expectedErrors);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: list<array{0: string, 1: int, 2?: string|null}>}>
+     */
+    public static function provideGroupingFiles(): iterable
+    {
+        yield 'default' => [
+            __DIR__ . '/data/grouping/default.php',
             [
-                'Unused Grouping\Example::foo',
-                23,
-                "• Thus Grouping\Example::bar is transitively also unused\n" .
-                "• Thus Grouping\Example::bag is transitively also unused\n" .
-                '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                [
+                    'Unused Grouping\Example::foo',
+                    23,
+                    "• Thus Grouping\Example::bar is transitively also unused\n" .
+                    "• Thus Grouping\Example::bag is transitively also unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                ],
+                [
+                    'Unused Grouping\Example::boo',
+                    29,
+                    "• Thus Grouping\Example::bag is transitively also unused\n" .
+                    "• Thus Grouping\Example::bar is transitively also unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                ],
+                [
+                    'Unused Grouping\Example::UNUSED_CONST',
+                    8,
+                ],
+                [
+                    'Unused Grouping\Example::recur',
+                    47,
+                ],
+                [
+                    'Unused Grouping\Example::recur1',
+                    54,
+                    'Thus Grouping\Example::recur2 is transitively also unused',
+                ],
             ],
+        ];
+
+        yield 'closure' => [
+            __DIR__ . '/data/grouping/closure.php',
             [
-                'Unused Grouping\Example::boo',
-                29,
-                "• Thus Grouping\Example::bag is transitively also unused\n" .
-                "• Thus Grouping\Example::bar is transitively also unused\n" .
-                '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                [
+                    'Unused GroupingClosure\ClosureUser::__construct',
+                    12,
+                    'Thus GroupingClosure\Incriminated::baz is transitively also unused',
+                ],
             ],
+        ];
+
+        yield 'repeated' => [
+            __DIR__ . '/data/grouping/repeated.php',
             [
-                'Unused Grouping\Example::UNUSED_CONST',
-                8,
+                [
+                    'Unused GroupingRepeated\User::__construct',
+                    12,
+                    'Thus GroupingRepeated\Incriminated::baz is transitively also unused',
+                ],
             ],
-            [
-                'Unused Grouping\Example::recur',
-                47,
-            ],
-            [
-                'Unused Grouping\Example::recur1',
-                54,
-                'Thus Grouping\Example::recur2 is transitively also unused',
-            ],
-        ]);
+        ];
     }
 
     /**
