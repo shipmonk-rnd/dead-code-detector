@@ -44,6 +44,8 @@ parameters:
                 ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider: UsageProvider
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4
+        enforceClosureParamNativeTypehint:
+            enabled: false # we support even PHP 7.4 (cannot use mixed nor unions)
 
     ignoreErrors:
         -

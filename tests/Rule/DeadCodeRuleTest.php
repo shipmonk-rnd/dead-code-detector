@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
+use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\Output;
@@ -17,7 +18,10 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
+use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
+use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
@@ -71,13 +75,10 @@ class DeadCodeRuleTest extends RuleTestCase
         $reflectionProvider = self::createReflectionProvider();
 
         return [
-            new ProvidedUsagesCollector(
-                $reflectionProvider,
-                $this->getMemberUsageProviders(),
-            ),
+            new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
             new ClassDefinitionCollector(self::createReflectionProvider()),
-            new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess),
-            new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess),
+            new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
         ];
     }
 
@@ -362,7 +363,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-array-map-1' => [__DIR__ . '/data/methods/array-map-1.php'];
         yield 'method-unknown-class' => [__DIR__ . '/data/methods/unknown-class.php'];
 
-        // method providers
+        // providers
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', 8_01_00];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', 8_00_00];
@@ -370,6 +371,10 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', 8_00_00];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
+
+        // excluders
+        yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/code.php', __DIR__ . '/data/excluders/tests/tests/code.php']];
+        yield 'excluder-mixed' => [__DIR__ . '/data/excluders/mixed/code.php'];
 
         // constants
         yield 'const-basic' => [__DIR__ . '/data/constants/basic.php'];
@@ -452,6 +457,34 @@ class DeadCodeRuleTest extends RuleTestCase
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),
+        ];
+    }
+
+    /**
+     * @return list<MemberUsageExcluder>
+     */
+    private function getMemberUsageExcluders(): array
+    {
+        return [
+            new TestsUsageExcluder(
+                self::createReflectionProvider(),
+                true,
+                [__DIR__ . '/data/excluders/tests/tests'],
+            ),
+            new class implements MemberUsageExcluder
+            {
+
+                public function getIdentifier(): string
+                {
+                    return 'mixed';
+                }
+
+                public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+                {
+                    return $usage->getMemberRef()->getMemberName() === 'mixed';
+                }
+
+            },
         ];
     }
 

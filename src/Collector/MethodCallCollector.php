@@ -21,8 +21,10 @@ use PHPStan\TrinaryLogic;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 
 /**
@@ -37,13 +39,23 @@ class MethodCallCollector implements Collector
 
     private bool $trackMixedAccess;
 
+    /**
+     * @var list<MemberUsageExcluder>
+     */
+    private array $memberUsageExcluders;
+
+    /**
+     * @param list<MemberUsageExcluder> $memberUsageExcluders
+     */
     public function __construct(
         UsageOriginDetector $usageOriginDetector,
-        bool $trackMixedAccess
+        bool $trackMixedAccess,
+        array $memberUsageExcluders
     )
     {
         $this->usageOriginDetector = $usageOriginDetector;
         $this->trackMixedAccess = $trackMixedAccess;
+        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -119,9 +131,13 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-                $this->usageBuffer[] = new ClassMethodUsage(
-                    $this->usageOriginDetector->detectOrigin($scope),
-                    new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                $this->registerUsage(
+                    new ClassMethodUsage(
+                        $this->usageOriginDetector->detectOrigin($scope),
+                        new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                    ),
+                    $methodCall,
+                    $scope,
                 );
             }
         }
@@ -145,9 +161,13 @@ class MethodCallCollector implements Collector
 
         foreach ($methodNames as $methodName) {
             foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
-                $this->usageBuffer[] = new ClassMethodUsage(
-                    $this->usageOriginDetector->detectOrigin($scope),
-                    new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                $this->registerUsage(
+                    new ClassMethodUsage(
+                        $this->usageOriginDetector->detectOrigin($scope),
+                        new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                    ),
+                    $staticCall,
+                    $scope,
                 );
             }
         }
@@ -170,9 +190,13 @@ class MethodCallCollector implements Collector
                     $possibleDescendantCall = !$caller->isClassString()->yes();
 
                     foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
-                        $this->usageBuffer[] = new ClassMethodUsage(
-                            $this->usageOriginDetector->detectOrigin($scope),
-                            new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                        $this->registerUsage(
+                            new ClassMethodUsage(
+                                $this->usageOriginDetector->detectOrigin($scope),
+                                new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                            ),
+                            $array,
+                            $scope,
                         );
                     }
                 }
@@ -182,9 +206,13 @@ class MethodCallCollector implements Collector
 
     private function registerAttribute(Attribute $node, Scope $scope): void
     {
-        $this->usageBuffer[] = new ClassMethodUsage(
-            null,
-            new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
+        $this->registerUsage(
+            new ClassMethodUsage(
+                null,
+                new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
+            ),
+            $node,
+            $scope,
         );
     }
 
@@ -194,9 +222,13 @@ class MethodCallCollector implements Collector
         $callerType = $scope->getType($node->expr);
 
         foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
-            $this->usageBuffer[] = new ClassMethodUsage(
-                $this->usageOriginDetector->detectOrigin($scope),
-                new ClassMethodRef($className, $methodName, true),
+            $this->registerUsage(
+                new ClassMethodUsage(
+                    $this->usageOriginDetector->detectOrigin($scope),
+                    new ClassMethodRef($className, $methodName, true),
+                ),
+                $node,
+                $scope,
             );
         }
     }
@@ -254,6 +286,20 @@ class MethodCallCollector implements Collector
         }
 
         return $result;
+    }
+
+    private function registerUsage(ClassMethodUsage $usage, Node $node, Scope $scope): void
+    {
+        $excluderName = null;
+
+        foreach ($this->memberUsageExcluders as $excludedUsageDecider) {
+            if ($excludedUsageDecider->shouldExclude($usage, $node, $scope)) {
+                $excluderName = $excludedUsageDecider->getIdentifier();
+                break;
+            }
+        }
+
+        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
     }
 
 }
