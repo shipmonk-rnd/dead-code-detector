@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+
 /**
  * @immutable
  */
@@ -24,6 +26,14 @@ final class ClassMethodRef extends ClassMemberRef
     public static function buildKey(string $typeName, string $memberName): string
     {
         return 'm/' . $typeName . '::' . $memberName;
+    }
+
+    /**
+     * @return MemberType::METHOD
+     */
+    public function getMemberType(): int
+    {
+        return MemberType::METHOD;
     }
 
 }
