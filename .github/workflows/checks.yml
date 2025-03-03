@@ -44,8 +44,8 @@ jobs:
                     php-version: ${{ matrix.php-version }}
                     ini-file: development
             -
-                name: Install dependencies
-                run: composer install --no-progress --prefer-dist --no-interaction
+                name: Update dependencies
+                run: composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run dependency analyser
                 run: composer check:dependencies
@@ -67,8 +67,8 @@ jobs:
                     php-version: ${{ matrix.php-version }}
                     ini-file: development
             -
-                name: Install dependencies
-                run: composer install --no-progress --prefer-dist --no-interaction
+                name: Update dependencies
+                run: composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run PHPStan
                 run: composer check:types
