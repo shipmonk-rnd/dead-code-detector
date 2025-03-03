@@ -214,18 +214,19 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
+     * @param string|list<string> $files
      * @param list<array{0: string, 1: int, 2?: string|null}> $expectedErrors
      * @dataProvider provideGroupingFiles
      */
-    public function testGrouping(string $file, array $expectedErrors): void
+    public function testGrouping($files, array $expectedErrors): void
     {
         $this->unwrapGroupedErrors = false;
 
-        $this->analyse([$file], $expectedErrors);
+        $this->analyse(is_array($files) ? $files : [$files], $expectedErrors);
     }
 
     /**
-     * @return iterable<string, array{0: string, 1: list<array{0: string, 1: int, 2?: string|null}>}>
+     * @return iterable<string, array{0: string|list<string>, 1: list<array{0: string, 1: int, 2?: string|null}>}>
      */
     public static function provideGroupingFiles(): iterable
     {
@@ -233,11 +234,8 @@ class DeadCodeRuleTest extends RuleTestCase
             __DIR__ . '/data/grouping/default.php',
             [
                 [
-                    'Unused Grouping\Example::foo',
-                    23,
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    'Unused Grouping\Example::UNUSED_CONST',
+                    8,
                 ],
                 [
                     'Unused Grouping\Example::boo',
@@ -247,8 +245,11 @@ class DeadCodeRuleTest extends RuleTestCase
                     '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
                 ],
                 [
-                    'Unused Grouping\Example::UNUSED_CONST',
-                    8,
+                    'Unused Grouping\Example::foo',
+                    23,
+                    "• Thus Grouping\Example::bar is transitively also unused\n" .
+                    "• Thus Grouping\Example::bag is transitively also unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',
@@ -280,6 +281,28 @@ class DeadCodeRuleTest extends RuleTestCase
                     'Unused GroupingRepeated\User::__construct',
                     12,
                     'Thus GroupingRepeated\Incriminated::baz is transitively also unused',
+                ],
+            ],
+        ];
+
+        yield 'order-1' => [
+            [__DIR__ . '/data/grouping/order/one.php', __DIR__ . '/data/grouping/order/two.php'],
+            [
+                [
+                    'Unused GroupingOrder\ClassOne::one',
+                    7,
+                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
+                ],
+            ],
+        ];
+
+        yield 'order-2' => [
+            [__DIR__ . '/data/grouping/order/two.php', __DIR__ . '/data/grouping/order/one.php'],
+            [
+                [
+                    'Unused GroupingOrder\ClassOne::one', // ensure deterministic representative is chosen (even when ClassTwo was analysed first)
+                    7,
+                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
                 ],
             ],
         ];
