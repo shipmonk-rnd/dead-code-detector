@@ -14,8 +14,10 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use function array_map;
 use function count;
@@ -37,15 +39,25 @@ class ConstantFetchCollector implements Collector
 
     private bool $trackMixedAccess;
 
+    /**
+     * @var list<MemberUsageExcluder>
+     */
+    private array $memberUsageExcluders;
+
+    /**
+     * @param list<MemberUsageExcluder> $memberUsageExcluders
+     */
     public function __construct(
         UsageOriginDetector $usageOriginDetector,
         ReflectionProvider $reflectionProvider,
-        bool $trackMixedAccess
+        bool $trackMixedAccess,
+        array $memberUsageExcluders
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->trackMixedAccess = $trackMixedAccess;
         $this->usageOriginDetector = $usageOriginDetector;
+        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -111,9 +123,13 @@ class ConstantFetchCollector implements Collector
                     }
                 }
 
-                $this->usageBuffer[] = new ClassConstantUsage(
-                    $this->usageOriginDetector->detectOrigin($scope),
-                    new ClassConstantRef($className, $constantName, true),
+                $this->registerUsage(
+                    new ClassConstantUsage(
+                        $this->usageOriginDetector->detectOrigin($scope),
+                        new ClassConstantRef($className, $constantName, true),
+                    ),
+                    $node,
+                    $scope,
                 );
             }
         }
@@ -139,9 +155,13 @@ class ConstantFetchCollector implements Collector
             }
 
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
-                $this->usageBuffer[] = new ClassConstantUsage(
-                    $this->usageOriginDetector->detectOrigin($scope),
-                    new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
+                $this->registerUsage(
+                    new ClassConstantUsage(
+                        $this->usageOriginDetector->detectOrigin($scope),
+                        new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
+                    ),
+                    $node,
+                    $scope,
                 );
             }
         }
@@ -174,6 +194,20 @@ class ConstantFetchCollector implements Collector
         }
 
         return $result;
+    }
+
+    private function registerUsage(ClassConstantUsage $usage, Node $node, Scope $scope): void
+    {
+        $excluderName = null;
+
+        foreach ($this->memberUsageExcluders as $excludedUsageDecider) {
+            if ($excludedUsageDecider->shouldExclude($usage, $node, $scope)) {
+                $excluderName = $excludedUsageDecider->getIdentifier();
+                break;
+            }
+        }
+
+        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
     }
 
 }

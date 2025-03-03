@@ -59,12 +59,23 @@ services:
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder
+        tags:
+            - shipmonk.deadCode.memberUsageExcluder
+        arguments:
+            enabled: %shipmonkDeadCode.usageExcluders.tests.enabled%
+            devPaths: %shipmonkDeadCode.usageExcluders.tests.devPaths%
+
+
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector
         tags:
             - phpstan.collector
         arguments:
             trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
+            memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector
@@ -72,6 +83,7 @@ services:
             - phpstan.collector
         arguments:
             trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
+            memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
@@ -84,6 +96,7 @@ services:
             - phpstan.collector
         arguments:
             memberUsageProviders: tagged(shipmonk.deadCode.memberUsageProvider)
+            memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule
@@ -120,6 +133,10 @@ parameters:
                 enabled: null
             nette:
                 enabled: null
+        usageExcluders:
+            tests:
+                enabled: false
+                devPaths: null
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -147,6 +164,12 @@ parametersSchema:
             ])
             nette: structure([
                 enabled: schema(bool(), nullable())
+            ])
+        ])
+        usageExcluders: structure([
+            tests: structure([
+                enabled: bool()
+                devPaths: schema(listOf(string()), nullable())
             ])
         ])
     ])

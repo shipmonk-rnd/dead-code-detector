@@ -5,14 +5,14 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\ClassMethodsNode;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
 
 trait BufferedUsageCollector
 {
 
     /**
-     * @var list<ClassMemberUsage>
+     * @var list<CollectedUsage>
      */
     private array $usageBuffer = [];
 
@@ -32,7 +32,7 @@ trait BufferedUsageCollector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (ClassMemberUsage $call): string => $call->serialize(),
+                    static fn (CollectedUsage $usage): string => $usage->serialize(),
                     $data,
                 );
         }
