@@ -18,7 +18,7 @@ jobs:
                 name: Setup PHP
                 uses: shivammathur/setup-php@v2
                 with:
-                    php-version: 8.3
+                    php-version: 8.4
             -
                 name: Install dependencies
                 run: composer install --no-progress --prefer-dist --no-interaction
@@ -26,6 +26,52 @@ jobs:
             -
                 name: Run checks
                 run: composer check
+
+    cda:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                php-version: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        steps:
+            -
+                name: Checkout code
+                uses: actions/checkout@v4
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php-version }}
+                    ini-file: development
+            -
+                name: Update dependencies
+                run: composer update --no-progress --prefer-dist --no-interaction
+            -
+                name: Run dependency analyser
+                run: composer check:dependencies
+
+    phpstan:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                php-version: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        steps:
+            -
+                name: Checkout code
+                uses: actions/checkout@v4
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php-version }}
+                    ini-file: development
+            -
+                name: Update dependencies
+                run: composer update --no-progress --prefer-dist --no-interaction
+            -
+                name: Run PHPStan
+                run: composer check:types
 
     tests:
         runs-on: ubuntu-latest
@@ -43,6 +89,7 @@ jobs:
                 uses: shivammathur/setup-php@v2
                 with:
                     php-version: ${{ matrix.php-version }}
+                    ini-file: development
             -
                 name: Update dependencies
                 run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction

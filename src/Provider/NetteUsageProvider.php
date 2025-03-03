@@ -10,7 +10,6 @@ use Nette\ComponentModel\Container;
 use Nette\SmartObject;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
-use ReflectionClass;
 use ReflectionMethod;
 use function lcfirst;
 use function preg_match_all;
@@ -104,7 +103,7 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 
             if ($name !== null) {
                 $name = lcfirst($name);
-                $property = $this->getMagicProperties($reflection->getNativeReflection())[$name] ?? null;
+                $property = $this->getMagicProperties($reflection)[$name] ?? null;
 
                 if ($property !== null) {
                     return true;
@@ -116,12 +115,12 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass<object> $rc
      * @return array<string, true>
      * @see ObjectHelpers::getMagicProperties() Modified to use static reflection
      */
-    private function getMagicProperties(ReflectionClass $rc): array
+    private function getMagicProperties(ClassReflection $reflection): array
     {
+        $rc = $reflection->getNativeReflection();
         $class = $rc->getName();
 
         if (isset($this->smartObjectCache[$class])) {
@@ -151,13 +150,11 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
             }
         }
 
-        foreach ($rc->getTraits() as $trait) {
+        foreach ($reflection->getTraits() as $trait) {
             $props += $this->getMagicProperties($trait);
         }
 
-        $parent = $rc->getParentClass();
-
-        if ($parent !== false) {
+        foreach ($reflection->getParents() as $parent) {
             $props += $this->getMagicProperties($parent);
         }
 

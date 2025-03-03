@@ -9,6 +9,8 @@ use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ParameterNotFoundException;
@@ -19,8 +21,6 @@ use PHPStan\Reflection\MethodReflection;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
-use ReflectionClass;
-use ReflectionMethod;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -42,7 +42,6 @@ use function reset;
 use function simplexml_load_string;
 use function sprintf;
 use function strpos;
-use const PHP_VERSION_ID;
 
 class SymfonyUsageProvider implements MemberUsageProvider
 {
@@ -350,8 +349,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     protected function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
-        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
+        $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
+
+        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', $isInstanceOf)
+            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
     }
 
     /**
@@ -371,15 +372,11 @@ class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass<object>|ReflectionMethod $classOrMethod
+     * @param ReflectionClass|ReflectionMethod $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
     protected function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
     {
-        if (PHP_VERSION_ID < 8_00_00) {
-            return false;
-        }
-
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
             return true;
         }
