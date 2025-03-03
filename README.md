@@ -265,6 +265,8 @@ class UserFacade
 }
 ```
 
+- If you are excluding tests usages (see above), this will not cause the related tests to be removed alongside.
+
 
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
