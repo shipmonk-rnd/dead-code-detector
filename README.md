@@ -7,6 +7,7 @@
 - ✅ **PHPStan** extension
 - ♻️ **Dead cycles** detection
 - 🔗 **Transitive dead** member detection
+- 🧪 **Dead tested code** detection
 - 🧹 **Automatic removal** of unused code
 - 📚 **Popular libraries** support
 - ✨ **Customizable** usage providers
@@ -86,7 +87,7 @@ Those providers are enabled by default, but you can disable them if needed.
 
 ## Excluding usages in tests:
 - By default, all usages within scanned paths can mark members as used
-- But that might not be desirable if class declared in `src` is only used in `tests`
+- But that might not be desirable if class declared in `src` is **only used in `tests`**
 - You can exclude those usages by enabling `tests` usage excluder:
 
 ```neon
