@@ -242,16 +242,16 @@ class DeadCodeRuleTest extends RuleTestCase
                 [
                     'Unused Grouping\Example::boo',
                     29,
+                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused\n" .
                     "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    '• Thus Grouping\Example::bar is transitively also unused',
                 ],
                 [
                     'Unused Grouping\Example::foo',
                     23,
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
+                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused\n" .
                     "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    '• Thus Grouping\Example::bar is transitively also unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',

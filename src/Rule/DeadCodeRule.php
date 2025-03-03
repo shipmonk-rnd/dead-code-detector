@@ -587,12 +587,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             'transitive' => false,
         ];
 
+        $tips = [];
+
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
             $transitiveDeadMemberRef = $transitivelyDeadMember->getMember()->toHumanString();
             $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
 
-            $builder->addTip("Thus $transitiveDeadMemberRef is transitively also unused{$exclusionMessage}");
-
+            $tips[$transitiveDeadMemberRef] = "Thus $transitiveDeadMemberRef is transitively also unused{$exclusionMessage}";
             $metadata[$transitiveDeadMemberRef] = [
                 'file' => $transitivelyDeadMember->getFile(),
                 'line' => $transitivelyDeadMember->getLine(),
@@ -601,6 +602,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         $builder->metadata($metadata);
+
+        ksort($tips);
+
+        foreach ($tips as $tip) {
+            $builder->addTip($tip);
+        }
 
         return $builder->build();
     }
