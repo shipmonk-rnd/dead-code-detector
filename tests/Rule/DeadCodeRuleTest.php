@@ -37,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
 use function str_replace;
+use function str_starts_with;
 use const PHP_VERSION_ID;
 
 /**
@@ -504,7 +505,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
                 {
-                    return $usage->getMemberRef()->getMemberName() === 'mixed';
+                    return str_starts_with($usage->getMemberRef()->getMemberName(), 'mixed');
                 }
 
             },
