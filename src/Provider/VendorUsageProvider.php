@@ -6,7 +6,6 @@ use Composer\Autoload\ClassLoader;
 use ReflectionClass;
 use ReflectionMethod;
 use function array_keys;
-use function str_starts_with;
 use function strlen;
 use function strpos;
 use function substr;
@@ -82,7 +81,7 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         foreach ($this->vendorDirs as $vendorDir) {
-            if (str_starts_with($filePath, $vendorDir)) {
+            if (strpos($filePath, $vendorDir) === 0) {
                 return true;
             }
         }
