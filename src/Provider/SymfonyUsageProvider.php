@@ -9,6 +9,8 @@ use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ParameterNotFoundException;
@@ -19,8 +21,6 @@ use PHPStan\Reflection\MethodReflection;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
-use ReflectionClass;
-use ReflectionMethod;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -42,7 +42,6 @@ use function reset;
 use function simplexml_load_string;
 use function sprintf;
 use function strpos;
-use const PHP_VERSION_ID;
 
 class SymfonyUsageProvider implements MemberUsageProvider
 {
@@ -323,12 +322,16 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $method->isConstructor() && $method->getDeclaringClass()->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle');
     }
 
-    protected function isAutowiredWithRequiredAttribute(ReflectionMethod $method): bool
+    protected function isAutowiredWithRequiredAttribute(
+        ReflectionMethod $method
+    ): bool
     {
         return $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required');
     }
 
-    protected function isEventListenerMethodWithAsEventListenerAttribute(ReflectionMethod $method): bool
+    protected function isEventListenerMethodWithAsEventListenerAttribute(
+        ReflectionMethod $method
+    ): bool
     {
         $class = $method->getDeclaringClass();
 
@@ -336,19 +339,25 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
     }
 
-    protected function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
+    protected function isConstructorWithAsCommandAttribute(
+        ReflectionMethod $method
+    ): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
-    protected function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
+    protected function isConstructorWithAsControllerAttribute(
+        ReflectionMethod $method
+    ): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
     }
 
-    protected function isMethodWithRouteAttribute(ReflectionMethod $method): bool
+    protected function isMethodWithRouteAttribute(
+        ReflectionMethod $method
+    ): bool
     {
         return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
@@ -357,7 +366,9 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
-    protected function isProbablySymfonyListener(ReflectionMethod $method): bool
+    protected function isProbablySymfonyListener(
+        ReflectionMethod $method
+    ): bool
     {
         $methodName = $method->getName();
 
@@ -371,15 +382,11 @@ class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass<object>|ReflectionMethod $classOrMethod
+     * @param ReflectionClass|ReflectionMethod $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
     protected function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
     {
-        if (PHP_VERSION_ID < 8_00_00) {
-            return false;
-        }
-
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
             return true;
         }

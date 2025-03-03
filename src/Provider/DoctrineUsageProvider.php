@@ -6,14 +6,13 @@ use Composer\InstalledVersions;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
-use ReflectionClass;
-use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use const PHP_VERSION_ID;
 
 class DoctrineUsageProvider implements MemberUsageProvider
 {
@@ -163,24 +162,19 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || $methodName === 'onClear';
     }
 
-    protected function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    protected function hasAttribute(
+        ReflectionMethod $method,
+        string $attributeClass
+    ): bool
     {
-        if (PHP_VERSION_ID < 8_00_00) {
-            return false;
-        }
-
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    /**
-     * @param ReflectionClass<object> $class
-     */
-    protected function isPartOfAsEntityListener(ReflectionClass $class, string $methodName): bool
+    protected function isPartOfAsEntityListener(
+        ReflectionClass $class,
+        string $methodName
+    ): bool
     {
-        if (PHP_VERSION_ID < 8_00_00) {
-            return false;
-        }
-
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
             $listenerMethodName = $attribute->getArguments()['method'] ?? $attribute->getArguments()[1] ?? null;
 
@@ -192,9 +186,6 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    /**
-     * @param ReflectionClass<object> $class
-     */
     protected function isEntityRepositoryConstructor(ReflectionClass $class, ReflectionMethod $method): bool
     {
         if (!$method->isConstructor()) {

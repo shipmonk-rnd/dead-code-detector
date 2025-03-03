@@ -5,19 +5,18 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use Composer\InstalledVersions;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\Node\InClassNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPUnit\Framework\TestCase;
-use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use function array_merge;
 use function is_string;
 use function strpos;
-use const PHP_VERSION_ID;
 
 class PhpUnitUsageProvider implements MemberUsageProvider
 {
@@ -115,10 +114,6 @@ class PhpUnitUsageProvider implements MemberUsageProvider
      */
     private function getDataProvidersFromAttributes(ReflectionMethod $method): array
     {
-        if (PHP_VERSION_ID < 8_00_00) {
-            return [];
-        }
-
         $result = [];
 
         foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
@@ -134,7 +129,7 @@ class PhpUnitUsageProvider implements MemberUsageProvider
 
     private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
     {
-        return PHP_VERSION_ID >= 8_00_00 && $method->getAttributes($attributeClass) !== [];
+        return $method->getAttributes($attributeClass) !== [];
     }
 
     private function hasAnnotation(ReflectionMethod $method, string $string): bool

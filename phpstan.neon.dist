@@ -49,3 +49,7 @@ parameters:
         -
             message: "#but it's missing from the PHPDoc @throws tag\\.$#" # allow uncatched exceptions in tests
             path: tests/*
+
+        # allow referencing any attribute classes
+        - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionClass\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
+        - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionMethod\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
