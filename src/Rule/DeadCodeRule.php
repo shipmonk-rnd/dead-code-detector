@@ -36,6 +36,7 @@ use function array_slice;
 use function array_sum;
 use function array_values;
 use function in_array;
+use function ksort;
 use function sprintf;
 use function strpos;
 
@@ -487,6 +488,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function groupDeadMembers(): array
     {
+        ksort($this->blackMembers);
+
         $deadGroups = [];
 
         /** @var array<string, true> $deadMethodsWithCaller */
