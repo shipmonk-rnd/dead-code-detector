@@ -322,16 +322,12 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $method->isConstructor() && $method->getDeclaringClass()->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle');
     }
 
-    protected function isAutowiredWithRequiredAttribute(
-        ReflectionMethod $method
-    ): bool
+    protected function isAutowiredWithRequiredAttribute(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required');
     }
 
-    protected function isEventListenerMethodWithAsEventListenerAttribute(
-        ReflectionMethod $method
-    ): bool
+    protected function isEventListenerMethodWithAsEventListenerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
 
@@ -339,25 +335,19 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
     }
 
-    protected function isConstructorWithAsCommandAttribute(
-        ReflectionMethod $method
-    ): bool
+    protected function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
-    protected function isConstructorWithAsControllerAttribute(
-        ReflectionMethod $method
-    ): bool
+    protected function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
     }
 
-    protected function isMethodWithRouteAttribute(
-        ReflectionMethod $method
-    ): bool
+    protected function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
         $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
 
@@ -368,9 +358,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
-    protected function isProbablySymfonyListener(
-        ReflectionMethod $method
-    ): bool
+    protected function isProbablySymfonyListener(ReflectionMethod $method): bool
     {
         $methodName = $method->getName();
 

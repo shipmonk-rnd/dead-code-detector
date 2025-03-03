@@ -162,18 +162,12 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || $methodName === 'onClear';
     }
 
-    protected function hasAttribute(
-        ReflectionMethod $method,
-        string $attributeClass
-    ): bool
+    protected function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
     {
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    protected function isPartOfAsEntityListener(
-        ReflectionClass $class,
-        string $methodName
-    ): bool
+    protected function isPartOfAsEntityListener(ReflectionClass $class, string $methodName): bool
     {
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
             $listenerMethodName = $attribute->getArguments()['method'] ?? $attribute->getArguments()[1] ?? null;
