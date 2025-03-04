@@ -100,6 +100,12 @@ parameters:
                     - %currentWorkingDirectory%/tests
 ```
 
+With such setup, members used only in tests will be reported with corresponding message, e.g:
+
+```
+Unused AddressValidator::isValidPostalCode (all usages excluded by tests excluder)
+```
+
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own usage provider.
 - Just tag it with `shipmonk.deadCode.memberUsageProvider` and implement `ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider`
