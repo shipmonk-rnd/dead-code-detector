@@ -113,28 +113,21 @@ class MethodCallCollector implements Collector
         $methodNames = $this->getMethodName($methodCall, $scope);
 
         if ($methodCall instanceof New_) {
-            if ($methodCall->class instanceof Expr) {
-                $callerType = $scope->getType($methodCall->class);
-                $possibleDescendantCall = true;
-
-            } elseif ($methodCall->class instanceof Name) {
-                $callerType = $scope->resolveTypeByName($methodCall->class);
-                $possibleDescendantCall = $methodCall->class->toString() === 'static';
-
+            if ($methodCall->class instanceof Expr || $methodCall->class instanceof Name) {
+                $callerType = $scope->getType($methodCall);
             } else {
                 return;
             }
         } else {
             $callerType = $scope->getType($methodCall->var);
-            $possibleDescendantCall = true;
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
+            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createNo()) as $methodRef) {
                 $this->registerUsage(
                     new ClassMethodUsage(
                         $this->usageOriginDetector->detectOrigin($scope),
-                        new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                        $methodRef,
                     ),
                     $methodCall,
                     $scope,
@@ -152,19 +145,16 @@ class MethodCallCollector implements Collector
 
         if ($staticCall->class instanceof Expr) {
             $callerType = $scope->getType($staticCall->class);
-            $possibleDescendantCall = true;
-
         } else {
-            $callerType = $scope->resolveTypeByName($staticCall->class);
-            $possibleDescendantCall = $staticCall->class->toString() === 'static';
+            $callerType = $scope->resolveTypeByName($staticCall->class); // broken in PHPStan, the type here is marked as NOT final
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createYes()) as $className) {
+            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createYes()) as $methodRef) {
                 $this->registerUsage(
                     new ClassMethodUsage(
                         $this->usageOriginDetector->detectOrigin($scope),
-                        new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                        $methodRef,
                     ),
                     $staticCall,
                     $scope,
@@ -186,14 +176,11 @@ class MethodCallCollector implements Collector
                     $caller = $typeAndName->getType();
                     $methodName = $typeAndName->getMethod();
 
-                    // currently always true, see https://github.com/phpstan/phpstan-src/pull/3372
-                    $possibleDescendantCall = !$caller->isClassString()->yes();
-
-                    foreach ($this->getDeclaringTypesWithMethod($scope, $caller, $methodName, TrinaryLogic::createMaybe()) as $className) {
+                    foreach ($this->getDeclaringTypesWithMethod($methodName, $caller, TrinaryLogic::createMaybe()) as $methodRef) {
                         $this->registerUsage(
                             new ClassMethodUsage(
                                 $this->usageOriginDetector->detectOrigin($scope),
-                                new ClassMethodRef($className, $methodName, $possibleDescendantCall),
+                                $methodRef,
                             ),
                             $array,
                             $scope,
@@ -221,11 +208,11 @@ class MethodCallCollector implements Collector
         $methodName = '__clone';
         $callerType = $scope->getType($node->expr);
 
-        foreach ($this->getDeclaringTypesWithMethod($scope, $callerType, $methodName, TrinaryLogic::createNo()) as $className) {
+        foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createNo()) as $methodRef) {
             $this->registerUsage(
                 new ClassMethodUsage(
                     $this->usageOriginDetector->detectOrigin($scope),
-                    new ClassMethodRef($className, $methodName, true),
+                    $methodRef,
                 ),
                 $node,
                 $scope,
@@ -257,12 +244,11 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @return list<class-string<object>|null>
+     * @return list<ClassMethodRef>
      */
     private function getDeclaringTypesWithMethod(
-        Scope $scope,
-        Type $type,
         string $methodName,
+        Type $type,
         TrinaryLogic $isStaticCall
     ): array
     {
@@ -273,7 +259,7 @@ class MethodCallCollector implements Collector
         $result = [];
 
         foreach ($classReflections as $classReflection) {
-            $result[] = $classReflection->getName();
+            $result[] = new ClassMethodRef($classReflection->getName(), $methodName, !$classReflection->isFinal());
         }
 
         if ($this->trackMixedAccess) {
@@ -281,7 +267,7 @@ class MethodCallCollector implements Collector
             $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
 
             if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
-                $result[] = null; // call over unknown type
+                $result[] = new ClassMethodRef(null, $methodName, true); // call over unknown type
             }
         }
 
