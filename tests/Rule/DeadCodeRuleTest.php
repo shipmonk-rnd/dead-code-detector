@@ -493,7 +493,7 @@ class DeadCodeRuleTest extends RuleTestCase
             new TestsUsageExcluder(
                 self::createReflectionProvider(),
                 true,
-                [__DIR__ . '/data/excluders/tests/tests'],
+                [__DIR__ . '/data/excluders/../excluders/tests/tests'], // tests path normalization
             ),
             new class implements MemberUsageExcluder
             {
