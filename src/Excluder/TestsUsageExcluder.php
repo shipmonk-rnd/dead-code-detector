@@ -3,13 +3,13 @@
 namespace ShipMonk\PHPStan\DeadCode\Excluder;
 
 use Composer\Autoload\ClassLoader;
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use function array_filter;
 use function array_keys;
-use function array_values;
 use function count;
 use function dirname;
 use function file_get_contents;
@@ -32,7 +32,7 @@ class TestsUsageExcluder implements MemberUsageExcluder
     /**
      * @var list<string>
      */
-    private array $devPaths;
+    private array $devPaths = [];
 
     private bool $enabled;
 
@@ -46,8 +46,15 @@ class TestsUsageExcluder implements MemberUsageExcluder
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->devPaths = $devPaths ?? $this->autodetectComposerDevPaths();
         $this->enabled = $enabled;
+
+        if ($devPaths !== null) {
+            foreach ($devPaths as $devPath) {
+                $this->devPaths[] = $this->realpath($devPath);
+            }
+        } else {
+            $this->devPaths = $this->autodetectComposerDevPaths();
+        }
     }
 
     public function getIdentifier(): string
@@ -61,7 +68,7 @@ class TestsUsageExcluder implements MemberUsageExcluder
             return false;
         }
 
-        return $this->isWithinDevPaths($scope->getFile())
+        return $this->isWithinDevPaths($this->realpath($scope->getFile()))
             && !$this->isWithinDevPaths($this->getDeclarationFile($usage->getMemberRef()->getClassName()));
     }
 
@@ -90,7 +97,13 @@ class TestsUsageExcluder implements MemberUsageExcluder
             return null;
         }
 
-        return $this->reflectionProvider->getClass($className)->getFileName();
+        $filePath = $this->reflectionProvider->getClass($className)->getFileName();
+
+        if ($filePath === null) {
+            return null;
+        }
+
+        return $this->realpath($filePath);
     }
 
     /**
@@ -181,17 +194,28 @@ class TestsUsageExcluder implements MemberUsageExcluder
                     }
 
                     foreach ($globPaths as $globPath) {
-                        $result[] = realpath($globPath);
+                        $result[] = $this->realpath($globPath);
                     }
 
                     continue;
                 }
 
-                $result[] = realpath($absolutePath);
+                $result[] = $this->realpath($absolutePath);
             }
         }
 
-        return array_values(array_filter($result, static fn ($path): bool => $path !== false));
+        return $result;
+    }
+
+    private function realpath(string $path): string
+    {
+        $realPath = realpath($path);
+
+        if ($realPath === false) {
+            throw new LogicException("Unable to realpath '$path'");
+        }
+
+        return $realPath;
     }
 
 }
