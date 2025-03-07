@@ -142,18 +142,29 @@ class ApiOutputUsageProvider extends ReflectionBasedMemberUsageProvider
 ```
 
 ### AST-based customization:
-- For more complex usecases that are deducible only from AST (e.g. serialization calls), you just stick with raw `MemberUsageProvider` interface:
+- For more complex usecases that are deducible only from AST (e.g. serialization calls), you just stick with raw `MemberUsageProvider` interface.
+- Here is simplified example how to emit `User::__construct` usage in following PHP snippet:
 
 ```php
+function test(SerializerInterface $serializer): User {
+    return $serializer->deserialize('{"name": "John"}', User::class, 'json');
+}
+```
 
+```php
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class DeserializationUsageProvider implements MemberUsageProvider
 {
+
+    public function __construct(
+        private UsageOriginDetector $originDetector,
+    ) {}
 
     /**
      * @return list<ClassMemberUsage>
@@ -173,7 +184,7 @@ class DeserializationUsageProvider implements MemberUsageProvider
             $serializedClass = $scope->getType($secondArgument)->getConstantStrings()[0];
 
             // record the method it was called from (needed for proper transitive dead code elimination)
-            $originRef = $this->getOriginMethodRef($scope);
+            $originRef = $this->originDetector->detectOrigin($node, $scope);
 
             // record the hidden constructor call
             $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', false);
@@ -182,15 +193,6 @@ class DeserializationUsageProvider implements MemberUsageProvider
         }
 
         return [];
-    }
-
-    private function getOriginMethodRef(Scope $scope): ?ClassMethodRef
-    {
-        return new ClassMethodRef(
-            $scope->getClassReflection()->getName(),
-            $scope->getFunction()->getName(),
-            false,
-        );
     }
 
 }
