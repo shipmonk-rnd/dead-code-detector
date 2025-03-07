@@ -113,17 +113,24 @@ class MethodCallCollector implements Collector
         $methodNames = $this->getMethodName($methodCall, $scope);
 
         if ($methodCall instanceof New_) {
-            if ($methodCall->class instanceof Expr || $methodCall->class instanceof Name) {
+            if ($methodCall->class instanceof Expr) {
                 $callerType = $scope->getType($methodCall);
+                $possibleDescendantCall = null;
+
+            } elseif ($methodCall->class instanceof Name) {
+                $callerType = $scope->resolveTypeByName($methodCall->class);
+                $possibleDescendantCall = $methodCall->class->toString() === 'static';
+
             } else {
                 return;
             }
         } else {
             $callerType = $scope->getType($methodCall->var);
+            $possibleDescendantCall = null;
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createNo()) as $methodRef) {
+            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createNo(), $possibleDescendantCall) as $methodRef) {
                 $this->registerUsage(
                     new ClassMethodUsage(
                         $this->usageOriginDetector->detectOrigin($scope),
@@ -145,12 +152,15 @@ class MethodCallCollector implements Collector
 
         if ($staticCall->class instanceof Expr) {
             $callerType = $scope->getType($staticCall->class);
+            $possibleDescendantCall = null;
+
         } else {
-            $callerType = $scope->resolveTypeByName($staticCall->class); // broken in PHPStan, the type here is marked as NOT final
+            $callerType = $scope->resolveTypeByName($staticCall->class);
+            $possibleDescendantCall = $staticCall->class->toString() === 'static';
         }
 
         foreach ($methodNames as $methodName) {
-            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createYes()) as $methodRef) {
+            foreach ($this->getDeclaringTypesWithMethod($methodName, $callerType, TrinaryLogic::createYes(), $possibleDescendantCall) as $methodRef) {
                 $this->registerUsage(
                     new ClassMethodUsage(
                         $this->usageOriginDetector->detectOrigin($scope),
@@ -249,7 +259,8 @@ class MethodCallCollector implements Collector
     private function getDeclaringTypesWithMethod(
         string $methodName,
         Type $type,
-        TrinaryLogic $isStaticCall
+        TrinaryLogic $isStaticCall,
+        ?bool $isPossibleDescendant = null
     ): array
     {
         $typeNoNull = TypeCombinator::removeNull($type); // remove null to support nullsafe calls
@@ -259,7 +270,8 @@ class MethodCallCollector implements Collector
         $result = [];
 
         foreach ($classReflections as $classReflection) {
-            $result[] = new ClassMethodRef($classReflection->getName(), $methodName, !$classReflection->isFinal());
+            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
+            $result[] = new ClassMethodRef($classReflection->getName(), $methodName, $possibleDescendant);
         }
 
         if ($this->trackMixedAccess) {
