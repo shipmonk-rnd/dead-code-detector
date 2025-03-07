@@ -209,6 +209,10 @@ class TestsUsageExcluder implements MemberUsageExcluder
 
     private function realpath(string $path): string
     {
+        if (strpos($path, 'phar://') === 0) {
+            return $path;
+        }
+
         $realPath = realpath($path);
 
         if ($realPath === false) {
