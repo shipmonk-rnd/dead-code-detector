@@ -328,6 +328,7 @@ parameters:
 
 #### Private constructors:
 - Those are never reported as dead as those are often used to deny class instantiation
+  - This applies only to constructors without any parameters
 
 #### Interface methods:
 - If you never call interface method over the interface, but only over its implementors, it gets reported as dead

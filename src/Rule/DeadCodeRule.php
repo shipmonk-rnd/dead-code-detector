@@ -76,7 +76,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      *      name: string,
      *      file: string,
      *      constants: array<string, array{line: int}>,
-     *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
+     *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>
@@ -692,6 +692,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
+        $params = $this->typeDefinitions[$typeName]['methods'][$memberName]['params'] ?? 0;
         $abstract = $this->typeDefinitions[$typeName]['methods'][$memberName]['abstract'] ?? false;
         $visibility = $this->typeDefinitions[$typeName]['methods'][$memberName]['visibility'] ?? 0;
 
@@ -701,8 +702,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return true;
         }
 
-        if ($memberName === '__construct' && ($visibility & Visibility::PRIVATE) !== 0) {
-            // private constructors are often used to deny instantiation
+        if ($memberName === '__construct' && ($visibility & Visibility::PRIVATE) !== 0 && $params === 0) {
+            // private constructors with zero parameters are often used to deny instantiation
             return true;
         }
 
