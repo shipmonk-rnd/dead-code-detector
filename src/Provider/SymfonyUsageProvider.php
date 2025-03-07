@@ -14,6 +14,7 @@ use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ParameterNotFoundException;
+use PHPStan\Node\InClassMethodNode;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
@@ -26,6 +27,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use SimpleXMLElement;
 use SplFileInfo;
 use UnexpectedValueException;
@@ -62,12 +64,16 @@ class SymfonyUsageProvider implements MemberUsageProvider
      */
     private array $dicConstants = [];
 
+    private UsageOriginDetector $usageOriginDetector;
+
     public function __construct(
         Container $container,
+        UsageOriginDetector $usageOriginDetector,
         ?bool $enabled,
         ?string $configDir
     )
     {
+        $this->usageOriginDetector = $usageOriginDetector;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $resolvedConfigDir = $configDir ?? $this->autodetectConfigDir();
         $containerXmlPath = $this->getContainerXmlPath($container);
@@ -94,6 +100,13 @@ class SymfonyUsageProvider implements MemberUsageProvider
                 ...$usages,
                 ...$this->getMethodUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
+            ];
+        }
+
+        if ($node instanceof InClassMethodNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            $usages = [
+                ...$usages,
+                ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
             ];
         }
 
@@ -210,6 +223,75 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
             if ($this->shouldMarkAsUsed($method)) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getMethodUsagesFromAttributeReflection(InClassMethodNode $node, Scope $scope): array
+    {
+        $usages = [];
+
+        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+            foreach ($parameter->getAttributes() as $attributeReflection) {
+                if ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireLocator') {
+                    $arguments = $attributeReflection->getArgumentTypes();
+
+                    if (!isset($arguments['services']) || !isset($arguments['defaultIndexMethod'])) {
+                        continue;
+                    }
+
+                    if ($arguments['services']->isArray()->yes()) {
+                        $classNames = $arguments['services']->getIterableValueType()->getConstantStrings();
+                    } else {
+                        $classNames = $arguments['services']->getConstantStrings();
+                    }
+
+                    $defaultIndexMethod = $arguments['defaultIndexMethod']->getConstantStrings();
+
+                    if ($classNames === [] || !isset($defaultIndexMethod[0])) {
+                        continue;
+                    }
+
+                    foreach ($classNames as $className) {
+                        $usages[] = new ClassMethodUsage(
+                            $this->usageOriginDetector->detectOrigin($scope),
+                            new ClassMethodRef(
+                                $className->getValue(),
+                                $defaultIndexMethod[0]->getValue(),
+                                true,
+                            ),
+                        );
+                    }
+                } elseif ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator') {
+                    $arguments = $attributeReflection->getArgumentTypes();
+
+                    if (!isset($arguments['tag']) || !isset($arguments['defaultIndexMethod'])) {
+                        continue;
+                    }
+
+                    $classNames = $arguments['tag']->getConstantStrings();
+                    $defaultIndexMethod = $arguments['defaultIndexMethod']->getConstantStrings();
+
+                    if ($classNames === [] || !isset($defaultIndexMethod[0])) {
+                        continue;
+                    }
+
+                    foreach ($classNames as $className) {
+                        $usages[] = new ClassMethodUsage(
+                            $this->usageOriginDetector->detectOrigin($scope),
+                            new ClassMethodRef(
+                                $className->getValue(),
+                                $defaultIndexMethod[0]->getValue(),
+                                true,
+                            ),
+                        );
+                    }
+                }
             }
         }
 
@@ -395,7 +477,8 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/routing')
             || InstalledVersions::isInstalled('symfony/contracts')
             || InstalledVersions::isInstalled('symfony/console')
-            || InstalledVersions::isInstalled('symfony/http-kernel');
+            || InstalledVersions::isInstalled('symfony/http-kernel')
+            || InstalledVersions::isInstalled('symfony/dependency-injection');
     }
 
     private function createUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
