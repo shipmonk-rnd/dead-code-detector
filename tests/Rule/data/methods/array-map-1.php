@@ -12,6 +12,7 @@ class ArrayMapTest
         [$this, 'method4'];
         [self::class, 'method5'];
         ['static', 'method6']; // https://github.com/phpstan/phpstan/issues/11594
+        [new self(), 'method7'];
     }
 
     public function method1(string $foo): void {} // error: Unused DeadMap\ArrayMapTest::method1
@@ -20,6 +21,7 @@ class ArrayMapTest
     public function method4(): void {}
     public static function method5(): void {}
     public static function method6(): void {} // error: Unused DeadMap\ArrayMapTest::method6
+    public function method7(): void {}
 }
 
 class Child extends ArrayMapTest {
@@ -29,6 +31,7 @@ class Child extends ArrayMapTest {
     public function method4(): void {}
     public static function method5(): void {} // should be reported (https://github.com/phpstan/phpstan-src/pull/3372)
     public static function method6(): void {} // error: Unused DeadMap\Child::method6
+    public function method7(): void {} // error: Unused DeadMap\Child::method7
 
 }
 

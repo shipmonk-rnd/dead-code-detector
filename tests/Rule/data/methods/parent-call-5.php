@@ -10,9 +10,7 @@ class ParentClass
 
 class ChildClass extends ParentClass
 {
-    public function method() {}
+    public function method() {} // error: Unused ParentCall5\ChildClass::method
 }
 
-// this cannot be call over descendant, but there is no such info in PHPStan's ObjectType
-// ideally, ChildClass::method() should be marked as dead, but it is currently impossible
 (new ParentClass())->method();

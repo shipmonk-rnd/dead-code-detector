@@ -6,6 +6,10 @@ class CloneClass1 {
     public function __clone() {}
 }
 
+class CloneClassChild extends CloneClass1 {
+    public function __clone() {} // error: Unused DeadClone\CloneClassChild::__clone
+}
+
 class CloneClass2 {
     public function __clone() {} // error: Unused DeadClone\CloneClass2::__clone
 }
