@@ -478,6 +478,7 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
+                new UsageOriginDetector(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),
