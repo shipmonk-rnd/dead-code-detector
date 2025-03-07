@@ -19,13 +19,14 @@ use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use function array_fill_keys;
 use function array_map;
+use function count;
 
 /**
  * @implements Collector<ClassLike, array{
  *       kind: string,
  *       name: string,
  *       constants: array<string, array{line: int}>,
- *       methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
+ *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
  *       interfaces: array<string, null>,
@@ -52,7 +53,7 @@ class ClassDefinitionCollector implements Collector
      *      kind: string,
      *      name: string,
      *      constants: array<string, array{line: int}>,
-     *      methods: array<string, array{line: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
+     *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
      *      interfaces: array<string, null>,
@@ -76,6 +77,7 @@ class ClassDefinitionCollector implements Collector
         foreach ($node->getMethods() as $method) {
             $methods[$method->name->toString()] = [
                 'line' => $method->getStartLine(),
+                'params' => count($method->params),
                 'abstract' => $method->isAbstract() || $node instanceof Interface_,
                 'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
             ];
