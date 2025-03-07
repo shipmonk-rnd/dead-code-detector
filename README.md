@@ -129,20 +129,19 @@ services:
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 
-class ApiOutputUsageProvider extends ReflectionBasedMemberUsageProvider
+class FuzzyTwigUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
     {
-        // all methods from our ApiOutput interface are called automatically (e.g. during serialization)
-        return $method->getDeclaringClass()->implementsInterface(ApiOutput::class);
+        return $method->getDeclaringClass()->implementsInterface(UsedInTwigMarkerInterface::class);
     }
 
 }
 ```
 
 ### AST-based customization:
-- For more complex usecases that are deducible only from AST (e.g. serialization calls), you just stick with raw `MemberUsageProvider` interface.
+- For more complex usecases that are deducible only from AST, you just stick with raw `MemberUsageProvider` interface.
 - Here is simplified example how to emit `User::__construct` usage in following PHP snippet:
 
 ```php
