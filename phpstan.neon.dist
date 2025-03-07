@@ -41,7 +41,10 @@ parameters:
                 PHPStan\Rules\Rule: Rule
                 PHPStan\Collectors\Collector: Collector
                 ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase: RuleTest
+                ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef: Ref
+                ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage: Usage
                 ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider: UsageProvider
+                ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder: UsageExcluder
         enforceReadonlyPublicProperty:
             enabled: false # we support even PHP 7.4
         enforceClosureParamNativeTypehint:
