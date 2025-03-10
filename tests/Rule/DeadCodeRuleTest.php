@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use Composer\InstalledVersions;
+use Composer\Semver\VersionParser;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
@@ -391,6 +393,11 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', 8_01_00];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', 8_00_00];
+
+        if (InstalledVersions::satisfies(new VersionParser(), 'symfony/dependency-injection', '^7.1')) {
+            yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', 8_00_00];
+        }
+
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', 8_00_00];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', 8_00_00];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
@@ -478,6 +485,7 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
+                new UsageOriginDetector(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),
