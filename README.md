@@ -151,6 +151,9 @@ function test(SerializerInterface $serializer): User {
 ```
 
 ```php
+use PhpParser\Node;
+use PhpParser\Node\Expr\MethodCall;
+use PHPStan\Analyser\Scope;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
@@ -183,7 +186,7 @@ class DeserializationUsageProvider implements MemberUsageProvider
             $serializedClass = $scope->getType($secondArgument)->getConstantStrings()[0];
 
             // record the method it was called from (needed for proper transitive dead code elimination)
-            $originRef = $this->originDetector->detectOrigin($node, $scope);
+            $originRef = $this->originDetector->detectOrigin($scope);
 
             // record the hidden constructor call
             $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', false);
