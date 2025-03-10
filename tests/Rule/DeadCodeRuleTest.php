@@ -89,28 +89,28 @@ class DeadCodeRuleTest extends RuleTestCase
      * @param string|non-empty-list<string> $files
      * @dataProvider provideFiles
      */
-    public function testDead($files, ?int $lowestPhpVersion = null): void
+    public function testDead($files, bool $requirementsMet = true): void
     {
         $this->emitErrorsInGroups = false;
-        $this->doTestDead($files, $lowestPhpVersion);
+        $this->doTestDead($files, $requirementsMet);
     }
 
     /**
      * @param string|non-empty-list<string> $files
      * @dataProvider provideFiles
      */
-    public function testDeadWithGroups($files, ?int $lowestPhpVersion = null): void
+    public function testDeadWithGroups($files, bool $requirementsMet = true): void
     {
-        $this->doTestDead($files, $lowestPhpVersion);
+        $this->doTestDead($files, $requirementsMet);
     }
 
     /**
      * @param string|non-empty-list<string> $files
      */
-    private function doTestDead($files, ?int $lowestPhpVersion = null): void
+    private function doTestDead($files, bool $requirementsMet): void
     {
-        if ($lowestPhpVersion !== null && PHP_VERSION_ID < $lowestPhpVersion) {
-            self::markTestSkipped('Requires PHP ' . $lowestPhpVersion);
+        if (!$requirementsMet) {
+            self::markTestSkipped('Requirements not met');
         }
 
         $this->analyseFiles(is_array($files) ? $files : [$files]);
@@ -313,13 +313,13 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return array<string, array{0: string|list<string>, 1?: int}>
+     * @return array<string, array{0: string|list<string>, 1?: bool}>
      */
     public static function provideFiles(): iterable
     {
         // methods
         yield 'method-anonym' => [__DIR__ . '/data/methods/anonym.php'];
-        yield 'method-enum' => [__DIR__ . '/data/methods/enum.php', 8_01_00];
+        yield 'method-enum' => [__DIR__ . '/data/methods/enum.php', self::requiresPhp(8_01_00)];
         yield 'method-callables' => [__DIR__ . '/data/methods/callables.php'];
         yield 'method-code' => [__DIR__ . '/data/methods/basic.php'];
         yield 'method-ctor' => [__DIR__ . '/data/methods/ctor.php'];
@@ -391,15 +391,11 @@ class DeadCodeRuleTest extends RuleTestCase
 
         // providers
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
-        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', 8_01_00];
-        yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', 8_00_00];
-
-        if (InstalledVersions::satisfies(new VersionParser(), 'symfony/dependency-injection', '^7.1')) {
-            yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', 8_00_00];
-        }
-
-        yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', 8_00_00];
-        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', 8_00_00];
+        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
+        yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
+        yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
+        yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
+        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
 
@@ -596,6 +592,16 @@ class DeadCodeRuleTest extends RuleTestCase
             ->willReturn(['containerXmlPath' => __DIR__ . '/data/providers/symfony/services.xml']);
 
         return $mock;
+    }
+
+    private static function requiresPhp(int $lowestPhpVersion): bool
+    {
+        return PHP_VERSION_ID >= $lowestPhpVersion;
+    }
+
+    private static function requiresPackage(string $package, string $constraint): bool
+    {
+        return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
     }
 
 }
