@@ -34,6 +34,7 @@ use function array_map;
 use function array_merge;
 use function array_merge_recursive;
 use function array_slice;
+use function array_unique;
 use function array_values;
 use function in_array;
 use function ksort;
@@ -108,7 +109,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $mixedMemberUsages = [];
 
     /**
-     * @var array<string, list<string>> callerKey => memberUseKey[]
+     * @var array<string, array<string, list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
      */
     private array $usageGraph = [];
 
@@ -247,7 +248,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
                 foreach ($alternativeOriginKeys as $alternativeOriginKey) {
-                    $this->usageGraph[$alternativeOriginKey][] = $alternativeMemberKey;
+                    $this->usageGraph[$alternativeOriginKey][$alternativeMemberKey][] = $memberUsage;
                 }
 
                 if ($isWhite) {
@@ -415,6 +416,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
+        $result = array_values(array_unique($result));
+
         $this->memberAlternativesCache[$cacheKey] = $result;
 
         return $result;
@@ -455,21 +458,21 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param array<string, null> $visitedKeys
+     * @param array<string, list<ClassMemberUsage>> $visited
      */
-    private function markTransitivesWhite(string $callerKey, array $visitedKeys = []): void
+    private function markTransitivesWhite(string $callerKey, array $visited = []): void
     {
-        $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
+        $visited = $visited === [] ? [$callerKey => []] : $visited; // TODO [] init?
+        $callees = $this->usageGraph[$callerKey] ?? [];
 
         if (isset($this->blackMembers[$callerKey])) { // TODO debug why not always present
-            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], array_keys($visitedKeys));
+            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], $visited);
 
             unset($this->blackMembers[$callerKey]);
         }
 
-        foreach ($calleeKeys as $calleeKey) {
-            if (array_key_exists($calleeKey, $visitedKeys)) {
+        foreach ($callees as $calleeKey => $usages) {
+            if (array_key_exists($calleeKey, $visited)) {
                 continue;
             }
 
@@ -477,7 +480,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            $this->markTransitivesWhite($calleeKey, array_merge($visitedKeys, [$calleeKey => null]));
+            $this->markTransitivesWhite($calleeKey, array_merge($visited, [$calleeKey => $usages]));
         }
     }
 
@@ -488,11 +491,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function getTransitiveDeadCalls(string $callerKey, array $visitedKeys = []): array
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
+        $callees = $this->usageGraph[$callerKey] ?? [];
 
         $result = [];
 
-        foreach ($calleeKeys as $calleeKey) {
+        foreach ($callees as $calleeKey => $_) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
                 continue;
             }
@@ -528,7 +531,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            foreach ($callees as $callee) {
+            foreach ($callees as $callee => $_) {
                 if (array_key_exists($callee, $this->blackMembers)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }

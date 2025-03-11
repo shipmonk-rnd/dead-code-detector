@@ -9,6 +9,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -16,7 +17,12 @@ use function array_map;
 use function array_sum;
 use function count;
 use function explode;
+use function ltrim;
+use function next;
+use function preg_replace;
+use function reset;
 use function sprintf;
+use function str_repeat;
 use function str_replace;
 use function strpos;
 
@@ -34,7 +40,7 @@ class DebugUsagePrinter
     /**
      * memberKey => usage info
      *
-     * @var array<string, array{usages?: list<CollectedUsage>, eliminationPath?: list<string>, neverReported?: string}>
+     * @var array<string, array{usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
      */
     private array $debugMembers;
 
@@ -124,19 +130,26 @@ class DebugUsagePrinter
         $output->writeLineFormatted("\n<fg=red>Usage debugging information:</>");
 
         foreach ($this->debugMembers as $memberKey => $debugMember) {
-            $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $memberKey));
+            $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $this->prettyMemberKey($memberKey)));
 
             if (isset($debugMember['eliminationPath'])) {
-                $output->writeLineFormatted("|\n| Elimination path:");
+                $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
+                $depth = 0;
 
-                foreach ($debugMember['eliminationPath'] as $index => $eliminationPath) {
-                    $entrypoint = $index === 0 ? '(entrypoint)' : '';
-                    $output->writeLineFormatted(sprintf('|  -> <fg=white>%s</> %s', $eliminationPath, $entrypoint));
+                foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
+                    $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '    ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
+                    $nextFragmentUsages = next($debugMember['eliminationPath']);
+                    $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
+                    $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
+
+                    if ($nextFragmentFirstUsageOrigin === null) {
+                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $this->prettyMemberKey($fragmentKey)));
+                    } else {
+                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</> (%s)', $indent, $this->prettyMemberKey($fragmentKey), $this->getOriginReference($nextFragmentFirstUsageOrigin)));
+                    }
+
+                    $depth++;
                 }
-            }
-
-            if (isset($debugMember['neverReported'])) {
-                $output->writeLineFormatted(sprintf("|\n| <fg=yellow>Is never reported as dead: %s</>", $debugMember['neverReported']));
             }
 
             if (isset($debugMember['usages'])) {
@@ -152,10 +165,25 @@ class DebugUsagePrinter
 
                     $output->writeLineFormatted('');
                 }
+            } elseif (isset($debugMember['neverReported'])) {
+                $output->writeLineFormatted(sprintf("|\n| <fg=yellow>Is never reported as dead: %s</>", $debugMember['neverReported']));
+            } else {
+                $output->writeLineFormatted("|\n| <fg=yellow>No usages found</>");
             }
 
             $output->writeLineFormatted('');
         }
+    }
+
+    private function prettyMemberKey(string $memberKey): string
+    {
+        $replaced = preg_replace('/^(m|c)\//', '', $memberKey);
+
+        if ($replaced === null) {
+            throw new LogicException('Failed to pretty member key ' . $memberKey);
+        }
+
+        return $replaced;
     }
 
     private function getOriginReference(UsageOrigin $origin): string
@@ -201,9 +229,9 @@ class DebugUsagePrinter
     }
 
     /**
-     * @param list<string> $usagePath
+     * @param array<string, list<ClassMemberUsage>> $eliminationPath
      */
-    public function markMemberAsWhite(BlackMember $blackMember, array $usagePath): void
+    public function markMemberAsWhite(BlackMember $blackMember, array $eliminationPath): void
     {
         $memberKey = $blackMember->getMember()->toKey();
 
@@ -211,7 +239,7 @@ class DebugUsagePrinter
             return;
         }
 
-        $this->debugMembers[$memberKey]['eliminationPath'] = $usagePath;
+        $this->debugMembers[$memberKey]['eliminationPath'] = $eliminationPath;
     }
 
     public function markMemberAsNeverReported(BlackMember $blackMember, string $reason): void
@@ -227,7 +255,7 @@ class DebugUsagePrinter
 
     /**
      * @param list<string> $debugMembers
-     * @return array<string, array{usages?: list<CollectedUsage>, eliminationPath?: list<string>, neverReported?: string}>
+     * @return array<string, array{usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
      */
     private function buildDebugMemberKeys(array $debugMembers): array
     {
@@ -239,24 +267,25 @@ class DebugUsagePrinter
             }
 
             [$class, $memberName] = explode('::', $debugMember); // @phpstan-ignore offsetAccess.notFound
+            $normalizedClass = ltrim($class, '\\');
 
-            if (!$this->reflectionProvider->hasClass($class)) {
-                throw new LogicException("Class $class does not exist");
+            if (!$this->reflectionProvider->hasClass($normalizedClass)) {
+                throw new LogicException("Class $normalizedClass does not exist");
             }
 
-            $classReflection = $this->reflectionProvider->getClass($class);
+            $classReflection = $this->reflectionProvider->getClass($normalizedClass);
 
             if ($classReflection->hasMethod($memberName)) {
-                $key = ClassMethodRef::buildKey($class, $memberName);
+                $key = ClassMethodRef::buildKey($normalizedClass, $memberName);
 
             } elseif ($classReflection->hasConstant($memberName)) {
-                $key = ClassConstantRef::buildKey($class, $memberName);
+                $key = ClassConstantRef::buildKey($normalizedClass, $memberName);
 
             } elseif ($classReflection->hasProperty($memberName)) {
                 throw new LogicException('Properties are not yet supported');
 
             } else {
-                throw new LogicException("Member $memberName does not exist in $class");
+                throw new LogicException("Member $memberName does not exist in $normalizedClass");
             }
 
             $result[$key] = [];
