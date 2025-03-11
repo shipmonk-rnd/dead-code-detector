@@ -14,11 +14,11 @@ final class ClassMethodUsage extends ClassMemberUsage
     private ClassMethodRef $callee;
 
     /**
-     * @param ClassMethodRef|null $origin The method where the call occurs
+     * @param UsageOrigin $origin The method where the call occurs
      * @param ClassMethodRef $callee The method being called
      */
     public function __construct(
-        ?ClassMethodRef $origin,
+        UsageOrigin $origin,
         ClassMethodRef $callee
     )
     {

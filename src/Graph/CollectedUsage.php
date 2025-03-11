@@ -60,12 +60,12 @@ final class CollectedUsage
         $data = [
             'e' => $this->excludedBy,
             't' => $this->usage->getMemberType(),
-            'o' => $origin === null
-                ? null
-                : [
+            'o' => [
                     'c' => $origin->getClassName(),
-                    'm' => $origin->getMemberName(),
-                    'd' => $origin->isPossibleDescendant(),
+                    'm' => $origin->getMethodName(),
+                    'f' => $origin->getFile(),
+                    'l' => $origin->getLine(),
+                    'r' => $origin->getReason(),
                 ],
             'm' => [
                 'c' => $memberRef->getClassName(),
@@ -84,14 +84,14 @@ final class CollectedUsage
     public static function deserialize(string $data): self
     {
         try {
-            /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string, d: bool}|null, m: array{c: string|null, m: string, d: bool}} $result */
+            /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, r: string|null}, m: array{c: string|null, m: string, d: bool}} $result */
             $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
         }
 
         $memberType = $result['t'];
-        $origin = $result['o'] === null ? null : new ClassMethodRef($result['o']['c'], $result['o']['m'], $result['o']['d']);
+        $origin = new UsageOrigin($result['o']['c'], $result['o']['m'], $result['o']['f'], $result['o']['l'], $result['o']['r']);
         $exclusionReason = $result['e'];
 
         $usage = $memberType === MemberType::CONSTANT

@@ -73,11 +73,11 @@ class ReflectionUsageProvider implements MemberUsageProvider
                     foreach ($genericType->getObjectClassReflections() as $genericReflection) {
                         $usedConstants = [
                             ...$usedConstants,
-                            ...$this->extractConstantsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $scope),
+                            ...$this->extractConstantsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $node, $scope),
                         ];
                         $usedMethods = [
                             ...$usedMethods,
-                            ...$this->extractMethodsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $scope),
+                            ...$this->extractMethodsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $node, $scope),
                         ];
                     }
                 }
@@ -98,6 +98,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         ClassReflection $genericReflection,
         array $args,
+        Node $node,
         Scope $scope
     ): array
     {
@@ -105,7 +106,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
         if ($methodName === 'getConstants' || $methodName === 'getReflectionConstants') {
             foreach ($genericReflection->getNativeReflection()->getReflectionConstants() as $reflectionConstant) {
-                $usedConstants[] = $this->createConstantUsage($scope, $reflectionConstant->getDeclaringClass()->getName(), $reflectionConstant->getName());
+                $usedConstants[] = $this->createConstantUsage($node, $scope, $reflectionConstant->getDeclaringClass()->getName(), $reflectionConstant->getName());
             }
         }
 
@@ -113,7 +114,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedConstants[] = $this->createConstantUsage($scope, $genericReflection->getName(), $constantString->getValue());
+                $usedConstants[] = $this->createConstantUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
             }
         }
 
@@ -128,6 +129,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         ClassReflection $genericReflection,
         array $args,
+        Node $node,
         Scope $scope
     ): array
     {
@@ -135,7 +137,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
         if ($methodName === 'getMethods') {
             foreach ($genericReflection->getNativeReflection()->getMethods() as $reflectionMethod) {
-                $usedMethods[] = $this->createMethodUsage($scope, $reflectionMethod->getDeclaringClass()->getName(), $reflectionMethod->getName());
+                $usedMethods[] = $this->createMethodUsage($node, $scope, $reflectionMethod->getDeclaringClass()->getName(), $reflectionMethod->getName());
             }
         }
 
@@ -143,7 +145,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedMethods[] = $this->createMethodUsage($scope, $genericReflection->getName(), $constantString->getValue());
+                $usedMethods[] = $this->createMethodUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
             }
         }
 
@@ -151,7 +153,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             $constructor = $genericReflection->getNativeReflection()->getConstructor();
 
             if ($constructor !== null) {
-                $usedMethods[] = $this->createMethodUsage($scope, $constructor->getDeclaringClass()->getName(), '__construct');
+                $usedMethods[] = $this->createMethodUsage($node, $scope, $constructor->getDeclaringClass()->getName(), '__construct');
             }
         }
 
@@ -181,10 +183,15 @@ class ReflectionUsageProvider implements MemberUsageProvider
         return [$call->name->toString()];
     }
 
-    private function createConstantUsage(Scope $scope, string $className, string $constantName): ClassConstantUsage
+    private function createConstantUsage(
+        Node $node,
+        Scope $scope,
+        string $className,
+        string $constantName
+    ): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            $this->usageOriginDetector->detectOrigin($scope),
+            $this->usageOriginDetector->detectOrigin($node, $scope),
             new ClassConstantRef(
                 $className,
                 $constantName,
@@ -193,10 +200,15 @@ class ReflectionUsageProvider implements MemberUsageProvider
         );
     }
 
-    private function createMethodUsage(Scope $scope, string $className, string $methodName): ClassMethodUsage
+    private function createMethodUsage(
+        Node $node,
+        Scope $scope,
+        string $className,
+        string $methodName
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            $this->usageOriginDetector->detectOrigin($scope),
+            $this->usageOriginDetector->detectOrigin($node, $scope),
             new ClassMethodRef(
                 $className,
                 $methodName,

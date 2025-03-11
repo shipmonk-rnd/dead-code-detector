@@ -11,6 +11,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
+use PHPStan\File\SimpleRelativePathHelper;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
@@ -60,9 +61,13 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
+                new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+                self::createReflectionProvider(),
                 new ClassHierarchy(),
+                null,
                 !$this->emitErrorsInGroups,
                 true,
+                [],
                 new BackwardCompatibilityChecker([]),
             );
         }
@@ -79,7 +84,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector(self::createReflectionProvider()),
+            new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess, $this->getMemberUsageExcluders()),
             new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
         ];
@@ -159,10 +164,10 @@ class DeadCodeRuleTest extends RuleTestCase
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
         <fg=red>Found 4 usages over unknown type</>:
-        $ec • <fg=white>getter1</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter2</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter3</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>staticMethod</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:46</>
+        $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:49</>
+        $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:52</>
+        $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:57</>
 
         Thus, any member named the same is considered used, no matter its declaring class!
 
@@ -481,7 +486,6 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
-                new UsageOriginDetector(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),

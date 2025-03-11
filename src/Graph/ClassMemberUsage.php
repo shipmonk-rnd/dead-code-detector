@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
-use LogicException;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -14,25 +13,15 @@ abstract class ClassMemberUsage
     /**
      * Origin method of the usage, "where it was called from"
      * This is required for proper transitive dead code detection.
-     *
-     * @see UsageOriginDetector for typical usage
      */
-    private ?ClassMethodRef $origin;
+    private UsageOrigin $origin;
 
-    public function __construct(?ClassMethodRef $origin)
+    public function __construct(UsageOrigin $origin)
     {
-        if ($origin !== null && $origin->isPossibleDescendant()) {
-            throw new LogicException('Origin should always be exact place in codebase.');
-        }
-
-        if ($origin !== null && $origin->getClassName() === null) {
-            throw new LogicException('Origin should always be exact place in codebase, thus className should be known.');
-        }
-
         $this->origin = $origin;
     }
 
-    public function getOrigin(): ?ClassMethodRef
+    public function getOrigin(): UsageOrigin
     {
         return $this->origin;
     }
@@ -48,13 +37,5 @@ abstract class ClassMemberUsage
      * @return static
      */
     abstract public function concretizeMixedUsage(string $className): self;
-
-    public function toHumanString(): string
-    {
-        $origin = $this->origin !== null ? $this->origin->toHumanString() : 'unknown';
-        $callee = $this->getMemberRef()->toHumanString();
-
-        return "$origin -> $callee";
-    }
 
 }

@@ -125,7 +125,7 @@ class ConstantFetchCollector implements Collector
 
                 $this->registerUsage(
                     new ClassConstantUsage(
-                        $this->usageOriginDetector->detectOrigin($scope),
+                        $this->usageOriginDetector->detectOrigin($node, $scope),
                         new ClassConstantRef($className, $constantName, true),
                     ),
                     $node,
@@ -157,7 +157,7 @@ class ConstantFetchCollector implements Collector
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
                 $this->registerUsage(
                     new ClassConstantUsage(
-                        $this->usageOriginDetector->detectOrigin($scope),
+                        $this->usageOriginDetector->detectOrigin($node, $scope),
                         new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
                     ),
                     $node,

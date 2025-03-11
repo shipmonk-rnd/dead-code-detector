@@ -10,6 +10,7 @@ use RecursiveIteratorIterator;
 use ShipMonk\PHPStan\DeadCode\Collector\BufferedUsageCollector;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -19,6 +20,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
@@ -54,6 +56,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $missingClassNames = [];
         $excluded = [
+            UsageOrigin::class,
             ClassMethodUsage::class,
             ClassMethodRef::class,
             ClassConstantRef::class,
@@ -70,6 +73,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
             MemberType::class,
+            NeverReportedReason::class,
         ];
 
         /** @var DirectoryIterator $file */

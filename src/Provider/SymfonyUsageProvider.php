@@ -27,7 +27,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use SimpleXMLElement;
 use SplFileInfo;
 use UnexpectedValueException;
@@ -64,16 +64,12 @@ class SymfonyUsageProvider implements MemberUsageProvider
      */
     private array $dicConstants = [];
 
-    private UsageOriginDetector $usageOriginDetector;
-
     public function __construct(
         Container $container,
-        UsageOriginDetector $usageOriginDetector,
         ?bool $enabled,
         ?string $configDir
     )
     {
-        $this->usageOriginDetector = $usageOriginDetector;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $resolvedConfigDir = $configDir ?? $this->autodetectConfigDir();
         $containerXmlPath = $this->getContainerXmlPath($container);
@@ -148,6 +144,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         $className = $scope->getClassReflection()->getName();
 
         $usages = [];
+        $usageOrigin = UsageOrigin::fromScope($node, $scope);
 
         // phpcs:disable Squiz.PHP.CommentedOutCode.Found
         foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
@@ -155,7 +152,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
                 // ['eventName' => 'methodName']
                 foreach ($eventConfig->getConstantStrings() as $subscriberMethodString) {
                     $usages[] = new ClassMethodUsage(
-                        null,
+                        $usageOrigin,
                         new ClassMethodRef(
                             $className,
                             $subscriberMethodString->getValue(),
@@ -168,7 +165,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
                 foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
                     foreach ($subscriberMethodArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                         $usages[] = new ClassMethodUsage(
-                            null,
+                            $usageOrigin,
                             new ClassMethodRef(
                                 $className,
                                 $subscriberMethodString->getValue(),
@@ -183,7 +180,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
                     foreach ($subscriberMethodArray->getIterableValueType()->getConstantArrays() as $innerArray) {
                         foreach ($innerArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                             $usages[] = new ClassMethodUsage(
-                                null,
+                                $usageOrigin,
                                 new ClassMethodRef(
                                     $className,
                                     $subscriberMethodString->getValue(),
@@ -214,7 +211,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         foreach ($nativeReflection->getMethods() as $method) {
             if (isset($this->dicCalls[$className][$method->getName()])) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'called via DIC');
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -222,7 +219,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             if ($this->shouldMarkAsUsed($method)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), null);
             }
         }
 
@@ -235,6 +232,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private function getMethodUsagesFromAttributeReflection(InClassMethodNode $node, Scope $scope): array
     {
         $usages = [];
+        $usageOrigin = UsageOrigin::fromScope($node, $scope);
 
         foreach ($node->getMethodReflection()->getParameters() as $parameter) {
             foreach ($parameter->getAttributes() as $attributeReflection) {
@@ -259,7 +257,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
                     foreach ($classNames as $className) {
                         $usages[] = new ClassMethodUsage(
-                            $this->usageOriginDetector->detectOrigin($scope),
+                            $usageOrigin,
                             new ClassMethodRef(
                                 $className->getValue(),
                                 $defaultIndexMethod[0]->getValue(),
@@ -283,7 +281,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
                     foreach ($classNames as $className) {
                         $usages[] = new ClassMethodUsage(
-                            $this->usageOriginDetector->detectOrigin($scope),
+                            UsageOrigin::fromScope($node, $scope),
                             new ClassMethodRef(
                                 $className->getValue(),
                                 $defaultIndexMethod[0]->getValue(),
@@ -481,10 +479,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/dependency-injection');
     }
 
-    private function createUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
+    private function createUsage(ExtendedMethodReflection $methodReflection, ?string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            null,
+            UsageOrigin::fromProvider(self::class, $reason),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
@@ -570,7 +568,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             $usages[] = new ClassConstantUsage(
-                null,
+                UsageOrigin::fromProvider(self::class, 'used in DIC'),
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $constantName,

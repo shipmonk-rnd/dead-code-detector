@@ -106,6 +106,8 @@ services:
         arguments:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
             trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
+            debugMembers: %shipmonkDeadCode.debug.usagesOf%
+            editorUrl: %editorUrl%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker
@@ -137,6 +139,8 @@ parameters:
             tests:
                 enabled: false
                 devPaths: null
+        debug:
+            usagesOf: []
 
 parametersSchema:
     shipmonkDeadCode: structure([
@@ -171,5 +175,8 @@ parametersSchema:
                 enabled: bool()
                 devPaths: schema(listOf(string()), nullable())
             ])
+        ])
+        debug: structure([
+            usagesOf: listOf(string())
         ])
     ])
