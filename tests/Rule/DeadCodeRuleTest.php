@@ -21,6 +21,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
+use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
@@ -61,13 +62,15 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
-                new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
-                self::createReflectionProvider(),
+                new DebugUsagePrinter(
+                    new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+                    self::createReflectionProvider(),
+                    null,
+                    true,
+                    [],
+                ),
                 new ClassHierarchy(),
-                null,
                 !$this->emitErrorsInGroups,
-                true,
-                [],
                 new BackwardCompatibilityChecker([]),
             );
         }

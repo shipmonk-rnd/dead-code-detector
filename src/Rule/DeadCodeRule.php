@@ -7,9 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Command\Output;
 use PHPStan\Diagnose\DiagnoseExtension;
-use PHPStan\File\RelativePathHelper;
 use PHPStan\Node\CollectedDataNode;
-use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -18,6 +16,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
+use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
@@ -28,7 +27,6 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_keys;
@@ -36,14 +34,9 @@ use function array_map;
 use function array_merge;
 use function array_merge_recursive;
 use function array_slice;
-use function array_sum;
 use function array_values;
-use function count;
-use function explode;
 use function in_array;
 use function ksort;
-use function sprintf;
-use function str_replace;
 use function strpos;
 
 /**
@@ -73,13 +66,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         '__debugInfo' => null,
     ];
 
-    private RelativePathHelper $relativePathHelper;
-
-    private ReflectionProvider $reflectionProvider;
+    private DebugUsagePrinter $debugUsagePrinter;
 
     private ClassHierarchy $classHierarchy;
-
-    private ?string $editorUrl;
 
     /**
      * typename => data
@@ -104,15 +93,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $reportTransitivelyDeadAsSeparateError;
 
-    private bool $trackMixedAccess;
-
-    /**
-     * memberKey => usage info
-     *
-     * @var array<string, array{usages?: list<CollectedUsage>, eliminationPath?: list<string>, neverReported?: string}>
-     */
-    private array $debugMembers;
-
     /**
      * memberKey => DeadMember
      *
@@ -132,27 +112,16 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private array $usageGraph = [];
 
-    /**
-     * @param list<string> $debugMembers
-     */
     public function __construct(
-        RelativePathHelper $relativePathHelper,
-        ReflectionProvider $reflectionProvider,
+        DebugUsagePrinter $debugUsagePrinter,
         ClassHierarchy $classHierarchy,
-        ?string $editorUrl,
         bool $reportTransitivelyDeadMethodAsSeparateError,
-        bool $trackMixedAccess,
-        array $debugMembers,
         BackwardCompatibilityChecker $checker
     )
     {
-        $this->relativePathHelper = $relativePathHelper;
-        $this->reflectionProvider = $reflectionProvider;
+        $this->debugUsagePrinter = $debugUsagePrinter;
         $this->classHierarchy = $classHierarchy;
-        $this->editorUrl = $editorUrl;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
-        $this->trackMixedAccess = $trackMixedAccess;
-        $this->debugMembers = $this->buildDebugMemberKeys($debugMembers);
 
         $checker->check();
     }
@@ -193,7 +162,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     $collectedUsage = CollectedUsage::deserialize($useString);
                     $memberUsage = $collectedUsage->getUsage();
 
-                    $this->recordDebugUsage($collectedUsage);
+                    $this->debugUsagePrinter->recordUsage($collectedUsage);
 
                     if ($memberUsage->getMemberRef()->getClassName() === null) {
                         $this->mixedMemberUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getMemberName()][] = $collectedUsage;
@@ -295,7 +264,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $neverReportedReason = $this->isNeverReportedAsDead($blackMember);
 
             if ($neverReportedReason !== null) {
-                $this->markDebugMemberAsNeverReported($blackMember, $neverReportedReason);
+                $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason);
 
                 unset($this->blackMembers[$blackMemberKey]);
             }
@@ -494,7 +463,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $calleeKeys = $this->usageGraph[$callerKey] ?? [];
 
         if (isset($this->blackMembers[$callerKey])) { // TODO debug why not always present
-            $this->markDebugMemberAsWhite($this->blackMembers[$callerKey], array_keys($visitedKeys));
+            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], array_keys($visitedKeys));
 
             unset($this->blackMembers[$callerKey]);
         }
@@ -759,211 +728,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public function print(Output $output): void
     {
-        $this->printMixedMemberUsages($output);
-        $this->printDebugMemberUsages($output);
-    }
-
-    private function printMixedMemberUsages(Output $output): void
-    {
-        if ($this->mixedMemberUsages === [] || !$output->isDebug() || !$this->trackMixedAccess) {
-            return;
-        }
-
-        $totalCount = array_sum(array_map('count', $this->mixedMemberUsages));
-        $maxExamplesToShow = 20;
-        $examplesShown = 0;
-        $output->writeLineFormatted(sprintf('<fg=red>Found %d usages over unknown type</>:', $totalCount));
-
-        foreach ($this->mixedMemberUsages as $memberType => $collectedUsages) {
-            foreach ($collectedUsages as $memberName => $usages) {
-                $examplesShown++;
-                $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
-                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
-
-                $exampleCaller = $this->getExampleCaller($usages);
-
-                if ($exampleCaller !== null) {
-                    $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
-                }
-
-                $output->writeLineFormatted('');
-
-                if ($examplesShown >= $maxExamplesToShow) {
-                    break 2;
-                }
-            }
-        }
-
-        if ($totalCount > $maxExamplesToShow) {
-            $output->writeLineFormatted(sprintf('... and %d more', $totalCount - $maxExamplesToShow));
-        }
-
-        $output->writeLineFormatted('');
-        $output->writeLineFormatted('Thus, any member named the same is considered used, no matter its declaring class!');
-        $output->writeLineFormatted('');
-    }
-
-    /**
-     * @param list<CollectedUsage> $usages
-     */
-    private function getExampleCaller(array $usages): ?string
-    {
-        foreach ($usages as $usage) {
-            $origin = $usage->getUsage()->getOrigin();
-
-            if ($origin->getFile() !== null) {
-                return $this->getOriginReference($origin);
-            }
-        }
-
-        return null;
-    }
-
-    private function printDebugMemberUsages(Output $output): void
-    {
-        if ($this->debugMembers === [] || !$output->isDebug()) {
-            return;
-        }
-
-        $output->writeLineFormatted("\n<fg=red>Usage debugging information:</>");
-
-        foreach ($this->debugMembers as $memberKey => $debugMember) {
-            $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $memberKey));
-
-            if (isset($debugMember['eliminationPath'])) {
-                $output->writeLineFormatted("|\n| Elimination path:");
-
-                foreach ($debugMember['eliminationPath'] as $index => $eliminationPath) {
-                    $entrypoint = $index === 0 ? '(entrypoint)' : '';
-                    $output->writeLineFormatted(sprintf('|  -> <fg=white>%s</> %s', $eliminationPath, $entrypoint));
-                }
-            }
-
-            if (isset($debugMember['neverReported'])) {
-                $output->writeLineFormatted(sprintf("|\n| <fg=yellow>Is never reported as dead: %s</>", $debugMember['neverReported']));
-            }
-
-            if (isset($debugMember['usages'])) {
-                $output->writeLineFormatted(sprintf("|\n| <fg=green>Found %d usages:</>", count($debugMember['usages'])));
-
-                foreach ($debugMember['usages'] as $collectedUsage) {
-                    $origin = $collectedUsage->getUsage()->getOrigin();
-                    $output->writeFormatted(sprintf('|  • <fg=white>%s</>', $this->getOriginReference($origin)));
-
-                    if ($collectedUsage->isExcluded()) {
-                        $output->writeFormatted(sprintf('|   <fg=yellow>Excluded by %s</>', $collectedUsage->getExcludedBy()));
-                    }
-
-                    $output->writeLineFormatted('');
-                }
-            }
-
-            $output->writeLineFormatted('');
-        }
-    }
-
-    private function getOriginReference(UsageOrigin $origin): string
-    {
-        $file = $origin->getFile();
-        $line = $origin->getLine();
-
-        if ($file !== null && $line !== null) {
-            $relativeFile = $this->relativePathHelper->getRelativePath($file);
-
-            if ($this->editorUrl === null) {
-                return sprintf(
-                    '%s:%s',
-                    $relativeFile,
-                    $line,
-                );
-            }
-
-            return sprintf(
-                '<href=%s>%s:%s</>',
-                str_replace(['%file%', '%relFile%', '%line%'], [$file, $relativeFile, (string) $line], $this->editorUrl),
-                $relativeFile,
-                $line,
-            );
-        }
-
-        if ($origin->getReason() !== null) {
-            return $origin->getReason();
-        }
-
-        throw new LogicException('Unknown state of usage origin');
-    }
-
-    /**
-     * @param list<string> $debugMembers
-     * @return array<string, array{usages?: list<CollectedUsage>, eliminationPath?: list<string>, neverReported?: string}>
-     */
-    private function buildDebugMemberKeys(array $debugMembers): array
-    {
-        $result = [];
-
-        foreach ($debugMembers as $debugMember) {
-            if (strpos($debugMember, '::') === false) {
-                throw new LogicException("Invalid debug member format: $debugMember");
-            }
-
-            [$class, $memberName] = explode('::', $debugMember); // @phpstan-ignore offsetAccess.notFound
-
-            if (!$this->reflectionProvider->hasClass($class)) {
-                throw new LogicException("Class $class does not exist");
-            }
-
-            $classReflection = $this->reflectionProvider->getClass($class);
-
-            if ($classReflection->hasMethod($memberName)) {
-                $key = ClassMethodRef::buildKey($class, $memberName);
-
-            } elseif ($classReflection->hasConstant($memberName)) {
-                $key = ClassConstantRef::buildKey($class, $memberName);
-
-            } else {
-                throw new LogicException("Member $memberName does not exist in $class");
-            }
-
-            $result[$key] = [];
-        }
-
-        return $result;
-    }
-
-    private function recordDebugUsage(CollectedUsage $collectedUsage): void
-    {
-        $memberKey = $collectedUsage->getUsage()->getMemberRef()->toKey();
-
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
-        }
-
-        $this->debugMembers[$memberKey]['usages'][] = $collectedUsage;
-    }
-
-    /**
-     * @param list<string> $usagePath
-     */
-    private function markDebugMemberAsWhite(BlackMember $blackMember, array $usagePath): void
-    {
-        $memberKey = $blackMember->getMember()->toKey();
-
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
-        }
-
-        $this->debugMembers[$memberKey]['eliminationPath'] = $usagePath;
-    }
-
-    private function markDebugMemberAsNeverReported(BlackMember $blackMember, string $reason): void
-    {
-        $memberKey = $blackMember->getMember()->toKey();
-
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
-        }
-
-        $this->debugMembers[$memberKey]['neverReported'] = $reason;
+        $this->debugUsagePrinter->printMixedMemberUsages($output, $this->mixedMemberUsages);
+        $this->debugUsagePrinter->printDebugMemberUsages($output);
     }
 
 }

@@ -11,6 +11,13 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
+        arguments:
+            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
+            debugMembers: %shipmonkDeadCode.debug.usagesOf%
+            editorUrl: %editorUrl%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -105,9 +112,6 @@ services:
             - phpstan.diagnoseExtension
         arguments:
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
-            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
-            debugMembers: %shipmonkDeadCode.debug.usagesOf%
-            editorUrl: %editorUrl%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker
