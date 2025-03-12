@@ -8,9 +8,6 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector
-
-    -
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
         arguments:
             trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%

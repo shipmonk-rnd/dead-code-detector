@@ -27,7 +27,6 @@ use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -95,8 +94,8 @@ class DeadCodeRuleTest extends RuleTestCase
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
             new ClassDefinitionCollector($reflectionProvider),
-            new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess, $this->getMemberUsageExcluders()),
-            new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new MethodCallCollector($this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
         ];
     }
 
@@ -601,7 +600,6 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         return [
             new ReflectionUsageProvider(
-                $this->createUsageOriginDetector(),
                 true,
             ),
             new class extends ReflectionBasedMemberUsageProvider
@@ -682,18 +680,6 @@ class DeadCodeRuleTest extends RuleTestCase
                 },
             );
         return $mock;
-    }
-
-    private function createUsageOriginDetector(): UsageOriginDetector
-    {
-        /** @var UsageOriginDetector|null $detector */
-        static $detector = null;
-
-        if ($detector === null) {
-            $detector = new UsageOriginDetector();
-        }
-
-        return $detector;
     }
 
     public function gatherAnalyserErrors(array $files): array

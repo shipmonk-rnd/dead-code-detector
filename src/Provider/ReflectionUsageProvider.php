@@ -18,7 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_key_first;
 use function count;
 use function in_array;
@@ -26,16 +26,12 @@ use function in_array;
 class ReflectionUsageProvider implements MemberUsageProvider
 {
 
-    private UsageOriginDetector $usageOriginDetector;
-
     private bool $enabled;
 
     public function __construct(
-        UsageOriginDetector $usageOriginDetector,
         bool $enabled
     )
     {
-        $this->usageOriginDetector = $usageOriginDetector;
         $this->enabled = $enabled;
     }
 
@@ -191,7 +187,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
     ): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            $this->usageOriginDetector->detectOrigin($node, $scope),
+            UsageOrigin::createRegular($node, $scope),
             new ClassConstantRef(
                 $className,
                 $constantName,
@@ -208,7 +204,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            $this->usageOriginDetector->detectOrigin($node, $scope),
+            UsageOrigin::createRegular($node, $scope),
             new ClassMethodRef(
                 $className,
                 $methodName,

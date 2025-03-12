@@ -157,7 +157,7 @@ use PHPStan\Analyser\Scope;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use Symfony\Component\Serializer\SerializerInterface;
 
@@ -185,13 +185,13 @@ class DeserializationUsageProvider implements MemberUsageProvider
             $secondArgument = $node->getArgs()[1]->value;
             $serializedClass = $scope->getType($secondArgument)->getConstantStrings()[0];
 
-            // record the method it was called from (needed for proper transitive dead code elimination)
-            $originRef = $this->originDetector->detectOrigin($scope);
+            // record the place it was called from (needed for proper transitive dead code elimination)
+            $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
             // record the hidden constructor call
             $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', false);
 
-            return [new ClassMethodUsage($originRef, $constructorRef)];
+            return [new ClassMethodUsage($usageOrigin, $constructorRef)];
         }
 
         return [];
