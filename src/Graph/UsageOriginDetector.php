@@ -13,7 +13,7 @@ class UsageOriginDetector
      */
     public function detectOrigin(Node $node, Scope $scope): UsageOrigin
     {
-        return UsageOrigin::fromScope($node, $scope);
+        return UsageOrigin::createRegular($node, $scope);
     }
 
 }

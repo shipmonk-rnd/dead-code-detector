@@ -206,7 +206,7 @@ class MethodCallCollector implements Collector
     {
         $this->registerUsage(
             new ClassMethodUsage(
-                UsageOrigin::fromScope($node, $scope),
+                UsageOrigin::createRegular($node, $scope),
                 new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
             ),
             $node,

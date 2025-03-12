@@ -145,7 +145,7 @@ class PhpUnitUsageProvider implements MemberUsageProvider
     private function createUsage(ExtendedMethodReflection $getNativeMethod, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::fromProvider(self::class, $reason),
+            UsageOrigin::createVirtual($this, $reason),
             new ClassMethodRef(
                 $getNativeMethod->getDeclaringClass()->getName(),
                 $getNativeMethod->getName(),

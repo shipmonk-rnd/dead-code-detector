@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
@@ -40,6 +41,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
+use function preg_replace;
 use function str_replace;
 use function strpos;
 use const PHP_VERSION_ID;
@@ -49,6 +51,11 @@ use const PHP_VERSION_ID;
  */
 class DeadCodeRuleTest extends RuleTestCase
 {
+
+    /**
+     * @var list<string>
+     */
+    private array $debugMembers = [];
 
     private bool $trackMixedAccess = true;
 
@@ -67,7 +74,7 @@ class DeadCodeRuleTest extends RuleTestCase
                     self::createReflectionProvider(),
                     null,
                     true,
-                    [],
+                    $this->debugMembers,
                 ),
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
@@ -178,6 +185,104 @@ class DeadCodeRuleTest extends RuleTestCase
         OUTPUT;
 
         self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDebugUsage(): void
+    {
+        $this->debugMembers = [
+            'DebugNever\Foo::__get',
+            'DebugVirtual\FooTest::testFoo',
+            'DebugGlobal\Foo::__construct',
+            'DebugCycle\Foo::__construct',
+            'DebugRegular\Another::call',
+            'DebugZero\Foo::__construct',
+        ];
+        $this->analyseFiles([
+            __DIR__ . '/data/debug/entrypoint.php',
+            __DIR__ . '/data/debug/cycle.php',
+            __DIR__ . '/data/debug/global.php',
+            __DIR__ . '/data/debug/never.php',
+            __DIR__ . '/data/debug/virtual.php',
+            __DIR__ . '/data/debug/zero.php',
+        ]);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $output = $this->createMock(Output::class);
+        $output->expects(self::once())
+            ->method('isDebug')
+            ->willReturn(true);
+        $output->expects(self::atLeastOnce())
+            ->method('writeFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message;
+                },
+            );
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message . "\n";
+                },
+            );
+
+        $rule->print($output);
+
+        $expectedOutput = <<<'OUTPUT'
+
+        Usage debugging information:
+
+        DebugNever\Foo::__get
+        |
+        | Is never reported as dead: unsupported magic method
+
+
+        DebugVirtual\FooTest::testFoo
+        |
+        | Elimination path:
+        | entrypoint DebugVirtual\FooTest::testFoo
+        |
+        | Found 1 usages:
+        |  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
+
+
+        DebugGlobal\Foo::__construct
+        |
+        | Elimination path:
+        | entrypoint DebugGlobal\Foo::__construct
+        |
+        | Found 1 usages:
+        |  • data/debug/global.php:10
+
+
+        DebugCycle\Foo::__construct
+        |
+        | Elimination path:
+        | Not found, all usages originate in unused code
+        |
+        | Found 1 usages:
+        |  • data/debug/cycle.php:17
+
+
+        DebugRegular\Another::call
+        |
+        | Elimination path:
+        | entrypoint DebugRegular\FooController::dummyAction:12
+        |        calls DebugRegular\Another::call
+        |
+        | Found 1 usages:
+        |  • data/debug/entrypoint.php:12
+
+
+        DebugZero\Foo::__construct
+        |
+        | No usages found
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $this->trimColors($actualOutput));
     }
 
     /**
@@ -609,6 +714,21 @@ class DeadCodeRuleTest extends RuleTestCase
     private static function requiresPackage(string $package, string $constraint): bool
     {
         return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
+    }
+
+    private function trimColors(string $output): string
+    {
+        $replaced = preg_replace(
+            '/<fg=[a-z]+>(.*?)<\/>/',
+            '$1',
+            $output,
+        );
+
+        if ($replaced === null) {
+            throw new LogicException('Failed to trim colors');
+        }
+
+        return $replaced;
     }
 
 }

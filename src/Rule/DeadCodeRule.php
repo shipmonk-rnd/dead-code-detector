@@ -693,6 +693,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             || (array_key_exists((string) $memberUsage->getOrigin()->getMethodName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
 
+    /**
+     * @return NeverReportedReason::*|null
+     */
     private function isNeverReportedAsDead(BlackMember $blackMember): ?string
     {
         if (!$blackMember->getMember() instanceof ClassMethodRef) {

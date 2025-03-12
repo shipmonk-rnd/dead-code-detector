@@ -137,19 +137,22 @@ class DebugUsagePrinter
                 $depth = 0;
 
                 foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
-                    $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '    ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
+                    $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '     ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
                     $nextFragmentUsages = next($debugMember['eliminationPath']);
                     $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
                     $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
 
-                    if ($nextFragmentFirstUsageOrigin === null) {
-                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $this->prettyMemberKey($fragmentKey)));
-                    } else {
-                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</> (%s)', $indent, $this->prettyMemberKey($fragmentKey), $this->getOriginReference($nextFragmentFirstUsageOrigin)));
-                    }
+                    $pathFragment = $nextFragmentFirstUsageOrigin === null
+                        ? $this->prettyMemberKey($fragmentKey)
+                        : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
+
+                    $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
 
                     $depth++;
                 }
+            } elseif (isset($debugMember['usages'])) {
+                $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
+                $output->writeLineFormatted('| <fg=yellow>Not found, all usages originate in unused code</>');
             }
 
             if (isset($debugMember['usages'])) {
@@ -210,11 +213,34 @@ class DebugUsagePrinter
             );
         }
 
-        if ($origin->getReason() !== null) {
-            return $origin->getReason();
+        if ($origin->getProvider() !== null) {
+            $note = $origin->getNote() !== null ? " ({$origin->getNote()})" : '';
+            return 'virtual usage from ' . $origin->getProvider() . $note;
         }
 
         throw new LogicException('Unknown state of usage origin');
+    }
+
+    private function getOriginLink(UsageOrigin $origin, string $title): string
+    {
+        $file = $origin->getFile();
+        $line = $origin->getLine();
+
+        if ($line !== null) {
+            $title = sprintf('%s:%s', $title, $line);
+        }
+
+        if ($this->editorUrl !== null && $file !== null && $line !== null) {
+            $relativeFile = $this->relativePathHelper->getRelativePath($file);
+
+            return sprintf(
+                '<href=%s>%s</>',
+                str_replace(['%file%', '%relFile%', '%line%'], [$file, $relativeFile, (string) $line], $this->editorUrl),
+                $title,
+            );
+        }
+
+        return $title;
     }
 
     public function recordUsage(CollectedUsage $collectedUsage): void

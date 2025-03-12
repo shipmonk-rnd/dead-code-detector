@@ -93,7 +93,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function createConstantUsage(ReflectionClassConstant $constantReflection): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            UsageOrigin::fromProvider(self::class, null),
+            UsageOrigin::createVirtual($this),
             new ClassConstantRef(
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
@@ -105,7 +105,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function createMethodUsage(ReflectionMethod $methodReflection): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::fromProvider(self::class, null),
+            UsageOrigin::createVirtual($this),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),

@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
+use function get_class;
 
 /**
  * @immutable
@@ -22,39 +23,51 @@ final class UsageOrigin
 
     private ?int $line;
 
-    private ?string $reason;
+    private ?string $provider;
 
-    public function __construct( // TODO private?
+    private ?string $note;
+
+    /**
+     * @internal Please use static constructors instead.
+     */
+    public function __construct(
         ?string $className,
         ?string $methodName,
-        ?string $fileName,
+        ?string $fileName, // TODO try reusing collector file to reduce memory usage
         ?int $line,
-        ?string $reason = null
+        ?string $provider,
+        ?string $note
     )
     {
         $this->className = $className;
         $this->methodName = $methodName;
         $this->fileName = $fileName;
         $this->line = $line;
-        $this->reason = $reason;
+        $this->provider = $provider;
+        $this->note = $note;
     }
 
     /**
-     * @param class-string<MemberUsageProvider> $providerClass
-     * @param ?string $reason More detailed identification why provider emitted this usage
+     * Creates virtual usage origin with no reference to any place in code
+     *
+     * @param ?string $note More detailed identification why provider emitted this virtual usage
      */
-    public static function fromProvider(string $providerClass, ?string $reason): self
+    public static function createVirtual(MemberUsageProvider $provider, ?string $note = null): self
     {
         return new self(
             null,
             null,
             null,
             null,
-            $providerClass . ' - ' . (string) $reason, // TODO better approach?
+            get_class($provider),
+            $note,
         );
     }
 
-    public static function fromScope(Node $node, Scope $scope): self
+    /**
+     * Creates usage origin with reference to file:line
+     */
+    public static function createRegular(Node $node, Scope $scope): self
     {
         if (!$scope->isInClass() || !$scope->getFunction() instanceof MethodReflection) {
             return new self(
@@ -62,6 +75,8 @@ final class UsageOrigin
                 null,
                 $scope->getFile(),
                 $node->getStartLine(),
+                null,
+                null,
             );
         }
 
@@ -70,6 +85,8 @@ final class UsageOrigin
             $scope->getFunction()->getName(),
             $scope->getFile(),
             $node->getStartLine(),
+            null,
+            null,
         );
     }
 
@@ -93,9 +110,14 @@ final class UsageOrigin
         return $this->line;
     }
 
-    public function getReason(): ?string
+    public function getProvider(): ?string
     {
-        return $this->reason;
+        return $this->provider;
+    }
+
+    public function getNote(): ?string
+    {
+        return $this->note;
     }
 
     public function hasClassMethodRef(): bool

@@ -144,7 +144,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         $className = $scope->getClassReflection()->getName();
 
         $usages = [];
-        $usageOrigin = UsageOrigin::fromScope($node, $scope);
+        $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
         // phpcs:disable Squiz.PHP.CommentedOutCode.Found
         foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
@@ -232,7 +232,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private function getMethodUsagesFromAttributeReflection(InClassMethodNode $node, Scope $scope): array
     {
         $usages = [];
-        $usageOrigin = UsageOrigin::fromScope($node, $scope);
+        $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
         foreach ($node->getMethodReflection()->getParameters() as $parameter) {
             foreach ($parameter->getAttributes() as $attributeReflection) {
@@ -281,7 +281,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
                     foreach ($classNames as $className) {
                         $usages[] = new ClassMethodUsage(
-                            UsageOrigin::fromScope($node, $scope),
+                            UsageOrigin::createRegular($node, $scope),
                             new ClassMethodRef(
                                 $className->getValue(),
                                 $defaultIndexMethod[0]->getValue(),
@@ -482,7 +482,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private function createUsage(ExtendedMethodReflection $methodReflection, ?string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::fromProvider(self::class, $reason),
+            UsageOrigin::createVirtual($this, $reason),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
@@ -568,7 +568,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             $usages[] = new ClassConstantUsage(
-                UsageOrigin::fromProvider(self::class, 'used in DIC'),
+                UsageOrigin::createVirtual($this, 'used in DIC'),
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $constantName,

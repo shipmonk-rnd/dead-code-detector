@@ -101,7 +101,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         $className = $scope->getClassReflection()->getName();
 
         $usages = [];
-        $usageOrigin = UsageOrigin::fromScope($node, $scope);
+        $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
         foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
             foreach ($rootArray->getValuesArray()->getValueTypes() as $eventConfig) {
@@ -201,7 +201,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
     private function createMethodUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::fromProvider(self::class, null),
+            UsageOrigin::createVirtual($this),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
