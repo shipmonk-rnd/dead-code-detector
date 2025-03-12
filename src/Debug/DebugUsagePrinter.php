@@ -74,7 +74,8 @@ class DebugUsagePrinter
         $totalCount = array_sum(array_map('count', $mixedMemberUsages));
         $maxExamplesToShow = 20;
         $examplesShown = 0;
-        $output->writeLineFormatted(sprintf('<fg=red>Found %d usages over unknown type</>:', $totalCount));
+        $plural = $totalCount > 1 ? 's' : '';
+        $output->writeLineFormatted(sprintf('<fg=red>Found %d usage%s over unknown type</>:', $totalCount, $plural));
 
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
             foreach ($collectedUsages as $memberName => $usages) {
@@ -136,34 +137,40 @@ class DebugUsagePrinter
                 $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
                 $depth = 0;
 
-                foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
-                    $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '     ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
-                    $nextFragmentUsages = next($debugMember['eliminationPath']);
-                    $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
-                    $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
+                if (count($debugMember['eliminationPath']) === 1) {
+                    $output->writeLineFormatted('| direct usage');
 
-                    $pathFragment = $nextFragmentFirstUsageOrigin === null
-                        ? $this->prettyMemberKey($fragmentKey)
-                        : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
+                } else {
+                    foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
+                        $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '     ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
+                        $nextFragmentUsages = next($debugMember['eliminationPath']);
+                        $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
+                        $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
 
-                    $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
+                        $pathFragment = $nextFragmentFirstUsageOrigin === null
+                            ? $this->prettyMemberKey($fragmentKey)
+                            : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
 
-                    $depth++;
+                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
+
+                        $depth++;
+                    }
                 }
             } elseif (isset($debugMember['usages'])) {
                 $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
-                $output->writeLineFormatted('| <fg=yellow>Not found, all usages originate in unused code</>');
+                $output->writeLineFormatted('| <fg=yellow>not found, all usages originate in unused code</>');
             }
 
             if (isset($debugMember['usages'])) {
-                $output->writeLineFormatted(sprintf("|\n| <fg=green>Found %d usages:</>", count($debugMember['usages'])));
+                $plural = count($debugMember['usages']) > 1 ? 's' : '';
+                $output->writeLineFormatted(sprintf("|\n| <fg=green>Found %d usage%s:</>", count($debugMember['usages']), $plural));
 
                 foreach ($debugMember['usages'] as $collectedUsage) {
                     $origin = $collectedUsage->getUsage()->getOrigin();
                     $output->writeFormatted(sprintf('|  • <fg=white>%s</>', $this->getOriginReference($origin)));
 
                     if ($collectedUsage->isExcluded()) {
-                        $output->writeFormatted(sprintf(' - <fg=yellow>Excluded by %s</>', $collectedUsage->getExcludedBy()));
+                        $output->writeFormatted(sprintf(' - <fg=yellow>excluded by %s excluder</>', $collectedUsage->getExcludedBy()));
                     }
 
                     $output->writeLineFormatted('');

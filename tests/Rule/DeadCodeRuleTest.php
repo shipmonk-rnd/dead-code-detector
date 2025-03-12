@@ -190,18 +190,24 @@ class DeadCodeRuleTest extends RuleTestCase
     public function testDebugUsage(): void
     {
         $this->debugMembers = [
+            'DebugCtor\Foo::__construct',
+            'DebugExclude\Foo::mixedExcluder',
             'DebugNever\Foo::__get',
             'DebugVirtual\FooTest::testFoo',
-            'DebugGlobal\Foo::__construct',
+            'DebugGlobal\Foo::chain',
+            'DebugMixed\Foo::any',
             'DebugCycle\Foo::__construct',
             'DebugRegular\Another::call',
             'DebugZero\Foo::__construct',
         ];
         $this->analyseFiles([
-            __DIR__ . '/data/debug/entrypoint.php',
+            __DIR__ . '/data/debug/ctor.php',
+            __DIR__ . '/data/debug/exclude.php',
             __DIR__ . '/data/debug/cycle.php',
             __DIR__ . '/data/debug/global.php',
+            __DIR__ . '/data/debug/mixed.php',
             __DIR__ . '/data/debug/never.php',
+            __DIR__ . '/data/debug/regular.php',
             __DIR__ . '/data/debug/virtual.php',
             __DIR__ . '/data/debug/zero.php',
         ]);
@@ -209,7 +215,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $actualOutput = '';
         $output = $this->createMock(Output::class);
-        $output->expects(self::once())
+        $output->expects(self::atLeastOnce())
             ->method('isDebug')
             ->willReturn(true);
         $output->expects(self::atLeastOnce())
@@ -229,9 +235,33 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $rule->print($output);
 
-        $expectedOutput = <<<'OUTPUT'
+        $ec = '';
+        $expectedOutput = <<<"OUTPUT"
+        Found 1 usage over unknown type:
+        $ec • any method, for example in data/debug/mixed.php:13
+
+        Thus, any member named the same is considered used, no matter its declaring class!
+
 
         Usage debugging information:
+
+        DebugCtor\Foo::__construct
+        |
+        | Elimination path:
+        | not found, all usages originate in unused code
+        |
+        | Found 1 usage:
+        |  • data/debug/ctor.php:9
+
+
+        DebugExclude\Foo::mixedExcluder
+        |
+        | Elimination path:
+        | not found, all usages originate in unused code
+        |
+        | Found 1 usage:
+        |  • data/debug/exclude.php:10 - excluded by mixed excluder
+
 
         DebugNever\Foo::__get
         |
@@ -241,27 +271,36 @@ class DeadCodeRuleTest extends RuleTestCase
         DebugVirtual\FooTest::testFoo
         |
         | Elimination path:
-        | entrypoint DebugVirtual\FooTest::testFoo
+        | direct usage
         |
-        | Found 1 usages:
+        | Found 1 usage:
         |  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
 
 
-        DebugGlobal\Foo::__construct
+        DebugGlobal\Foo::chain
         |
         | Elimination path:
-        | entrypoint DebugGlobal\Foo::__construct
+        | direct usage
         |
-        | Found 1 usages:
-        |  • data/debug/global.php:10
+        | Found 1 usage:
+        |  • data/debug/global.php:12
+
+
+        DebugMixed\Foo::any
+        |
+        | Elimination path:
+        | direct usage
+        |
+        | Found 1 usage:
+        |  • data/debug/mixed.php:13
 
 
         DebugCycle\Foo::__construct
         |
         | Elimination path:
-        | Not found, all usages originate in unused code
+        | not found, all usages originate in unused code
         |
-        | Found 1 usages:
+        | Found 1 usage:
         |  • data/debug/cycle.php:17
 
 
@@ -271,8 +310,9 @@ class DeadCodeRuleTest extends RuleTestCase
         | entrypoint DebugRegular\FooController::dummyAction:12
         |        calls DebugRegular\Another::call
         |
-        | Found 1 usages:
-        |  • data/debug/entrypoint.php:12
+        | Found 2 usages:
+        |  • data/debug/regular.php:12
+        |  • data/debug/regular.php:13
 
 
         DebugZero\Foo::__construct
@@ -282,7 +322,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         OUTPUT;
 
-        self::assertSame($expectedOutput, $this->trimColors($actualOutput));
+        self::assertSame($expectedOutput, $this->trimFgColors($actualOutput));
     }
 
     /**
@@ -716,7 +756,7 @@ class DeadCodeRuleTest extends RuleTestCase
         return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
     }
 
-    private function trimColors(string $output): string
+    private function trimFgColors(string $output): string
     {
         $replaced = preg_replace(
             '/<fg=[a-z]+>(.*?)<\/>/',

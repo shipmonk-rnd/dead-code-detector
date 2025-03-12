@@ -163,8 +163,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     $collectedUsage = CollectedUsage::deserialize($useString);
                     $memberUsage = $collectedUsage->getUsage();
 
-                    $this->debugUsagePrinter->recordUsage($collectedUsage);
-
                     if ($memberUsage->getMemberRef()->getClassName() === null) {
                         $this->mixedMemberUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getMemberName()][] = $collectedUsage;
                         continue;
@@ -233,6 +231,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $excludedMemberUsages = [];
 
         foreach ($knownCollectedUsages as $collectedUsage) {
+            $this->debugUsagePrinter->recordUsage($collectedUsage);
+
             if ($collectedUsage->isExcluded()) {
                 $excludedMemberUsages[] = $collectedUsage;
                 continue;

@@ -10,6 +10,7 @@ class FooController {
     public function dummyAction(Another $another): void
     {
         $another->call();
+        $another->call();
     }
 }
 
