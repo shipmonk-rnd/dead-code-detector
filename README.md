@@ -364,7 +364,7 @@ parameters:
 Then, run PHPStan with `-vvv` CLI option and you will see the output like this:
 
 ```txt
-App\Facade\UserFacade::registerUser
+App\User\Entity\Address::__construct
 |
 | Elimination path:
 | entrypoint App\User\RegisterUserController::__invoke:36
