@@ -350,6 +350,33 @@ class IgnoreDeadInterfaceUsageProvider extends ReflectionBasedMemberUsageProvide
 }
 ```
 
+## Debugging:
+- If you want to see how dead code detector evaluated usages of certain method, you do the following:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        debug:
+            usagesOf:
+                - App\User\Entity\Address::__construct
+```
+
+Then, run PHPStan with `-vvv` CLI option and you will see the output like this:
+
+```txt
+App\Facade\UserFacade::registerUser
+|
+| Elimination path:
+| entrypoint App\User\RegisterUserController::__invoke:36
+|        calls App\User\UserFacade::registerUser:142
+|          calls App\User\Entity\Address::__construct
+|
+| Found 2 usages:
+|  • src/User/UserFacade.php:142
+|  • tests/User/Entity/AddressTest.php:64 - excluded by tests excluder
+```
+
+If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor), you can click on the usages to open it in your IDE.
 
 ## Future scope:
 - Dead class property detection
