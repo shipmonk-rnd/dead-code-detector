@@ -99,7 +99,7 @@ class MethodCallCollector implements Collector
             $this->registerAttribute($node, $scope);
         }
 
-        return $this->tryFlushBuffer($node, $scope);
+        return $this->emitUsages();
     }
 
     /**
@@ -297,7 +297,7 @@ class MethodCallCollector implements Collector
             }
         }
 
-        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
+        $this->usages[] = new CollectedUsage($usage, $excluderName);
     }
 
 }
