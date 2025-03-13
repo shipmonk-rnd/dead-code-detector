@@ -296,14 +296,14 @@ class DebugUsagePrinter
 
         foreach ($debugMembers as $debugMember) {
             if (strpos($debugMember, '::') === false) {
-                throw new LogicException("Invalid debug member format: $debugMember");
+                throw new LogicException("Invalid debug member format: '$debugMember', expected 'ClassName::memberName'");
             }
 
             [$class, $memberName] = explode('::', $debugMember); // @phpstan-ignore offsetAccess.notFound
             $normalizedClass = ltrim($class, '\\');
 
             if (!$this->reflectionProvider->hasClass($normalizedClass)) {
-                throw new LogicException("Class $normalizedClass does not exist");
+                throw new LogicException("Class '$normalizedClass' does not exist");
             }
 
             $classReflection = $this->reflectionProvider->getClass($normalizedClass);
@@ -315,10 +315,10 @@ class DebugUsagePrinter
                 $key = ClassConstantRef::buildKey($normalizedClass, $memberName);
 
             } elseif ($classReflection->hasProperty($memberName)) {
-                throw new LogicException('Properties are not yet supported');
+                throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
 
             } else {
-                throw new LogicException("Member $memberName does not exist in $normalizedClass");
+                throw new LogicException("Member '$memberName' does not exist in '$normalizedClass'");
             }
 
             $result[$key] = [];
