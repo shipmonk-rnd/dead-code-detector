@@ -29,6 +29,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
+use function array_key_last;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -258,7 +259,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         foreach ($whiteMembers as $whiteCalleeKey => $usages) {
-            $this->markTransitivesWhite($whiteCalleeKey, [$whiteCalleeKey => $usages]);
+            $this->markTransitivesWhite([$whiteCalleeKey => $usages]);
         }
 
         foreach ($this->blackMembers as $blackMemberKey => $blackMember) {
@@ -460,20 +461,21 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $visited
+     * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $stack callerKey => usages[]
      */
-    private function markTransitivesWhite(string $callerKey, array $visited): void
+    private function markTransitivesWhite(array $stack): void
     {
+        $callerKey = array_key_last($stack);
         $callees = $this->usageGraph[$callerKey] ?? [];
 
         if (isset($this->blackMembers[$callerKey])) {
-            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], $visited);
+            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], $stack);
 
             unset($this->blackMembers[$callerKey]);
         }
 
         foreach ($callees as $calleeKey => $usages) {
-            if (array_key_exists($calleeKey, $visited)) {
+            if (array_key_exists($calleeKey, $stack)) {
                 continue;
             }
 
@@ -481,7 +483,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            $this->markTransitivesWhite($calleeKey, array_merge($visited, [$calleeKey => $usages]));
+            $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]));
         }
     }
 
