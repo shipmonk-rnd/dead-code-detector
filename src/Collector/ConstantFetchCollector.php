@@ -35,8 +35,6 @@ class ConstantFetchCollector implements Collector
 
     private ReflectionProvider $reflectionProvider;
 
-    private bool $trackMixedAccess;
-
     /**
      * @var list<MemberUsageExcluder>
      */
@@ -47,12 +45,10 @@ class ConstantFetchCollector implements Collector
      */
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        bool $trackMixedAccess,
         array $memberUsageExcluders
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->trackMixedAccess = $trackMixedAccess;
         $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
@@ -185,7 +181,7 @@ class ConstantFetchCollector implements Collector
             }
         }
 
-        if ($this->trackMixedAccess && $result === []) {
+        if ($result === []) {
             $result[] = null; // call over unknown type
         }
 

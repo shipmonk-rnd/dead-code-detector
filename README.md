@@ -281,13 +281,15 @@ class UserFacade
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
   - Such behaviour might not be desired for strictly typed codebases, because e.g. single `new $unknown()` will mark all constructors as used
-  - Thus, you can disable this feature in your `phpstan.neon.dist`:
-- The same applies to constant fetches over unknown types (e.g. `$unknown::CONSTANT`)
+  - The same applies to constant fetches over unknown types (e.g. `$unknown::CONSTANT`)
+  - Thus, you can disable this feature in your `phpstan.neon.dist` by excluding such usages:
 
 ```neon
 parameters:
     shipmonkDeadCode:
-        trackMixedAccess: false
+        usageExcluders:
+            usageOverMixed:
+                enabled: true
 ```
 
 - If you want to check how many of those cases are present in your codebase, you can run PHPStan analysis with `-vvv` and you will see some diagnostics:

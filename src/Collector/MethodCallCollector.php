@@ -35,8 +35,6 @@ class MethodCallCollector implements Collector
 
     use BufferedUsageCollector;
 
-    private bool $trackMixedAccess;
-
     /**
      * @var list<MemberUsageExcluder>
      */
@@ -46,11 +44,9 @@ class MethodCallCollector implements Collector
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
-        bool $trackMixedAccess,
         array $memberUsageExcluders
     )
     {
-        $this->trackMixedAccess = $trackMixedAccess;
         $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
@@ -270,13 +266,11 @@ class MethodCallCollector implements Collector
             $result[] = new ClassMethodRef($classReflection->getName(), $methodName, $possibleDescendant);
         }
 
-        if ($this->trackMixedAccess) {
-            $canBeObjectCall = !$typeNoNull->isObject()->no() && !$isStaticCall->yes();
-            $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
+        $canBeObjectCall = !$typeNoNull->isObject()->no() && !$isStaticCall->yes();
+        $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
 
-            if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
-                $result[] = new ClassMethodRef(null, $methodName, true); // call over unknown type
-            }
+        if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
+            $result[] = new ClassMethodRef(null, $methodName, true); // call over unknown type
         }
 
         return $result;
