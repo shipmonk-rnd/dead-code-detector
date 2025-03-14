@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Debug;
 
 use LogicException;
 use PHPStan\Command\Output;
+use PHPStan\DependencyInjection\Container;
 use PHPStan\File\RelativePathHelper;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
@@ -47,22 +48,22 @@ class DebugUsagePrinter
      */
     private array $debugMembers;
 
-    /**
-     * @param list<string> $debugMembers
-     */
     public function __construct(
+        Container $container,
         RelativePathHelper $relativePathHelper,
         ReflectionProvider $reflectionProvider,
         ?string $editorUrl,
-        bool $trackMixedAccess,
-        array $debugMembers
+        bool $trackMixedAccess
     )
     {
         $this->relativePathHelper = $relativePathHelper;
         $this->reflectionProvider = $reflectionProvider;
         $this->editorUrl = $editorUrl;
         $this->trackMixedAccess = $trackMixedAccess;
-        $this->debugMembers = $this->buildDebugMemberKeys($debugMembers);
+        $this->debugMembers = $this->buildDebugMemberKeys(
+            // @phpstan-ignore offsetAccess.nonOffsetAccessible, offsetAccess.nonOffsetAccessible, missingType.checkedException, argument.type
+            $container->getParameter('shipmonkDeadCode')['debug']['usagesOf'], // prevents https://github.com/phpstan/phpstan/issues/12740
+        );
     }
 
     /**

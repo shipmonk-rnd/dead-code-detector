@@ -66,14 +66,19 @@ class DeadCodeRuleTest extends RuleTestCase
 
     protected function getRule(): DeadCodeRule
     {
+        $container = $this->createMock(Container::class);
+        $container->expects(self::any())
+            ->method('getParameter')
+            ->willReturn(['debug' => ['usagesOf' => $this->debugMembers]]);
+
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
                 new DebugUsagePrinter(
+                    $container,
                     new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
                     self::createReflectionProvider(),
                     null,
                     true,
-                    $this->debugMembers,
                 ),
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
