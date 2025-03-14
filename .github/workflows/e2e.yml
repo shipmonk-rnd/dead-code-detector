@@ -33,4 +33,4 @@ jobs:
 
             -
                 name: Run analysis
-                run: vendor/bin/phpstan -vv
+                run: vendor/bin/phpstan -vv --ansi
