@@ -10,8 +10,8 @@ services:
     -
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
         arguments:
-            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
             editorUrl: %editorUrl%
+            mixedExcluderEnabled: %shipmonkDeadCode.usageExcluders.usageOverMixed.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
@@ -69,7 +69,13 @@ services:
             - shipmonk.deadCode.memberUsageExcluder
         arguments:
             enabled: %shipmonkDeadCode.usageExcluders.tests.enabled%
-            devPaths: %shipmonkDeadCode.usageExcluders.tests.devPaths%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder
+        tags:
+            - shipmonk.deadCode.memberUsageExcluder
+        arguments:
+            enabled: %shipmonkDeadCode.usageExcluders.usageOverMixed.enabled%
 
 
     -
@@ -77,7 +83,6 @@ services:
         tags:
             - phpstan.collector
         arguments:
-            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
             memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
@@ -85,7 +90,6 @@ services:
         tags:
             - phpstan.collector
         arguments:
-            trackMixedAccess: %shipmonkDeadCode.trackMixedAccess%
             memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
@@ -113,11 +117,12 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker
         arguments:
             servicesWithOldTag: tagged(shipmonk.deadCode.entrypointProvider)
+            trackMixedAccessParameterValue: %shipmonkDeadCode.trackMixedAccess%
 
 
 parameters:
     shipmonkDeadCode:
-        trackMixedAccess: true
+        trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
         usageProviders:
             vendor:
@@ -139,12 +144,14 @@ parameters:
             tests:
                 enabled: false
                 devPaths: null
+            usageOverMixed:
+                enabled: false
         debug:
             usagesOf: []
 
 parametersSchema:
     shipmonkDeadCode: structure([
-        trackMixedAccess: bool()
+        trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
         reportTransitivelyDeadMethodAsSeparateError: bool()
         usageProviders: structure([
             vendor: structure([
@@ -174,6 +181,9 @@ parametersSchema:
             tests: structure([
                 enabled: bool()
                 devPaths: schema(listOf(string()), nullable())
+            ])
+            usageOverMixed: structure([
+                enabled: bool()
             ])
         ])
         debug: structure([

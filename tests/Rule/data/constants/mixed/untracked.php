@@ -5,9 +5,9 @@ namespace DeadConstMixed2;
 
 class Clazz {
 
-    const CONST1 = 1; // error: Unused DeadConstMixed2\Clazz::CONST1
-    const CONST2 = 1; // error: Unused DeadConstMixed2\Clazz::CONST2
-    const CONST3 = 1; // error: Unused DeadConstMixed2\Clazz::CONST3
+    const CONST1 = 1; // error: Unused DeadConstMixed2\Clazz::CONST1 (all usages excluded by usageOverMixed excluder)
+    const CONST2 = 1; // error: Unused DeadConstMixed2\Clazz::CONST2 (all usages excluded by usageOverMixed excluder)
+    const CONST3 = 1; // error: Unused DeadConstMixed2\Clazz::CONST3 (all usages excluded by usageOverMixed excluder)
     const CONST4 = 1; // error: Unused DeadConstMixed2\Clazz::CONST4
     const CONST5 = 1;
     const CONST6 = 1; // error: Unused DeadConstMixed2\Clazz::CONST6
@@ -18,9 +18,9 @@ class Clazz {
 
 interface IFace {
 
-    const CONST1 = 1; // error: Unused DeadConstMixed2\IFace::CONST1
-    const CONST2 = 1; // error: Unused DeadConstMixed2\IFace::CONST2
-    const CONST3 = 1; // error: Unused DeadConstMixed2\IFace::CONST3
+    const CONST1 = 1; // error: Unused DeadConstMixed2\IFace::CONST1 (all usages excluded by usageOverMixed excluder)
+    const CONST2 = 1; // error: Unused DeadConstMixed2\IFace::CONST2 (all usages excluded by usageOverMixed excluder)
+    const CONST3 = 1; // error: Unused DeadConstMixed2\IFace::CONST3 (all usages excluded by usageOverMixed excluder)
     const CONST4 = 1;
     const CONST5 = 1; // error: Unused DeadConstMixed2\IFace::CONST5
 
@@ -28,9 +28,9 @@ interface IFace {
 
 class Implementor implements IFace {
 
-    const CONST1 = 1; // error: Unused DeadConstMixed2\Implementor::CONST1
-    const CONST2 = 1; // error: Unused DeadConstMixed2\Implementor::CONST2
-    const CONST3 = 1; // error: Unused DeadConstMixed2\Implementor::CONST3
+    const CONST1 = 1; // error: Unused DeadConstMixed2\Implementor::CONST1 (all usages excluded by usageOverMixed excluder)
+    const CONST2 = 1; // error: Unused DeadConstMixed2\Implementor::CONST2 (all usages excluded by usageOverMixed excluder)
+    const CONST3 = 1; // error: Unused DeadConstMixed2\Implementor::CONST3 (all usages excluded by usageOverMixed excluder)
     const CONST4 = 1;
     const CONST5 = 1; // error: Unused DeadConstMixed2\Implementor::CONST5
     const CONST6 = 1;
