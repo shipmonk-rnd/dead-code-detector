@@ -157,7 +157,7 @@ use PHPStan\Analyser\Scope;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use Symfony\Component\Serializer\SerializerInterface;
 
@@ -185,13 +185,13 @@ class DeserializationUsageProvider implements MemberUsageProvider
             $secondArgument = $node->getArgs()[1]->value;
             $serializedClass = $scope->getType($secondArgument)->getConstantStrings()[0];
 
-            // record the method it was called from (needed for proper transitive dead code elimination)
-            $originRef = $this->originDetector->detectOrigin($scope);
+            // record the place it was called from (needed for proper transitive dead code elimination)
+            $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
             // record the hidden constructor call
             $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', false);
 
-            return [new ClassMethodUsage($originRef, $constructorRef)];
+            return [new ClassMethodUsage($usageOrigin, $constructorRef)];
         }
 
         return [];
@@ -350,6 +350,34 @@ class IgnoreDeadInterfaceUsageProvider extends ReflectionBasedMemberUsageProvide
 }
 ```
 
+## Debugging:
+- If you want to see how dead code detector evaluated usages of certain method, you do the following:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        debug:
+            usagesOf:
+                - App\User\Entity\Address::__construct
+```
+
+Then, run PHPStan with `-vvv` CLI option and you will see the output like this:
+
+```txt
+App\User\Entity\Address::__construct
+|
+| Marked as alive by:
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
+|   calls App\User\RegisterUserController::__invoke:36
+|     calls App\User\UserFacade::registerUser:142
+|       calls App\User\Entity\Address::__construct
+|
+| Found 2 usages:
+|  • src/User/UserFacade.php:142
+|  • tests/User/Entity/AddressTest.php:64 - excluded by tests excluder
+```
+
+If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor), you can click on the usages to open it in your IDE.
 
 ## Future scope:
 - Dead class property detection

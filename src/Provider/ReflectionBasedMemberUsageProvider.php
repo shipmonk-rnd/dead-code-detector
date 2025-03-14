@@ -13,6 +13,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_merge;
 
 abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
@@ -92,7 +93,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function createConstantUsage(ReflectionClassConstant $constantReflection): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            null,
+            UsageOrigin::createVirtual($this),
             new ClassConstantRef(
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
@@ -104,7 +105,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function createMethodUsage(ReflectionMethod $methodReflection): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            null,
+            UsageOrigin::createVirtual($this),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),

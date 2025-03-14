@@ -196,7 +196,6 @@
         <exclude name="Squiz.Operators.IncrementDecrementUsage.NoBrackets"/><!-- there is no need for brackets -->
     </rule>
     <rule ref="Squiz.Operators.ValidLogicalOperators"/>
-    <rule ref="Squiz.PHP.CommentedOutCode"/>
     <rule ref="Squiz.PHP.GlobalKeyword"/>
     <rule ref="Squiz.PHP.InnerFunctions"/>
     <rule ref="Squiz.PHP.LowercasePHPFunctions"/>

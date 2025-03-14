@@ -86,12 +86,13 @@ class ProvidedUsagesCollector implements Collector
         $memberRef = $usage->getMemberRef();
         $memberRefClass = $memberRef->getClassName();
 
-        $originRef = $usage->getOrigin();
-        $originRefClass = $originRef === null ? null : $originRef->getClassName();
+        $origin = $usage->getOrigin();
+        $originClass = $origin->getClassName();
+        $originMethod = $origin->getMethodName();
 
         $context = sprintf(
-            "It was emitted as %s by %s for node '%s' in '%s' on line %s",
-            $usage->toHumanString(),
+            "It emitted usage of %s by %s for node '%s' in '%s' on line %s",
+            $usage->getMemberRef()->toHumanString(),
             get_class($provider),
             get_class($node),
             $scope->getFile(),
@@ -102,16 +103,13 @@ class ProvidedUsagesCollector implements Collector
             throw new LogicException("Class '$memberRefClass' does not exist. $context");
         }
 
-        if (
-            $originRef !== null
-            && $originRefClass !== null
-        ) {
-            if (!$this->reflectionProvider->hasClass($originRefClass)) {
-                throw new LogicException("Class '{$originRefClass}' does not exist. $context");
+        if ($originClass !== null) {
+            if (!$this->reflectionProvider->hasClass($originClass)) {
+                throw new LogicException("Class '{$originClass}' does not exist. $context");
             }
 
-            if (!$this->reflectionProvider->getClass($originRefClass)->hasMethod($originRef->getMemberName())) {
-                throw new LogicException("Method '{$originRef->getMemberName()}' does not exist in class '$originRefClass'. $context");
+            if ($originMethod !== null && !$this->reflectionProvider->getClass($originClass)->hasMethod($originMethod)) {
+                throw new LogicException("Method '{$originMethod}' does not exist in class '$originClass'. $context");
             }
         }
     }

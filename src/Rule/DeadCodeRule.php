@@ -16,8 +16,10 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
+use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -27,16 +29,16 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
+use function array_key_last;
 use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_merge_recursive;
 use function array_slice;
-use function array_sum;
+use function array_unique;
 use function array_values;
 use function in_array;
 use function ksort;
-use function sprintf;
 use function strpos;
 
 /**
@@ -66,6 +68,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         '__debugInfo' => null,
     ];
 
+    private DebugUsagePrinter $debugUsagePrinter;
+
     private ClassHierarchy $classHierarchy;
 
     /**
@@ -91,8 +95,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $reportTransitivelyDeadAsSeparateError;
 
-    private bool $trackMixedAccess;
-
     /**
      * memberKey => DeadMember
      *
@@ -108,20 +110,20 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $mixedMemberUsages = [];
 
     /**
-     * @var array<string, list<string>> callerKey => memberUseKey[]
+     * @var array<string, array<string, non-empty-list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
      */
     private array $usageGraph = [];
 
     public function __construct(
+        DebugUsagePrinter $debugUsagePrinter,
         ClassHierarchy $classHierarchy,
         bool $reportTransitivelyDeadMethodAsSeparateError,
-        bool $trackMixedAccess,
         BackwardCompatibilityChecker $checker
     )
     {
+        $this->debugUsagePrinter = $debugUsagePrinter;
         $this->classHierarchy = $classHierarchy;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
-        $this->trackMixedAccess = $trackMixedAccess;
 
         $checker->check();
     }
@@ -224,8 +226,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        /** @var list<string> $whiteMemberKeys */
-        $whiteMemberKeys = [];
+        /** @var array<string, non-empty-list<ClassMemberUsage>> $whiteMembers */
+        $whiteMembers = [];
         /** @var list<CollectedUsage> $excludedMemberUsages */
         $excludedMemberUsages = [];
 
@@ -239,30 +241,40 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $isWhite = $this->isConsideredWhite($memberUsage);
 
             $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUsage->getMemberRef());
-            $alternativeOriginKeys = $memberUsage->getOrigin() !== null ? $this->getAlternativeMemberKeys($memberUsage->getOrigin()) : [];
+            $alternativeOriginKeys = $memberUsage->getOrigin()->hasClassMethodRef()
+                ? $this->getAlternativeMemberKeys($memberUsage->getOrigin()->toClassMethodRef())
+                : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
                 foreach ($alternativeOriginKeys as $alternativeOriginKey) {
-                    $this->usageGraph[$alternativeOriginKey][] = $alternativeMemberKey;
+                    $this->usageGraph[$alternativeOriginKey][$alternativeMemberKey][] = $memberUsage;
                 }
 
                 if ($isWhite) {
-                    $whiteMemberKeys[] = $alternativeMemberKey;
+                    $whiteMembers[$alternativeMemberKey][] = $collectedUsage->getUsage();
                 }
             }
+
+            $this->debugUsagePrinter->recordUsage($collectedUsage, $alternativeMemberKeys);
         }
 
-        foreach ($whiteMemberKeys as $whiteCalleeKey) {
-            $this->markTransitivesWhite($whiteCalleeKey);
+        foreach ($whiteMembers as $whiteCalleeKey => $usages) {
+            $this->markTransitivesWhite([$whiteCalleeKey => $usages]);
         }
 
         foreach ($this->blackMembers as $blackMemberKey => $blackMember) {
-            if ($this->isNeverReportedAsDead($blackMember)) {
+            $neverReportedReason = $this->isNeverReportedAsDead($blackMember);
+
+            if ($neverReportedReason !== null) {
+                $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason);
+
                 unset($this->blackMembers[$blackMemberKey]);
             }
         }
 
         foreach ($excludedMemberUsages as $excludedMemberUsage) {
+            $this->debugUsagePrinter->recordUsage($excludedMemberUsage);
+
             $excludedBy = $excludedMemberUsage->getExcludedBy();
             $excludedMemberRef = $excludedMemberUsage->getUsage()->getMemberRef();
 
@@ -407,6 +419,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
+        $result = array_values(array_unique($result));
+
         $this->memberAlternativesCache[$cacheKey] = $result;
 
         return $result;
@@ -447,17 +461,21 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param array<string, null> $visitedKeys
+     * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $stack callerKey => usages[]
      */
-    private function markTransitivesWhite(string $callerKey, array $visitedKeys = []): void
+    private function markTransitivesWhite(array $stack): void
     {
-        $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
+        $callerKey = array_key_last($stack);
+        $callees = $this->usageGraph[$callerKey] ?? [];
 
-        unset($this->blackMembers[$callerKey]);
+        if (isset($this->blackMembers[$callerKey])) {
+            $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], $stack);
 
-        foreach ($calleeKeys as $calleeKey) {
-            if (array_key_exists($calleeKey, $visitedKeys)) {
+            unset($this->blackMembers[$callerKey]);
+        }
+
+        foreach ($callees as $calleeKey => $usages) {
+            if (array_key_exists($calleeKey, $stack)) {
                 continue;
             }
 
@@ -465,7 +483,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            $this->markTransitivesWhite($calleeKey, array_merge($visitedKeys, [$calleeKey => null]));
+            $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]));
         }
     }
 
@@ -476,11 +494,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private function getTransitiveDeadCalls(string $callerKey, array $visitedKeys = []): array
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
-        $calleeKeys = $this->usageGraph[$callerKey] ?? [];
+        $callees = $this->usageGraph[$callerKey] ?? [];
 
         $result = [];
 
-        foreach ($calleeKeys as $calleeKey) {
+        foreach ($callees as $calleeKey => $_) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
                 continue;
             }
@@ -516,7 +534,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            foreach ($callees as $callee) {
+            foreach ($callees as $callee => $_) {
                 if (array_key_exists($callee, $this->blackMembers)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
@@ -673,15 +691,18 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private function isConsideredWhite(ClassMemberUsage $memberUsage): bool
     {
-        return $memberUsage->getOrigin() === null
+        return $memberUsage->getOrigin()->getClassName() === null // out-of-class scope
             || $this->isAnonymousClass($memberUsage->getOrigin()->getClassName())
-            || (array_key_exists($memberUsage->getOrigin()->getMemberName(), self::UNSUPPORTED_MAGIC_METHODS));
+            || (array_key_exists((string) $memberUsage->getOrigin()->getMethodName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
 
-    private function isNeverReportedAsDead(BlackMember $blackMember): bool
+    /**
+     * @return NeverReportedReason::*|null
+     */
+    private function isNeverReportedAsDead(BlackMember $blackMember): ?string
     {
         if (!$blackMember->getMember() instanceof ClassMethodRef) {
-            return false;
+            return null;
         }
 
         $typeName = $blackMember->getMember()->getClassName();
@@ -699,73 +720,25 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         if ($kind === ClassLikeKind::TRAIT && $abstract) {
             // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
             // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
-            return true;
+            return NeverReportedReason::ABSTRACT_TRAIT_METHOD;
         }
 
         if ($memberName === '__construct' && ($visibility & Visibility::PRIVATE) !== 0 && $params === 0) {
             // private constructors with zero parameters are often used to deny instantiation
-            return true;
+            return NeverReportedReason::PRIVATE_CONSTRUCTOR_NO_PARAMS;
         }
 
         if (array_key_exists($memberName, self::UNSUPPORTED_MAGIC_METHODS)) {
-            return true;
+            return NeverReportedReason::UNSUPPORTED_MAGIC_METHOD;
         }
 
-        return false;
+        return null;
     }
 
     public function print(Output $output): void
     {
-        if ($this->mixedMemberUsages === [] || !$output->isDebug() || !$this->trackMixedAccess) {
-            return;
-        }
-
-        $totalCount = array_sum(array_map('count', $this->mixedMemberUsages));
-        $maxExamplesToShow = 20;
-        $examplesShown = 0;
-        $output->writeLineFormatted(sprintf('<fg=red>Found %d usages over unknown type</>:', $totalCount));
-
-        foreach ($this->mixedMemberUsages as $memberType => $collectedUsages) {
-            foreach ($collectedUsages as $memberName => $usages) {
-                $examplesShown++;
-                $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
-                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
-
-                $exampleCaller = $this->getExampleCaller($usages);
-
-                if ($exampleCaller !== null) {
-                    $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
-                }
-
-                $output->writeLineFormatted('');
-
-                if ($examplesShown >= $maxExamplesToShow) {
-                    break 2;
-                }
-            }
-        }
-
-        if ($totalCount > $maxExamplesToShow) {
-            $output->writeLineFormatted(sprintf('... and %d more', $totalCount - $maxExamplesToShow));
-        }
-
-        $output->writeLineFormatted('');
-        $output->writeLineFormatted('Thus, any member named the same is considered used, no matter its declaring class!');
-        $output->writeLineFormatted('');
-    }
-
-    /**
-     * @param list<CollectedUsage> $usages
-     */
-    private function getExampleCaller(array $usages): ?string
-    {
-        foreach ($usages as $usage) {
-            if ($usage->getUsage()->getOrigin() !== null) {
-                return $usage->getUsage()->getOrigin()->toHumanString();
-            }
-        }
-
-        return null;
+        $this->debugUsagePrinter->printMixedMemberUsages($output, $this->mixedMemberUsages);
+        $this->debugUsagePrinter->printDebugMemberUsages($output, $this->typeDefinitions);
     }
 
 }

@@ -13,6 +13,7 @@ use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 
 class DoctrineUsageProvider implements MemberUsageProvider
 {
@@ -100,12 +101,13 @@ class DoctrineUsageProvider implements MemberUsageProvider
         $className = $scope->getClassReflection()->getName();
 
         $usages = [];
+        $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
         foreach ($scope->getType($node->expr)->getConstantArrays() as $rootArray) {
             foreach ($rootArray->getValuesArray()->getValueTypes() as $eventConfig) {
                 foreach ($eventConfig->getConstantStrings() as $subscriberMethodString) {
                     $usages[] = new ClassMethodUsage(
-                        null,
+                        $usageOrigin,
                         new ClassMethodRef(
                             $className,
                             $subscriberMethodString->getValue(),
@@ -199,7 +201,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
     private function createMethodUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            null,
+            UsageOrigin::createVirtual($this),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),

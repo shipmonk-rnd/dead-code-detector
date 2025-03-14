@@ -14,11 +14,11 @@ final class ClassConstantUsage extends ClassMemberUsage
     private ClassConstantRef $fetch;
 
     /**
-     * @param ClassMethodRef|null $origin The method where the call occurs
+     * @param UsageOrigin $origin The method where the fetch occurs
      * @param ClassConstantRef $fetch The fetch of the constant
      */
     public function __construct(
-        ?ClassMethodRef $origin,
+        UsageOrigin $origin,
         ClassConstantRef $fetch
     )
     {

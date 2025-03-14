@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
@@ -11,6 +12,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
+use PHPStan\File\SimpleRelativePathHelper;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
@@ -20,11 +22,11 @@ use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
+use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOriginDetector;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -38,6 +40,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
+use function preg_replace;
 use function str_replace;
 use function strpos;
 use const PHP_VERSION_ID;
@@ -47,6 +50,11 @@ use const PHP_VERSION_ID;
  */
 class DeadCodeRuleTest extends RuleTestCase
 {
+
+    /**
+     * @var list<string>
+     */
+    private array $debugMembers = [];
 
     private bool $trackMixedAccess = true;
 
@@ -58,11 +66,22 @@ class DeadCodeRuleTest extends RuleTestCase
 
     protected function getRule(): DeadCodeRule
     {
+        $container = $this->createMock(Container::class);
+        $container->expects(self::any())
+            ->method('getParameter')
+            ->willReturn(['debug' => ['usagesOf' => $this->debugMembers]]);
+
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
+                new DebugUsagePrinter(
+                    $container,
+                    new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+                    self::createReflectionProvider(),
+                    null,
+                    true,
+                ),
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
-                true,
                 new BackwardCompatibilityChecker([]),
             );
         }
@@ -79,9 +98,9 @@ class DeadCodeRuleTest extends RuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector(self::createReflectionProvider()),
-            new MethodCallCollector($this->createUsageOriginDetector(), $this->trackMixedAccess, $this->getMemberUsageExcluders()),
-            new ConstantFetchCollector($this->createUsageOriginDetector(), $reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new ClassDefinitionCollector($reflectionProvider),
+            new MethodCallCollector($this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
         ];
     }
 
@@ -159,10 +178,10 @@ class DeadCodeRuleTest extends RuleTestCase
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
         <fg=red>Found 4 usages over unknown type</>:
-        $ec • <fg=white>getter1</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter2</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>getter3</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
-        $ec • <fg=white>staticMethod</> method, for example in <fg=white>DeadMixed1\Tester::__construct</>
+        $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:46</>
+        $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:49</>
+        $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:52</>
+        $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:57</>
 
         Thus, any member named the same is considered used, no matter its declaring class!
 
@@ -170,6 +189,92 @@ class DeadCodeRuleTest extends RuleTestCase
         OUTPUT;
 
         self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDebugUsage(): void
+    {
+        $this->debugMembers = [
+            'DateTime::format',
+            'DebugAlternative\Foo::foo',
+            'DebugCtor\Foo::__construct',
+            'DebugExclude\Foo::mixedExcluder',
+            'DebugNever\Foo::__get',
+            'DebugVirtual\FooTest::testFoo',
+            'DebugGlobal\Foo::chain2',
+            'DebugMixed\Foo::any',
+            'DebugCycle\Foo::__construct',
+            'DebugRegular\Another::call',
+            'DebugUnsupported\Foo::notDead',
+            'DebugZero\Foo::__construct',
+        ];
+        $this->analyseFiles([
+            __DIR__ . '/data/debug/alternative.php',
+            __DIR__ . '/data/debug/ctor.php',
+            __DIR__ . '/data/debug/exclude.php',
+            __DIR__ . '/data/debug/cycle.php',
+            __DIR__ . '/data/debug/foreign.php',
+            __DIR__ . '/data/debug/global.php',
+            __DIR__ . '/data/debug/mixed.php',
+            __DIR__ . '/data/debug/never.php',
+            __DIR__ . '/data/debug/regular.php',
+            __DIR__ . '/data/debug/unsupported.php',
+            __DIR__ . '/data/debug/virtual.php',
+            __DIR__ . '/data/debug/zero.php',
+        ]);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $output = $this->createMock(Output::class);
+        $output->expects(self::atLeastOnce())
+            ->method('isDebug')
+            ->willReturn(true);
+        $output->expects(self::atLeastOnce())
+            ->method('writeFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message;
+                },
+            );
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message . "\n";
+                },
+            );
+
+        $rule->print($output);
+
+        $expectedOutput = file_get_contents(__DIR__ . '/data/debug/expected_output.txt');
+        self::assertNotFalse($expectedOutput);
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
+    /**
+     * @dataProvider provideDebugUsageInvalidArgs
+     */
+    public function testDebugUsageInvalidArgs(string $member, string $error): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage($error);
+
+        $this->debugMembers = [$member];
+        $this->analyseFiles([__DIR__ . '/data/debug/alternative.php']);
+        $this->getRule();
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function provideDebugUsageInvalidArgs(): array
+    {
+        return [
+            'method not owned' => ['DebugAlternative\Clazz::foo', "Member 'foo' does not exist directly in 'DebugAlternative\Clazz'"],
+            'method not declared' => ['DebugAlternative\Clazz::__construct', "Member '__construct' does not exist directly in 'DebugAlternative\Clazz'"],
+            'no method' => ['DebugAlternative\Clazz::xyz', "Member 'xyz' does not exist directly in 'DebugAlternative\Clazz'"],
+            'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
+            'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
+        ];
     }
 
     /**
@@ -448,7 +553,6 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         return [
             new ReflectionUsageProvider(
-                $this->createUsageOriginDetector(),
                 true,
             ),
             new class extends ReflectionBasedMemberUsageProvider
@@ -481,7 +585,6 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
-                new UsageOriginDetector(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
             ),
@@ -530,18 +633,6 @@ class DeadCodeRuleTest extends RuleTestCase
                 },
             );
         return $mock;
-    }
-
-    private function createUsageOriginDetector(): UsageOriginDetector
-    {
-        /** @var UsageOriginDetector|null $detector */
-        static $detector = null;
-
-        if ($detector === null) {
-            $detector = new UsageOriginDetector();
-        }
-
-        return $detector;
     }
 
     public function gatherAnalyserErrors(array $files): array
@@ -602,6 +693,21 @@ class DeadCodeRuleTest extends RuleTestCase
     private static function requiresPackage(string $package, string $constraint): bool
     {
         return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
+    }
+
+    private function trimFgColors(string $output): string
+    {
+        $replaced = preg_replace(
+            '/<fg=[a-z]+>(.*?)<\/>/',
+            '$1',
+            $output,
+        );
+
+        if ($replaced === null) {
+            throw new LogicException('Failed to trim colors');
+        }
+
+        return $replaced;
     }
 
 }

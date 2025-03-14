@@ -14,6 +14,7 @@ use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_merge;
 use function is_string;
 use function strpos;
@@ -56,12 +57,12 @@ class PhpUnitUsageProvider implements MemberUsageProvider
 
             foreach ($dataProviders as $dataProvider) {
                 if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider));
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider), 'data provider method');
                 }
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()));
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'test method');
             }
         }
 
@@ -141,10 +142,10 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         return strpos($method->getDocComment(), $string) !== false;
     }
 
-    private function createUsage(ExtendedMethodReflection $getNativeMethod): ClassMethodUsage
+    private function createUsage(ExtendedMethodReflection $getNativeMethod, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            null,
+            UsageOrigin::createVirtual($this, $reason),
             new ClassMethodRef(
                 $getNativeMethod->getDeclaringClass()->getName(),
                 $getNativeMethod->getName(),
