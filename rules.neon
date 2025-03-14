@@ -116,6 +116,8 @@ services:
 
 
 parameters:
+    parametersNotInvalidatingCache:
+        - parameters.shipmonkDeadCode.debug.usagesOf
     shipmonkDeadCode:
         trackMixedAccess: true
         reportTransitivelyDeadMethodAsSeparateError: false
