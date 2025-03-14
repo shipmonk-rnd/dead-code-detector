@@ -77,7 +77,7 @@ class ConstantFetchCollector implements Collector
             $this->registerFunctionCall($node, $scope);
         }
 
-        return $this->tryFlushBuffer($node, $scope);
+        return $this->emitUsages();
     }
 
     private function registerFunctionCall(FuncCall $node, Scope $scope): void
@@ -203,7 +203,7 @@ class ConstantFetchCollector implements Collector
             }
         }
 
-        $this->usageBuffer[] = new CollectedUsage($usage, $excluderName);
+        $this->usages[] = new CollectedUsage($usage, $excluderName);
     }
 
 }
