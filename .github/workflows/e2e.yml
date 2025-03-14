@@ -11,7 +11,12 @@ jobs:
                     -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
                     -
+                        repo: shipmonk-rnd/doctrine-two-phase-migrations
+                    -
                         repo: shipmonk-rnd/phpstan-rules
+                    -
+                        repo: shipmonk-rnd/phpstan-baseline-per-identifier
+
             fail-fast: false
         steps:
             -
