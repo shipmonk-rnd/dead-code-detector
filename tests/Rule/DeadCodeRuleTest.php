@@ -270,6 +270,7 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         return [
             'method not owned' => ['DebugAlternative\Clazz::foo', "Member 'foo' does not exist directly in 'DebugAlternative\Clazz'"],
+            'method not declared' => ['DebugAlternative\Clazz::__construct', "Member '__construct' does not exist directly in 'DebugAlternative\Clazz'"],
             'no method' => ['DebugAlternative\Clazz::xyz', "Member 'xyz' does not exist directly in 'DebugAlternative\Clazz'"],
             'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
             'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
