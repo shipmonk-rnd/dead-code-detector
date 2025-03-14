@@ -24,6 +24,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
+use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -78,11 +79,11 @@ class DeadCodeRuleTest extends RuleTestCase
                     new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
                     self::createReflectionProvider(),
                     null,
-                    true,
+                    !$this->trackMixedAccess,
                 ),
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
-                new BackwardCompatibilityChecker([]),
+                new BackwardCompatibilityChecker([], null),
             );
         }
 
@@ -99,8 +100,8 @@ class DeadCodeRuleTest extends RuleTestCase
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
             new ClassDefinitionCollector($reflectionProvider),
-            new MethodCallCollector($this->trackMixedAccess, $this->getMemberUsageExcluders()),
-            new ConstantFetchCollector($reflectionProvider, $this->trackMixedAccess, $this->getMemberUsageExcluders()),
+            new MethodCallCollector($this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
         ];
     }
 
@@ -154,26 +155,7 @@ class DeadCodeRuleTest extends RuleTestCase
         $rule = $this->getRule();
 
         $actualOutput = '';
-        $output = $this->createMock(Output::class);
-        $output->expects(self::once())
-            ->method('isDebug')
-            ->willReturn(true);
-        $output->expects(self::atLeastOnce())
-            ->method('writeFormatted')
-            ->willReturnCallback(
-                static function (string $message) use (&$actualOutput): void {
-                    $actualOutput .= $message;
-                },
-            );
-        $output->expects(self::atLeastOnce())
-            ->method('writeLineFormatted')
-            ->willReturnCallback(
-                static function (string $message) use (&$actualOutput): void {
-                    $actualOutput .= $message . "\n";
-                },
-            );
-
-        $rule->print($output);
+        $rule->print($this->getOutputMock($actualOutput));
 
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
@@ -224,29 +206,41 @@ class DeadCodeRuleTest extends RuleTestCase
         $rule = $this->getRule();
 
         $actualOutput = '';
-        $output = $this->createMock(Output::class);
-        $output->expects(self::atLeastOnce())
-            ->method('isDebug')
-            ->willReturn(true);
-        $output->expects(self::atLeastOnce())
-            ->method('writeFormatted')
-            ->willReturnCallback(
-                static function (string $message) use (&$actualOutput): void {
-                    $actualOutput .= $message;
-                },
-            );
-        $output->expects(self::atLeastOnce())
-            ->method('writeLineFormatted')
-            ->willReturnCallback(
-                static function (string $message) use (&$actualOutput): void {
-                    $actualOutput .= $message . "\n";
-                },
-            );
-
-        $rule->print($output);
+        $rule->print($this->getOutputMock($actualOutput));
 
         $expectedOutput = file_get_contents(__DIR__ . '/data/debug/expected_output.txt');
         self::assertNotFalse($expectedOutput);
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
+    public function testDebugUsageWithExcludedMixed(): void
+    {
+        $this->trackMixedAccess = false;
+        $this->debugMembers = ['DebugMixed\Foo::any'];
+        $this->analyse([__DIR__ . '/data/debug/mixed.php'], [
+            [
+                'Unused DebugMixed\Foo::any (all usages excluded by usageOverMixed excluder)',
+                7,
+            ],
+        ]);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+        $expectedOutput = <<<'OUTPUT'
+
+        Usage debugging information:
+
+        DebugMixed\Foo::any
+        |
+        | Dead because:
+        | all usages originate in unused code
+        |
+        | Found 1 usage:
+        |  • data/debug/mixed.php:13 - excluded by usageOverMixed excluder
+
+        OUTPUT;
+
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
@@ -275,6 +269,29 @@ class DeadCodeRuleTest extends RuleTestCase
             'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
             'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
         ];
+    }
+
+    private function getOutputMock(string &$actualOutput): Output
+    {
+        $output = $this->createMock(Output::class);
+        $output->expects(self::atLeastOnce())
+            ->method('isDebug')
+            ->willReturn(true);
+        $output->expects(self::atLeastOnce())
+            ->method('writeFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message;
+                },
+            );
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(
+                static function (string $message) use (&$actualOutput): void {
+                    $actualOutput .= $message . "\n";
+                },
+            );
+        return $output;
     }
 
     /**
@@ -596,7 +613,7 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     private function getMemberUsageExcluders(): array
     {
-        return [
+        $excluders = [
             new TestsUsageExcluder(
                 self::createReflectionProvider(),
                 true,
@@ -617,6 +634,12 @@ class DeadCodeRuleTest extends RuleTestCase
 
             },
         ];
+
+        if (!$this->trackMixedAccess) {
+            $excluders[] = new MixedUsageExcluder(true);
+        }
+
+        return $excluders;
     }
 
     private function createPhpStanContainerMock(): Container

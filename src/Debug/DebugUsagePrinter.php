@@ -37,8 +37,6 @@ class DebugUsagePrinter
 
     private ReflectionProvider $reflectionProvider;
 
-    private bool $trackMixedAccess;
-
     private ?string $editorUrl;
 
     /**
@@ -48,18 +46,20 @@ class DebugUsagePrinter
      */
     private array $debugMembers;
 
+    private bool $mixedExcluderEnabled;
+
     public function __construct(
         Container $container,
         RelativePathHelper $relativePathHelper,
         ReflectionProvider $reflectionProvider,
         ?string $editorUrl,
-        bool $trackMixedAccess
+        bool $mixedExcluderEnabled
     )
     {
         $this->relativePathHelper = $relativePathHelper;
         $this->reflectionProvider = $reflectionProvider;
+        $this->mixedExcluderEnabled = $mixedExcluderEnabled;
         $this->editorUrl = $editorUrl;
-        $this->trackMixedAccess = $trackMixedAccess;
         $this->debugMembers = $this->buildDebugMemberKeys(
             // @phpstan-ignore offsetAccess.nonOffsetAccessible, offsetAccess.nonOffsetAccessible, missingType.checkedException, argument.type
             $container->getParameter('shipmonkDeadCode')['debug']['usagesOf'], // prevents https://github.com/phpstan/phpstan/issues/12740
@@ -71,7 +71,7 @@ class DebugUsagePrinter
      */
     public function printMixedMemberUsages(Output $output, array $mixedMemberUsages): void
     {
-        if ($mixedMemberUsages === [] || !$output->isDebug() || !$this->trackMixedAccess) {
+        if ($mixedMemberUsages === [] || !$output->isDebug() || $this->mixedExcluderEnabled) {
             return;
         }
 
