@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3db2a7de56d94f1fafe36b2922a91afd",
+    "content-hash": "dc67d62a2208f0dcd091a47fc84c315a",
     "packages": [
         {
             "name": "phpstan/phpstan",
-            "version": "2.1.7",
+            "version": "2.1.x-dev",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "12567f91a74036d56ba0af6d56c8e73ac0e8d850"
+                "reference": "cbdfae609210e70809d738547e2c2bb9764bf9df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/12567f91a74036d56ba0af6d56c8e73ac0e8d850",
-                "reference": "12567f91a74036d56ba0af6d56c8e73ac0e8d850",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/cbdfae609210e70809d738547e2c2bb9764bf9df",
+                "reference": "cbdfae609210e70809d738547e2c2bb9764bf9df",
                 "shasum": ""
             },
             "require": {
@@ -26,6 +26,7 @@
             "conflict": {
                 "phpstan/phpstan-shim": "*"
             },
+            "default-branch": true,
             "bin": [
                 "phpstan",
                 "phpstan.phar"
@@ -62,7 +63,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-03-05T13:43:55+00:00"
+            "time": "2025-03-14T14:24:50+00:00"
         }
     ],
     "packages-dev": [
@@ -5999,7 +6000,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "phpstan/phpstan": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
