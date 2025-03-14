@@ -231,8 +231,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $excludedMemberUsages = [];
 
         foreach ($knownCollectedUsages as $collectedUsage) {
-            $this->debugUsagePrinter->recordUsage($collectedUsage);
-
             if ($collectedUsage->isExcluded()) {
                 $excludedMemberUsages[] = $collectedUsage;
                 continue;
@@ -255,6 +253,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     $whiteMemberKeys[] = $alternativeMemberKey;
                 }
             }
+
+            $this->debugUsagePrinter->recordUsage($collectedUsage, $alternativeMemberKeys);
         }
 
         foreach ($whiteMemberKeys as $whiteCalleeKey) {
@@ -272,6 +272,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         foreach ($excludedMemberUsages as $excludedMemberUsage) {
+            $this->debugUsagePrinter->recordUsage($excludedMemberUsage);
+
             $excludedBy = $excludedMemberUsage->getExcludedBy();
             $excludedMemberRef = $excludedMemberUsage->getUsage()->getMemberRef();
 
@@ -735,7 +737,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     public function print(Output $output): void
     {
         $this->debugUsagePrinter->printMixedMemberUsages($output, $this->mixedMemberUsages);
-        $this->debugUsagePrinter->printDebugMemberUsages($output);
+        $this->debugUsagePrinter->printDebugMemberUsages($output, $this->typeDefinitions);
     }
 
 }

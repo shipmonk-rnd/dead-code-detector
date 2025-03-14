@@ -5,7 +5,9 @@ namespace ShipMonk\PHPStan\DeadCode\Debug;
 use LogicException;
 use PHPStan\Command\Output;
 use PHPStan\File\RelativePathHelper;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
+use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -15,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function array_sum;
+use function array_unique;
 use function count;
 use function explode;
 use function ltrim;
@@ -40,7 +43,7 @@ class DebugUsagePrinter
     /**
      * memberKey => usage info
      *
-     * @var array<string, array{usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
+     * @var array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
      */
     private array $debugMembers;
 
@@ -122,7 +125,10 @@ class DebugUsagePrinter
         return null;
     }
 
-    public function printDebugMemberUsages(Output $output): void
+    /**
+     * @param array<string, mixed> $analysedClasses
+     */
+    public function printDebugMemberUsages(Output $output, array $analysedClasses): void
     {
         if ($this->debugMembers === [] || !$output->isDebug()) {
             return;
@@ -131,6 +137,8 @@ class DebugUsagePrinter
         $output->writeLineFormatted("\n<fg=red>Usage debugging information:</>");
 
         foreach ($this->debugMembers as $memberKey => $debugMember) {
+            $typeName = $debugMember['typename'];
+
             $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $this->prettyMemberKey($memberKey)));
 
             if (isset($debugMember['eliminationPath'])) {
@@ -158,7 +166,12 @@ class DebugUsagePrinter
                 }
             } elseif (isset($debugMember['usages'])) {
                 $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
-                $output->writeLineFormatted('| <fg=yellow>not found, all usages originate in unused code</>');
+
+                if (!isset($analysedClasses[$typeName])) {
+                    $output->writeLineFormatted("| <fg=yellow>'$typeName' is not defined within analysed files</>");
+                } else {
+                    $output->writeLineFormatted('| <fg=yellow>not found, all usages originate in unused code</>');
+                }
             }
 
             if (isset($debugMember['usages'])) {
@@ -250,15 +263,23 @@ class DebugUsagePrinter
         return $title;
     }
 
-    public function recordUsage(CollectedUsage $collectedUsage): void
+    /**
+     * @param list<string> $alternativeKeys
+     */
+    public function recordUsage(CollectedUsage $collectedUsage, array $alternativeKeys = []): void
     {
-        $memberKey = $collectedUsage->getUsage()->getMemberRef()->toKey();
+        $memberKeys = array_unique([
+            $collectedUsage->getUsage()->getMemberRef()->toKey(),
+            ...$alternativeKeys,
+        ]);
 
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
+        foreach ($memberKeys as $memberKey) {
+            if (!isset($this->debugMembers[$memberKey])) {
+                continue;
+            }
+
+            $this->debugMembers[$memberKey]['usages'][] = $collectedUsage;
         }
-
-        $this->debugMembers[$memberKey]['usages'][] = $collectedUsage;
     }
 
     /**
@@ -288,7 +309,7 @@ class DebugUsagePrinter
 
     /**
      * @param list<string> $debugMembers
-     * @return array<string, array{usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
+     * @return array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
      */
     private function buildDebugMemberKeys(array $debugMembers): array
     {
@@ -308,23 +329,62 @@ class DebugUsagePrinter
 
             $classReflection = $this->reflectionProvider->getClass($normalizedClass);
 
-            if ($classReflection->hasMethod($memberName)) {
+            if ($this->hasOwnMethod($classReflection, $memberName)) {
                 $key = ClassMethodRef::buildKey($normalizedClass, $memberName);
 
-            } elseif ($classReflection->hasConstant($memberName)) {
+            } elseif ($this->hasOwnConstant($classReflection, $memberName)) {
                 $key = ClassConstantRef::buildKey($normalizedClass, $memberName);
 
-            } elseif ($classReflection->hasProperty($memberName)) {
+            } elseif ($this->hasOwnProperty($classReflection, $memberName)) {
                 throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
 
             } else {
-                throw new LogicException("Member '$memberName' does not exist in '$normalizedClass'");
+                throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
             }
 
-            $result[$key] = [];
+            $result[$key] = [
+                'typename' => $normalizedClass,
+            ];
         }
 
         return $result;
+    }
+
+    private function hasOwnMethod(ClassReflection $classReflection, string $methodName): bool
+    {
+        if (!$classReflection->hasMethod($methodName)) {
+            return false;
+        }
+
+        try {
+            return $classReflection->getNativeReflection()->getMethod($methodName)->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
+        } catch (ReflectionException $e) {
+            return false;
+        }
+    }
+
+    private function hasOwnConstant(ClassReflection $classReflection, string $constantName): bool
+    {
+        $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
+
+        if ($constantReflection === false) {
+            return false;
+        }
+
+        return $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
+    }
+
+    private function hasOwnProperty(ClassReflection $classReflection, string $propertyName): bool
+    {
+        if (!$classReflection->hasProperty($propertyName)) {
+            return false;
+        }
+
+        try {
+            return $classReflection->getNativeReflection()->getProperty($propertyName)->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
+        } catch (ReflectionException $e) {
+            return false;
+        }
     }
 
 }

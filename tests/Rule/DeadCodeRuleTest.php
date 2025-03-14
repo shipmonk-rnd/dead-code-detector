@@ -189,6 +189,8 @@ class DeadCodeRuleTest extends RuleTestCase
     public function testDebugUsage(): void
     {
         $this->debugMembers = [
+            'DateTime::format',
+            'DebugAlternative\Foo::foo',
             'DebugCtor\Foo::__construct',
             'DebugExclude\Foo::mixedExcluder',
             'DebugNever\Foo::__get',
@@ -200,9 +202,11 @@ class DeadCodeRuleTest extends RuleTestCase
             'DebugZero\Foo::__construct',
         ];
         $this->analyseFiles([
+            __DIR__ . '/data/debug/alternative.php',
             __DIR__ . '/data/debug/ctor.php',
             __DIR__ . '/data/debug/exclude.php',
             __DIR__ . '/data/debug/cycle.php',
+            __DIR__ . '/data/debug/foreign.php',
             __DIR__ . '/data/debug/global.php',
             __DIR__ . '/data/debug/mixed.php',
             __DIR__ . '/data/debug/never.php',
@@ -243,6 +247,24 @@ class DeadCodeRuleTest extends RuleTestCase
 
 
         Usage debugging information:
+
+        DateTime::format
+        |
+        | Elimination path:
+        | 'DateTime' is not defined within analysed files
+        |
+        | Found 1 usage:
+        |  • data/debug/foreign.php:5
+
+
+        DebugAlternative\Foo::foo
+        |
+        | Elimination path:
+        | direct usage
+        |
+        | Found 1 usage:
+        |  • data/debug/alternative.php:13
+
 
         DebugCtor\Foo::__construct
         |
@@ -322,6 +344,32 @@ class DeadCodeRuleTest extends RuleTestCase
         OUTPUT;
 
         self::assertSame($expectedOutput, $this->trimFgColors($actualOutput));
+    }
+
+    /**
+     * @dataProvider provideDebugUsageInvalidArgs
+     */
+    public function testDebugUsageInvalidArgs(string $member, string $error): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage($error);
+
+        $this->debugMembers = [$member];
+        $this->analyseFiles([__DIR__ . '/data/debug/alternative.php']);
+        $this->getRule();
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function provideDebugUsageInvalidArgs(): array
+    {
+        return [
+            'method not owned' => ['DebugAlternative\Clazz::foo', "Member 'foo' does not exist directly in 'DebugAlternative\Clazz'"],
+            'no method' => ['DebugAlternative\Clazz::xyz', "Member 'xyz' does not exist directly in 'DebugAlternative\Clazz'"],
+            'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
+            'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
+        ];
     }
 
     /**
