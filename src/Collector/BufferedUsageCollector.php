@@ -32,7 +32,7 @@ trait BufferedUsageCollector
             return $data === []
                 ? null
                 : array_map(
-                    static fn (CollectedUsage $usage): string => $usage->serialize(),
+                    static fn (CollectedUsage $usage): string => $usage->serialize($scope->getFile()),
                     $data,
                 );
         }

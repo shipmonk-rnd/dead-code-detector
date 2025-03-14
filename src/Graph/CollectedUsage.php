@@ -52,7 +52,14 @@ final class CollectedUsage
         );
     }
 
-    public function serialize(): string
+    /**
+     * Scope file is passed to optimize transferred data size (and thus result cache size)
+     * - PHPStan itself transfers all collector data along with scope file
+     * - thus if our data match those already-transferred ones, lets omit those
+     *
+     * @see https://github.com/phpstan/phpstan-src/blob/2fe4e0f94e75fe8844a21fdb81799f01f0591dfe/src/Analyser/FileAnalyser.php#L198
+     */
+    public function serialize(string $scopeFile): string
     {
         $origin = $this->usage->getOrigin();
         $memberRef = $this->usage->getMemberRef();
@@ -63,7 +70,7 @@ final class CollectedUsage
             'o' => [
                     'c' => $origin->getClassName(),
                     'm' => $origin->getMethodName(),
-                    'f' => $origin->getFile(),
+                    'f' => $origin->getFile() === $scopeFile ? '_' : $origin->getFile(),
                     'l' => $origin->getLine(),
                     'p' => $origin->getProvider(),
                     'n' => $origin->getNote(),
@@ -82,7 +89,7 @@ final class CollectedUsage
         }
     }
 
-    public static function deserialize(string $data): self
+    public static function deserialize(string $data, string $scopeFile): self
     {
         try {
             /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool}} $result */
@@ -92,7 +99,14 @@ final class CollectedUsage
         }
 
         $memberType = $result['t'];
-        $origin = new UsageOrigin($result['o']['c'], $result['o']['m'], $result['o']['f'], $result['o']['l'], $result['o']['p'], $result['o']['n']);
+        $origin = new UsageOrigin(
+            $result['o']['c'],
+            $result['o']['m'],
+            $result['o']['f'] === '_' ? $scopeFile : $result['o']['f'],
+            $result['o']['l'],
+            $result['o']['p'],
+            $result['o']['n'],
+        );
         $exclusionReason = $result['e'];
 
         $usage = $memberType === MemberType::CONSTANT

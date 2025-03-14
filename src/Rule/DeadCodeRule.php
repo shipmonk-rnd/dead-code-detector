@@ -158,10 +158,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $memberUseData = array_merge_recursive($methodCallData, $providedUsagesData, $constFetchData);
         unset($methodCallData, $providedUsagesData, $constFetchData);
 
-        foreach ($memberUseData as $usesPerFile) {
+        foreach ($memberUseData as $file => $usesPerFile) {
             foreach ($usesPerFile as $useStrings) {
                 foreach ($useStrings as $useString) {
-                    $collectedUsage = CollectedUsage::deserialize($useString);
+                    $collectedUsage = CollectedUsage::deserialize($useString, $file);
                     $memberUsage = $collectedUsage->getUsage();
 
                     if ($memberUsage->getMemberRef()->getClassName() === null) {
