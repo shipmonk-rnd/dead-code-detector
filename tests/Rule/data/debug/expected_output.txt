@@ -1,0 +1,114 @@
+Found 1 usage over unknown type:
+ • any method, for example in data/debug/mixed.php:13
+
+Thus, any member named the same is considered used, no matter its declaring class!
+
+
+Usage debugging information:
+
+DateTime::format
+|
+| Not defined within analysed files!
+|
+| Found 1 usage:
+|  • data/debug/foreign.php:5
+
+
+DebugAlternative\Foo::foo
+|
+| Marked as alive at:
+| entry data/debug/alternative.php:13
+|   calls DebugAlternative\Foo::foo
+|
+| Found 1 usage:
+|  • data/debug/alternative.php:13
+
+
+DebugCtor\Foo::__construct
+|
+| Dead because:
+| all usages originate in unused code
+|
+| Found 1 usage:
+|  • data/debug/ctor.php:9
+
+
+DebugExclude\Foo::mixedExcluder
+|
+| Dead because:
+| all usages originate in unused code
+|
+| Found 1 usage:
+|  • data/debug/exclude.php:10 - excluded by mixed excluder
+
+
+DebugNever\Foo::__get
+|
+| Is never reported as dead: unsupported magic method
+
+
+DebugVirtual\FooTest::testFoo
+|
+| Marked as alive at:
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
+|   calls DebugVirtual\FooTest::testFoo
+|
+| Found 1 usage:
+|  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
+
+
+DebugGlobal\Foo::chain2
+|
+| Marked as alive at:
+| entry data/debug/global.php:20
+|   calls DebugGlobal\Foo::chain1:11
+|     calls DebugGlobal\Foo::chain2
+|
+| Found 1 usage:
+|  • data/debug/global.php:11
+
+
+DebugMixed\Foo::any
+|
+| Marked as alive at:
+| entry data/debug/mixed.php:13
+|   calls DebugMixed\Foo::any
+|
+| Found 1 usage:
+|  • data/debug/mixed.php:13
+
+
+DebugCycle\Foo::__construct
+|
+| Dead because:
+| all usages originate in unused code
+|
+| Found 1 usage:
+|  • data/debug/cycle.php:17
+
+
+DebugRegular\Another::call
+|
+| Marked as alive at:
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
+|   calls DebugRegular\FooController::dummyAction:12
+|     calls DebugRegular\Another::call
+|
+| Found 2 usages:
+|  • data/debug/regular.php:12
+|  • data/debug/regular.php:13
+
+
+DebugUnsupported\Foo::notDead
+|
+| Marked as alive at:
+| entry DebugUnsupported\Foo::__destruct:8
+|   calls DebugUnsupported\Foo::notDead
+|
+| Found 1 usage:
+|  • data/debug/unsupported.php:8
+
+
+DebugZero\Foo::__construct
+|
+| No usages found

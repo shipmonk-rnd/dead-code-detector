@@ -200,10 +200,11 @@ class DeadCodeRuleTest extends RuleTestCase
             'DebugExclude\Foo::mixedExcluder',
             'DebugNever\Foo::__get',
             'DebugVirtual\FooTest::testFoo',
-            'DebugGlobal\Foo::chain',
+            'DebugGlobal\Foo::chain2',
             'DebugMixed\Foo::any',
             'DebugCycle\Foo::__construct',
             'DebugRegular\Another::call',
+            'DebugUnsupported\Foo::notDead',
             'DebugZero\Foo::__construct',
         ];
         $this->analyseFiles([
@@ -216,6 +217,7 @@ class DeadCodeRuleTest extends RuleTestCase
             __DIR__ . '/data/debug/mixed.php',
             __DIR__ . '/data/debug/never.php',
             __DIR__ . '/data/debug/regular.php',
+            __DIR__ . '/data/debug/unsupported.php',
             __DIR__ . '/data/debug/virtual.php',
             __DIR__ . '/data/debug/zero.php',
         ]);
@@ -243,112 +245,9 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $rule->print($output);
 
-        $ec = '';
-        $expectedOutput = <<<"OUTPUT"
-        Found 1 usage over unknown type:
-        $ec • any method, for example in data/debug/mixed.php:13
-
-        Thus, any member named the same is considered used, no matter its declaring class!
-
-
-        Usage debugging information:
-
-        DateTime::format
-        |
-        | Elimination path:
-        | 'DateTime' is not defined within analysed files
-        |
-        | Found 1 usage:
-        |  • data/debug/foreign.php:5
-
-
-        DebugAlternative\Foo::foo
-        |
-        | Elimination path:
-        | direct usage
-        |
-        | Found 1 usage:
-        |  • data/debug/alternative.php:13
-
-
-        DebugCtor\Foo::__construct
-        |
-        | Elimination path:
-        | not found, all usages originate in unused code
-        |
-        | Found 1 usage:
-        |  • data/debug/ctor.php:9
-
-
-        DebugExclude\Foo::mixedExcluder
-        |
-        | Elimination path:
-        | not found, all usages originate in unused code
-        |
-        | Found 1 usage:
-        |  • data/debug/exclude.php:10 - excluded by mixed excluder
-
-
-        DebugNever\Foo::__get
-        |
-        | Is never reported as dead: unsupported magic method
-
-
-        DebugVirtual\FooTest::testFoo
-        |
-        | Elimination path:
-        | direct usage
-        |
-        | Found 1 usage:
-        |  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
-
-
-        DebugGlobal\Foo::chain
-        |
-        | Elimination path:
-        | direct usage
-        |
-        | Found 1 usage:
-        |  • data/debug/global.php:12
-
-
-        DebugMixed\Foo::any
-        |
-        | Elimination path:
-        | direct usage
-        |
-        | Found 1 usage:
-        |  • data/debug/mixed.php:13
-
-
-        DebugCycle\Foo::__construct
-        |
-        | Elimination path:
-        | not found, all usages originate in unused code
-        |
-        | Found 1 usage:
-        |  • data/debug/cycle.php:17
-
-
-        DebugRegular\Another::call
-        |
-        | Elimination path:
-        | entrypoint DebugRegular\FooController::dummyAction:12
-        |        calls DebugRegular\Another::call
-        |
-        | Found 2 usages:
-        |  • data/debug/regular.php:12
-        |  • data/debug/regular.php:13
-
-
-        DebugZero\Foo::__construct
-        |
-        | No usages found
-
-
-        OUTPUT;
-
-        self::assertSame($expectedOutput, $this->trimFgColors($actualOutput));
+        $expectedOutput = file_get_contents(__DIR__ . '/data/debug/expected_output.txt');
+        self::assertNotFalse($expectedOutput);
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
     /**

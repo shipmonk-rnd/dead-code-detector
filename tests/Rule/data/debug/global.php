@@ -6,7 +6,15 @@ class Foo
 {
     public function __construct() {}
 
-    public function chain() {}
+    public function chain1()
+    {
+        $this->chain2();
+    }
+
+    public function chain2()
+    {
+
+    }
 }
 
-(new Foo())->chain();
+(new Foo())->chain1();

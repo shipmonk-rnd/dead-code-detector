@@ -44,7 +44,7 @@ class DebugUsagePrinter
     /**
      * memberKey => usage info
      *
-     * @var array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
+     * @var array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
      */
     private array $debugMembers;
 
@@ -143,36 +143,35 @@ class DebugUsagePrinter
             $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $this->prettyMemberKey($memberKey)));
 
             if (isset($debugMember['eliminationPath'])) {
-                $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
-                $depth = 0;
+                $output->writeLineFormatted("|\n| <fg=green>Marked as alive at:</>");
+                $depth = 1;
 
-                if (count($debugMember['eliminationPath']) === 1) {
-                    $output->writeLineFormatted('| direct usage');
-
-                } else {
-                    foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
-                        $indent = $depth === 0 ? '<fg=gray>entrypoint</> ' : '     ' . str_repeat('  ', $depth) . '<fg=gray>calls</> ';
-                        $nextFragmentUsages = next($debugMember['eliminationPath']);
-                        $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
-                        $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
-
-                        $pathFragment = $nextFragmentFirstUsageOrigin === null
-                            ? $this->prettyMemberKey($fragmentKey)
-                            : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
-
-                        $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
-
-                        $depth++;
+                foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
+                    if ($depth === 1) {
+                        $entrypoint = $this->getOriginReference($fragmentUsages[0]->getOrigin(), false);
+                        $output->writeLineFormatted(sprintf('| <fg=gray>entry</> <fg=white>%s</>', $entrypoint));
                     }
-                }
-            } elseif (isset($debugMember['usages'])) {
-                $output->writeLineFormatted("|\n| <fg=green>Elimination path:</>");
 
-                if (!isset($analysedClasses[$typeName])) {
-                    $output->writeLineFormatted("| <fg=yellow>'$typeName' is not defined within analysed files</>");
-                } else {
-                    $output->writeLineFormatted('| <fg=yellow>not found, all usages originate in unused code</>');
+                    $indent = str_repeat('  ', $depth) . '<fg=gray>calls</> ';
+
+                    $nextFragmentUsages = next($debugMember['eliminationPath']);
+                    $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
+                    $nextFragmentFirstUsageOrigin = $nextFragmentFirstUsage instanceof ClassMemberUsage ? $nextFragmentFirstUsage->getOrigin() : null;
+
+                    $pathFragment = $nextFragmentFirstUsageOrigin === null
+                        ? $this->prettyMemberKey($fragmentKey)
+                        : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
+
+                    $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
+
+                    $depth++;
                 }
+            } elseif (!isset($analysedClasses[$typeName])) {
+                $output->writeLineFormatted("|\n| <fg=yellow>Not defined within analysed files!</>");
+
+            } elseif (isset($debugMember['usages'])) {
+                $output->writeLineFormatted("|\n| <fg=yellow>Dead because:</>");
+                $output->writeLineFormatted('| all usages originate in unused code');
             }
 
             if (isset($debugMember['usages'])) {
@@ -210,7 +209,7 @@ class DebugUsagePrinter
         return $replaced;
     }
 
-    private function getOriginReference(UsageOrigin $origin): string
+    private function getOriginReference(UsageOrigin $origin, bool $preferFileLine = true): string
     {
         $file = $origin->getFile();
         $line = $origin->getLine();
@@ -218,19 +217,18 @@ class DebugUsagePrinter
         if ($file !== null && $line !== null) {
             $relativeFile = $this->relativePathHelper->getRelativePath($file);
 
+            $title = $origin->getClassName() !== null && $origin->getMethodName() !== null && !$preferFileLine
+                ? sprintf('%s::%s:%d', $origin->getClassName(), $origin->getMethodName(), $line)
+                : sprintf('%s:%s', $relativeFile, $line);
+
             if ($this->editorUrl === null) {
-                return sprintf(
-                    '%s:%s',
-                    $relativeFile,
-                    $line,
-                );
+                return $title;
             }
 
             return sprintf(
-                '<href=%s>%s:%s</>',
+                '<href=%s>%s</>',
                 str_replace(['%file%', '%relFile%', '%line%'], [$file, $relativeFile, (string) $line], $this->editorUrl),
-                $relativeFile,
-                $line,
+                $title,
             );
         }
 
@@ -284,7 +282,7 @@ class DebugUsagePrinter
     }
 
     /**
-     * @param array<string, list<ClassMemberUsage>> $eliminationPath
+     * @param array<string, non-empty-list<ClassMemberUsage>> $eliminationPath
      */
     public function markMemberAsWhite(BlackMember $blackMember, array $eliminationPath): void
     {
@@ -310,7 +308,7 @@ class DebugUsagePrinter
 
     /**
      * @param list<string> $debugMembers
-     * @return array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, list<ClassMemberUsage>>, neverReported?: string}>
+     * @return array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
      */
     private function buildDebugMemberKeys(array $debugMembers): array
     {

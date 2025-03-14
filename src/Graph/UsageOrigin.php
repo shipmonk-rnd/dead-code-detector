@@ -33,7 +33,7 @@ final class UsageOrigin
     public function __construct(
         ?string $className,
         ?string $methodName,
-        ?string $fileName, // TODO try reusing collector file to reduce memory usage
+        ?string $fileName,
         ?int $line,
         ?string $provider,
         ?string $note

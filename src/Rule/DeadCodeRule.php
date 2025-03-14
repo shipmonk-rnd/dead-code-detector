@@ -109,7 +109,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $mixedMemberUsages = [];
 
     /**
-     * @var array<string, array<string, list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
+     * @var array<string, array<string, non-empty-list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
      */
     private array $usageGraph = [];
 
@@ -225,8 +225,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        /** @var list<string> $whiteMemberKeys */
-        $whiteMemberKeys = [];
+        /** @var array<string, non-empty-list<ClassMemberUsage>> $whiteMembers */
+        $whiteMembers = [];
         /** @var list<CollectedUsage> $excludedMemberUsages */
         $excludedMemberUsages = [];
 
@@ -250,15 +250,15 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 }
 
                 if ($isWhite) {
-                    $whiteMemberKeys[] = $alternativeMemberKey;
+                    $whiteMembers[$alternativeMemberKey][] = $collectedUsage->getUsage();
                 }
             }
 
             $this->debugUsagePrinter->recordUsage($collectedUsage, $alternativeMemberKeys);
         }
 
-        foreach ($whiteMemberKeys as $whiteCalleeKey) {
-            $this->markTransitivesWhite($whiteCalleeKey);
+        foreach ($whiteMembers as $whiteCalleeKey => $usages) {
+            $this->markTransitivesWhite($whiteCalleeKey, [$whiteCalleeKey => $usages]);
         }
 
         foreach ($this->blackMembers as $blackMemberKey => $blackMember) {
@@ -460,14 +460,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param array<string, list<ClassMemberUsage>> $visited
+     * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $visited
      */
-    private function markTransitivesWhite(string $callerKey, array $visited = []): void
+    private function markTransitivesWhite(string $callerKey, array $visited): void
     {
-        $visited = $visited === [] ? [$callerKey => []] : $visited; // TODO [] init?
         $callees = $this->usageGraph[$callerKey] ?? [];
 
-        if (isset($this->blackMembers[$callerKey])) { // TODO debug why not always present
+        if (isset($this->blackMembers[$callerKey])) {
             $this->debugUsagePrinter->markMemberAsWhite($this->blackMembers[$callerKey], $visited);
 
             unset($this->blackMembers[$callerKey]);
@@ -690,7 +689,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private function isConsideredWhite(ClassMemberUsage $memberUsage): bool
     {
-        return $memberUsage->getOrigin()->getClassName() === null
+        return $memberUsage->getOrigin()->getClassName() === null // out-of-class scope
             || $this->isAnonymousClass($memberUsage->getOrigin()->getClassName())
             || (array_key_exists((string) $memberUsage->getOrigin()->getMethodName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
