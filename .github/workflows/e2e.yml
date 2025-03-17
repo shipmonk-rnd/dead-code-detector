@@ -18,6 +18,7 @@ jobs:
                         repo: shipmonk-rnd/phpstan-baseline-per-identifier
                     -
                         repo: shipmonk-rnd/input-mapper
+                        php: 8.3
 
             fail-fast: false
         steps:
@@ -31,7 +32,7 @@ jobs:
                 name: Setup PHP
                 uses: shivammathur/setup-php@v2
                 with:
-                    php-version: 8.4
+                    php-version: ${{ matrix.php || '8.4' }}
                     ini-file: development
 
             -
