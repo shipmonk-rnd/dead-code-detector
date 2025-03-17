@@ -1,0 +1,44 @@
+name: E2E
+on:
+    pull_request:
+
+jobs:
+    e2e:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                include:
+                    -
+                        repo: shipmonk-rnd/doctrine-mysql-index-hints
+                    -
+                        repo: shipmonk-rnd/doctrine-two-phase-migrations
+                    -
+                        repo: shipmonk-rnd/phpstan-rules
+                    -
+                        repo: shipmonk-rnd/phpstan-baseline-per-identifier
+                    -
+                        repo: shipmonk-rnd/input-mapper
+                        php: 8.3
+
+            fail-fast: false
+        steps:
+            -
+                name: Clone ${{ matrix.repo }}
+                uses: actions/checkout@v4
+                with:
+                    repository: ${{ matrix.repo }}
+
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php || '8.4' }}
+                    ini-file: development
+
+            -
+                name: Update Dead Code Detector
+                run: composer require shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies
+
+            -
+                name: Run analysis
+                run: vendor/bin/phpstan -vvv --ansi
