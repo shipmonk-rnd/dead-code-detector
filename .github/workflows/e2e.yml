@@ -16,6 +16,8 @@ jobs:
                         repo: shipmonk-rnd/phpstan-rules
                     -
                         repo: shipmonk-rnd/phpstan-baseline-per-identifier
+                    -
+                        repo: shipmonk-rnd/input-mapper
 
             fail-fast: false
         steps:
