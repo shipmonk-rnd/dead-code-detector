@@ -5,24 +5,24 @@ namespace DeadMixed2;
 
 class Clazz {
 
-    public function getter1() {} // error: Unused DeadMixed2\Clazz::getter1
-    public function getter2() {} // error: Unused DeadMixed2\Clazz::getter2
-    public function getter3() {} // error: Unused DeadMixed2\Clazz::getter3
+    public function getter1() {} // error: Unused DeadMixed2\Clazz::getter1 (all usages excluded by usageOverMixed excluder)
+    public function getter2() {} // error: Unused DeadMixed2\Clazz::getter2 (all usages excluded by usageOverMixed excluder)
+    public function getter3() {} // error: Unused DeadMixed2\Clazz::getter3 (all usages excluded by usageOverMixed excluder)
     public function getter4() {} // error: Unused DeadMixed2\Clazz::getter4
     public function getter5() {}
     public function getter6() {} // error: Unused DeadMixed2\Clazz::getter6
 
     public function someMethod() {} // error: Unused DeadMixed2\Clazz::someMethod
     public function nonStaticMethod() {} // error: Unused DeadMixed2\Clazz::nonStaticMethod
-    public static function staticMethod() {} // error: Unused DeadMixed2\Clazz::staticMethod
+    public static function staticMethod() {} // error: Unused DeadMixed2\Clazz::staticMethod (all usages excluded by usageOverMixed excluder)
 
 }
 
 interface IFace {
 
-    public function getter1(); // error: Unused DeadMixed2\IFace::getter1
-    public function getter2(); // error: Unused DeadMixed2\IFace::getter2
-    public function getter3(); // error: Unused DeadMixed2\IFace::getter3
+    public function getter1(); // error: Unused DeadMixed2\IFace::getter1 (all usages excluded by usageOverMixed excluder)
+    public function getter2(); // error: Unused DeadMixed2\IFace::getter2 (all usages excluded by usageOverMixed excluder)
+    public function getter3(); // error: Unused DeadMixed2\IFace::getter3 (all usages excluded by usageOverMixed excluder)
     public function getter4();
     public function getter5(); // error: Unused DeadMixed2\IFace::getter5
 
@@ -30,9 +30,9 @@ interface IFace {
 
 class Implementor implements IFace {
 
-    public function getter1() {} // error: Unused DeadMixed2\Implementor::getter1
-    public function getter2() {} // error: Unused DeadMixed2\Implementor::getter2
-    public function getter3() {} // error: Unused DeadMixed2\Implementor::getter3
+    public function getter1() {} // error: Unused DeadMixed2\Implementor::getter1 (all usages excluded by usageOverMixed excluder)
+    public function getter2() {} // error: Unused DeadMixed2\Implementor::getter2 (all usages excluded by usageOverMixed excluder)
+    public function getter3() {} // error: Unused DeadMixed2\Implementor::getter3 (all usages excluded by usageOverMixed excluder)
     public function getter4() {}
     public function getter5() {} // error: Unused DeadMixed2\Implementor::getter5
     public function getter6() {}

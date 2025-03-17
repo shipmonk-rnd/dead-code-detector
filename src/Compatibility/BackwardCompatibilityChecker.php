@@ -7,6 +7,7 @@ use function array_map;
 use function count;
 use function get_class;
 use function implode;
+use function var_export;
 
 class BackwardCompatibilityChecker
 {
@@ -16,12 +17,18 @@ class BackwardCompatibilityChecker
      */
     private array $servicesWithOldTag;
 
+    private ?bool $trackMixedAccessParameterValue;
+
     /**
      * @param list<object> $servicesWithOldTag
      */
-    public function __construct(array $servicesWithOldTag)
+    public function __construct(
+        array $servicesWithOldTag,
+        ?bool $trackMixedAccessParameterValue
+    )
     {
         $this->servicesWithOldTag = $servicesWithOldTag;
+        $this->trackMixedAccessParameterValue = $trackMixedAccessParameterValue;
     }
 
     public function check(): void
@@ -32,6 +39,11 @@ class BackwardCompatibilityChecker
             $isAre = count($this->servicesWithOldTag) > 1 ? 'are' : 'is';
 
             throw new LogicException("Service$plural $serviceClassNames $isAre registered with old tag 'shipmonk.deadCode.entrypointProvider'. Please update the tag to 'shipmonk.deadCode.memberUsageProvider'.");
+        }
+
+        if ($this->trackMixedAccessParameterValue !== null) {
+            $newValue = var_export(!$this->trackMixedAccessParameterValue, true);
+            throw new LogicException("Using deprecated parameter 'trackMixedAccess', please use 'parameters.shipmonkDeadCode.usageExcluders.usageOverMixed.enabled: $newValue' instead.");
         }
     }
 
