@@ -59,11 +59,11 @@ DebugNever\Foo::__get
 DebugVirtual\FooTest::testFoo
 |
 | Marked as alive at:
-| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (Test method)
 |   calls DebugVirtual\FooTest::testFoo
 |
 | Found 1 usage:
-|  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (test method)
+|  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (Test method)
 
 
 DebugGlobal\Foo::chain2
@@ -99,7 +99,7 @@ DebugCycle\Foo::__construct
 DebugRegular\Another::call
 |
 | Marked as alive at:
-| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider (Route method via #[Route] attribute)
 |   calls DebugRegular\FooController::dummyAction:12
 |     calls DebugRegular\Another::call
 |

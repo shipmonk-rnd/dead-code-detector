@@ -26,36 +26,38 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
     {
         if (!$this->enabled) {
-            return false;
+            return null;
         }
 
         $reflectionClass = $method->getDeclaringClass();
         $methodName = $method->getName();
 
+        $usage = VirtualUsage::withNote('Method overrides vendor one, thus is expected to be used by vendor code');
+
         do {
             if ($this->isForeignMethod($reflectionClass, $methodName)) {
-                return true;
+                return $usage;
             }
 
             foreach ($reflectionClass->getInterfaces() as $interface) {
                 if ($this->isForeignMethod($interface, $methodName)) {
-                    return true;
+                    return $usage;
                 }
             }
 
             foreach ($reflectionClass->getTraits() as $trait) {
                 if ($this->isForeignMethod($trait, $methodName)) {
-                    return true;
+                    return $usage;
                 }
             }
 
             $reflectionClass = $reflectionClass->getParentClass();
         } while ($reflectionClass !== false);
 
-        return false;
+        return null;
     }
 
     /**

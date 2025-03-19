@@ -23,6 +23,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsage;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_keys;
@@ -56,6 +57,7 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $missingClassNames = [];
         $excluded = [
+            VirtualUsage::class,
             UsageOrigin::class,
             ClassMethodUsage::class,
             ClassMethodRef::class,

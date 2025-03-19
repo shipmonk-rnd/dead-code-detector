@@ -36,14 +36,14 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         return [];
     }
 
-    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
     {
-        return false; // Expected to be overridden by subclasses.
+        return null; // Expected to be overridden by subclasses.
     }
 
-    protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): bool
+    protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsage
     {
-        return false; // Expected to be overridden by subclasses.
+        return null; // Expected to be overridden by subclasses.
     }
 
     /**
@@ -60,8 +60,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 continue; // skip methods from ancestors
             }
 
-            if ($this->shouldMarkMethodAsUsed($nativeMethodReflection)) {
-                $usages[] = $this->createMethodUsage($nativeMethodReflection);
+            $usage = $this->shouldMarkMethodAsUsed($nativeMethodReflection);
+
+            if ($usage !== null) {
+                $usages[] = $this->createMethodUsage($nativeMethodReflection, $usage->getNote());
             }
         }
 
@@ -82,18 +84,20 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 continue; // skip constants from ancestors
             }
 
-            if ($this->shouldMarkConstantAsUsed($nativeConstantReflection)) {
-                $usages[] = $this->createConstantUsage($nativeConstantReflection);
+            $usage = $this->shouldMarkConstantAsUsed($nativeConstantReflection);
+
+            if ($usage !== null) {
+                $usages[] = $this->createConstantUsage($nativeConstantReflection, $usage->getNote());
             }
         }
 
         return $usages;
     }
 
-    private function createConstantUsage(ReflectionClassConstant $constantReflection): ClassConstantUsage
+    private function createConstantUsage(ReflectionClassConstant $constantReflection, string $note): ClassConstantUsage
     {
         return new ClassConstantUsage(
-            UsageOrigin::createVirtual($this),
+            UsageOrigin::createVirtual($this, $note),
             new ClassConstantRef(
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
@@ -102,10 +106,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         );
     }
 
-    private function createMethodUsage(ReflectionMethod $methodReflection): ClassMethodUsage
+    private function createMethodUsage(ReflectionMethod $methodReflection, string $note): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this),
+            UsageOrigin::createVirtual($this, $note),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),

@@ -50,9 +50,9 @@ final class UsageOrigin
     /**
      * Creates virtual usage origin with no reference to any place in code
      *
-     * @param ?string $note More detailed identification why provider emitted this virtual usage
+     * @param string $note More detailed info why provider emitted this virtual usage
      */
-    public static function createVirtual(MemberUsageProvider $provider, ?string $note = null): self
+    public static function createVirtual(MemberUsageProvider $provider, string $note): self
     {
         return new self(
             null,

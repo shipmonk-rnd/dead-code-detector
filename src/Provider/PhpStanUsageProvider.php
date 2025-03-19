@@ -18,22 +18,26 @@ class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->container = $container;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
     {
         if (!$this->enabled) {
-            return false;
+            return null;
         }
 
         return $this->isConstructorCallInPhpStanDic($method);
     }
 
-    private function isConstructorCallInPhpStanDic(ReflectionMethod $method): bool
+    private function isConstructorCallInPhpStanDic(ReflectionMethod $method): ?VirtualUsage
     {
         if (!$method->isConstructor()) {
-            return false;
+            return null;
         }
 
-        return $this->container->findServiceNamesByType($method->getDeclaringClass()->getName()) !== [];
+        if ($this->container->findServiceNamesByType($method->getDeclaringClass()->getName()) !== []) {
+            return VirtualUsage::withNote('Constructor call from PHPStan DI container');
+        }
+
+        return null;
     }
 
 }

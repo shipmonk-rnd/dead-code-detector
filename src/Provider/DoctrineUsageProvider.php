@@ -65,8 +65,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            if ($this->shouldMarkMethodAsUsed($method)) {
-                $usages[] = $this->createMethodUsage($classReflection->getNativeMethod($method->getName()));
+            $usageNote = $this->shouldMarkMethodAsUsed($method);
+
+            if ($usageNote !== null) {
+                $usages[] = $this->createMethodUsage($classReflection->getNativeMethod($method->getName()), $usageNote);
             }
         }
 
@@ -121,15 +123,28 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?string
     {
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
 
-        return $this->isLifecycleEventMethod($method)
-            || $this->isEntityRepositoryConstructor($class, $method)
-            || $this->isPartOfAsEntityListener($class, $methodName)
-            || $this->isProbablyDoctrineListener($methodName);
+        if ($this->isLifecycleEventMethod($method)) {
+            return 'Lifecycle event method via attribute';
+        }
+
+        if ($this->isEntityRepositoryConstructor($class, $method)) {
+            return 'Entity repository constructor (created by EntityRepositoryFactory)';
+        }
+
+        if ($this->isPartOfAsEntityListener($class, $methodName)) {
+            return 'Is part of AsEntityListener methods';
+        }
+
+        if ($this->isProbablyDoctrineListener($methodName)) {
+            return 'Is probable listener method';
+        }
+
+        return null;
     }
 
     protected function isLifecycleEventMethod(ReflectionMethod $method): bool
@@ -198,10 +213,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('doctrine/doctrine-bundle');
     }
 
-    private function createMethodUsage(ExtendedMethodReflection $methodReflection): ClassMethodUsage
+    private function createMethodUsage(ExtendedMethodReflection $methodReflection, string $note): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this),
+            UsageOrigin::createVirtual($this, $note),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
