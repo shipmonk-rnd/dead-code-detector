@@ -216,7 +216,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
     private function createMethodUsage(ExtendedMethodReflection $methodReflection, string $note): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, $note),
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),

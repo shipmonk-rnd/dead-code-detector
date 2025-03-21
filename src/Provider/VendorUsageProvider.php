@@ -26,7 +26,7 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if (!$this->enabled) {
             return null;
@@ -35,7 +35,7 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         $reflectionClass = $method->getDeclaringClass();
         $methodName = $method->getName();
 
-        $usage = VirtualUsage::withNote('Method overrides vendor one, thus is expected to be used by vendor code');
+        $usage = VirtualUsageData::withNote('Method overrides vendor one, thus is expected to be used by vendor code');
 
         do {
             if ($this->isForeignMethod($reflectionClass, $methodName)) {

@@ -508,7 +508,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, $reason),
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
@@ -594,7 +594,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             $usages[] = new ClassConstantUsage(
-                UsageOrigin::createVirtual($this, 'Referenced in config in ' . $configFile),
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Referenced in config in ' . $configFile)),
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $constantName,

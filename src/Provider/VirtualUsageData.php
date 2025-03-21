@@ -2,7 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-class VirtualUsage
+class VirtualUsageData
 {
 
     private string $note;
@@ -12,6 +12,9 @@ class VirtualUsage
         $this->note = $note;
     }
 
+    /**
+     * @param string $note More detailed info why provider emitted this virtual usage
+     */
     public static function withNote(string $note): self
     {
         return new self($note);

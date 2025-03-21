@@ -38,7 +38,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsage;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use function file_get_contents;
 use function is_array;
@@ -577,10 +577,10 @@ class DeadCodeRuleTest extends RuleTestCase
             new class extends ReflectionBasedMemberUsageProvider
             {
 
-                public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
+                public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
                 {
                     if ($method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint') {
-                        return VirtualUsage::withNote('test');
+                        return VirtualUsageData::withNote('test');
                     }
 
                     return null;

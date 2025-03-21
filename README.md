@@ -127,16 +127,16 @@ services:
 ```php
 
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsage;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 
 class FuzzyTwigUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if ($method->getDeclaringClass()->implementsInterface(UsedInTwigMarkerInterface::class)) {
-            return VirtualUsage::withNote('Probably used in twig');
+            return VirtualUsageData::withNote('Probably used in twig');
         }
         return null;
     }
@@ -345,15 +345,15 @@ parameters:
   - The easiest way to ignore it is via custom `MemberUsageProvider`:
 
 ```php
-use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsage;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 
 class IgnoreDeadInterfaceUsageProvider extends ReflectionBasedMemberUsageProvider
 {
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsage
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if ($method->getDeclaringClass()->isInterface()) {
-            return VirtualUsage::withNote('Interface method, kept for unification even when possibly unused');
+            return VirtualUsageData::withNote('Interface method, kept for unification even when possibly unused');
         }
 
         return null;
