@@ -36,7 +36,7 @@ DebugCtor\Foo::__construct
 DebugExclude\Foo::mixedExcluder1
 |
 | Dead because:
-| all usages originate in unused code
+| all usages are excluded
 |
 | Found 1 usage:
 |  • data/debug/exclude.php:15 - excluded by mixed excluder
@@ -45,7 +45,7 @@ DebugExclude\Foo::mixedExcluder1
 DebugExclude\Foo::mixedExcluder2
 |
 | Dead because:
-| all usages originate in unused code
+| all usages are excluded
 |
 | Found 1 usage:
 |  • data/debug/exclude.php:16 - excluded by mixed excluder
