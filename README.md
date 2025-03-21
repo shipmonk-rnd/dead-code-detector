@@ -390,6 +390,9 @@ App\User\Entity\Address::__construct
 
 If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor), you can click on the usages to open it in your IDE.
 
+> [!TIP]
+> You can change the list of debug references without affecting result cache, so rerun is instant!
+
 ## Future scope:
 - Dead class property detection
 - Dead class detection
