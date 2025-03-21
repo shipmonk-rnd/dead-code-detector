@@ -171,7 +171,12 @@ class DebugUsagePrinter
 
             } elseif (isset($debugMember['usages'])) {
                 $output->writeLineFormatted("|\n| <fg=yellow>Dead because:</>");
-                $output->writeLineFormatted('| all usages originate in unused code');
+
+                if ($this->allUsagesExcluded($debugMember['usages'])) {
+                    $output->writeLineFormatted('| all usages are excluded');
+                } else {
+                    $output->writeLineFormatted('| all usages originate in unused code');
+                }
             }
 
             if (isset($debugMember['usages'])) {
@@ -384,6 +389,20 @@ class DebugUsagePrinter
         } catch (ReflectionException $e) {
             return false;
         }
+    }
+
+    /**
+     * @param list<CollectedUsage> $collectedUsages
+     */
+    private function allUsagesExcluded(array $collectedUsages): bool
+    {
+        foreach ($collectedUsages as $collectedUsage) {
+            if (!$collectedUsage->isExcluded()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }

@@ -235,7 +235,7 @@ class DeadCodeRuleTest extends RuleTestCase
         DebugMixed\Foo::any
         |
         | Dead because:
-        | all usages originate in unused code
+        | all usages are excluded
         |
         | Found 1 usage:
         |  • data/debug/mixed.php:13 - excluded by usageOverMixed excluder
