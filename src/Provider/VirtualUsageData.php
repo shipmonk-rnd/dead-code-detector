@@ -2,7 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-class VirtualUsageData
+final class VirtualUsageData
 {
 
     private string $note;
