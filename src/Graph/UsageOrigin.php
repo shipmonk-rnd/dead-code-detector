@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use function get_class;
 
 /**
@@ -49,10 +50,8 @@ final class UsageOrigin
 
     /**
      * Creates virtual usage origin with no reference to any place in code
-     *
-     * @param ?string $note More detailed identification why provider emitted this virtual usage
      */
-    public static function createVirtual(MemberUsageProvider $provider, ?string $note = null): self
+    public static function createVirtual(MemberUsageProvider $provider, VirtualUsageData $data): self
     {
         return new self(
             null,
@@ -60,7 +59,7 @@ final class UsageOrigin
             null,
             null,
             get_class($provider),
-            $note,
+            $data->getNote(),
         );
     }
 

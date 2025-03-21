@@ -39,10 +39,10 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled ?? $this->isNetteInstalled();
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): bool
+    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if (!$this->enabled) {
-            return false;
+            return null;
         }
 
         $methodName = $method->getName();
@@ -53,37 +53,39 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         return $this->isNetteMagic($reflection, $methodName);
     }
 
-    private function isNetteMagic(ClassReflection $reflection, string $methodName): bool
+    private function isNetteMagic(ClassReflection $reflection, string $methodName): ?VirtualUsageData
     {
         if (
             $reflection->is(SignalReceiver::class)
             && strpos($methodName, 'handle') === 0
         ) {
-            return true;
+            return VirtualUsageData::withNote('Signal handler method');
         }
 
         if (
             $reflection->is(Container::class)
             && strpos($methodName, 'createComponent') === 0
         ) {
-            return true;
+            return VirtualUsageData::withNote('Component factory method');
         }
 
         if (
             $reflection->is(Control::class)
             && strpos($methodName, 'render') === 0
         ) {
-            return true;
+            return VirtualUsageData::withNote('Render method');
         }
 
         if (
-            $reflection->is(Presenter::class)
-            && (
-                strpos($methodName, 'action') === 0
-                || strpos($methodName, 'inject') === 0
-            )
+            $reflection->is(Presenter::class) && strpos($methodName, 'action') === 0
         ) {
-            return true;
+            return VirtualUsageData::withNote('Presenter action method');
+        }
+
+        if (
+            $reflection->is(Presenter::class) && strpos($methodName, 'inject') === 0
+        ) {
+            return VirtualUsageData::withNote('Presenter inject method');
         }
 
         if (
@@ -106,12 +108,12 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
                 $property = $this->getMagicProperties($reflection)[$name] ?? null;
 
                 if ($property !== null) {
-                    return true;
+                    return VirtualUsageData::withNote('Access method for magic property ' . $name);
                 }
             }
         }
 
-        return false;
+        return null;
     }
 
     /**

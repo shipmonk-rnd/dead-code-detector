@@ -50,6 +50,8 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     private bool $enabled;
 
+    private ?string $configDir;
+
     /**
      * class => [method => true]
      *
@@ -58,9 +60,9 @@ class SymfonyUsageProvider implements MemberUsageProvider
     private array $dicCalls = [];
 
     /**
-     * class => [constant]
+     * class => [constant => config file]
      *
-     * @var array<string, list<string>>
+     * @var array<string, array<string, string>>
      */
     private array $dicConstants = [];
 
@@ -71,15 +73,15 @@ class SymfonyUsageProvider implements MemberUsageProvider
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
-        $resolvedConfigDir = $configDir ?? $this->autodetectConfigDir();
+        $this->configDir = $configDir ?? $this->autodetectConfigDir();
         $containerXmlPath = $this->getContainerXmlPath($container);
 
         if ($this->enabled && $containerXmlPath !== null) {
             $this->fillDicClasses($containerXmlPath);
         }
 
-        if ($this->enabled && $resolvedConfigDir !== null) {
-            $this->fillDicConstants($resolvedConfigDir);
+        if ($this->enabled && $this->configDir !== null) {
+            $this->fillDicConstants($this->configDir);
         }
     }
 
@@ -211,15 +213,17 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         foreach ($nativeReflection->getMethods() as $method) {
             if (isset($this->dicCalls[$className][$method->getName()])) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'called via DIC');
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Called via DIC');
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
                 continue;
             }
 
-            if ($this->shouldMarkAsUsed($method)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), null);
+            $note = $this->shouldMarkAsUsed($method);
+
+            if ($note !== null) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), $note);
             }
         }
 
@@ -296,15 +300,37 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    protected function shouldMarkAsUsed(ReflectionMethod $method): bool
+    protected function shouldMarkAsUsed(ReflectionMethod $method): ?string
     {
-        return $this->isBundleConstructor($method)
-            || $this->isEventListenerMethodWithAsEventListenerAttribute($method)
-            || $this->isAutowiredWithRequiredAttribute($method)
-            || $this->isConstructorWithAsCommandAttribute($method)
-            || $this->isConstructorWithAsControllerAttribute($method)
-            || $this->isMethodWithRouteAttribute($method)
-            || $this->isProbablySymfonyListener($method);
+        if ($this->isBundleConstructor($method)) {
+            return 'Bundle constructor (created by Kernel)';
+        }
+
+        if ($this->isEventListenerMethodWithAsEventListenerAttribute($method)) {
+            return 'Event listener method via #[AsEventListener] attribute';
+        }
+
+        if ($this->isAutowiredWithRequiredAttribute($method)) {
+            return 'Autowired with #[Required] (called by DIC)';
+        }
+
+        if ($this->isConstructorWithAsCommandAttribute($method)) {
+            return 'Class has #[AsCommand] attribute';
+        }
+
+        if ($this->isConstructorWithAsControllerAttribute($method)) {
+            return 'Class has #[AsController] attribute';
+        }
+
+        if ($this->isMethodWithRouteAttribute($method)) {
+            return 'Route method via #[Route] attribute';
+        }
+
+        if ($this->isProbablySymfonyListener($method)) {
+            return 'Probable listener method';
+        }
+
+        return null;
     }
 
     protected function fillDicClasses(string $containerXmlPath): void
@@ -479,10 +505,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/dependency-injection');
     }
 
-    private function createUsage(ExtendedMethodReflection $methodReflection, ?string $reason): ClassMethodUsage
+    private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, $reason),
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
@@ -551,7 +577,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         foreach ($matches[1] as $usedConstants) {
             [$className, $constantName] = explode('::', $usedConstants); // @phpstan-ignore offsetAccess.notFound
-            $this->dicConstants[$className][] = $constantName;
+            $this->dicConstants[$className][$constantName] = $yamlFile;
         }
     }
 
@@ -562,13 +588,13 @@ class SymfonyUsageProvider implements MemberUsageProvider
     {
         $usages = [];
 
-        foreach ($this->dicConstants[$classReflection->getName()] ?? [] as $constantName) {
+        foreach ($this->dicConstants[$classReflection->getName()] ?? [] as $constantName => $configFile) {
             if (!$classReflection->hasConstant($constantName)) {
                 continue;
             }
 
             $usages[] = new ClassConstantUsage(
-                UsageOrigin::createVirtual($this, 'used in DIC'),
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Referenced in config in ' . $configFile)),
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $constantName,

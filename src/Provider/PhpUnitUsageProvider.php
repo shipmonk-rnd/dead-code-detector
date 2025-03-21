@@ -57,12 +57,12 @@ class PhpUnitUsageProvider implements MemberUsageProvider
 
             foreach ($dataProviders as $dataProvider) {
                 if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider), 'data provider method');
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider), 'Data provider method');
                 }
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'test method');
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Test method');
             }
         }
 
@@ -145,7 +145,7 @@ class PhpUnitUsageProvider implements MemberUsageProvider
     private function createUsage(ExtendedMethodReflection $getNativeMethod, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, $reason),
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),
             new ClassMethodRef(
                 $getNativeMethod->getDeclaringClass()->getName(),
                 $getNativeMethod->getName(),
