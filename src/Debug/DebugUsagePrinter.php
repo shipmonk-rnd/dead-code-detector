@@ -265,7 +265,7 @@ class DebugUsagePrinter
     /**
      * @param list<string> $alternativeKeys
      */
-    public function recordUsage(CollectedUsage $collectedUsage, array $alternativeKeys = []): void
+    public function recordUsage(CollectedUsage $collectedUsage, array $alternativeKeys): void
     {
         $memberKeys = array_unique([
             $collectedUsage->getUsage()->getMemberRef()->toKey(),
