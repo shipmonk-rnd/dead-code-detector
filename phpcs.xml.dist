@@ -272,7 +272,11 @@
     <rule ref="SlevomatCodingStandard.Classes.EmptyLinesAroundClassBraces"/>
     <rule ref="SlevomatCodingStandard.Classes.TraitUseDeclaration" />
     <rule ref="SlevomatCodingStandard.Classes.PropertyDeclaration" />
-    <rule ref="SlevomatCodingStandard.Classes.RequireMultiLineMethodSignature"/>
+    <rule ref="SlevomatCodingStandard.Classes.RequireMultiLineMethodSignature">
+        <properties>
+            <property name="minParametersCount" value="4"/>
+        </properties>
+    </rule>
     <rule ref="SlevomatCodingStandard.Classes.TraitUseSpacing" />
     <rule ref="SlevomatCodingStandard.Classes.DisallowConstructorPropertyPromotion" />
     <rule ref="SlevomatCodingStandard.Commenting.AnnotationName"/>
