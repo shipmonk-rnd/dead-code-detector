@@ -33,13 +33,22 @@ DebugCtor\Foo::__construct
 |  • data/debug/ctor.php:9
 
 
-DebugExclude\Foo::mixedExcluder
+DebugExclude\Foo::mixedExcluder1
 |
 | Dead because:
 | all usages originate in unused code
 |
 | Found 1 usage:
-|  • data/debug/exclude.php:10 - excluded by mixed excluder
+|  • data/debug/exclude.php:15 - excluded by mixed excluder
+
+
+DebugExclude\Foo::mixedExcluder2
+|
+| Dead because:
+| all usages originate in unused code
+|
+| Found 1 usage:
+|  • data/debug/exclude.php:16 - excluded by mixed excluder
 
 
 DebugNever\Foo::__get

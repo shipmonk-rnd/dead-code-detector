@@ -273,18 +273,19 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         foreach ($excludedMemberUsages as $excludedMemberUsage) {
-            $this->debugUsagePrinter->recordUsage($excludedMemberUsage);
-
             $excludedBy = $excludedMemberUsage->getExcludedBy();
             $excludedMemberRef = $excludedMemberUsage->getUsage()->getMemberRef();
+            $alternativeExcludedMemberKeys = $this->getAlternativeMemberKeys($excludedMemberRef);
 
-            foreach ($this->getAlternativeMemberKeys($excludedMemberRef) as $alternativeExcludedMemberKey) {
+            foreach ($alternativeExcludedMemberKeys as $alternativeExcludedMemberKey) {
                 if (!isset($this->blackMembers[$alternativeExcludedMemberKey])) {
                     continue;
                 }
 
                 $this->blackMembers[$alternativeExcludedMemberKey]->markHasExcludedUsage($excludedBy);
             }
+
+            $this->debugUsagePrinter->recordUsage($excludedMemberUsage, $alternativeExcludedMemberKeys);
         }
 
         if ($this->reportTransitivelyDeadAsSeparateError) {
