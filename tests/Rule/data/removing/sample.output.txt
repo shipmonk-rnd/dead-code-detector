@@ -10,4 +10,4 @@ Processing data/removing/sample.php...
  • Removed method Removal\Child2::mixedExcludedUsage
    ! Excluded usage at data/removing/sample.php:48 left intact
 
-Removed 9 dead members in 1 files.
+Removed 9 dead members in 1 file.

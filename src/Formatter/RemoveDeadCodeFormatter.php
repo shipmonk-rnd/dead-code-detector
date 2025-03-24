@@ -67,7 +67,8 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             }
         }
 
-        $count = 0;
+        $membersCount = 0;
+        $filesCount = count($deadMembersByFiles);
 
         foreach ($deadMembersByFiles as $file => $deadMembersByType) {
             /** @var array<string, list<ClassMemberUsage>> $deadConstants */
@@ -75,7 +76,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             /** @var array<string, list<ClassMemberUsage>> $deadMethods */
             $deadMethods = $deadMembersByType[DeadCodeRule::IDENTIFIER_METHOD] ?? [];
 
-            $count += count($deadConstants) + count($deadMethods);
+            $membersCount += count($deadConstants) + count($deadMethods);
 
             $relativeFile = $this->usagePrinter->getRelativePath($file);
             $output->writeLineFormatted("Processing $relativeFile...");
@@ -96,8 +97,11 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             }
         }
 
+        $memberPlural = $membersCount === 1 ? '' : 's';
+        $filePlural = $filesCount === 1 ? '' : 's';
+
         $output->writeLineFormatted('');
-        $output->writeLineFormatted('Removed ' . $count . ' dead members in ' . count($deadMembersByFiles) . ' files.');
+        $output->writeLineFormatted("Removed $membersCount dead member$memberPlural in $filesCount file$filePlural.");
 
         return 0;
     }

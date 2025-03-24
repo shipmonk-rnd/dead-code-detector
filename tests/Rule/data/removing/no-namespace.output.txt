@@ -2,4 +2,4 @@ Processing data/removing/no-namespace.php...
  • Removed constant Remove::DEAD
  • Removed method Remove::dead
 
-Removed 2 dead members in 1 files.
+Removed 2 dead members in 1 file.

@@ -324,7 +324,7 @@ class DeadCodeRuleTest extends RuleTestCase
             ->method('write')
             ->willReturnCallback(
                 function (string $file, string $content): void {
-                    $expectedFile = $this->getTransformedFilePath($file);
+                    $expectedFile = $this->getAutoremoveTransformedFilePath($file);
                     self::assertFileExists($expectedFile);
 
                     $expectedNewCode = file_get_contents($expectedFile);
@@ -337,7 +337,7 @@ class DeadCodeRuleTest extends RuleTestCase
         $formatter = new RemoveDeadCodeFormatter($fileSystem, $this->createOutputEnhancer());
         $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
 
-        $expectedOutputFile = $this->getOutputFilePath($file);
+        $expectedOutputFile = $this->getAutoremoveOutputFilePath($file);
         self::assertFileExists($expectedOutputFile);
         self::assertSame(file_get_contents($expectedOutputFile), $writtenOutput);
     }
@@ -577,12 +577,12 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
     }
 
-    private function getTransformedFilePath(string $file): string
+    private function getAutoremoveTransformedFilePath(string $file): string
     {
         return str_replace('.php', '.transformed.php', $file);
     }
 
-    private function getOutputFilePath(string $file): string
+    private function getAutoremoveOutputFilePath(string $file): string
     {
         return str_replace('.php', '.output.txt', $file);
     }
