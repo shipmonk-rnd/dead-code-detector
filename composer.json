@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": "^7.4 || ^8.0",
-        "phpstan/phpstan": "2.1.x-dev"
+        "phpstan/phpstan": "^2.1.9"
     },
     "require-dev": {
         "composer-runtime-api": "^2.0",
