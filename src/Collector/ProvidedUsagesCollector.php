@@ -69,11 +69,11 @@ class ProvidedUsagesCollector implements Collector
                 $collectedUsage = $this->resolveExclusion($newUsage, $node, $scope);
 
                 $this->validateUsage($newUsage, $memberUsageProvider, $node, $scope);
-                $this->usageBuffer[] = $collectedUsage;
+                $this->usages[] = $collectedUsage;
             }
         }
 
-        return $this->tryFlushBuffer($node, $scope);
+        return $this->emitUsages($scope);
     }
 
     private function validateUsage(
