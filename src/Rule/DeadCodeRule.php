@@ -273,7 +273,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         foreach ($excludedMemberUsages as $excludedMemberUsage) {
-            $excludedBy = $excludedMemberUsage->getExcludedBy();
             $excludedMemberRef = $excludedMemberUsage->getUsage()->getMemberRef();
             $alternativeExcludedMemberKeys = $this->getAlternativeMemberKeys($excludedMemberRef);
 
@@ -282,7 +281,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     continue;
                 }
 
-                $this->blackMembers[$alternativeExcludedMemberKey]->markHasExcludedUsage($excludedBy);
+                $this->blackMembers[$alternativeExcludedMemberKey]->addExcludedUsage($excludedMemberUsage);
             }
 
             $this->debugUsagePrinter->recordUsage($excludedMemberUsage, $alternativeExcludedMemberKeys);
@@ -593,6 +592,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         $humanMemberString = $representative->getMember()->toHumanString();
         $exclusionMessage = $representative->getExclusionMessage();
+        $excludedUsages = $representative->getExcludedUsages();
 
         $builder = RuleErrorBuilder::message("Unused {$humanMemberString}{$exclusionMessage}")
             ->file($representative->getFile())
@@ -604,6 +604,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             'file' => $representative->getFile(),
             'line' => $representative->getLine(),
             'transitive' => false,
+            'excludedUsages' => $excludedUsages,
         ];
 
         $tips = [];
@@ -611,12 +612,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
             $transitiveDeadMemberRef = $transitivelyDeadMember->getMember()->toHumanString();
             $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
+            $excludedUsages = $transitivelyDeadMember->getExcludedUsages();
 
             $tips[$transitiveDeadMemberRef] = "Thus $transitiveDeadMemberRef is transitively also unused{$exclusionMessage}";
             $metadata[$transitiveDeadMemberRef] = [
                 'file' => $transitivelyDeadMember->getFile(),
                 'line' => $transitivelyDeadMember->getLine(),
                 'transitive' => true,
+                'excludedUsages' => $excludedUsages,
             ];
         }
 

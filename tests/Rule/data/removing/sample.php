@@ -36,9 +36,14 @@ class Child2 extends AbstractClass
     {
         echo self::USED_CONST;
     }
+
+    public function mixedExcludedUsage(): void {
+
+    }
 }
 
 function testIt(Child2 $child2): void
 {
     $child2->foo();
+    $child2->mixedExcludedUsage();
 }

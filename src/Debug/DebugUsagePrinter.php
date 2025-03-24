@@ -5,7 +5,6 @@ namespace ShipMonk\PHPStan\DeadCode\Debug;
 use LogicException;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
-use PHPStan\File\RelativePathHelper;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionException;
@@ -15,7 +14,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use function array_map;
 use function array_sum;
 use function array_unique;
@@ -27,17 +26,14 @@ use function preg_replace;
 use function reset;
 use function sprintf;
 use function str_repeat;
-use function str_replace;
 use function strpos;
 
 class DebugUsagePrinter
 {
 
-    private RelativePathHelper $relativePathHelper;
+    private OutputEnhancer $outputEnhancer;
 
     private ReflectionProvider $reflectionProvider;
-
-    private ?string $editorUrl;
 
     /**
      * memberKey => usage info
@@ -50,16 +46,14 @@ class DebugUsagePrinter
 
     public function __construct(
         Container $container,
-        RelativePathHelper $relativePathHelper,
+        OutputEnhancer $outputEnhancer,
         ReflectionProvider $reflectionProvider,
-        ?string $editorUrl,
         bool $mixedExcluderEnabled
     )
     {
-        $this->relativePathHelper = $relativePathHelper;
+        $this->outputEnhancer = $outputEnhancer;
         $this->reflectionProvider = $reflectionProvider;
         $this->mixedExcluderEnabled = $mixedExcluderEnabled;
-        $this->editorUrl = $editorUrl;
         $this->debugMembers = $this->buildDebugMemberKeys(
             // @phpstan-ignore offsetAccess.nonOffsetAccessible, offsetAccess.nonOffsetAccessible, missingType.checkedException, argument.type
             $container->getParameter('shipmonkDeadCode')['debug']['usagesOf'], // prevents https://github.com/phpstan/phpstan/issues/12740
@@ -119,7 +113,7 @@ class DebugUsagePrinter
             $origin = $usage->getUsage()->getOrigin();
 
             if ($origin->getFile() !== null) {
-                return $this->getOriginReference($origin);
+                return $this->outputEnhancer->getOriginReference($origin);
             }
         }
 
@@ -148,7 +142,7 @@ class DebugUsagePrinter
 
                 foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
                     if ($depth === 1) {
-                        $entrypoint = $this->getOriginReference($fragmentUsages[0]->getOrigin(), false);
+                        $entrypoint = $this->outputEnhancer->getOriginReference($fragmentUsages[0]->getOrigin(), false);
                         $output->writeLineFormatted(sprintf('| <fg=gray>entry</> <fg=white>%s</>', $entrypoint));
                     }
 
@@ -160,7 +154,7 @@ class DebugUsagePrinter
 
                     $pathFragment = $nextFragmentFirstUsageOrigin === null
                         ? $this->prettyMemberKey($fragmentKey)
-                        : $this->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
+                        : $this->outputEnhancer->getOriginLink($nextFragmentFirstUsageOrigin, $this->prettyMemberKey($fragmentKey));
 
                     $output->writeLineFormatted(sprintf('| %s<fg=white>%s</>', $indent, $pathFragment));
 
@@ -185,7 +179,7 @@ class DebugUsagePrinter
 
                 foreach ($debugMember['usages'] as $collectedUsage) {
                     $origin = $collectedUsage->getUsage()->getOrigin();
-                    $output->writeFormatted(sprintf('|  • <fg=white>%s</>', $this->getOriginReference($origin)));
+                    $output->writeFormatted(sprintf('|  • <fg=white>%s</>', $this->outputEnhancer->getOriginReference($origin)));
 
                     if ($collectedUsage->isExcluded()) {
                         $output->writeFormatted(sprintf(' - <fg=yellow>excluded by %s excluder</>', $collectedUsage->getExcludedBy()));
@@ -212,59 +206,6 @@ class DebugUsagePrinter
         }
 
         return $replaced;
-    }
-
-    private function getOriginReference(UsageOrigin $origin, bool $preferFileLine = true): string
-    {
-        $file = $origin->getFile();
-        $line = $origin->getLine();
-
-        if ($file !== null && $line !== null) {
-            $relativeFile = $this->relativePathHelper->getRelativePath($file);
-
-            $title = $origin->getClassName() !== null && $origin->getMethodName() !== null && !$preferFileLine
-                ? sprintf('%s::%s:%d', $origin->getClassName(), $origin->getMethodName(), $line)
-                : sprintf('%s:%s', $relativeFile, $line);
-
-            if ($this->editorUrl === null) {
-                return $title;
-            }
-
-            return sprintf(
-                '<href=%s>%s</>',
-                str_replace(['%file%', '%relFile%', '%line%'], [$file, $relativeFile, (string) $line], $this->editorUrl),
-                $title,
-            );
-        }
-
-        if ($origin->getProvider() !== null) {
-            $note = $origin->getNote() !== null ? " ({$origin->getNote()})" : '';
-            return 'virtual usage from ' . $origin->getProvider() . $note;
-        }
-
-        throw new LogicException('Unknown state of usage origin');
-    }
-
-    private function getOriginLink(UsageOrigin $origin, string $title): string
-    {
-        $file = $origin->getFile();
-        $line = $origin->getLine();
-
-        if ($line !== null) {
-            $title = sprintf('%s:%s', $title, $line);
-        }
-
-        if ($this->editorUrl !== null && $file !== null && $line !== null) {
-            $relativeFile = $this->relativePathHelper->getRelativePath($file);
-
-            return sprintf(
-                '<href=%s>%s</>',
-                str_replace(['%file%', '%relFile%', '%line%'], [$file, $relativeFile, (string) $line], $this->editorUrl),
-                $title,
-            );
-        }
-
-        return $title;
     }
 
     /**

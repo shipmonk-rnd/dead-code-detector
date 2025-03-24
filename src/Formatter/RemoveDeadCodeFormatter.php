@@ -5,9 +5,13 @@ namespace ShipMonk\PHPStan\DeadCode\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
+use function array_keys;
 use function count;
 
 class RemoveDeadCodeFormatter implements ErrorFormatter
@@ -15,9 +19,15 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
     private FileSystem $fileSystem;
 
-    public function __construct(FileSystem $fileSystem)
+    private OutputEnhancer $usagePrinter;
+
+    public function __construct(
+        FileSystem $fileSystem,
+        OutputEnhancer $usagePrinter
+    )
     {
         $this->fileSystem = $fileSystem;
+        $this->usagePrinter = $usagePrinter;
     }
 
     public function formatErrors(
@@ -37,6 +47,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             return 1;
         }
 
+        /** @var array<string, array<string, array<string, list<ClassMemberUsage>>>> $deadMembersByFiles file => [identifier => [key => excludedUsages[]]] */
         $deadMembersByFiles = [];
 
         foreach ($analysisResult->getFileSpecificErrors() as $fileSpecificError) {
@@ -47,32 +58,73 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
                 continue;
             }
 
-            /** @var array<string, array{file: string}> $metadata */
+            /** @var array<string, array{file: string, excludedUsages: list<ClassMemberUsage>}> $metadata */
             $metadata = $fileSpecificError->getMetadata();
             $type = $fileSpecificError->getIdentifier();
 
-            foreach ($metadata as $key => $data) {
-                $deadMembersByFiles[$data['file']][$type][] = $key;
+            foreach ($metadata as $memberKey => $data) {
+                $deadMembersByFiles[$data['file']][$type][$memberKey] = $data['excludedUsages'];
             }
         }
 
         $count = 0;
 
         foreach ($deadMembersByFiles as $file => $deadMembersByType) {
+            /** @var array<string, list<ClassMemberUsage>> $deadConstants */
             $deadConstants = $deadMembersByType[DeadCodeRule::IDENTIFIER_CONSTANT] ?? [];
+            /** @var array<string, list<ClassMemberUsage>> $deadMethods */
             $deadMethods = $deadMembersByType[DeadCodeRule::IDENTIFIER_METHOD] ?? [];
 
             $count += count($deadConstants) + count($deadMethods);
 
-            $transformer = new RemoveDeadCodeTransformer($deadMethods, $deadConstants);
+            $relativeFile = $this->usagePrinter->getRelativePath($file);
+            $output->writeLineFormatted("Processing $relativeFile...");
+
+            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants));
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
+
+            foreach ($deadConstants as $constant => $excludedUsages) {
+                $output->writeLineFormatted(" • Removed constant $constant");
+                $this->printExcludedUsages($output, $excludedUsages);
+            }
+
+            foreach ($deadMethods as $method => $excludedUsages) {
+                $output->writeLineFormatted(" • Removed method $method");
+                $this->printExcludedUsages($output, $excludedUsages);
+            }
         }
 
-        $output->writeLineFormatted('Removed ' . $count . ' dead methods in ' . count($deadMembersByFiles) . ' files.');
+        $output->writeLineFormatted('');
+        $output->writeLineFormatted('Removed ' . $count . ' dead members in ' . count($deadMembersByFiles) . ' files.');
 
         return 0;
+    }
+
+    /**
+     * @param list<ClassMemberUsage> $excludedUsages
+     */
+    private function printExcludedUsages(Output $output, array $excludedUsages): void
+    {
+        foreach ($excludedUsages as $excludedUsage) {
+            $originLink = $this->getOriginLink($excludedUsage->getOrigin());
+
+            if ($originLink === null) {
+                continue;
+            }
+
+            $output->writeLineFormatted("   ! Excluded usage at {$originLink} left intact");
+        }
+    }
+
+    private function getOriginLink(UsageOrigin $origin): ?string
+    {
+        if ($origin->getFile() === null || $origin->getLine() === null) {
+            return null;
+        }
+
+        return $this->usagePrinter->getOriginReference($origin);
     }
 
 }

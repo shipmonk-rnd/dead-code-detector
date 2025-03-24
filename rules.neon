@@ -6,11 +6,14 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
+    -
+        class: ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer
+        arguments:
+            editorUrl: %editorUrl%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
         arguments:
-            editorUrl: %editorUrl%
             mixedExcluderEnabled: %shipmonkDeadCode.usageExcluders.usageOverMixed.enabled%
 
     -

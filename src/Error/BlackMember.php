@@ -5,6 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Error;
 use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use function array_keys;
 use function count;
@@ -20,9 +22,9 @@ final class BlackMember
     private int $line;
 
     /**
-     * @var array<string, true>
+     * @var array<string, list<ClassMemberUsage>>
      */
-    private array $excluders = [];
+    private array $excludedUsages = [];
 
     public function __construct(
         ClassMemberRef $member,
@@ -58,9 +60,15 @@ final class BlackMember
         return $this->line;
     }
 
-    public function markHasExcludedUsage(string $excludedBy): void
+    public function addExcludedUsage(CollectedUsage $excludedUsage): void
     {
-        $this->excluders[$excludedBy] = true;
+        if (!$excludedUsage->isExcluded()) {
+            throw new LogicException('Given usage is not excluded!');
+        }
+
+        $excludedBy = $excludedUsage->getExcludedBy();
+
+        $this->excludedUsages[$excludedBy][] = $excludedUsage->getUsage();
     }
 
     public function getErrorIdentifier(): string
@@ -72,14 +80,30 @@ final class BlackMember
 
     public function getExclusionMessage(): string
     {
-        if (count($this->excluders) === 0) {
+        if (count($this->excludedUsages) === 0) {
             return '';
         }
 
-        $excluderNames = implode(', ', array_keys($this->excluders));
-        $plural = count($this->excluders) > 1 ? 's' : '';
+        $excluderNames = implode(', ', array_keys($this->excludedUsages));
+        $plural = count($this->excludedUsages) > 1 ? 's' : '';
 
         return " (all usages excluded by {$excluderNames} excluder{$plural})";
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    public function getExcludedUsages(): array
+    {
+        $result = [];
+
+        foreach ($this->excludedUsages as $usages) {
+            foreach ($usages as $usage) {
+                $result[] = $usage;
+            }
+        }
+
+        return $result;
     }
 
 }

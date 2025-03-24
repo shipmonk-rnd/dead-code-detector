@@ -1,5 +1,5 @@
 {
     "Exclude": [
-        "^tests/Rule/data/debug/expected_output.txt"
+        "output.txt$"
     ]
 }
