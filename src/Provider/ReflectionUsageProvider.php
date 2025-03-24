@@ -107,7 +107,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         }
 
         if (($methodName === 'getConstant' || $methodName === 'getReflectionConstant') && count($args) === 1) {
-            $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
+            $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
                 $usedConstants[] = $this->createConstantUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
@@ -138,7 +138,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         }
 
         if ($methodName === 'getMethod' && count($args) === 1) {
-            $firstArg = $args[array_key_first($args)]; // @phpstan-ignore offsetAccess.notFound
+            $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
                 $usedMethods[] = $this->createMethodUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
