@@ -2,7 +2,7 @@
 
 namespace CtorPrivate;
 
-class StaticCtor implements MyInterface
+class StaticCtor
 {
     private function __construct()
     {

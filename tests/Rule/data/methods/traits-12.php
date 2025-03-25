@@ -8,9 +8,7 @@ trait SomeTrait {
 
 class Origin {
 
-    public function method(): string {
-        return 'Doing something';
-    }
+    public function method(): void {}
 }
 
 class User extends Origin {

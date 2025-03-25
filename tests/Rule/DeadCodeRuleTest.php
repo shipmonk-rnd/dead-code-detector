@@ -42,8 +42,14 @@ use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use Throwable;
+use Traversable;
+use function array_merge;
 use function file_get_contents;
 use function is_array;
+use function iterator_to_array;
+use function ob_end_clean;
+use function ob_start;
 use function preg_replace;
 use function str_replace;
 use function strpos;
@@ -124,6 +130,50 @@ class DeadCodeRuleTest extends RuleTestCase
     public function testDeadWithGroups($files, bool $requirementsMet = true): void
     {
         $this->doTestDead($files, $requirementsMet);
+    }
+
+    /**
+     * Ensure we test real PHP code
+     * - mainly targets invalid class/trait/iface compositions
+     *
+     * @runInSeparateProcess
+     */
+    public function testNoFatalError(): void
+    {
+        if (PHP_VERSION_ID < 8_04_00) {
+            self::markTestSkipped('Requires PHP 8.4+ to allow any PHP feature in test code');
+        }
+
+        $required = [];
+
+        $fileProviders = array_merge(
+            iterator_to_array(self::provideFiles(), false),
+            iterator_to_array(self::provideGroupingFiles(), false),
+            iterator_to_array(self::provideAutoRemoveFiles(), false),
+        );
+
+        foreach ($fileProviders as $args) {
+            $files = is_array($args[0]) ? $args[0] : [$args[0]];
+
+            foreach ($files as $file) {
+                if (isset($required[$file])) {
+                    continue;
+                }
+
+                try {
+                    ob_start();
+                    require $file;
+                    ob_end_clean();
+
+                } catch (Throwable $e) {
+                    self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
+                }
+
+                $required[$file] = true;
+            }
+        }
+
+        $this->expectNotToPerformAssertions();
     }
 
     /**
@@ -371,9 +421,9 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return iterable<string, array{0: string|list<string>, 1: list<array{0: string, 1: int, 2?: string|null}>}>
+     * @return Traversable<string, array{0: string|list<string>, 1: list<array{0: string, 1: int, 2?: string|null}>}>
      */
-    public static function provideGroupingFiles(): iterable
+    public static function provideGroupingFiles(): Traversable
     {
         yield 'default' => [
             __DIR__ . '/data/grouping/default.php',
@@ -454,9 +504,9 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return array<string, array{0: string|list<string>, 1?: bool}>
+     * @return Traversable<string, array{0: string|list<string>, 1?: bool}>
      */
-    public static function provideFiles(): iterable
+    public static function provideFiles(): Traversable
     {
         // methods
         yield 'method-anonym' => [__DIR__ . '/data/methods/anonym.php'];
@@ -572,9 +622,9 @@ class DeadCodeRuleTest extends RuleTestCase
     }
 
     /**
-     * @return iterable<string, array{0: string}>
+     * @return Traversable<string, array{0: string}>
      */
-    public function provideAutoRemoveFiles(): iterable
+    public static function provideAutoRemoveFiles(): Traversable
     {
         yield 'sample' => [__DIR__ . '/data/removing/sample.php'];
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];

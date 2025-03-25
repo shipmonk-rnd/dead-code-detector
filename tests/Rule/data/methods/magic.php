@@ -22,7 +22,7 @@ class Magic {
         $this->calledFromDestruct();
     }
 
-    public function __get()
+    public function __get($what)
     {
         $this->calledFromGet();
     }
@@ -34,6 +34,8 @@ class Magic {
 
 }
 
-$invokable = Magic::create();
-$invokable->magic();
-$invokable();
+function test() {
+    $invokable = Magic::create();
+    $invokable->magic();
+    $invokable();
+}
