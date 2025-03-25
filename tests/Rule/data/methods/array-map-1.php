@@ -35,4 +35,6 @@ class Child extends ArrayMapTest {
 
 }
 
-new ArrayMapTest();
+function test() {
+    new ArrayMapTest();
+}

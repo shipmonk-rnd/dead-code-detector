@@ -92,32 +92,34 @@ class GetAllConstantsChild extends GetAllConstantsParent {
     const CONSTANT = 1; // error: Unused Reflection\GetAllConstantsChild::CONSTANT
 }
 
-GetAllConstantsChild::getConstants();
-GetAllConstantsChild::getConstants2();
+function test() {
+    GetAllConstantsChild::getConstants();
+    GetAllConstantsChild::getConstants2();
 
 
-$reflection1 = new \ReflectionClass(Holder1::class);
-$reflection1->getConstants();
-$reflection1->getMethod('used');
+    $reflection1 = new \ReflectionClass(Holder1::class);
+    $reflection1->getConstants();
+    $reflection1->getMethod('used');
 
-$reflection2 = new \ReflectionClass(Holder2::class);
-$reflection2->getReflectionConstant('CONST1');
-$reflection2->getConstant('CONST3');
-$reflection2->getConstructor();
+    $reflection2 = new \ReflectionClass(Holder2::class);
+    $reflection2->getReflectionConstant('CONST1');
+    $reflection2->getConstant('CONST3');
+    $reflection2->getConstructor();
 
-$reflection3 = new \ReflectionClass(Holder3::class);
-$reflection3->getMethods();
-$reflection3->getReflectionConstants();
+    $reflection3 = new \ReflectionClass(Holder3::class);
+    $reflection3->getMethods();
+    $reflection3->getReflectionConstants();
 
-$reflection4 = new \ReflectionClass(Holder4::class);
-$reflection4->newInstanceWithoutConstructor();
+    $reflection4 = new \ReflectionClass(Holder4::class);
+    $reflection4->newInstanceWithoutConstructor();
 
-$reflection4 = new \ReflectionClass(Holder5::class);
-$reflection4->newInstance();
+    $reflection4 = new \ReflectionClass(Holder5::class);
+    $reflection4->newInstance();
 
-$enumReflection1 = new \ReflectionClass(EnumHolder1::class);
-$enumReflection1->getConstants();
-$enumReflection1->getMethod('used');
+    $enumReflection1 = new \ReflectionClass(EnumHolder1::class);
+    $enumReflection1->getConstants();
+    $enumReflection1->getMethod('used');
+}
 
 /**
  * @param class-string<HolderParent> $fqn

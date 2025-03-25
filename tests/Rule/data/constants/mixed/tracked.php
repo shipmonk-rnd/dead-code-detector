@@ -61,4 +61,6 @@ class Tester
     }
 }
 
-new Tester();
+function test() {
+    new Tester();
+}

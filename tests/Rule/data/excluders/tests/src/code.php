@@ -12,7 +12,9 @@ class DeclaredInSrcUsedInSrc {
     const CONST = 1;
 }
 
-echo DeclaredInSrcUsedInSrc::CONST;
-echo DeclaredInSrcUsedInBoth::CONST;
-echo DeclaredInTestsUsedInBoth::CONST;
-echo DeclaredInTestsUsedInSrc::CONST;
+function test2() {
+    echo DeclaredInSrcUsedInSrc::CONST;
+    echo DeclaredInSrcUsedInBoth::CONST;
+    echo DeclaredInTestsUsedInBoth::CONST;
+    echo DeclaredInTestsUsedInSrc::CONST;
+}

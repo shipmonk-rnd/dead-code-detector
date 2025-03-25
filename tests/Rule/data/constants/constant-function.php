@@ -12,7 +12,9 @@ class Test extends TestParent {
 }
 
 
-$fn = 'constant';
-echo constant('DeadConstFn\Test::A');
-echo constant('Unknown::A');
-echo $fn('\DeadConstFn\Test::B');
+function test() {
+    $fn = 'constant';
+    echo constant('DeadConstFn\Test::A');
+    echo constant('Unknown::A');
+    echo $fn('\DeadConstFn\Test::B');
+}

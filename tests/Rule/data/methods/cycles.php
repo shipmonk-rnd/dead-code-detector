@@ -29,4 +29,6 @@ class B {
     }
 }
 
-(new Foo())->recursion1();
+function test() {
+    (new Foo())->recursion1();
+}

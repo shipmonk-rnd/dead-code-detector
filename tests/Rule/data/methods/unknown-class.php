@@ -2,4 +2,6 @@
 
 namespace UnknownClass;
 
-Unknown::notFailing();
+function test() {
+    Unknown::notFailing();
+}

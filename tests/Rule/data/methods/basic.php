@@ -32,6 +32,48 @@ class TestB implements TestInterface {
     }
 }
 
+trait TestTrait {
+
+    public function __construct() // error: Unused DeadBasic\TestTrait::__construct
+    {
+    }
+
+    public function traitMethodUsed(): void
+    {
+
+    }
+
+    public function traitMethodUnused(): void // error: Unused DeadBasic\TestTrait::traitMethodUnused
+    {
+
+    }
+}
+
+abstract class TestParent {
+
+    use TestTrait;
+
+    public function __construct() // error: Unused DeadBasic\TestParent::__construct
+    {
+    }
+
+    public function parentMethodUsed(TestChild $child): void
+    {
+        $child->childMethodUsed();
+        $this->traitMethodUsed();
+    }
+
+    public function overwrittenParentMethodUsedByChild(): void // error: Unused DeadBasic\TestParent::overwrittenParentMethodUsedByChild
+    {
+
+    }
+
+    public function parentMethodUnused(): void  // error: Unused DeadBasic\TestParent::parentMethodUnused
+    {
+
+    }
+}
+
 final class TestChild extends TestParent {
 
     public function __construct(TestA|TestB $class)
@@ -64,46 +106,6 @@ final class TestChild extends TestParent {
     }
 }
 
-abstract class TestParent {
-
-    use TestTrait;
-
-    public function __construct() // error: Unused DeadBasic\TestParent::__construct
-    {
-    }
-
-    public function parentMethodUsed(TestChild $child): void
-    {
-        $child->childMethodUsed();
-        $this->traitMethodUsed();
-    }
-
-    public function overwrittenParentMethodUsedByChild(): void // error: Unused DeadBasic\TestParent::overwrittenParentMethodUsedByChild
-    {
-
-    }
-
-    public function parentMethodUnused(): void  // error: Unused DeadBasic\TestParent::parentMethodUnused
-    {
-
-    }
+function test() {
+    new TestChild();
 }
-
-trait TestTrait {
-
-    public function __construct() // error: Unused DeadBasic\TestTrait::__construct
-    {
-    }
-
-    public function traitMethodUsed(): void
-    {
-
-    }
-
-    public function traitMethodUnused(): void // error: Unused DeadBasic\TestTrait::traitMethodUnused
-    {
-
-    }
-}
-
-new TestChild();
