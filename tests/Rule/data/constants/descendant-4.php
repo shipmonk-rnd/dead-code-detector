@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace DeadConstStatic;
+namespace DeadConstDescendant4;
 
 
 class P {
