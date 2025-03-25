@@ -16,6 +16,7 @@ use PHPStan\File\SimpleRelativePathHelper;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPUnit\Framework\MockObject\MockObject;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -29,6 +30,7 @@ use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
+use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
@@ -77,9 +79,8 @@ class DeadCodeRuleTest extends RuleTestCase
             $this->rule = new DeadCodeRule(
                 new DebugUsagePrinter(
                     $container,
-                    new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+                    $this->createOutputEnhancer(),
                     self::createReflectionProvider(),
-                    null,
                     !$this->trackMixedAccess,
                 ),
                 new ClassHierarchy(),
@@ -301,6 +302,15 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
+        $writtenOutput = '';
+
+        $output = $this->createOutput();
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
         $fileSystem = $this->createMock(FileSystem::class);
         $fileSystem->expects(self::once())
             ->method('read')
@@ -314,7 +324,7 @@ class DeadCodeRuleTest extends RuleTestCase
             ->method('write')
             ->willReturnCallback(
                 function (string $file, string $content): void {
-                    $expectedFile = $this->getTransformedFilePath($file);
+                    $expectedFile = $this->getAutoremoveTransformedFilePath($file);
                     self::assertFileExists($expectedFile);
 
                     $expectedNewCode = file_get_contents($expectedFile);
@@ -324,8 +334,12 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $analyserErrors = $this->gatherAnalyserErrors([$file]);
 
-        $formatter = new RemoveDeadCodeFormatter($fileSystem);
-        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $this->createOutput());
+        $formatter = new RemoveDeadCodeFormatter($fileSystem, $this->createOutputEnhancer());
+        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
+
+        $expectedOutputFile = $this->getAutoremoveOutputFilePath($file);
+        self::assertFileExists($expectedOutputFile);
+        self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput));
     }
 
     /**
@@ -336,6 +350,9 @@ class DeadCodeRuleTest extends RuleTestCase
         return new AnalysisResult($errors, [], [], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor
     }
 
+    /**
+     * @return Output&MockObject
+     */
     private function createOutput(): Output
     {
         return $this->createMock(Output::class);
@@ -560,9 +577,14 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
     }
 
-    private function getTransformedFilePath(string $file): string
+    private function getAutoremoveTransformedFilePath(string $file): string
     {
         return str_replace('.php', '.transformed.php', $file);
+    }
+
+    private function getAutoremoveOutputFilePath(string $file): string
+    {
+        return str_replace('.php', '.output.txt', $file);
     }
 
     /**
@@ -646,6 +668,14 @@ class DeadCodeRuleTest extends RuleTestCase
         }
 
         return $excluders;
+    }
+
+    private function createOutputEnhancer(): OutputEnhancer
+    {
+        return new OutputEnhancer(
+            new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+            null,
+        );
     }
 
     private function createPhpStanContainerMock(): Container

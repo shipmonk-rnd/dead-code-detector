@@ -280,6 +280,12 @@ class UserFacade
 ```
 
 - If you are excluding tests usages (see above), this will not cause the related tests to be removed alongside.
+  - But you will see all those kept usages in output (with links to your IDE if you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor))
+
+```txt
+ • Removed method UserFacade::deadMethod
+   ! Excluded usage at tests/User/UserFacadeTest.php:241 left intact
+```
 
 
 ## Calls over unknown types

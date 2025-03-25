@@ -1,0 +1,4 @@
+ • Removed constant Remove::DEAD
+ • Removed method Remove::dead
+
+Removed 2 dead members in 1 file.
