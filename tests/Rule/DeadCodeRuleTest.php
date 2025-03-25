@@ -45,6 +45,7 @@ use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use Throwable;
 use Traversable;
 use function array_merge;
+use function error_reporting;
 use function file_get_contents;
 use function is_array;
 use function iterator_to_array;
@@ -53,6 +54,8 @@ use function ob_start;
 use function preg_replace;
 use function str_replace;
 use function strpos;
+use const E_ALL;
+use const E_DEPRECATED;
 use const PHP_VERSION_ID;
 
 /**
@@ -143,6 +146,9 @@ class DeadCodeRuleTest extends RuleTestCase
         if (PHP_VERSION_ID < 8_04_00) {
             self::markTestSkipped('Requires PHP 8.4+ to allow any PHP feature in test code');
         }
+
+        // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
+        error_reporting(E_ALL & ~E_DEPRECATED);
 
         $required = [];
 
