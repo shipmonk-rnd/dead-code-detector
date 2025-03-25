@@ -1,4 +1,3 @@
-Processing data/removing/no-namespace.php...
  • Removed constant Remove::DEAD
  • Removed method Remove::dead
 

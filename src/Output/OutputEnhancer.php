@@ -24,11 +24,6 @@ class OutputEnhancer
         $this->editorUrl = $editorUrl;
     }
 
-    public function getRelativePath(string $absoluteFile): string
-    {
-        return $this->relativePathHelper->getRelativePath($absoluteFile);
-    }
-
     public function getOriginLink(UsageOrigin $origin, string $title): string
     {
         $file = $origin->getFile();

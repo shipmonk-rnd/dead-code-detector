@@ -339,7 +339,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $expectedOutputFile = $this->getAutoremoveOutputFilePath($file);
         self::assertFileExists($expectedOutputFile);
-        self::assertSame(file_get_contents($expectedOutputFile), $writtenOutput);
+        self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput));
     }
 
     /**

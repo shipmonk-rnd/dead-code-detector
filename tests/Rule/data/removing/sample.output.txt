@@ -1,4 +1,3 @@
-Processing data/removing/sample.php...
  • Removed constant Removal\Interface1::DEAD_IFACE_CONST1
  • Removed constant Removal\Interface1::DEAD_IFACE_CONST2
  • Removed constant Removal\Interface1::DEAD_IFACE_CONST3

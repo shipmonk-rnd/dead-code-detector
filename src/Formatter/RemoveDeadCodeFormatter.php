@@ -19,15 +19,15 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
     private FileSystem $fileSystem;
 
-    private OutputEnhancer $usagePrinter;
+    private OutputEnhancer $outputEnhancer;
 
     public function __construct(
         FileSystem $fileSystem,
-        OutputEnhancer $usagePrinter
+        OutputEnhancer $outputEnhancer
     )
     {
         $this->fileSystem = $fileSystem;
-        $this->usagePrinter = $usagePrinter;
+        $this->outputEnhancer = $outputEnhancer;
     }
 
     public function formatErrors(
@@ -78,21 +78,18 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
             $membersCount += count($deadConstants) + count($deadMethods);
 
-            $relativeFile = $this->usagePrinter->getRelativePath($file);
-            $output->writeLineFormatted("Processing $relativeFile...");
-
             $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants));
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
 
             foreach ($deadConstants as $constant => $excludedUsages) {
-                $output->writeLineFormatted(" • Removed constant $constant");
+                $output->writeLineFormatted(" • Removed constant <fg=white>$constant</>");
                 $this->printExcludedUsages($output, $excludedUsages);
             }
 
             foreach ($deadMethods as $method => $excludedUsages) {
-                $output->writeLineFormatted(" • Removed method $method");
+                $output->writeLineFormatted(" • Removed method <fg=white>$method</>");
                 $this->printExcludedUsages($output, $excludedUsages);
             }
         }
@@ -128,7 +125,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             return null;
         }
 
-        return $this->usagePrinter->getOriginReference($origin);
+        return $this->outputEnhancer->getOriginReference($origin);
     }
 
 }
