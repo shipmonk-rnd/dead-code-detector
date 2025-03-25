@@ -427,15 +427,16 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     private function findDefinerMemberKey(
-        ClassMemberRef $origin,
+        ClassMemberRef $memberRef,
         string $className,
         bool $includeParentLookup = true
     ): ?string
     {
-        $memberName = $origin->getMemberName();
-        $memberKey = $origin::buildKey($className, $memberName);
+        $memberName = $memberRef->getMemberName();
+        $memberKey = $memberRef::buildKey($className, $memberName);
+        $memberType = $memberRef->getMemberType();
 
-        if ($this->hasMember($className, $memberName, $origin->getMemberType())) {
+        if ($this->hasMember($className, $memberName, $memberRef->getMemberType())) {
             return $memberKey;
         }
 
@@ -447,9 +448,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         if ($includeParentLookup) {
+            $parentNames = $memberType === MemberType::CONSTANT
+                ? $this->getAncestorNames($className) // constants can be declared in interfaces
+                : $this->getParentNames($className);
+
             // search for definition in parents (and its traits)
-            foreach ($this->getParentNames($className) as $parentName) {
-                $found = $this->findDefinerMemberKey($origin, $parentName, false);
+            foreach ($parentNames as $parentName) {
+                $found = $this->findDefinerMemberKey($memberRef, $parentName, false);
 
                 if ($found !== null) {
                     return $found;

@@ -547,12 +547,15 @@ class DeadCodeRuleTest extends RuleTestCase
         // constants
         yield 'const-basic' => [__DIR__ . '/data/constants/basic.php'];
         yield 'const-function' => [__DIR__ . '/data/constants/constant-function.php'];
+        yield 'const-descendant-1' => [__DIR__ . '/data/constants/descendant-1.php'];
+        yield 'const-descendant-2' => [__DIR__ . '/data/constants/descendant-2.php'];
+        yield 'const-descendant-3' => [__DIR__ . '/data/constants/descendant-3.php'];
+        yield 'const-descendant-4' => [__DIR__ . '/data/constants/descendant-4.php'];
         yield 'const-dynamic' => [__DIR__ . '/data/constants/dynamic.php'];
         yield 'const-expr' => [__DIR__ . '/data/constants/expr.php'];
         yield 'const-magic' => [__DIR__ . '/data/constants/magic.php'];
         yield 'const-mixed' => [__DIR__ . '/data/constants/mixed/tracked.php'];
         yield 'const-override' => [__DIR__ . '/data/constants/override.php'];
-        yield 'const-static' => [__DIR__ . '/data/constants/static.php'];
         yield 'const-traits-1' => [__DIR__ . '/data/constants/traits-1.php'];
         yield 'const-traits-2' => [__DIR__ . '/data/constants/traits-2.php'];
         yield 'const-traits-3' => [__DIR__ . '/data/constants/traits-3.php'];

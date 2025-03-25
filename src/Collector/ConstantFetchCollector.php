@@ -131,7 +131,7 @@ class ConstantFetchCollector implements Collector
     {
         if ($node->class instanceof Expr) {
             $ownerType = $scope->getType($node->class);
-            $possibleDescendantFetch = true;
+            $possibleDescendantFetch = null;
         } else {
             $ownerType = $scope->resolveTypeByName($node->class);
             $possibleDescendantFetch = $node->class->toString() === 'static';
@@ -146,11 +146,11 @@ class ConstantFetchCollector implements Collector
                 continue; // reserved for class name fetching
             }
 
-            foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName) as $className) {
+            foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName, $possibleDescendantFetch) as $constantRef) {
                 $this->registerUsage(
                     new ClassConstantUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassConstantRef($className, $constantName, $possibleDescendantFetch),
+                        $constantRef,
                     ),
                     $node,
                     $scope,
@@ -160,29 +160,26 @@ class ConstantFetchCollector implements Collector
     }
 
     /**
-     * @return list<class-string<object>|null>
+     * @return list<ClassConstantRef>
      */
     private function getDeclaringTypesWithConstant(
         Type $type,
-        string $constantName
+        string $constantName,
+        ?bool $isPossibleDescendant
     ): array
     {
-        $typeNormalized = TypeUtils::toBenevolentUnion($type); // extract possible calls even from Class|int
+        $typeNormalized = TypeUtils::toBenevolentUnion($type); // extract possible fetches even from Class|int
         $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         $result = [];
 
         foreach ($classReflections as $classReflection) {
-            if ($classReflection->hasConstant($constantName)) {
-                $result[] = $classReflection->getConstant($constantName)->getDeclaringClass()->getName();
-
-            } else { // unknown constant fetch (might be present on children)
-                $result[] = $classReflection->getName();
-            }
+            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
+            $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant);
         }
 
         if ($result === []) {
-            $result[] = null; // call over unknown type
+            $result[] = new ClassConstantRef(null, $constantName, true); // call over unknown type
         }
 
         return $result;
