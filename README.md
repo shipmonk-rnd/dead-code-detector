@@ -234,6 +234,9 @@ services:
 
 The same interface is used for exclusion of test-only usages, see above.
 
+> [!NOTE]
+> Excluders are called **after** providers.
+
 ## Dead cycles & transitively dead methods
 - This library automatically detects dead cycles and transitively dead methods (methods that are only called from dead methods)
 - By default, it reports only the first dead method in the subtree and the rest as a tip:
