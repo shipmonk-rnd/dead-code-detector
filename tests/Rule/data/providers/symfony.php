@@ -16,6 +16,7 @@ use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Service\Attribute\Required;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class SomeController {
 
@@ -114,4 +115,22 @@ class DicClass3 {
 
 class Sftp {
     const RETRY_LIMIT = 3; // used in yaml via !php/const
+}
+
+class ModelValidator
+{
+    public static function validate(): void {}
+}
+
+#[Assert\Callback([ModelValidator::class, 'validate'])]
+#[Assert\Callback('validateBar')]
+#[Assert\Callback(callback: 'validateBaz')]
+class ValidatedModel
+{
+    #[Assert\Callback]
+    public function validateFoo(): void {}
+
+    public function validateBar(): void {}
+
+    public function validateBaz(): void {}
 }

@@ -326,6 +326,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             return 'Route method via #[Route] attribute';
         }
 
+        if ($this->isMethodWithCallbackConstraintAttribute($method)) {
+            return 'Callback constraint method via #[Assert\Callback] attribute';
+        }
+
         if ($this->isProbablySymfonyListener($method)) {
             return 'Probable listener method';
         }
@@ -461,6 +465,23 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
     }
 
+    protected function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
+    {
+        $attributes = $method->getDeclaringClass()->getAttributes('Symfony\Component\Validator\Constraints\Callback');
+
+        foreach ($attributes as $attribute) {
+            $arguments = $attribute->getArguments();
+
+            $callback = $arguments['callback'] ?? $arguments[0] ?? null;
+
+            if ($callback === $method->getName()) {
+                return true;
+            }
+        }
+
+        return $this->hasAttribute($method, 'Symfony\Component\Validator\Constraints\Callback');
+    }
+
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
@@ -502,6 +523,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/contracts')
             || InstalledVersions::isInstalled('symfony/console')
             || InstalledVersions::isInstalled('symfony/http-kernel')
+            || InstalledVersions::isInstalled('symfony/validator')
             || InstalledVersions::isInstalled('symfony/dependency-injection');
     }
 
