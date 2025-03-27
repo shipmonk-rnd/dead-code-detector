@@ -37,7 +37,9 @@ jobs:
 
             -
                 name: Update Dead Code Detector
-                run: composer require shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies
+                run: |
+                    echo "$(jq --indent 4 '.repositories += [{"type": "vcs", "url": "https://github.com/${{ github.repository }}"}]' composer.json)" > composer.json
+                    composer require shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies
 
             -
                 name: Run analysis
