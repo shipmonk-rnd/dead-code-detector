@@ -608,6 +608,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         $metadata[$humanMemberString] = [
             'file' => $representative->getFile(),
             'line' => $representative->getLine(),
+            'type' => $representative->getMember()->getMemberType(),
             'transitive' => false,
             'excludedUsages' => $excludedUsages,
         ];
@@ -623,6 +624,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $metadata[$transitiveDeadMemberRef] = [
                 'file' => $transitivelyDeadMember->getFile(),
                 'line' => $transitivelyDeadMember->getLine(),
+                'type' => $transitivelyDeadMember->getMember()->getMemberType(),
                 'transitive' => true,
                 'excludedUsages' => $excludedUsages,
             ];

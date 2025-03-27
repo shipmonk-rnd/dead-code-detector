@@ -2,11 +2,12 @@
  • Removed constant Removal\Interface1::DEAD_IFACE_CONST2
  • Removed constant Removal\Interface1::DEAD_IFACE_CONST3
  • Removed constant Removal\Child2::DEAD_CONST
+ • Removed constant Removal\Child2::TRANSITIVE_DEAD
  • Removed method Removal\Interface1::foo
  • Removed method Removal\Interface2::foo
  • Removed method Removal\AbstractClass::foo
  • Removed method Removal\Child1::foo
  • Removed method Removal\Child2::mixedExcludedUsage
-   ! Excluded usage at data/removing/sample.php:48 left intact
+   ! Excluded usage at data/removing/sample.php:49 left intact
 
-Removed 9 dead members in 1 file.
+Removed 10 dead members in 1 file.
