@@ -31,6 +31,7 @@ class Child1 extends AbstractClass
 class Child2 extends AbstractClass
 {
     const USED_CONST = 1, DEAD_CONST = 2;
+    const TRANSITIVE_DEAD = 3;
 
     public function foo(): void
     {
@@ -38,7 +39,7 @@ class Child2 extends AbstractClass
     }
 
     public function mixedExcludedUsage(): void {
-
+        echo self::TRANSITIVE_DEAD;
     }
 }
 

@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
@@ -58,12 +59,13 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
                 continue;
             }
 
-            /** @var array<string, array{file: string, excludedUsages: list<ClassMemberUsage>}> $metadata */
+            /** @var array<string, array{file: string, type: MemberType::*, excludedUsages: list<ClassMemberUsage>}> $metadata */
             $metadata = $fileSpecificError->getMetadata();
-            $type = $fileSpecificError->getIdentifier();
 
             foreach ($metadata as $memberKey => $data) {
-                $deadMembersByFiles[$data['file']][$type][$memberKey] = $data['excludedUsages'];
+                $file = $data['file'];
+                $type = $data['type'];
+                $deadMembersByFiles[$file][$type][$memberKey] = $data['excludedUsages'];
             }
         }
 
@@ -72,9 +74,9 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
         foreach ($deadMembersByFiles as $file => $deadMembersByType) {
             /** @var array<string, list<ClassMemberUsage>> $deadConstants */
-            $deadConstants = $deadMembersByType[DeadCodeRule::IDENTIFIER_CONSTANT] ?? [];
+            $deadConstants = $deadMembersByType[MemberType::CONSTANT] ?? [];
             /** @var array<string, list<ClassMemberUsage>> $deadMethods */
-            $deadMethods = $deadMembersByType[DeadCodeRule::IDENTIFIER_METHOD] ?? [];
+            $deadMethods = $deadMembersByType[MemberType::METHOD] ?? [];
 
             $membersCount += count($deadConstants) + count($deadMethods);
 
