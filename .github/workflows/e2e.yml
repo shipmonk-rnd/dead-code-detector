@@ -34,11 +34,13 @@ jobs:
                 with:
                     php-version: ${{ matrix.php || '8.4' }}
                     ini-file: development
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             -
                 name: Update Dead Code Detector
                 run: |
-                    echo "$(jq --indent 4 '.repositories += [{"type": "vcs", "url": "https://github.com/${{ github.repository }}"}]' composer.json)" > composer.json
+                    composer config repositories.pr vcs https://github.com/${{ github.repository }}
                     composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies
 
             -
