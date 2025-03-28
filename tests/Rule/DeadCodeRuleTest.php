@@ -464,6 +464,16 @@ class DeadCodeRuleTest extends RuleTestCase
             ],
         ];
 
+        yield 'attribute' => [
+            __DIR__ . '/data/grouping/attribute.php',
+            [
+                [
+                    'Unused AttributeGrouping\Foo::endpoint',
+                    9,
+                ],
+            ],
+        ];
+
         yield 'closure' => [
             __DIR__ . '/data/grouping/closure.php',
             [
