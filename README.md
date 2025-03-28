@@ -37,14 +37,17 @@ includes:
 - `#[AsCommand]` attribute
 - `#[Required]` attribute
 - `#[Route]` attributes
+- `#[Assert\Callback]` attributes
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
 - `!php const` references in `config` yamls
+- `defaultIndexMethod` in `#[AutowireLocator]` and `#[AutowireIterator]`
 
 #### Doctrine:
 - `#[AsEntityListener]` attribute
 - `Doctrine\ORM\Events::*` events
 - `Doctrine\Common\EventSubscriber` methods
+- `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 
 #### PHPUnit:
