@@ -117,7 +117,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
                 continue;
             }
 
-            $output->writeLineFormatted("   ! Excluded usage at {$originLink} left intact");
+            $output->writeLineFormatted("<fg=yellow>   ! Excluded usage at {$originLink} left intact</>");
         }
     }
 
