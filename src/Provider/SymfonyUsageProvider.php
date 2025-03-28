@@ -39,6 +39,7 @@ use function extension_loaded;
 use function file_get_contents;
 use function in_array;
 use function is_dir;
+use function is_string;
 use function preg_match_all;
 use function reset;
 use function simplexml_load_string;
@@ -96,6 +97,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [
                 ...$usages,
+                ...$this->getUniqueEntityUsages($node),
                 ...$this->getMethodUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
             ];
@@ -116,6 +118,47 @@ class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUniqueEntityUsages(InClassNode $node): array
+    {
+        $repositoryClass = null;
+        $repositoryMethod = null;
+
+        foreach ($node->getClassReflection()->getNativeReflection()->getAttributes() as $attribute) {
+            if ($attribute->getName() === 'Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity') {
+                $arguments = $attribute->getArguments();
+
+                if (isset($arguments['repositoryMethod']) && is_string($arguments['repositoryMethod'])) {
+                    $repositoryMethod = $arguments['repositoryMethod'];
+                }
+            }
+
+            if ($attribute->getName() === 'Doctrine\ORM\Mapping\Entity') {
+                $arguments = $attribute->getArguments();
+
+                if (isset($arguments['repositoryClass']) && is_string($arguments['repositoryClass'])) {
+                    $repositoryClass = $arguments['repositoryClass'];
+                }
+            }
+        }
+
+        if ($repositoryClass !== null && $repositoryMethod !== null) {
+            $usage = new ClassMethodUsage(
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Used in #[UniqueEntity] attribute')),
+                new ClassMethodRef(
+                    $repositoryClass,
+                    $repositoryMethod,
+                    false,
+                ),
+            );
+            return [$usage];
+        }
+
+        return [];
     }
 
     /**
