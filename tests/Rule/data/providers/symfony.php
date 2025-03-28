@@ -2,8 +2,10 @@
 
 namespace Symfony;
 
+use Doctrine\ORM\Mapping\Entity;
 use ShipMonk\Logging\Logger;
 use ShipMonk\Logging\StaticLogger;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -133,4 +135,13 @@ class ValidatedModel
     public function validateBar(): void {}
 
     public function validateBaz(): void {}
+}
+
+
+#[UniqueEntity(repositoryMethod: 'findByUniqueName')]
+#[Entity(repositoryClass: CompanyRepository::class)]
+class Company {}
+
+class CompanyRepository {
+    public function findByUniqueName(): void {}
 }
