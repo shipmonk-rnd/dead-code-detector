@@ -561,14 +561,13 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isSymfonyInstalled(): bool
     {
-        return InstalledVersions::isInstalled('symfony/event-dispatcher')
-            || InstalledVersions::isInstalled('symfony/routing')
-            || InstalledVersions::isInstalled('symfony/contracts')
-            || InstalledVersions::isInstalled('symfony/console')
-            || InstalledVersions::isInstalled('symfony/http-kernel')
-            || InstalledVersions::isInstalled('symfony/validator')
-            || InstalledVersions::isInstalled('symfony/dependency-injection')
-            || InstalledVersions::isInstalled('symfony/doctrine-bridge');
+        foreach (InstalledVersions::getInstalledPackages() as $package) {
+            if (strpos($package, 'symfony/') === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
