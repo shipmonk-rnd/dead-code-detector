@@ -567,7 +567,8 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('symfony/console')
             || InstalledVersions::isInstalled('symfony/http-kernel')
             || InstalledVersions::isInstalled('symfony/validator')
-            || InstalledVersions::isInstalled('symfony/dependency-injection');
+            || InstalledVersions::isInstalled('symfony/dependency-injection')
+            || InstalledVersions::isInstalled('symfony/doctrine-bridge');
     }
 
     private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
