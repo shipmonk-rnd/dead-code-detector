@@ -39,7 +39,7 @@ final class ClassConstantUsage extends ClassMemberUsage
         return $this->fetch;
     }
 
-    public function concretizeMixedUsage(string $className): self
+    public function concretizeMixedClassNameUsage(string $className): self
     {
         if ($this->fetch->getClassName() !== null) {
             throw new LogicException('Usage is not mixed, thus it cannot be concretized');
@@ -50,6 +50,22 @@ final class ClassConstantUsage extends ClassMemberUsage
             new ClassConstantRef(
                 $className,
                 $this->fetch->getMemberName(),
+                $this->fetch->isPossibleDescendant(),
+            ),
+        );
+    }
+
+    public function concretizeMixedMemberNameUsage(string $memberName): ClassMemberUsage
+    {
+        if ($this->fetch->getMemberName() !== null) {
+            throw new LogicException('Usage is not mixed, thus it cannot be concretized');
+        }
+
+        return new self(
+            $this->getOrigin(),
+            new ClassConstantRef(
+                $this->fetch->getClassName(),
+                $memberName,
                 $this->fetch->isPossibleDescendant(),
             ),
         );

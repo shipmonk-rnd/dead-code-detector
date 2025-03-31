@@ -137,9 +137,7 @@ class ConstantFetchCollector implements Collector
             $possibleDescendantFetch = $node->class->toString() === 'static';
         }
 
-        $constantNames = $node->name instanceof Expr
-            ? array_map(static fn (ConstantStringType $string): string => $string->getValue(), $scope->getType($node->name)->getConstantStrings())
-            : [$node->name->toString()];
+        $constantNames = $this->getConstantNames($node, $scope);
 
         foreach ($constantNames as $constantName) {
             if ($constantName === 'class') {
@@ -160,11 +158,31 @@ class ConstantFetchCollector implements Collector
     }
 
     /**
+     * @return list<string|null>
+     */
+    private function getConstantNames(ClassConstFetch $fetch, Scope $scope): array
+    {
+        if ($fetch->name instanceof Expr) {
+            $possibleConstantNames = [];
+
+            foreach ($scope->getType($fetch->name)->getConstantStrings() as $constantString) {
+                $possibleConstantNames[] = $constantString->getValue();
+            }
+
+            return $possibleConstantNames === []
+                ? [null] // unknown constant name
+                : $possibleConstantNames;
+        }
+
+        return [$fetch->name->toString()];
+    }
+
+    /**
      * @return list<ClassConstantRef>
      */
     private function getDeclaringTypesWithConstant(
         Type $type,
-        string $constantName,
+        ?string $constantName,
         ?bool $isPossibleDescendant
     ): array
     {

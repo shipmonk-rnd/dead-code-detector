@@ -14,13 +14,17 @@ abstract class ClassMemberRef
 
     private ?string $className;
 
-    private string $memberName;
+    private ?string $memberName;
 
     private bool $possibleDescendant;
 
+    /**
+     * @param string|null $className Null if method is called over unknown type
+     * @param string|null $memberName Null if method name is unknown
+     */
     public function __construct(
         ?string $className,
-        string $memberName,
+        ?string $memberName,
         bool $possibleDescendant
     )
     {
@@ -34,7 +38,7 @@ abstract class ClassMemberRef
         return $this->className;
     }
 
-    public function getMemberName(): string
+    public function getMemberName(): ?string
     {
         return $this->memberName;
     }

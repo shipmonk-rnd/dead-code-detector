@@ -36,6 +36,11 @@ abstract class ClassMemberUsage
     /**
      * @return static
      */
-    abstract public function concretizeMixedUsage(string $className): self;
+    abstract public function concretizeMixedClassNameUsage(string $className): self;
+
+    /**
+     * @return static
+     */
+    abstract public function concretizeMixedMemberNameUsage(string $memberName): self;
 
 }

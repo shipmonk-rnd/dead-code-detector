@@ -102,7 +102,7 @@ class MethodCallCollector implements Collector
         Scope $scope
     ): void
     {
-        $methodNames = $this->getMethodName($methodCall, $scope);
+        $methodNames = $this->getMethodNames($methodCall, $scope);
 
         if ($methodCall instanceof New_) {
             if ($methodCall->class instanceof Expr) {
@@ -140,7 +140,7 @@ class MethodCallCollector implements Collector
         Scope $scope
     ): void
     {
-        $methodNames = $this->getMethodName($staticCall, $scope);
+        $methodNames = $this->getMethodNames($staticCall, $scope);
 
         if ($staticCall->class instanceof Expr) {
             $callerType = $scope->getType($staticCall->class);
@@ -224,9 +224,9 @@ class MethodCallCollector implements Collector
 
     /**
      * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
-     * @return list<string>
+     * @return list<string|null>
      */
-    private function getMethodName(CallLike $call, Scope $scope): array
+    private function getMethodNames(CallLike $call, Scope $scope): array
     {
         if ($call instanceof New_) {
             return ['__construct'];
@@ -239,7 +239,9 @@ class MethodCallCollector implements Collector
                 $possibleMethodNames[] = $constantString->getValue();
             }
 
-            return $possibleMethodNames;
+            return $possibleMethodNames === []
+                ? [null] // unknown method name
+                : $possibleMethodNames;
         }
 
         return [$call->name->toString()];
@@ -249,7 +251,7 @@ class MethodCallCollector implements Collector
      * @return list<ClassMethodRef>
      */
     private function getDeclaringTypesWithMethod(
-        string $methodName,
+        ?string $methodName,
         Type $type,
         TrinaryLogic $isStaticCall,
         ?bool $isPossibleDescendant = null

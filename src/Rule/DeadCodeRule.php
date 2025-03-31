@@ -107,7 +107,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      *
      * @var array<MemberType::*, array<string, list<CollectedUsage>>>
      */
-    private array $mixedMemberUsages = [];
+    private array $mixedClassNameUsages = [];
+
+    /**
+     * memberType => [className => CollectedUsage[]]
+     *
+     * @var array<MemberType::*, array<string, list<CollectedUsage>>>
+     */
+    private array $mixedMemberNameUsages = [];
 
     /**
      * @var array<string, array<string, non-empty-list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
@@ -165,10 +172,16 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     $memberUsage = $collectedUsage->getUsage();
 
                     if ($memberUsage->getMemberRef()->getClassName() === null) {
-                        $this->mixedMemberUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getMemberName()][] = $collectedUsage;
+                        $this->mixedClassNameUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getMemberName()][] = $collectedUsage;
                         continue;
                     }
 
+                    if ($memberUsage->getMemberRef()->getMemberName() === null) {
+                        $this->mixedMemberNameUsages[$memberUsage->getMemberType()][$memberUsage->getMemberRef()->getClassName()][] = $collectedUsage;
+                        continue;
+                    }
+
+                    // TODO mixed over mixed
                     $knownCollectedUsages[] = $collectedUsage;
                 }
             }
@@ -208,10 +221,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $methodKey = $methodRef->toKey();
 
                 $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
-
-                foreach ($this->mixedMemberUsages[MemberType::METHOD][$methodName] ?? [] as $mixedUsage) {
-                    $knownCollectedUsages[] = $mixedUsage->concretizeMixedUsage($typeName);
-                }
             }
 
             foreach ($constants as $constantName => $constantData) {
@@ -219,9 +228,24 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $constantKey = $constantRef->toKey();
 
                 $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
+            }
+        }
 
-                foreach ($this->mixedMemberUsages[MemberType::CONSTANT][$constantName] ?? [] as $mixedUsage) {
-                    $knownCollectedUsages[] = $mixedUsage->concretizeMixedUsage($typeName);
+        foreach ($this->typeDefinitions as $typeName => $typeDef) {
+            $memberNamesForMixedExpand = [
+                MemberType::METHOD => array_keys($typeDef['methods']),
+                MemberType::CONSTANT => array_keys($typeDef['constants']),
+            ];
+
+            foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
+                foreach ($memberNames as $memberName) {
+                    foreach ($this->mixedClassNameUsages[$memberType][$memberName] ?? [] as $mixedUsage) {
+                        $knownCollectedUsages[] = $mixedUsage->concretizeMixedClassNameUsage($typeName);
+                    }
+
+                    foreach ($this->mixedMemberNameUsages[$memberType][$typeName] ?? [] as $mixedUsage) {
+                        $knownCollectedUsages[] = $mixedUsage->concretizeMixedMemberNameUsage($memberName);
+                    }
                 }
             }
         }
@@ -723,6 +747,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             throw new LogicException('Ensured by BlackMember constructor');
         }
 
+        if ($memberName === null) {
+            throw new LogicException('Ensured by BlackMember constructor');
+        }
+
         $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
         $params = $this->typeDefinitions[$typeName]['methods'][$memberName]['params'] ?? 0;
         $abstract = $this->typeDefinitions[$typeName]['methods'][$memberName]['abstract'] ?? false;
@@ -748,7 +776,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public function print(Output $output): void
     {
-        $this->debugUsagePrinter->printMixedMemberUsages($output, $this->mixedMemberUsages);
+        $this->debugUsagePrinter->printMixedMemberUsages($output, $this->mixedClassNameUsages);
         $this->debugUsagePrinter->printDebugMemberUsages($output, $this->typeDefinitions);
     }
 

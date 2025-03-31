@@ -11,12 +11,11 @@ final class ClassMethodRef extends ClassMemberRef
 {
 
     /**
-     * @param string|null $className Null if method is called over unknown type
      * @param bool $possibleDescendant True if the $className can be a descendant of the actual class
      */
     public function __construct(
         ?string $className,
-        string $methodName,
+        ?string $methodName,
         bool $possibleDescendant
     )
     {

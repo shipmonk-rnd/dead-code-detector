@@ -572,6 +572,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-clone' => [__DIR__ . '/data/methods/clone.php'];
         yield 'method-magic' => [__DIR__ . '/data/methods/magic.php'];
         yield 'method-mixed' => [__DIR__ . '/data/methods/mixed/tracked.php'];
+        yield 'method-mixed-member' => [__DIR__ . '/data/methods/mixed-member.php'];
         yield 'method-new-in-initializers' => [__DIR__ . '/data/methods/new-in-initializers.php'];
         yield 'method-first-class-callable' => [__DIR__ . '/data/methods/first-class-callable.php'];
         yield 'method-hierarchy-in-vendor' => [__DIR__ . '/data/methods/hierarchy-in-vendor.php'];
@@ -757,7 +758,8 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
                 {
-                    return strpos($usage->getMemberRef()->getMemberName(), 'mixed') === 0;
+                    $memberName = $usage->getMemberRef()->getMemberName();
+                    return $memberName !== null && strpos($memberName, 'mixed') === 0;
                 }
 
             },
