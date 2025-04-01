@@ -68,11 +68,15 @@ final class UsageOrigin
      */
     public static function createRegular(Node $node, Scope $scope): self
     {
+        $file = $scope->isInTrait()
+            ? $scope->getTraitReflection()->getFileName()
+            : $scope->getFile();
+
         if (!$scope->isInClass() || !$scope->getFunction() instanceof MethodReflection) {
             return new self(
                 null,
                 null,
-                $scope->getFile(),
+                $file,
                 $node->getStartLine(),
                 null,
                 null,
@@ -82,7 +86,7 @@ final class UsageOrigin
         return new self(
             $scope->getClassReflection()->getName(),
             $scope->getFunction()->getName(),
-            $scope->getFile(),
+            $file,
             $node->getStartLine(),
             null,
             null,

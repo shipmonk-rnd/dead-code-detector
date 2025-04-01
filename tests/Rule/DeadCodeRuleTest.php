@@ -77,6 +77,8 @@ class DeadCodeRuleTest extends RuleTestCase
 
     private ?DeadCodeRule $rule = null;
 
+    private ?string $editorUrl = null;
+
     protected function getRule(): DeadCodeRule
     {
         $container = $this->createMock(Container::class);
@@ -297,6 +299,35 @@ class DeadCodeRuleTest extends RuleTestCase
         |
         | Found 1 usage:
         |  • data/debug/mixed.php:13 - excluded by usageOverMixed excluder
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
+    public function testDebugUsageOriginLink(): void
+    {
+        $this->editorUrl = '( %relFile% at line %line% )';
+        $this->debugMembers = ['DebugTrait\User::foo'];
+
+        $this->analyse([__DIR__ . '/data/debug/trait-1.php', __DIR__ . '/data/debug/trait-2.php'], []);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+        $expectedOutput = <<<'OUTPUT'
+
+        Usage debugging information:
+
+        DebugTrait\User::foo
+        |
+        | Marked as alive at:
+        | entry <href=( data/debug/trait-2.php at line 11 )>data/debug/trait-2.php:11</>
+        |   calls <href=( data/debug/trait-1.php at line 10 )>DebugTrait\TrueOrigin::origin:10</>
+        |     calls DebugTrait\User::foo
+        |
+        | Found 1 usage:
+        |  • <href=( data/debug/trait-1.php at line 10 )>data/debug/trait-1.php:10</>
 
         OUTPUT;
 
@@ -743,7 +774,7 @@ class DeadCodeRuleTest extends RuleTestCase
     {
         return new OutputEnhancer(
             new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
-            null,
+            $this->editorUrl,
         );
     }
 
