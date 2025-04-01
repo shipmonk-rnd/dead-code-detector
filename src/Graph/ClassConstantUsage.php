@@ -55,20 +55,4 @@ final class ClassConstantUsage extends ClassMemberUsage
         );
     }
 
-    public function concretizeMixedMemberNameUsage(string $memberName): ClassMemberUsage
-    {
-        if ($this->fetch->getMemberName() !== null) {
-            throw new LogicException('Usage is not mixed, thus it cannot be concretized');
-        }
-
-        return new self(
-            $this->getOrigin(),
-            new ClassConstantRef(
-                $this->fetch->getClassName(),
-                $memberName,
-                $this->fetch->isPossibleDescendant(),
-            ),
-        );
-    }
-
 }

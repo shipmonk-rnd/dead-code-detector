@@ -2,12 +2,21 @@
 
 namespace MixedMember;
 
+trait TheTrait
+{
+    const MINUS = -1;
+
+    public function minus() {}
+}
+
 interface TheInterface {
     const ZERO = 0;
 }
 
 class ParentClass
 {
+    use TheTrait;
+
     const ONE = 1;
     public function one() {}
 }
@@ -23,7 +32,7 @@ class Tester extends ParentClass implements TheInterface
 
 class Descendant extends Tester
 {
-    const FOUR = 4;
+    const FOUR = 4; // error: Unused MixedMember\Descendant::FOUR
 
     public function four() {}
 }

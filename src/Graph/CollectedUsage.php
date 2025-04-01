@@ -52,14 +52,6 @@ final class CollectedUsage
         );
     }
 
-    public function concretizeMixedMemberNameUsage(string $memberName): self
-    {
-        return new self(
-            $this->usage->concretizeMixedMemberNameUsage($memberName),
-            $this->excludedBy,
-        );
-    }
-
     /**
      * Scope file is passed to optimize transferred data size (and thus result cache size)
      * - PHPStan itself transfers all collector data along with scope file

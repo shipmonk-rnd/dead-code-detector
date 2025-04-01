@@ -51,13 +51,15 @@ abstract class ClassMemberRef
     public function toHumanString(): string
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        return $classRef . '::' . $this->memberName;
+        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
+        return $classRef . '::' . $memberRef;
     }
 
     public function toKey(): string
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        return static::buildKey($classRef, $this->memberName);
+        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
+        return static::buildKey($classRef, $memberRef);
     }
 
     abstract public static function buildKey(string $typeName, string $memberName): string;
