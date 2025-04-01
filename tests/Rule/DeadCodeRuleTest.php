@@ -668,27 +668,37 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
         // mixed member
-        yield 'mixed-member-basics' => [__DIR__ . '/data/mixed-member/basics.php'];
-        yield 'mixed-member-trait-1' => [__DIR__ . '/data/mixed-member/traits-1.php'];
-        yield 'mixed-member-trait-2' => [__DIR__ . '/data/mixed-member/traits-2.php'];
-        yield 'mixed-member-trait-3' => [__DIR__ . '/data/mixed-member/traits-3.php'];
-        yield 'mixed-member-trait-5' => [__DIR__ . '/data/mixed-member/traits-5.php'];
-        yield 'mixed-member-trait-6' => [__DIR__ . '/data/mixed-member/traits-6.php'];
-        yield 'mixed-member-trait-7' => [__DIR__ . '/data/mixed-member/traits-7.php'];
-        yield 'mixed-member-trait-8' => [__DIR__ . '/data/mixed-member/traits-8.php'];
-        yield 'mixed-member-trait-9' => [__DIR__ . '/data/mixed-member/traits-9.php'];
-        yield 'mixed-member-trait-10' => [__DIR__ . '/data/mixed-member/traits-10.php'];
-        yield 'mixed-member-trait-12' => [__DIR__ . '/data/mixed-member/traits-12.php'];
-        yield 'mixed-member-trait-14' => [__DIR__ . '/data/mixed-member/traits-14.php'];
-        yield 'mixed-member-trait-15' => [__DIR__ . '/data/mixed-member/traits-15.php'];
-        yield 'mixed-member-trait-16' => [__DIR__ . '/data/mixed-member/traits-16.php'];
-        yield 'mixed-member-trait-17' => [__DIR__ . '/data/mixed-member/traits-17.php'];
-        yield 'mixed-member-trait-18' => [__DIR__ . '/data/mixed-member/traits-18.php'];
-        yield 'mixed-member-trait-19' => [__DIR__ . '/data/mixed-member/traits-19.php'];
-        yield 'mixed-member-trait-20' => [__DIR__ . '/data/mixed-member/traits-20.php'];
-        yield 'mixed-member-trait-21' => [__DIR__ . '/data/mixed-member/traits-21.php'];
-        yield 'mixed-member-trait-22' => [__DIR__ . '/data/mixed-member/traits-22.php'];
-        yield 'mixed-member-trait-23' => [__DIR__ . '/data/mixed-member/traits-23.php'];
+        yield 'mixed-member-hierarchy-1' => [__DIR__ . '/data/mixed-member/hierarchy-1.php'];
+        yield 'mixed-member-hierarchy-2' => [__DIR__ . '/data/mixed-member/hierarchy-2.php'];
+        yield 'mixed-member-method-trait-1' => [__DIR__ . '/data/mixed-member/traits-1.php'];
+        yield 'mixed-member-method-trait-2' => [__DIR__ . '/data/mixed-member/traits-2.php'];
+        yield 'mixed-member-method-trait-3' => [__DIR__ . '/data/mixed-member/traits-3.php'];
+        yield 'mixed-member-method-trait-5' => [__DIR__ . '/data/mixed-member/traits-5.php'];
+        yield 'mixed-member-method-trait-6' => [__DIR__ . '/data/mixed-member/traits-6.php'];
+        yield 'mixed-member-method-trait-7' => [__DIR__ . '/data/mixed-member/traits-7.php'];
+        yield 'mixed-member-method-trait-8' => [__DIR__ . '/data/mixed-member/traits-8.php'];
+        yield 'mixed-member-method-trait-9' => [__DIR__ . '/data/mixed-member/traits-9.php'];
+        yield 'mixed-member-method-trait-10' => [__DIR__ . '/data/mixed-member/traits-10.php'];
+        yield 'mixed-member-method-trait-12' => [__DIR__ . '/data/mixed-member/traits-12.php'];
+        yield 'mixed-member-method-trait-14' => [__DIR__ . '/data/mixed-member/traits-14.php'];
+        yield 'mixed-member-method-trait-15' => [__DIR__ . '/data/mixed-member/traits-15.php'];
+        yield 'mixed-member-method-trait-16' => [__DIR__ . '/data/mixed-member/traits-16.php'];
+        yield 'mixed-member-method-trait-17' => [__DIR__ . '/data/mixed-member/traits-17.php'];
+        yield 'mixed-member-method-trait-18' => [__DIR__ . '/data/mixed-member/traits-18.php'];
+        yield 'mixed-member-method-trait-19' => [__DIR__ . '/data/mixed-member/traits-19.php'];
+        yield 'mixed-member-method-trait-20' => [__DIR__ . '/data/mixed-member/traits-20.php'];
+        yield 'mixed-member-method-trait-21' => [__DIR__ . '/data/mixed-member/traits-21.php'];
+        yield 'mixed-member-method-trait-22' => [__DIR__ . '/data/mixed-member/traits-22.php'];
+        yield 'mixed-member-method-trait-23' => [__DIR__ . '/data/mixed-member/traits-23.php'];
+        yield 'mixed-member-const-traits-1' => [__DIR__ . '/data/mixed-member/traits-const-1.php'];
+        yield 'mixed-member-const-traits-2' => [__DIR__ . '/data/mixed-member/traits-const-2.php'];
+        yield 'mixed-member-const-traits-3' => [__DIR__ . '/data/mixed-member/traits-const-3.php'];
+        yield 'mixed-member-const-traits-5' => [__DIR__ . '/data/mixed-member/traits-const-5.php'];
+        yield 'mixed-member-const-traits-7' => [__DIR__ . '/data/mixed-member/traits-const-7.php'];
+        yield 'mixed-member-const-traits-9' => [__DIR__ . '/data/mixed-member/traits-const-9.php'];
+        yield 'mixed-member-const-traits-10' => [__DIR__ . '/data/mixed-member/traits-const-10.php'];
+        yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
+        yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
     }
 
     /**

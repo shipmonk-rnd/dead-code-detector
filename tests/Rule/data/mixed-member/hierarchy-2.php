@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace MixedMember;
+namespace MixedMember2;
 
 trait TheTrait
 {
@@ -32,13 +32,13 @@ class Tester extends ParentClass implements TheInterface
 
 class Descendant extends Tester
 {
-    const FOUR = 4; // error: Unused MixedMember\Descendant::FOUR
+    const FOUR = 4; // error: Unused MixedMember2\Descendant::FOUR
 
-    public function four() {}
+    public function four() {} // error: Unused MixedMember2\Descendant::four
 }
 
-function test(Tester $tester, string $unknown)
+function test(string $unknown)
 {
-    echo $tester->$unknown(); // can be descendant
+    echo (new Tester)->$unknown(); // cannot be descendant
     echo Tester::{$unknown}; // cannot be descendant
 }
