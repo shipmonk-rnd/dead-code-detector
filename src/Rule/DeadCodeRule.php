@@ -498,14 +498,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
-     * @return iterable<string>
+     * @return list<string>
      */
     private function getPossibleDefinerMemberKeys(
         ClassMemberRef $memberRef,
         string $className,
         bool $includeParentLookup = true,
         array &$foundMemberNames = []
-    ): iterable
+    ): array
     {
         if ($memberRef->getMemberName() !== null) {
             throw new LogicException('This method does not make sense when member name is known');
