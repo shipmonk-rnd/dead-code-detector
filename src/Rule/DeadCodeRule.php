@@ -89,7 +89,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $typeDefinitions = [];
 
     /**
-     * type => [trait user => [trait => [original_member_name => aliased_member_name]]]
+     * type => [trait user => [trait => [aliased_member_name => original_member_name]]]
      *
      * @var array<MemberType::*, array<string, array<string, array<string, string>>>>
      */
@@ -341,14 +341,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     continue; // abstract trait methods are ignored, should correlate with isNeverReportedAsDead
                 }
 
-                $declaringTraitMethodDefinition = ClassMethodRef::buildKey($traitName, $traitMethod);
                 $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
 
                 // both method names need to work
                 if ($aliasMethodName !== null) {
-                    $aliasMethodDefinition = ClassMethodRef::buildKey($typeName, $aliasMethodName);
-                    $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
-                    $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$traitMethod] = $aliasMethodName;
+                    $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$aliasMethodName] = $traitMethod;
                 }
 
                 if (in_array($traitMethod, $excludedMethods, true)) {
@@ -356,8 +353,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 }
 
                 $overriddenMethods[] = $traitMethod;
-                $usedTraitMethodDefinition = ClassMethodRef::buildKey($typeName, $traitMethod);
-                $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
                 $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$traitMethod] = $traitMethod;
             }
 
@@ -377,15 +372,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             $excludedConstants = $overriddenConstants;
 
             foreach ($traitConstants as $traitConstant => $__) {
-                $declaringTraitConstantKey = ClassConstantRef::buildKey($traitName, $traitConstant);
-
                 if (in_array($traitConstant, $excludedConstants, true)) {
                     continue;
                 }
 
                 $overriddenConstants[] = $traitConstant;
-                $traitUserConstantKey = ClassConstantRef::buildKey($typeName, $traitConstant);
-                $this->classHierarchy->registerTraitUsage($declaringTraitConstantKey, $traitUserConstantKey);
                 $this->traitMembers[MemberType::CONSTANT][$typeName][$traitName][$traitConstant] = $traitConstant;
             }
 
@@ -436,13 +427,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($meAndDescendants as $className) {
             if ($member->getMemberName() !== null) {
-                $definerKey = $this->findDefinerMemberKey($member, $className, $member->getMemberName());
+                $definerKey = $this->findDefinerMemberKey($member->getMemberType(), $className, $member->getMemberName());
 
                 if ($definerKey !== null) {
                     $result[] = $definerKey;
                 }
             } else {
-                foreach ($this->getPossibleDefinerMemberKeys($member, $className) as $possibleDefinerKey) {
+                foreach ($this->getPossibleDefinerMemberKeys($member->getMemberType(), $className) as $possibleDefinerKey) {
                     $result[] = $possibleDefinerKey;
                 }
             }
@@ -455,22 +446,22 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return $result;
     }
 
+    /**
+     * @param MemberType::* $memberType
+     */
     private function findDefinerMemberKey(
-        ClassMemberRef $memberRef,
+        int $memberType,
         string $className,
         string $memberName,
         bool $includeParentLookup = true
     ): ?string
     {
-        $memberKey = $memberRef::buildKey($className, $memberName);
-        $memberType = $memberRef->getMemberType();
-
-        if ($this->hasMember($className, $memberName, $memberRef->getMemberType())) {
-            return $memberKey;
+        if ($this->hasMember($className, $memberName, $memberType)) {
+            return $this->buildMemberKey($memberType, $className, $memberName);
         }
 
         // search for definition in traits
-        $traitMethodKey = $this->classHierarchy->getDeclaringTraitMemberKey($memberKey);
+        $traitMethodKey = $this->getDeclaringTraitMemberKey($memberType, $className, $memberName);
 
         if ($traitMethodKey !== null) {
             return $traitMethodKey;
@@ -483,7 +474,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                $found = $this->findDefinerMemberKey($memberRef, $parentName, $memberName, false);
+                $found = $this->findDefinerMemberKey($memberType, $parentName, $memberName, false);
 
                 if ($found !== null) {
                     return $found;
@@ -495,30 +486,25 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
+     * @param MemberType::* $memberType
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
      */
     private function getPossibleDefinerMemberKeys(
-        ClassMemberRef $memberRef,
+        int $memberType,
         string $className,
         bool $includeParentLookup = true,
         array &$foundMemberNames = []
     ): array
     {
-        if ($memberRef->getMemberName() !== null) {
-            throw new LogicException('This method does not make sense when member name is known');
-        }
-
         /** @var list<string> $result */
         $result = [];
 
-        $memberType = $memberRef->getMemberType();
-
         foreach ($this->getMemberNames($className, $memberType) as $memberName) {
-            $memberKey = $memberRef::buildKey($className, $memberName);
+            $memberKey = $this->buildMemberKey($memberType, $className, $memberName);
 
             if (isset($foundMemberNames[$memberName])) {
-                continue; // already found
+                continue;
             }
 
             $result[] = $memberKey;
@@ -527,12 +513,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         // search for definition in traits
         foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
-            foreach ($traitMemberNames as $traitMemberName => $aliasedMemberName) {
+            foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
                 if (isset($foundMemberNames[$aliasedMemberName])) {
-                    continue; // already found
+                    continue;
                 }
 
-                $traitKey = $memberRef::buildKey($traitName, $traitMemberName);
+                $traitKey = $this->buildMemberKey($memberType, $traitName, $traitMemberName);
                 $result[] = $traitKey;
                 $foundMemberNames[$aliasedMemberName] = true;
             }
@@ -547,12 +533,38 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             foreach ($parentNames as $parentName) {
                 $result = [
                     ...$result,
-                    ...$this->getPossibleDefinerMemberKeys($memberRef, $parentName, false, $foundMemberNames),
+                    ...$this->getPossibleDefinerMemberKeys($memberType, $parentName, false, $foundMemberNames),
                 ];
             }
         }
 
         return $result;
+    }
+
+    private function getDeclaringTraitMemberKey(int $memberType, string $className, string $memberName): ?string
+    {
+        foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
+            foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
+                if ($memberName === $aliasedMemberName) {
+                    return $this->buildMemberKey($memberType, $traitName, $traitMemberName);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function buildMemberKey(int $memberType, string $className, string $memberName): string
+    {
+        if ($memberType === MemberType::METHOD) {
+            return ClassMethodRef::buildKey($className, $memberName);
+
+        } elseif ($memberType === MemberType::CONSTANT) {
+            return ClassConstantRef::buildKey($className, $memberName);
+
+        } else {
+            throw new LogicException('Unsupported member type');
+        }
     }
 
     /**

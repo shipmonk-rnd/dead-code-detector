@@ -604,6 +604,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-trait-21' => [__DIR__ . '/data/methods/traits-21.php'];
         yield 'method-trait-22' => [__DIR__ . '/data/methods/traits-22.php'];
         yield 'method-trait-23' => [__DIR__ . '/data/methods/traits-23.php'];
+        yield 'method-trait-24' => [__DIR__ . '/data/methods/traits-24.php'];
+        yield 'method-trait-25' => [__DIR__ . '/data/methods/traits-25.php'];
         yield 'method-nullsafe' => [__DIR__ . '/data/methods/nullsafe.php'];
         yield 'method-parent-1' => [__DIR__ . '/data/methods/parent-1.php'];
         yield 'method-parent-2' => [__DIR__ . '/data/methods/parent-2.php'];
@@ -701,6 +703,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-method-trait-21' => [__DIR__ . '/data/mixed-member/traits-21.php'];
         yield 'mixed-member-method-trait-22' => [__DIR__ . '/data/mixed-member/traits-22.php'];
         yield 'mixed-member-method-trait-23' => [__DIR__ . '/data/mixed-member/traits-23.php'];
+        yield 'mixed-member-method-trait-25' => [__DIR__ . '/data/mixed-member/traits-25.php'];
         yield 'mixed-member-const-traits-1' => [__DIR__ . '/data/mixed-member/traits-const-1.php'];
         yield 'mixed-member-const-traits-2' => [__DIR__ . '/data/mixed-member/traits-const-2.php'];
         yield 'mixed-member-const-traits-3' => [__DIR__ . '/data/mixed-member/traits-const-3.php'];
