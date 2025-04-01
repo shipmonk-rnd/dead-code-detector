@@ -89,9 +89,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $typeDefinitions = [];
 
     /**
-     * type => [trait user => [trait => member[]]]
+     * type => [trait user => [trait => [original_member_name => aliased_member_name]]]
      *
-     * @var array<MemberType::*, array<string, array<string, list<string>>>>
+     * @var array<MemberType::*, array<string, array<string, array<string, string>>>>
      */
     private array $traitMembers = [];
 
@@ -348,7 +348,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 if ($aliasMethodName !== null) {
                     $aliasMethodDefinition = ClassMethodRef::buildKey($typeName, $aliasMethodName);
                     $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $aliasMethodDefinition);
-                    $this->traitMembers[MemberType::METHOD][$typeName][$traitName][] = $aliasMethodName;
+                    $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$traitMethod] = $aliasMethodName;
                 }
 
                 if (in_array($traitMethod, $excludedMethods, true)) {
@@ -358,7 +358,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $overriddenMethods[] = $traitMethod;
                 $usedTraitMethodDefinition = ClassMethodRef::buildKey($typeName, $traitMethod);
                 $this->classHierarchy->registerTraitUsage($declaringTraitMethodDefinition, $usedTraitMethodDefinition);
-                $this->traitMembers[MemberType::METHOD][$typeName][$traitName][] = $traitMethod;
+                $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$traitMethod] = $traitMethod;
             }
 
             $this->fillTraitMethodUsages($typeName, $this->getTraitUsages($traitName), $overriddenMethods);
@@ -386,7 +386,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 $overriddenConstants[] = $traitConstant;
                 $traitUserConstantKey = ClassConstantRef::buildKey($typeName, $traitConstant);
                 $this->classHierarchy->registerTraitUsage($declaringTraitConstantKey, $traitUserConstantKey);
-                $this->traitMembers[MemberType::CONSTANT][$typeName][$traitName][] = $traitConstant;
+                $this->traitMembers[MemberType::CONSTANT][$typeName][$traitName][$traitConstant] = $traitConstant;
             }
 
             $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($traitName), $overriddenConstants);
@@ -517,12 +517,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             if ($this->hasMember($className, $memberName, $memberType)) { // TODO always true?
                 yield $memberKey;
             }
+        }
 
-            // search for definition in traits
-            foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
-                foreach ($traitMemberNames as $traitMemberName) {
-                    yield $memberRef::buildKey($traitName, $traitMemberName);
-                }
+        // search for definition in traits
+        foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
+            foreach ($traitMemberNames as $traitMemberName => $_) {
+                yield $memberRef::buildKey($traitName, $traitMemberName);
             }
         }
 
