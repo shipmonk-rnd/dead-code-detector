@@ -18,5 +18,8 @@ class Tester {
     }
 }
 
-(new Tester())->test();
-(new Tester())->aliased();
+function test(string $method)
+{
+    $o = new Tester();
+    $o->$method();
+}

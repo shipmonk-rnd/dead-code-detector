@@ -12,5 +12,8 @@ class TraitAliases {
     }
 }
 
-$o = new TraitAliases();
-$o->aliased();
+function test(string $method)
+{
+    $o = new TraitAliases();
+    $o->$method();
+}

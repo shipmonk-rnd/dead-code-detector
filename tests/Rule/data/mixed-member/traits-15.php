@@ -16,7 +16,8 @@ class TraitAliases {
     }
 }
 
-$o = new TraitAliases();
-$o->method1(); // is valid call
-$o->method2();
-$o->aliased3();
+function test(string $method)
+{
+    $o = new TraitAliases();
+    $o->$method();
+}

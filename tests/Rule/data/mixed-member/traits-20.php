@@ -17,5 +17,6 @@ class User extends Intermediate {
     public function method(): void {}
 }
 
-
-(new User())->method();
+function test(User $user, string $method) {
+    $user->$method();
+}

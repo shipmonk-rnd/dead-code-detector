@@ -12,4 +12,8 @@ class User1 {
     public function method1(): void {}
 }
 
-(new User1())->method1();
+function test(string $method)
+{
+    $o = new User1();
+    $o->$method();
+}

@@ -20,4 +20,8 @@ class Tester {
     use B;
 }
 
-(new Tester())->test();
+function test(string $method)
+{
+    $o = new Tester();
+    $o->$method();
+}

@@ -19,6 +19,8 @@ class AliasedTalker {
     }
 }
 
-$o = new AliasedTalker();
-$o->collision1();
-$o->collision2();
+function test(string $method)
+{
+    $o = new AliasedTalker();
+    $o->$method();
+}
