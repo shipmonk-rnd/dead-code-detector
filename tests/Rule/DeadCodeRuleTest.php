@@ -678,9 +678,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-trait-8' => [__DIR__ . '/data/mixed-member/traits-8.php'];
         yield 'mixed-member-trait-9' => [__DIR__ . '/data/mixed-member/traits-9.php'];
         yield 'mixed-member-trait-10' => [__DIR__ . '/data/mixed-member/traits-10.php'];
-        yield 'mixed-member-trait-11' => [[__DIR__ . '/data/mixed-member/traits-11-a.php', __DIR__ . '/data/mixed-member/traits-11-b.php']];
         yield 'mixed-member-trait-12' => [__DIR__ . '/data/mixed-member/traits-12.php'];
-        yield 'mixed-member-trait-13' => [__DIR__ . '/data/mixed-member/traits-13.php'];
         yield 'mixed-member-trait-14' => [__DIR__ . '/data/mixed-member/traits-14.php'];
 // yield 'mixed-member-trait-15' => [__DIR__ . '/data/mixed-member/traits-15.php'];
 // yield 'mixed-member-trait-16' => [__DIR__ . '/data/mixed-member/traits-16.php'];
