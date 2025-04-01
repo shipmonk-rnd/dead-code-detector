@@ -497,14 +497,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     // TODO squash with prev method?
 
     /**
-     * @param array<string, true> $foundMemberNames
+     * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return iterable<string>
      */
     private function getPossibleDefinerMemberKeys(
         ClassMemberRef $memberRef,
         string $className,
         bool $includeParentLookup = true,
-        array $foundMemberNames = []
+        array &$foundMemberNames = []
     ): iterable
     {
         if ($memberRef->getMemberName() !== null) {
