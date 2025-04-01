@@ -431,7 +431,4 @@
         <exclude name="SlevomatCodingStandard.ControlStructures.UselessIfConditionWithReturn.UselessIfCondition"/>
     </rule>
     <rule ref="SlevomatCodingStandard.ControlStructures.UselessTernaryOperator"/>
-    <rule ref="SlevomatCodingStandard.ControlStructures.EarlyExit">
-        <exclude name="SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed"/> <!-- leads to less readable code in some cases -->
-    </rule>
 </ruleset>

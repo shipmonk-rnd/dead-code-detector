@@ -771,13 +771,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function hasMember(string $typeName, string $memberName, int $memberType): bool
     {
-        if ($memberType === MemberType::METHOD) {
-            $key = 'methods';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            $key = 'constants';
-        } else {
-            throw new LogicException('Invalid member type');
-        }
+        $key = $this->getTypeDefinitionKeyForMemberType($memberType);
 
         return array_key_exists($memberName, $this->typeDefinitions[$typeName][$key] ?? []);
     }
@@ -788,15 +782,24 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function getMemberNames(string $typeName, int $memberType): array
     {
-        if ($memberType === MemberType::METHOD) {
-            $key = 'methods';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            $key = 'constants';
-        } else {
-            throw new LogicException('Invalid member type');
-        }
+        $key = $this->getTypeDefinitionKeyForMemberType($memberType);
 
         return array_keys($this->typeDefinitions[$typeName][$key] ?? []);
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     * @return 'methods'|'constants'
+     */
+    private function getTypeDefinitionKeyForMemberType(int $memberType): string
+    {
+        if ($memberType === MemberType::METHOD) {
+            return 'methods';
+        } elseif ($memberType === MemberType::CONSTANT) {
+            return 'constants';
+        }
+
+        throw new LogicException('Invalid member type'); // @phpstan-ignore deadCode.unreachable (keep it future safe)
     }
 
     /**
