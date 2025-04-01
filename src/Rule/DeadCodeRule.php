@@ -497,32 +497,48 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     // TODO squash with prev method?
 
     /**
+     * @param array<string, true> $foundMemberNames
      * @return iterable<string>
      */
     private function getPossibleDefinerMemberKeys(
         ClassMemberRef $memberRef,
         string $className,
-        bool $includeParentLookup = true
+        bool $includeParentLookup = true,
+        array $foundMemberNames = []
     ): iterable
     {
         if ($memberRef->getMemberName() !== null) {
             throw new LogicException('This method does not make sense when member name is known');
         }
 
+        /** @var list<string> $result */
+        $result = [];
+
         $memberType = $memberRef->getMemberType();
 
         foreach ($this->getMemberNames($className, $memberType) as $memberName) {
             $memberKey = $memberRef::buildKey($className, $memberName);
 
+            if (isset($foundMemberNames[$memberName])) {
+                continue; // already found
+            }
+
             if ($this->hasMember($className, $memberName, $memberType)) { // TODO always true?
-                yield $memberKey;
+                $result[] = $memberKey;
+                $foundMemberNames[$memberName] = true;
             }
         }
 
         // search for definition in traits
         foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
-            foreach ($traitMemberNames as $traitMemberName => $_) {
-                yield $memberRef::buildKey($traitName, $traitMemberName);
+            foreach ($traitMemberNames as $traitMemberName => $aliasedMemberName) {
+                if (isset($foundMemberNames[$aliasedMemberName])) {
+                    continue; // already found
+                }
+
+                $traitKey = $memberRef::buildKey($traitName, $traitMemberName);
+                $result[] = $traitKey;
+                $foundMemberNames[$aliasedMemberName] = true;
             }
         }
 
@@ -533,9 +549,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                yield from $this->getPossibleDefinerMemberKeys($memberRef, $parentName, false);
+                $result = [
+                    ...$result,
+                    ...$this->getPossibleDefinerMemberKeys($memberRef, $parentName, false, $foundMemberNames),
+                ];
             }
         }
+
+        return $result;
     }
 
     /**
