@@ -494,8 +494,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return null;
     }
 
-    // TODO squash with prev method?
-
     /**
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
@@ -523,10 +521,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue; // already found
             }
 
-            if ($this->hasMember($className, $memberName, $memberType)) { // TODO always true?
-                $result[] = $memberKey;
-                $foundMemberNames[$memberName] = true;
-            }
+            $result[] = $memberKey;
+            $foundMemberNames[$memberName] = true;
         }
 
         // search for definition in traits
