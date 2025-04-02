@@ -127,3 +127,14 @@ function testMemberOnlyInDescendant(string $fqn) {
         echo $classReflection->getConstant('NOT_IN_PARENT');
     }
 }
+
+/**
+ * @param class-string<HolderParent> $fqn
+ */
+function testNoGenericTypeKnown(string $fqn) {
+    $classReflection = new \ReflectionClass($fqn);
+
+    if ($classReflection->hasConstant('NOT_IN_PARENT')) {
+        echo $classReflection->getConstant('NOT_IN_PARENT');
+    }
+}
