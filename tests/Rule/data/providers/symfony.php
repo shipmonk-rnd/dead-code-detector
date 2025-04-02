@@ -31,8 +31,8 @@ class SomeController {
     {
     }
 
-    #[Unknown] // error: Unused Symfony\SomeController::dead
-    public function dead(): void
+    #[Unknown]
+    public function dead(): void // error: Unused Symfony\SomeController::dead
     {
     }
 

@@ -76,7 +76,7 @@ class ClassDefinitionCollector implements Collector
 
         foreach ($node->getMethods() as $method) {
             $methods[$method->name->toString()] = [
-                'line' => $method->getStartLine(),
+                'line' => $method->name->getStartLine(),
                 'params' => count($method->params),
                 'abstract' => $method->isAbstract() || $node instanceof Interface_,
                 'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
