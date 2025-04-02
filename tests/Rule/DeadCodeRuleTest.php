@@ -546,7 +546,7 @@ class DeadCodeRuleTest extends RuleTestCase
             [
                 [
                     'Unused AttributeGrouping\Foo::endpoint',
-                    9,
+                    10,
                 ],
             ],
         ];
@@ -761,6 +761,9 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-const-traits-10' => [__DIR__ . '/data/mixed-member/traits-const-10.php'];
         yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
+
+        // other
+        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php'];
     }
 
     /**
