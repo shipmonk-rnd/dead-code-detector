@@ -19,8 +19,8 @@ abstract class ClassMemberRef
     private bool $possibleDescendant;
 
     /**
-     * @param string|null $className Null if method is called over unknown type
-     * @param string|null $memberName Null if method name is unknown
+     * @param string|null $className Null if member is accessed over unknown type, e.g. unknown caller like $unknown->method()
+     * @param string|null $memberName Null if member name is unknown, e.g. unknown method like $class->$unknown()
      */
     public function __construct(
         ?string $className,
