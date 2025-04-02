@@ -44,10 +44,10 @@ final class CollectedUsage
         return $this->excludedBy;
     }
 
-    public function concretizeMixedUsage(string $className): self
+    public function concretizeMixedClassNameUsage(string $className): self
     {
         return new self(
-            $this->usage->concretizeMixedUsage($className),
+            $this->usage->concretizeMixedClassNameUsage($className),
             $this->excludedBy,
         );
     }

@@ -36,6 +36,10 @@ final class BlackMember
             throw new LogicException('Class name must be known');
         }
 
+        if ($member->getMemberName() === null) {
+            throw new LogicException('Member name must be known');
+        }
+
         if ($member->isPossibleDescendant()) {
             throw new LogicException('Using possible descendant does not make sense here');
         }

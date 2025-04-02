@@ -65,6 +65,8 @@ class ReflectionUsageProvider implements MemberUsageProvider
                     continue;
                 }
 
+                // ideally, we should check if T is covariant (marks children as used) or invariant (should not mark children as used)
+                // the default changed in PHP 8.4, see: https://github.com/phpstan/phpstan/issues/12459#issuecomment-2607123277
                 foreach ($reflection->getActiveTemplateTypeMap()->getTypes() as $genericType) {
                     foreach ($genericType->getObjectClassReflections() as $genericReflection) {
                         $usedConstants = [
@@ -101,9 +103,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         $usedConstants = [];
 
         if ($methodName === 'getConstants' || $methodName === 'getReflectionConstants') {
-            foreach ($genericReflection->getNativeReflection()->getReflectionConstants() as $reflectionConstant) {
-                $usedConstants[] = $this->createConstantUsage($node, $scope, $reflectionConstant->getDeclaringClass()->getName(), $reflectionConstant->getName());
-            }
+            $usedConstants[] = $this->createConstantUsage($node, $scope, $genericReflection->getName(), null);
         }
 
         if (($methodName === 'getConstant' || $methodName === 'getReflectionConstant') && count($args) === 1) {
@@ -132,9 +132,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         $usedMethods = [];
 
         if ($methodName === 'getMethods') {
-            foreach ($genericReflection->getNativeReflection()->getMethods() as $reflectionMethod) {
-                $usedMethods[] = $this->createMethodUsage($node, $scope, $reflectionMethod->getDeclaringClass()->getName(), $reflectionMethod->getName());
-            }
+            $usedMethods[] = $this->createMethodUsage($node, $scope, $genericReflection->getName(), null);
         }
 
         if ($methodName === 'getMethod' && count($args) === 1) {
@@ -183,7 +181,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Node $node,
         Scope $scope,
         string $className,
-        string $constantName
+        ?string $constantName
     ): ClassConstantUsage
     {
         return new ClassConstantUsage(
@@ -200,7 +198,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Node $node,
         Scope $scope,
         string $className,
-        string $methodName
+        ?string $methodName
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(

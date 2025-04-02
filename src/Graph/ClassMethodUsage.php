@@ -40,7 +40,7 @@ final class ClassMethodUsage extends ClassMemberUsage
         return $this->callee;
     }
 
-    public function concretizeMixedUsage(string $className): self
+    public function concretizeMixedClassNameUsage(string $className): self
     {
         if ($this->callee->getClassName() !== null) {
             throw new LogicException('Usage is not mixed, thus it cannot be concretized');

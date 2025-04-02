@@ -31,6 +31,8 @@ use function strpos;
 class DebugUsagePrinter
 {
 
+    public const ANY_MEMBER = "\0";
+
     private OutputEnhancer $outputEnhancer;
 
     private ReflectionProvider $reflectionProvider;
@@ -61,31 +63,58 @@ class DebugUsagePrinter
     }
 
     /**
-     * @param array<MemberType::*, array<string, list<CollectedUsage>>> $mixedMemberUsages
+     * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
      */
     public function printMixedMemberUsages(Output $output, array $mixedMemberUsages): void
     {
-        if ($mixedMemberUsages === [] || !$output->isDebug() || $this->mixedExcluderEnabled) {
+        if ($mixedMemberUsages === [] || !$output->isDebug()) {
+            return;
+        }
+
+        $fullyMixedUsages = [];
+
+        foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
+            if (isset($collectedUsages[self::ANY_MEMBER])) {
+                foreach ($collectedUsages[self::ANY_MEMBER] as $collectedUsage) {
+                    $fullyMixedUsages[$memberType][] = $collectedUsage;
+                }
+
+                unset($mixedMemberUsages[$memberType][self::ANY_MEMBER]);
+            }
+        }
+
+        $this->printMixedEverythingUsages($output, $fullyMixedUsages);
+        $this->printMixedClassNameUsages($output, $mixedMemberUsages);
+    }
+
+    /**
+     * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
+     */
+    private function printMixedClassNameUsages(Output $output, array $mixedMemberUsages): void
+    {
+        if ($this->mixedExcluderEnabled) {
             return;
         }
 
         $totalCount = array_sum(array_map('count', $mixedMemberUsages));
+
+        if ($totalCount === 0) {
+            return;
+        }
+
         $maxExamplesToShow = 20;
         $examplesShown = 0;
         $plural = $totalCount > 1 ? 's' : '';
-        $output->writeLineFormatted(sprintf('<fg=red>Found %d usage%s over unknown type</>:', $totalCount, $plural));
+        $output->writeLineFormatted(sprintf('<fg=yellow>Found %d usage%s over unknown type</>:', $totalCount, $plural));
 
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
             foreach ($collectedUsages as $memberName => $usages) {
                 $examplesShown++;
-                $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
-                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
+                $memberAccessString = $memberType === MemberType::METHOD ? 'method' : 'constant';
+                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberAccessString));
 
                 $exampleCaller = $this->getExampleCaller($usages);
-
-                if ($exampleCaller !== null) {
-                    $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
-                }
+                $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
 
                 $output->writeLineFormatted('');
 
@@ -105,9 +134,49 @@ class DebugUsagePrinter
     }
 
     /**
-     * @param list<CollectedUsage> $usages
+     * @param array<MemberType::*, non-empty-list<CollectedUsage>> $fullyMixedUsages
      */
-    private function getExampleCaller(array $usages): ?string
+    private function printMixedEverythingUsages(Output $output, array $fullyMixedUsages): void
+    {
+        if ($fullyMixedUsages === []) {
+            return;
+        }
+
+        foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
+            $fullyMixedCount = count($collectedUsages);
+
+            $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
+            $memberAccessString = $memberType === MemberType::METHOD ? 'call' : 'fetch';
+            $fullyMixedPlural = $fullyMixedCount > 1 ? ($memberType === MemberType::METHOD ? 's' : 'es') : '';
+            $output->writeLineFormatted(sprintf('<fg=red>Found %d UNKNOWN %s%s over UNKNOWN type!!</>', $fullyMixedCount, $memberAccessString, $fullyMixedPlural));
+
+            foreach ($collectedUsages as $usages) {
+                $output->writeLineFormatted(
+                    sprintf(
+                        ' • %s in <fg=white>%s</>',
+                        $memberType === MemberType::METHOD ? 'method call' : 'constant fetch',
+                        $this->getExampleCaller([$usages]),
+                    ),
+                );
+
+                $output->writeLineFormatted('');
+            }
+
+            $output->writeLineFormatted('');
+            $output->writeLineFormatted(sprintf(
+                'Such usages basically break whole dead code analysis, because any %s on any class can be %sed there!',
+                $memberTypeString,
+                $memberAccessString,
+            ));
+            $output->writeLineFormatted('All those usages were ignored!');
+            $output->writeLineFormatted('');
+        }
+    }
+
+    /**
+     * @param non-empty-list<CollectedUsage> $usages
+     */
+    private function getExampleCaller(array $usages): string
     {
         foreach ($usages as $usage) {
             $origin = $usage->getUsage()->getOrigin();
@@ -117,7 +186,10 @@ class DebugUsagePrinter
             }
         }
 
-        return null;
+        foreach ($usages as $usage) {
+            $origin = $usage->getUsage()->getOrigin();
+            return $this->outputEnhancer->getOriginReference($origin); // show virtual usages only as last resort
+        }
     }
 
     /**

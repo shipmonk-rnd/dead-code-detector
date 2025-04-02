@@ -12,7 +12,7 @@ final class ClassConstantRef extends ClassMemberRef
 
     public function __construct(
         ?string $className,
-        string $constantName,
+        ?string $constantName,
         bool $possibleDescendant
     )
     {

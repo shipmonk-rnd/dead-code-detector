@@ -14,13 +14,17 @@ abstract class ClassMemberRef
 
     private ?string $className;
 
-    private string $memberName;
+    private ?string $memberName;
 
     private bool $possibleDescendant;
 
+    /**
+     * @param string|null $className Null if member is accessed over unknown type, e.g. unknown caller like $unknown->method()
+     * @param string|null $memberName Null if member name is unknown, e.g. unknown method like $class->$unknown()
+     */
     public function __construct(
         ?string $className,
-        string $memberName,
+        ?string $memberName,
         bool $possibleDescendant
     )
     {
@@ -34,7 +38,7 @@ abstract class ClassMemberRef
         return $this->className;
     }
 
-    public function getMemberName(): string
+    public function getMemberName(): ?string
     {
         return $this->memberName;
     }
@@ -47,13 +51,15 @@ abstract class ClassMemberRef
     public function toHumanString(): string
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        return $classRef . '::' . $this->memberName;
+        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
+        return $classRef . '::' . $memberRef;
     }
 
     public function toKey(): string
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        return static::buildKey($classRef, $this->memberName);
+        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
+        return static::buildKey($classRef, $memberRef);
     }
 
     abstract public static function buildKey(string $typeName, string $memberName): string;

@@ -219,13 +219,59 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
-        <fg=red>Found 4 usages over unknown type</>:
+        <fg=yellow>Found 4 usages over unknown type</>:
         $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:46</>
         $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:49</>
         $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:52</>
         $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:57</>
 
         Thus, any member named the same is considered used, no matter its declaring class!
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDiagnoseFullyMixedCalls(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-method.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $ec = ''; // hack editorconfig checker to ignore wrong indentation
+        $expectedOutput = <<<"OUTPUT"
+        <fg=red>Found 1 UNKNOWN call over UNKNOWN type!!</>
+        $ec • method call in <fg=white>data/mixed-member/full-mixed-method.php:12</>
+
+
+        Such usages basically break whole dead code analysis, because any method on any class can be called there!
+        All those usages were ignored!
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDiagnoseFullyMixedFetches(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-const.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $ec = ''; // hack editorconfig checker to ignore wrong indentation
+        $expectedOutput = <<<"OUTPUT"
+        <fg=red>Found 1 UNKNOWN fetch over UNKNOWN type!!</>
+        $ec • constant fetch in <fg=white>data/mixed-member/full-mixed-const.php:12</>
+
+
+        Such usages basically break whole dead code analysis, because any constant on any class can be fetched there!
+        All those usages were ignored!
 
 
         OUTPUT;
@@ -367,14 +413,14 @@ class DeadCodeRuleTest extends RuleTestCase
         $output->expects(self::atLeastOnce())
             ->method('isDebug')
             ->willReturn(true);
-        $output->expects(self::atLeastOnce())
+        $output->expects(self::any())
             ->method('writeFormatted')
             ->willReturnCallback(
                 static function (string $message) use (&$actualOutput): void {
                     $actualOutput .= $message;
                 },
             );
-        $output->expects(self::atLeastOnce())
+        $output->expects(self::any())
             ->method('writeLineFormatted')
             ->willReturnCallback(
                 static function (string $message) use (&$actualOutput): void {
@@ -604,6 +650,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-trait-21' => [__DIR__ . '/data/methods/traits-21.php'];
         yield 'method-trait-22' => [__DIR__ . '/data/methods/traits-22.php'];
         yield 'method-trait-23' => [__DIR__ . '/data/methods/traits-23.php'];
+        yield 'method-trait-24' => [__DIR__ . '/data/methods/traits-24.php'];
+        yield 'method-trait-25' => [__DIR__ . '/data/methods/traits-25.php'];
         yield 'method-nullsafe' => [__DIR__ . '/data/methods/nullsafe.php'];
         yield 'method-parent-1' => [__DIR__ . '/data/methods/parent-1.php'];
         yield 'method-parent-2' => [__DIR__ . '/data/methods/parent-2.php'];
@@ -666,6 +714,53 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-14' => [__DIR__ . '/data/constants/traits-14.php'];
         yield 'const-traits-21' => [__DIR__ . '/data/constants/traits-21.php'];
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
+
+        // mixed member
+        yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
+        yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
+        yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
+        yield 'mixed-member-indirect-4' => [__DIR__ . '/data/mixed-member/indirect-interface-4.php'];
+        yield 'mixed-member-indirect-5' => [__DIR__ . '/data/mixed-member/indirect-interface-5.php'];
+        yield 'mixed-member-indirect-6' => [__DIR__ . '/data/mixed-member/indirect-interface-6.php'];
+        yield 'mixed-member-indirect-7' => [__DIR__ . '/data/mixed-member/indirect-interface-7.php'];
+        yield 'mixed-member-indirect-8' => [__DIR__ . '/data/mixed-member/indirect-interface-8.php'];
+        yield 'mixed-member-overwriting-1' => [__DIR__ . '/data/mixed-member/overwriting-methods-1.php'];
+        yield 'mixed-member-overwriting-2' => [__DIR__ . '/data/mixed-member/overwriting-methods-2.php'];
+        yield 'mixed-member-overwriting-3' => [__DIR__ . '/data/mixed-member/overwriting-methods-3.php'];
+        yield 'mixed-member-overwriting-4' => [__DIR__ . '/data/mixed-member/overwriting-methods-4.php'];
+        yield 'mixed-member-overwriting-5' => [__DIR__ . '/data/mixed-member/overwriting-methods-5.php'];
+        yield 'mixed-member-hierarchy-1' => [__DIR__ . '/data/mixed-member/hierarchy-1.php'];
+        yield 'mixed-member-hierarchy-2' => [__DIR__ . '/data/mixed-member/hierarchy-2.php'];
+        yield 'mixed-member-method-trait-1' => [__DIR__ . '/data/mixed-member/traits-1.php'];
+        yield 'mixed-member-method-trait-2' => [__DIR__ . '/data/mixed-member/traits-2.php'];
+        yield 'mixed-member-method-trait-3' => [__DIR__ . '/data/mixed-member/traits-3.php'];
+        yield 'mixed-member-method-trait-5' => [__DIR__ . '/data/mixed-member/traits-5.php'];
+        yield 'mixed-member-method-trait-6' => [__DIR__ . '/data/mixed-member/traits-6.php'];
+        yield 'mixed-member-method-trait-7' => [__DIR__ . '/data/mixed-member/traits-7.php'];
+        yield 'mixed-member-method-trait-8' => [__DIR__ . '/data/mixed-member/traits-8.php'];
+        yield 'mixed-member-method-trait-9' => [__DIR__ . '/data/mixed-member/traits-9.php'];
+        yield 'mixed-member-method-trait-10' => [__DIR__ . '/data/mixed-member/traits-10.php'];
+        yield 'mixed-member-method-trait-12' => [__DIR__ . '/data/mixed-member/traits-12.php'];
+        yield 'mixed-member-method-trait-14' => [__DIR__ . '/data/mixed-member/traits-14.php'];
+        yield 'mixed-member-method-trait-15' => [__DIR__ . '/data/mixed-member/traits-15.php'];
+        yield 'mixed-member-method-trait-16' => [__DIR__ . '/data/mixed-member/traits-16.php'];
+        yield 'mixed-member-method-trait-17' => [__DIR__ . '/data/mixed-member/traits-17.php'];
+        yield 'mixed-member-method-trait-18' => [__DIR__ . '/data/mixed-member/traits-18.php'];
+        yield 'mixed-member-method-trait-19' => [__DIR__ . '/data/mixed-member/traits-19.php'];
+        yield 'mixed-member-method-trait-20' => [__DIR__ . '/data/mixed-member/traits-20.php'];
+        yield 'mixed-member-method-trait-21' => [__DIR__ . '/data/mixed-member/traits-21.php'];
+        yield 'mixed-member-method-trait-22' => [__DIR__ . '/data/mixed-member/traits-22.php'];
+        yield 'mixed-member-method-trait-23' => [__DIR__ . '/data/mixed-member/traits-23.php'];
+        yield 'mixed-member-method-trait-25' => [__DIR__ . '/data/mixed-member/traits-25.php'];
+        yield 'mixed-member-const-traits-1' => [__DIR__ . '/data/mixed-member/traits-const-1.php'];
+        yield 'mixed-member-const-traits-2' => [__DIR__ . '/data/mixed-member/traits-const-2.php'];
+        yield 'mixed-member-const-traits-3' => [__DIR__ . '/data/mixed-member/traits-const-3.php'];
+        yield 'mixed-member-const-traits-5' => [__DIR__ . '/data/mixed-member/traits-const-5.php'];
+        yield 'mixed-member-const-traits-7' => [__DIR__ . '/data/mixed-member/traits-const-7.php'];
+        yield 'mixed-member-const-traits-9' => [__DIR__ . '/data/mixed-member/traits-const-9.php'];
+        yield 'mixed-member-const-traits-10' => [__DIR__ . '/data/mixed-member/traits-const-10.php'];
+        yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
+        yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
     }
 
     /**
@@ -757,7 +852,8 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
                 {
-                    return strpos($usage->getMemberRef()->getMemberName(), 'mixed') === 0;
+                    $memberName = $usage->getMemberRef()->getMemberName();
+                    return $memberName !== null && strpos($memberName, 'mixed') === 0;
                 }
 
             },

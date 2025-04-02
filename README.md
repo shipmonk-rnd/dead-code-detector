@@ -316,6 +316,18 @@ Found 2 usages over unknown type:
  • setStreet method, for example in App\Entity\User::updateAddress
 ```
 
+## Access of unknown member
+- In order to prevent false positives, we support even calls of unknown methods (e.g. `$class->$unknown()`) by marking all possible methods as used
+- If we find unknown call over unknown type (e.g. `$unknownClass->$unknownMethod()`), we ignore such usage (as it would mark all methods in codebase as used) and show warning in debug verbosity (`-vvv`)
+- Note that some calls over `ReflectionClass` also emit unknown method calls:
+
+```php
+/** @var ReflectionClass<Foo> $reflection */
+$methods = $reflection->getMethods(); // all Foo methods are used here
+```
+
+- All that applies even to constant fetches (e.g. `Foo::{$unknown}`)
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:
