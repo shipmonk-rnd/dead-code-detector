@@ -112,7 +112,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * memberType => [memberName => CollectedUsage[]]
      *
-     * @var array<MemberType::*, array<string, list<CollectedUsage>>>
+     * @var array<MemberType::*, array<string, non-empty-list<CollectedUsage>>>
      */
     private array $mixedClassNameUsages = [];
 
@@ -173,12 +173,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     $className = $memberUsage->getMemberRef()->getClassName();
                     $memberName = $memberUsage->getMemberRef()->getMemberName();
 
-                    if ($className === null && $memberName === null) {
-                        continue; // such mixed over mixed usages cause "everything might be used", lets ignore it
-                    }
-
                     if ($className === null) {
-                        $this->mixedClassNameUsages[$memberUsage->getMemberType()][$memberName][] = $collectedUsage;
+                        $memberNameString = $memberName ?? DebugUsagePrinter::ANY_MEMBER;
+                        $this->mixedClassNameUsages[$memberUsage->getMemberType()][$memberNameString][] = $collectedUsage;
                         continue;
                     }
 

@@ -219,13 +219,59 @@ class DeadCodeRuleTest extends RuleTestCase
 
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
-        <fg=red>Found 4 usages over unknown type</>:
+        <fg=yellow>Found 4 usages over unknown type</>:
         $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:46</>
         $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:49</>
         $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:52</>
         $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:57</>
 
         Thus, any member named the same is considered used, no matter its declaring class!
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDiagnoseFullyMixedCalls(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-method.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $ec = ''; // hack editorconfig checker to ignore wrong indentation
+        $expectedOutput = <<<"OUTPUT"
+        <fg=red>Found 1 UNKNOWN call over UNKNOWN type!!</>
+        $ec • method call in <fg=white>data/mixed-member/full-mixed-method.php:12</>
+
+
+        Such usages basically break whole dead code analysis, because any method on any class can be called there!
+        All those usages were ignored!
+
+
+        OUTPUT;
+
+        self::assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testDiagnoseFullyMixedFetches(): void
+    {
+        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-const.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $ec = ''; // hack editorconfig checker to ignore wrong indentation
+        $expectedOutput = <<<"OUTPUT"
+        <fg=red>Found 1 UNKNOWN fetch over UNKNOWN type!!</>
+        $ec • constant fetch in <fg=white>data/mixed-member/full-mixed-const.php:12</>
+
+
+        Such usages basically break whole dead code analysis, because any constant on any class can be fetched there!
+        All those usages were ignored!
 
 
         OUTPUT;
@@ -367,14 +413,14 @@ class DeadCodeRuleTest extends RuleTestCase
         $output->expects(self::atLeastOnce())
             ->method('isDebug')
             ->willReturn(true);
-        $output->expects(self::atLeastOnce())
+        $output->expects(self::any())
             ->method('writeFormatted')
             ->willReturnCallback(
                 static function (string $message) use (&$actualOutput): void {
                     $actualOutput .= $message;
                 },
             );
-        $output->expects(self::atLeastOnce())
+        $output->expects(self::any())
             ->method('writeLineFormatted')
             ->willReturnCallback(
                 static function (string $message) use (&$actualOutput): void {
@@ -670,6 +716,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
         // mixed member
+        yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
+        yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
         yield 'mixed-member-indirect-4' => [__DIR__ . '/data/mixed-member/indirect-interface-4.php'];
         yield 'mixed-member-indirect-5' => [__DIR__ . '/data/mixed-member/indirect-interface-5.php'];
