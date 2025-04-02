@@ -65,6 +65,8 @@ class ReflectionUsageProvider implements MemberUsageProvider
                     continue;
                 }
 
+                // ideally, we should check if T is covariant (marks children as used) or invariant (should not mark children as used)
+                // the default changed in PHP 8.4, see: https://github.com/phpstan/phpstan/issues/12459#issuecomment-2607123277
                 foreach ($reflection->getActiveTemplateTypeMap()->getTypes() as $genericType) {
                     foreach ($genericType->getObjectClassReflections() as $genericReflection) {
                         $usedConstants = [
