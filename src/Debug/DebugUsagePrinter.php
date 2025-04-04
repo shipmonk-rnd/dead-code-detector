@@ -70,8 +70,8 @@ class DebugUsagePrinter
         $mixedEverythingUsages = [];
         $mixedClassNameUsages = [];
 
-        foreach ($mixedMemberUsages as $memberType => $collectedUsageByMemberName) {
-            foreach ($collectedUsageByMemberName as $memberName => $collectedUsages) {
+        foreach ($mixedMemberUsages as $memberType => $collectedUsagesByMemberName) {
+            foreach ($collectedUsagesByMemberName as $memberName => $collectedUsages) {
                 foreach ($collectedUsages as $collectedUsage) {
                     if ($collectedUsage->isExcluded()) {
                         continue;
