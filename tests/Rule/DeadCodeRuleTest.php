@@ -503,6 +503,10 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1 to test enum case removal');
+        }
+
         $writtenOutput = '';
 
         $output = $this->createOutput();
@@ -792,11 +796,11 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
         // enums
-        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php'];
-        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php'];
+        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
+        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
 
         // mixed member
-        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php'];
+        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
@@ -845,7 +849,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
 
         // other
-        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php'];
+        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];
+        yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php', self::requiresPhp(8_01_00)];
     }
 
     /**
