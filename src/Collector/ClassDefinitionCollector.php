@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\Enum_;
+use PhpParser\Node\Stmt\EnumCase;
 use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
@@ -25,6 +26,7 @@ use function count;
  * @implements Collector<ClassLike, array{
  *       kind: string,
  *       name: string,
+ *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
@@ -52,6 +54,7 @@ class ClassDefinitionCollector implements Collector
      * @return array{
      *      kind: string,
      *      name: string,
+     *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
@@ -73,6 +76,8 @@ class ClassDefinitionCollector implements Collector
         $reflection = $this->reflectionProvider->getClass($typeName);
 
         $methods = [];
+        $constants = [];
+        $cases = [];
 
         foreach ($node->getMethods() as $method) {
             $methods[$method->name->toString()] = [
@@ -83,8 +88,6 @@ class ClassDefinitionCollector implements Collector
             ];
         }
 
-        $constants = [];
-
         foreach ($node->getConstants() as $constant) {
             foreach ($constant->consts as $const) {
                 $constants[$const->name->toString()] = [
@@ -93,10 +96,18 @@ class ClassDefinitionCollector implements Collector
             }
         }
 
+        foreach ($this->getEnumCases($node) as $case) {
+            $cases[$case->name->toString()] = [
+                'line' => $case->name->getStartLine(),
+            ];
+
+        }
+
         return [
             'kind' => $kind,
             'name' => $typeName,
             'methods' => $methods,
+            'cases' => $cases,
             'constants' => $constants,
             'parents' => $this->getParents($reflection),
             'traits' => $this->getTraits($node),
@@ -180,6 +191,26 @@ class ClassDefinitionCollector implements Collector
         }
 
         throw new LogicException('Unknown class-like node');
+    }
+
+    /**
+     * @return list<EnumCase>
+     */
+    private function getEnumCases(ClassLike $node): array
+    {
+        if (!$node instanceof Enum_) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($node->stmts as $stmt) {
+            if ($stmt instanceof EnumCase) {
+                $result[] = $stmt;
+            }
+        }
+
+        return $result;
     }
 
 }
