@@ -13,8 +13,6 @@ services:
 
     -
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
-        arguments:
-            mixedExcluderEnabled: %shipmonkDeadCode.usageExcluders.usageOverMixed.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider

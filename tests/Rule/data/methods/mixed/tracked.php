@@ -36,6 +36,7 @@ class Implementor implements IFace {
     public function getter4() {}
     public function getter5() {} // error: Unused DeadMixed1\Implementor::getter5
     public function getter6() {}
+    public function mixedGetter7() {} // error: Unused DeadMixed1\Implementor::mixedGetter7 (all usages excluded by mixedPrefix excluder)
 
 }
 
@@ -44,6 +45,7 @@ class Tester
     function __construct($mixed, string $notClass, object $object, IFace $iface, int|Clazz $maybeClass)
     {
         $mixed->getter1(); // may be valid call
+        $mixed->mixedGetter7(); // excluded call
 
         if (!$mixed instanceof Clazz) {
             $mixed->getter2(); // ideally, should mark only IFace, not Clazz (not implemented)

@@ -44,18 +44,14 @@ class DebugUsagePrinter
      */
     private array $debugMembers;
 
-    private bool $mixedExcluderEnabled;
-
     public function __construct(
         Container $container,
         OutputEnhancer $outputEnhancer,
-        ReflectionProvider $reflectionProvider,
-        bool $mixedExcluderEnabled
+        ReflectionProvider $reflectionProvider
     )
     {
         $this->outputEnhancer = $outputEnhancer;
         $this->reflectionProvider = $reflectionProvider;
-        $this->mixedExcluderEnabled = $mixedExcluderEnabled;
         $this->debugMembers = $this->buildDebugMemberKeys(
             // @phpstan-ignore offsetAccess.nonOffsetAccessible, offsetAccess.nonOffsetAccessible, missingType.checkedException, argument.type
             $container->getParameter('shipmonkDeadCode')['debug']['usagesOf'], // prevents https://github.com/phpstan/phpstan/issues/12740
@@ -71,20 +67,27 @@ class DebugUsagePrinter
             return;
         }
 
-        $fullyMixedUsages = [];
+        $mixedEverythingUsages = [];
+        $mixedClassNameUsages = [];
 
-        foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
-            if (isset($collectedUsages[self::ANY_MEMBER])) {
-                foreach ($collectedUsages[self::ANY_MEMBER] as $collectedUsage) {
-                    $fullyMixedUsages[$memberType][] = $collectedUsage;
+        foreach ($mixedMemberUsages as $memberType => $collectedUsageByMemberName) {
+            foreach ($collectedUsageByMemberName as $memberName => $collectedUsages) {
+                foreach ($collectedUsages as $collectedUsage) {
+                    if ($collectedUsage->isExcluded()) {
+                        continue;
+                    }
+
+                    if ($memberName === self::ANY_MEMBER) {
+                        $mixedEverythingUsages[$memberType][] = $collectedUsage;
+                    } else {
+                        $mixedClassNameUsages[$memberType][$memberName][] = $collectedUsage;
+                    }
                 }
-
-                unset($mixedMemberUsages[$memberType][self::ANY_MEMBER]);
             }
         }
 
-        $this->printMixedEverythingUsages($output, $fullyMixedUsages);
-        $this->printMixedClassNameUsages($output, $mixedMemberUsages);
+        $this->printMixedEverythingUsages($output, $mixedEverythingUsages);
+        $this->printMixedClassNameUsages($output, $mixedClassNameUsages);
     }
 
     /**
@@ -92,10 +95,6 @@ class DebugUsagePrinter
      */
     private function printMixedClassNameUsages(Output $output, array $mixedMemberUsages): void
     {
-        if ($this->mixedExcluderEnabled) {
-            return;
-        }
-
         $totalCount = array_sum(array_map('count', $mixedMemberUsages));
 
         if ($totalCount === 0) {

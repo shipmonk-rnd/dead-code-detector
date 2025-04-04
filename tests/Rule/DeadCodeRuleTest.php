@@ -93,7 +93,6 @@ class DeadCodeRuleTest extends RuleTestCase
                     $container,
                     $this->createOutputEnhancer(),
                     self::createReflectionProvider(),
-                    !$this->trackMixedAccess,
                 ),
                 new ClassHierarchy(),
                 !$this->emitErrorsInGroups,
@@ -221,10 +220,10 @@ class DeadCodeRuleTest extends RuleTestCase
         $ec = ''; // hack editorconfig checker to ignore wrong indentation
         $expectedOutput = <<<"OUTPUT"
         <fg=yellow>Found 4 usages over unknown type</>:
-        $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:46</>
-        $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:49</>
-        $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:52</>
-        $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:57</>
+        $ec • <fg=white>getter1</> method, for example in <fg=white>data/methods/mixed/tracked.php:47</>
+        $ec • <fg=white>getter2</> method, for example in <fg=white>data/methods/mixed/tracked.php:51</>
+        $ec • <fg=white>getter3</> method, for example in <fg=white>data/methods/mixed/tracked.php:54</>
+        $ec • <fg=white>staticMethod</> method, for example in <fg=white>data/methods/mixed/tracked.php:59</>
 
         Thus, any member named the same is considered used, no matter its declaring class!
 
@@ -856,7 +855,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function getIdentifier(): string
                 {
-                    return 'mixed';
+                    return 'mixedPrefix';
                 }
 
                 public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
