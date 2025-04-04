@@ -3,3 +3,7 @@
 interface Remove
 {
 }
+
+enum MyEnum
+{
+}

@@ -28,6 +28,10 @@ class Child2 extends AbstractClass
     }
 }
 
+enum MyEnum
+{
+}
+
 function testIt(Child2 $child2): void
 {
     $child2->foo();

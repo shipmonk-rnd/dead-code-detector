@@ -791,7 +791,12 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-21' => [__DIR__ . '/data/constants/traits-21.php'];
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
+        // enums
+        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php'];
+        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php'];
+
         // mixed member
+        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php'];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];

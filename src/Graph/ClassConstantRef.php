@@ -12,11 +12,11 @@ final class ClassConstantRef extends ClassMemberRef
 
     public function __construct(
         ?string $className,
-        ?string $constantName,
+        ?string $enumCaseName,
         bool $possibleDescendant
     )
     {
-        parent::__construct($className, $constantName, $possibleDescendant);
+        parent::__construct($className, $enumCaseName, $possibleDescendant);
     }
 
     public static function buildKey(
