@@ -11,7 +11,6 @@ use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
-use PHPStan\Reflection\ClassReflection;
 use ReflectionClass;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -68,14 +67,18 @@ class ReflectionUsageProvider implements MemberUsageProvider
                 // ideally, we should check if T is covariant (marks children as used) or invariant (should not mark children as used)
                 // the default changed in PHP 8.4, see: https://github.com/phpstan/phpstan/issues/12459#issuecomment-2607123277
                 foreach ($reflection->getActiveTemplateTypeMap()->getTypes() as $genericType) {
-                    foreach ($genericType->getObjectClassReflections() as $genericReflection) {
+                    $genericClassNames = $genericType->getObjectClassNames() === []
+                        ? [null] // call over ReflectionClass without specifying the generic type
+                        : $genericType->getObjectClassNames();
+
+                    foreach ($genericClassNames as $genericClassName) {
                         $usedConstants = [
                             ...$usedConstants,
-                            ...$this->extractConstantsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $node, $scope),
+                            ...$this->extractConstantsUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
                         ];
                         $usedMethods = [
                             ...$usedMethods,
-                            ...$this->extractMethodsUsedByReflection($methodName, $genericReflection, $node->getArgs(), $node, $scope),
+                            ...$this->extractMethodsUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
                         ];
                     }
                 }
@@ -93,8 +96,8 @@ class ReflectionUsageProvider implements MemberUsageProvider
      * @return list<ClassConstantUsage>
      */
     private function extractConstantsUsedByReflection(
+        ?string $genericClassName,
         string $methodName,
-        ClassReflection $genericReflection,
         array $args,
         Node $node,
         Scope $scope
@@ -103,14 +106,14 @@ class ReflectionUsageProvider implements MemberUsageProvider
         $usedConstants = [];
 
         if ($methodName === 'getConstants' || $methodName === 'getReflectionConstants') {
-            $usedConstants[] = $this->createConstantUsage($node, $scope, $genericReflection->getName(), null);
+            $usedConstants[] = $this->createConstantUsage($node, $scope, $genericClassName, null);
         }
 
         if (($methodName === 'getConstant' || $methodName === 'getReflectionConstant') && count($args) === 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedConstants[] = $this->createConstantUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
+                $usedConstants[] = $this->createConstantUsage($node, $scope, $genericClassName, $constantString->getValue());
             }
         }
 
@@ -122,8 +125,8 @@ class ReflectionUsageProvider implements MemberUsageProvider
      * @return list<ClassMethodUsage>
      */
     private function extractMethodsUsedByReflection(
+        ?string $genericClassName,
         string $methodName,
-        ClassReflection $genericReflection,
         array $args,
         Node $node,
         Scope $scope
@@ -132,23 +135,19 @@ class ReflectionUsageProvider implements MemberUsageProvider
         $usedMethods = [];
 
         if ($methodName === 'getMethods') {
-            $usedMethods[] = $this->createMethodUsage($node, $scope, $genericReflection->getName(), null);
+            $usedMethods[] = $this->createMethodUsage($node, $scope, $genericClassName, null);
         }
 
         if ($methodName === 'getMethod' && count($args) === 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedMethods[] = $this->createMethodUsage($node, $scope, $genericReflection->getName(), $constantString->getValue());
+                $usedMethods[] = $this->createMethodUsage($node, $scope, $genericClassName, $constantString->getValue());
             }
         }
 
         if (in_array($methodName, ['getConstructor', 'newInstance', 'newInstanceArgs'], true)) {
-            $constructor = $genericReflection->getNativeReflection()->getConstructor();
-
-            if ($constructor !== null) {
-                $usedMethods[] = $this->createMethodUsage($node, $scope, $constructor->getDeclaringClass()->getName(), '__construct');
-            }
+            $usedMethods[] = $this->createMethodUsage($node, $scope, $genericClassName, '__construct');
         }
 
         return $usedMethods;
@@ -180,7 +179,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
     private function createConstantUsage(
         Node $node,
         Scope $scope,
-        string $className,
+        ?string $className,
         ?string $constantName
     ): ClassConstantUsage
     {
@@ -197,7 +196,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
     private function createMethodUsage(
         Node $node,
         Scope $scope,
-        string $className,
+        ?string $className,
         ?string $methodName
     ): ClassMethodUsage
     {
