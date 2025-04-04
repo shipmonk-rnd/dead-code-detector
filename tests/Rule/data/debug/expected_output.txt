@@ -39,7 +39,7 @@ DebugExclude\Foo::mixedExcluder1
 | all usages are excluded
 |
 | Found 1 usage:
-|  • data/debug/exclude.php:15 - excluded by mixed excluder
+|  • data/debug/exclude.php:15 - excluded by mixedPrefix excluder
 
 
 DebugExclude\Foo::mixedExcluder2
@@ -48,7 +48,7 @@ DebugExclude\Foo::mixedExcluder2
 | all usages are excluded
 |
 | Found 1 usage:
-|  • data/debug/exclude.php:16 - excluded by mixed excluder
+|  • data/debug/exclude.php:16 - excluded by mixedPrefix excluder
 
 
 DebugNever\Foo::__get
