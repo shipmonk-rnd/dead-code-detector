@@ -56,7 +56,6 @@ includes:
 - annotations like `@test`, `@before`, `@afterClass` etc
 - attributes like `#[Test]`, `#[Before]`, `#[AfterClass]` etc
 
-
 #### PHPStan:
 - constructor calls for DIC services (rules, extensions, ...)
 
@@ -64,6 +63,9 @@ includes:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
 
+#### Twig:
+- `#[AsTwigFilter]`, `#[AsTwigFunction]`, `#[AsTwigTest]`
+- `new TwigFilter(..., callback)`, `new TwigFunction(..., callback)`, `new TwigTest(..., callback)`
 
 All those libraries are autoenabled when found within your composer dependencies.
 If you want to force enable/disable some of them, you can:
