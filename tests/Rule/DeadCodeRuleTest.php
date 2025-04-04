@@ -39,6 +39,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
@@ -680,6 +681,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
+        yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
@@ -830,6 +832,9 @@ class DeadCodeRuleTest extends RuleTestCase
                 $this->createContainerMockWithSymfonyConfig(),
                 true,
                 __DIR__ . '/data/providers/symfony/',
+            ),
+            new TwigUsageProvider(
+                true,
             ),
         ];
     }

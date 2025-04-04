@@ -45,6 +45,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.twig.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -142,6 +149,8 @@ parameters:
             symfony:
                 enabled: null
                 configDir: null
+            twig:
+                enabled: null
             doctrine:
                 enabled: null
             nette:
@@ -175,6 +184,9 @@ parametersSchema:
             symfony: structure([
                 enabled: schema(bool(), nullable())
                 configDir: schema(string(), nullable())
+            ])
+            twig: structure([
+                enabled: schema(bool(), nullable())
             ])
             doctrine: structure([
                 enabled: schema(bool(), nullable())
