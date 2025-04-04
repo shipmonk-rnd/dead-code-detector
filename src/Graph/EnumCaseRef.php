@@ -7,29 +7,28 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 /**
  * @immutable
  */
-final class ClassConstantRef extends ClassMemberRef
+final class EnumCaseRef extends ClassMemberRef
 {
 
     public function __construct(
         ?string $className,
-        ?string $enumCaseName,
-        bool $possibleDescendant
+        ?string $enumCaseName
     )
     {
-        parent::__construct($className, $enumCaseName, $possibleDescendant);
+        parent::__construct($className, $enumCaseName, false);
     }
 
     public static function buildKey(string $typeName, string $memberName): string
     {
-        return 'c/' . $typeName . '::' . $memberName;
+        return 'e/' . $typeName . '::' . $memberName;
     }
 
     /**
-     * @return MemberType::CONSTANT
+     * @return MemberType::ENUM_CASE
      */
     public function getMemberType(): int
     {
-        return MemberType::CONSTANT;
+        return MemberType::ENUM_CASE;
     }
 
 }

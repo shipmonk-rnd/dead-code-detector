@@ -1,4 +1,5 @@
  • Removed constant Remove::DEAD
  • Removed method Remove::dead
+ • Removed enum case MyEnum::DEAD
 
-Removed 2 dead members in 1 file.
+Removed 3 dead members in 1 file.

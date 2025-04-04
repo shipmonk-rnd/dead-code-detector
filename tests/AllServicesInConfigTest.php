@@ -20,6 +20,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
+use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
@@ -59,11 +61,13 @@ class AllServicesInConfigTest extends PHPStanTestCase
         $excluded = [
             VirtualUsageData::class,
             UsageOrigin::class,
+            EnumCaseUsage::class,
             ClassMethodUsage::class,
             ClassMethodRef::class,
             ClassConstantRef::class,
             ClassConstantUsage::class,
             ClassMemberRef::class,
+            EnumCaseRef::class,
             ClassMemberUsage::class,
             ClassLikeKind::class,
             CollectedUsage::class,
