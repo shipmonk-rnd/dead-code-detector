@@ -150,6 +150,10 @@ class DebugUsagePrinter
         }
 
         foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
+            if ($memberType === MemberType::ENUM_CASE) {
+                continue; // any fully mixed fetch is emitted twice (once as enum, once as const); report only once here
+            }
+
             $fullyMixedCount = count($collectedUsages);
 
             $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';

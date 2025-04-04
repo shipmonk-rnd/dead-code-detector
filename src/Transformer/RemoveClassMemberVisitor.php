@@ -9,6 +9,7 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\EnumCase;
 use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
@@ -33,16 +34,24 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
     private array $deadConstants;
 
     /**
+     * @var array<string, true>
+     */
+    private array $deadEnumCases;
+
+    /**
      * @param list<string> $deadMethods
      * @param list<string> $deadConstants
+     * @param list<string> $deadEnumCases
      */
     public function __construct(
         array $deadMethods,
-        array $deadConstants
+        array $deadConstants,
+        array $deadEnumCases
     )
     {
         $this->deadMethods = array_fill_keys($deadMethods, true);
         $this->deadConstants = array_fill_keys($deadConstants, true);
+        $this->deadEnumCases = array_fill_keys($deadEnumCases, true);
     }
 
     public function enterNode(Node $node): ?Node
@@ -88,6 +97,14 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $constKey = $this->getNamespacedName($node->name);
 
             if (isset($this->deadConstants[$constKey])) {
+                return NodeTraverser::REMOVE_NODE;
+            }
+        }
+
+        if ($node instanceof EnumCase) {
+            $enumCaseKey = $this->getNamespacedName($node->name);
+
+            if (isset($this->deadEnumCases[$enumCaseKey])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }

@@ -27,6 +27,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
 use function array_key_last;
@@ -49,6 +50,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';
     public const IDENTIFIER_CONSTANT = 'shipmonk.deadConstant';
+    public const IDENTIFIER_ENUM_CASE = 'shipmonk.deadEnumCase';
 
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,
@@ -79,6 +81,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      *      kind: string,
      *      name: string,
      *      file: string,
+     *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
@@ -191,6 +194,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     'kind' => $typeData['kind'],
                     'name' => $typeName,
                     'file' => $file,
+                    'cases' => $typeData['cases'],
                     'constants' => $typeData['constants'],
                     'methods' => $typeData['methods'],
                     'parents' => $typeData['parents'],
@@ -205,6 +209,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
             $constants = $typeDefinition['constants'];
+            $cases = $typeDefinition['cases'];
             $file = $typeDefinition['file'];
 
             $ancestorNames = $this->getAncestorNames($typeName);
@@ -226,12 +231,20 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
                 $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
             }
+
+            foreach ($cases as $enumCaseName => $enumCaseData) {
+                $enumCaseRef = new EnumCaseRef($typeName, $enumCaseName);
+                $enumCaseKey = $enumCaseRef->toKey();
+
+                $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);
+            }
         }
 
         foreach ($this->typeDefinitions as $typeName => $typeDef) {
             $memberNamesForMixedExpand = [
                 MemberType::METHOD => array_keys($typeDef['methods']),
                 MemberType::CONSTANT => array_keys($typeDef['constants']),
+                MemberType::ENUM_CASE => array_keys($typeDef['cases']),
             ];
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
@@ -574,6 +587,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         } elseif ($memberType === MemberType::CONSTANT) {
             return ClassConstantRef::buildKey($className, $memberName);
 
+        } elseif ($memberType === MemberType::ENUM_CASE) {
+            return EnumCaseRef::buildKey($className, $memberName);
+
         } else {
             throw new LogicException('Unsupported member type');
         }
@@ -815,7 +831,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param MemberType::* $memberType
-     * @return 'methods'|'constants'
+     * @return 'methods'|'constants'|'cases'
      */
     private function getTypeDefinitionKeyForMemberType(int $memberType): string
     {
@@ -823,6 +839,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             return 'methods';
         } elseif ($memberType === MemberType::CONSTANT) {
             return 'constants';
+        } elseif ($memberType === MemberType::ENUM_CASE) {
+            return 'cases';
         }
 
         throw new LogicException('Invalid member type'); // @phpstan-ignore deadCode.unreachable (keep it future safe)

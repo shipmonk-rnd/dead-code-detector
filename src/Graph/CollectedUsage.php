@@ -112,15 +112,24 @@ final class CollectedUsage
         );
         $exclusionReason = $result['e'];
 
-        $usage = $memberType === MemberType::CONSTANT
-            ? new ClassConstantUsage(
+        if ($memberType === MemberType::CONSTANT) {
+            $usage = new ClassConstantUsage(
                 $origin,
                 new ClassConstantRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
-            )
-            : new ClassMethodUsage(
+            );
+        } elseif ($memberType === MemberType::METHOD) {
+            $usage = new ClassMethodUsage(
                 $origin,
                 new ClassMethodRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
             );
+        } elseif ($memberType === MemberType::ENUM_CASE) {
+            $usage = new EnumCaseUsage(
+                $origin,
+                new EnumCaseRef($result['m']['c'], $result['m']['m']),
+            );
+        } else {
+            throw new LogicException('Unknown member type: ' . $memberType);
+        }
 
         return new self($usage, $exclusionReason);
     }
