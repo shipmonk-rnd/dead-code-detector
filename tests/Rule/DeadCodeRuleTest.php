@@ -760,7 +760,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
-        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_00_00)];
+        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];

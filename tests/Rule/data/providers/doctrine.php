@@ -2,12 +2,21 @@
 
 namespace Doctrine;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
 
+enum InvoiceStatus: string {
+    case Closed = 'closed';
+    case Open = 'open';
+}
+
 class MyEntity
 {
+
+    #[\Doctrine\ORM\Mapping\Column(type: Types::STRING, enumType: InvoiceStatus::class)]
+    private InvoiceStatus $status;
 
     #[\Doctrine\ORM\Mapping\PreUpdate]
     public function onUpdate(PreUpdateEventArgs $args): void {}
