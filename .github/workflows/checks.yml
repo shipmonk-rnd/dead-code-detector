@@ -71,7 +71,7 @@ jobs:
                 run: composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run PHPStan
-                run: composer check:types
+                run: vendor/bin/phpstan -vv --ansi --errot-format=github
 
     tests:
         runs-on: ubuntu-latest
