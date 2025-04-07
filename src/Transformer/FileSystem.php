@@ -9,7 +9,7 @@ use function file_put_contents;
 class FileSystem
 {
 
-    public function read(string $path): string
+    public function read(string $path): ?string
     {
         $contents = file_get_contents($path);
 
