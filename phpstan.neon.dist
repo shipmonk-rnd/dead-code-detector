@@ -32,7 +32,7 @@ parameters:
         uncheckedExceptionClasses:
             - LogicException
 
-    editorUrl: 'jetbrains://php-storm/navigate/reference?project=dead-code-detector&path=%%relFile%%:%%line%%' # requires usage of JetBrains Toolbox
+    editorUrl: null # jetbrains://php-storm/navigate/reference?project=dead-code-detector&path=%%relFile%%:%%line%%
     editorUrlTitle: '%%relFile%%:%%line%%'
 
     shipmonkRules:
