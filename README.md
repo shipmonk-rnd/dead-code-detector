@@ -81,12 +81,15 @@ parameters:
 ## Generic usage providers:
 
 #### Reflection:
-- Any constant or method accessed via `ReflectionClass` is detected as used
-  - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, ...
+- Any enum, constant or method accessed via `ReflectionClass` is detected as used
+  - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, `$reflection->getCases()`...
 
 #### Vendor:
 - Any overridden method that originates in `vendor` is not reported as dead
   - e.g. implementing `Psr\Log\LoggerInterface::log` is automatically considered used
+
+#### Enum:
+- Detects usages caused by `BackedEnum::from`, `BackedEnum::tryFrom` and `UnitEnum::cases`
 
 Those providers are enabled by default, but you can disable them if needed.
 

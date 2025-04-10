@@ -6,7 +6,9 @@ use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use function array_keys;
 use function count;
@@ -77,9 +79,15 @@ final class BlackMember
 
     public function getErrorIdentifier(): string
     {
-        return $this->member instanceof ClassConstantRef
-            ? DeadCodeRule::IDENTIFIER_CONSTANT
-            : DeadCodeRule::IDENTIFIER_METHOD;
+        if ($this->member instanceof ClassConstantRef) {
+            return DeadCodeRule::IDENTIFIER_CONSTANT;
+        } elseif ($this->member instanceof ClassMethodRef) {
+            return DeadCodeRule::IDENTIFIER_METHOD;
+        } elseif ($this->member instanceof EnumCaseRef) {
+            return DeadCodeRule::IDENTIFIER_ENUM_CASE;
+        } else {
+            throw new LogicException('Unknown member type');
+        }
     }
 
     public function getExclusionMessage(): string

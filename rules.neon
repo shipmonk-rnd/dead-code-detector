@@ -15,6 +15,13 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.enum.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -136,6 +143,8 @@ parameters:
         trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
         usageProviders:
+            enum:
+                enabled: true
             vendor:
                 enabled: true
             reflection:
@@ -167,6 +176,9 @@ parametersSchema:
         trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
         reportTransitivelyDeadMethodAsSeparateError: bool()
         usageProviders: structure([
+            enum: structure([
+                enabled: bool()
+            ])
             vendor: structure([
                 enabled: bool()
             ])
