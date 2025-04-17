@@ -24,3 +24,12 @@ class Foo
     }
 
 }
+
+enum MyEnum: string
+{
+    case
+    A // error: Unused ReportLines\MyEnum::A
+    =
+    'A'
+    ;
+}
