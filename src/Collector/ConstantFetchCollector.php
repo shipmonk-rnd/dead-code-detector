@@ -207,7 +207,7 @@ class ConstantFetchCollector implements Collector
             $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
 
             if ($mayBeEnum) {
-                $result[] = new EnumCaseRef($classReflection->getName(), $constantName);
+                $result[] = new EnumCaseRef($classReflection->getName(), $constantName, $typeNormalized->isEnum()->maybe());
             }
 
             $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant);
@@ -215,7 +215,7 @@ class ConstantFetchCollector implements Collector
 
         if ($result === []) { // call over unknown type
             $result[] = new ClassConstantRef(null, $constantName, true);
-            $result[] = new EnumCaseRef(null, $constantName);
+            $result[] = new EnumCaseRef(null, $constantName, true);
         }
 
         return $result;

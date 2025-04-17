@@ -11,7 +11,7 @@ enum MyEnum: string implements EnumIFace {
     case E_ONE = 'one';
     case E_TWO = 'two';
     case E_THREE = 'three'; // error: Unused DeadEnumMixed\MyEnum::E_THREE
-    case E_FOUR = 'four'; // error: Unused DeadEnumMixed\MyEnum::E_FOUR
+    case E_FOUR = 'four';
     case E_FIVE = 'five';
 
     const C_ONE = 'one';
@@ -32,7 +32,7 @@ function test($mixed, object $object, IFace $iface, EnumIFace $enumIFace, string
     $iface::E_THREE;
     $iface::C_THREE;
 
-    $enumIFace::E_FOUR; // bug in phpstan: https://github.com/phpstan/phpstan/issues/12832
+    $enumIFace::E_FOUR;
     $enumIFace::C_FOUR;
 
     $notClass::E_FIVE;

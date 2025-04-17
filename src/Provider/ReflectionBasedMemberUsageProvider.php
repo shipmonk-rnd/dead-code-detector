@@ -168,6 +168,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             new EnumCaseRef(
                 $enumCaseReflection->getDeclaringClass()->getName(),
                 $enumCaseReflection->getName(),
+                false,
             ),
         );
     }

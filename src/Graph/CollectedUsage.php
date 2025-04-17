@@ -125,7 +125,7 @@ final class CollectedUsage
         } elseif ($memberType === MemberType::ENUM_CASE) {
             $usage = new EnumCaseUsage(
                 $origin,
-                new EnumCaseRef($result['m']['c'], $result['m']['m']),
+                new EnumCaseRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
             );
         } else {
             throw new LogicException('Unknown member type: ' . $memberType);

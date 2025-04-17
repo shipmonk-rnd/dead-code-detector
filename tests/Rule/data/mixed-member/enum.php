@@ -13,5 +13,5 @@ enum Tester: string
 
 function test(Tester $tester, string $unknown)
 {
-    echo $tester::{$unknown}; // can be descendant
+    echo $tester::{$unknown};
 }
