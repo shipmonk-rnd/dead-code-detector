@@ -242,6 +242,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
             new EnumCaseRef(
                 $className,
                 $enumCaseName,
+                false,
             ),
         );
     }

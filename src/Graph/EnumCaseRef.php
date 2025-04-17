@@ -10,12 +10,16 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 final class EnumCaseRef extends ClassMemberRef
 {
 
+    /**
+     * @param bool $possibleDescendant Can be true only for maybe-enums (interfaces)
+     */
     public function __construct(
         ?string $className,
-        ?string $enumCaseName
+        ?string $enumCaseName,
+        bool $possibleDescendant
     )
     {
-        parent::__construct($className, $enumCaseName, false);
+        parent::__construct($className, $enumCaseName, $possibleDescendant);
     }
 
     public static function buildKey(string $typeName, string $memberName): string

@@ -262,6 +262,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
                         new EnumCaseRef(
                             $constantString->getValue(),
                             null,
+                            false,
                         ),
                     );
                 }

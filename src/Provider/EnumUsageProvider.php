@@ -72,7 +72,7 @@ class EnumUsageProvider implements MemberUsageProvider
                     continue;
                 }
 
-                $valueToCaseMapping = $this->getValueToEnumCaseMapping($classReflection->getNativeReflection()); // @phpstan-ignore argument.type (https://github.com/phpstan/phpstan-src/pull/3925)
+                $valueToCaseMapping = $this->getValueToEnumCaseMapping($classReflection->getNativeReflection());
                 $triedValues = $firstArgType->getConstantScalarValues() === []
                     ? [null]
                     : array_filter($firstArgType->getConstantScalarValues(), static fn($value): bool => is_string($value) || is_int($value));
@@ -81,7 +81,7 @@ class EnumUsageProvider implements MemberUsageProvider
                     $enumCase = $value === null ? null : $valueToCaseMapping[$value] ?? null;
                     $result[] = new EnumCaseUsage(
                         UsageOrigin::createRegular($staticCall, $scope),
-                        new EnumCaseRef($classReflection->getName(), $enumCase),
+                        new EnumCaseRef($classReflection->getName(), $enumCase, false),
                     );
                 }
             }
