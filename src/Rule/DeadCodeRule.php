@@ -233,7 +233,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($cases as $enumCaseName => $enumCaseData) {
-                $enumCaseRef = new EnumCaseRef($typeName, $enumCaseName);
+                $enumCaseRef = new EnumCaseRef($typeName, $enumCaseName, false);
                 $enumCaseKey = $enumCaseRef->toKey();
 
                 $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);

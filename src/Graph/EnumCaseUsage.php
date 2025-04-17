@@ -51,6 +51,7 @@ final class EnumCaseUsage extends ClassMemberUsage
             new EnumCaseRef(
                 $className,
                 $this->enumCase->getMemberName(),
+                $this->enumCase->isPossibleDescendant(),
             ),
         );
     }
