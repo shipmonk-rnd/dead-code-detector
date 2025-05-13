@@ -423,6 +423,7 @@ If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-form
 ## Usage in libraries:
 - Libraries typically contain public api, that is unused
   - If you mark such methods with `@api` phpdoc, those will be considered entrypoints
+  - You can also mark whole method or interface with `@api` to mark all its methods as entrypoints
 
 ## Future scope:
 - Dead class property detection
