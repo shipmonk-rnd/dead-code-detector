@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionMethod;
-use function str_contains;
+use function strpos;
 use function ucfirst;
 
 class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
@@ -69,7 +69,7 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         $phpDoc = $reflection->getDocComment();
 
-        if ($phpDoc !== false && str_contains($phpDoc, '@api')) {
+        if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
             return true;
         }
 
@@ -84,7 +84,7 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         if ($reflection->hasMethod($memberName)) {
             $phpDoc = $reflection->getMethod($memberName)->getDocComment(); // @phpstan-ignore missingType.checkedException (ReflectionException handled by hasMethod)
 
-            if ($phpDoc !== false && str_contains($phpDoc, '@api')) {
+            if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
                 return true;
             }
         }
@@ -94,7 +94,7 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
             $constant = $reflection->getReflectionConstant($memberName);
             $phpDoc = $constant->getDocComment();
 
-            if ($phpDoc !== false && str_contains($phpDoc, '@api')) {
+            if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
                 return true;
             }
         }
