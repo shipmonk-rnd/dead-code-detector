@@ -83,9 +83,6 @@ class ProvidedUsagesCollector implements Collector
         Scope $scope
     ): void
     {
-        $memberRef = $usage->getMemberRef();
-        $memberRefClass = $memberRef->getClassName();
-
         $origin = $usage->getOrigin();
         $originClass = $origin->getClassName();
         $originMethod = $origin->getMethodName();
@@ -98,10 +95,6 @@ class ProvidedUsagesCollector implements Collector
             $scope->getFile(),
             $node->getStartLine(),
         );
-
-        if (($memberRefClass !== null) && !$this->reflectionProvider->hasClass($memberRefClass)) {
-            throw new LogicException("Class '$memberRefClass' does not exist. $context");
-        }
 
         if ($originClass !== null) {
             if (!$this->reflectionProvider->hasClass($originClass)) {
