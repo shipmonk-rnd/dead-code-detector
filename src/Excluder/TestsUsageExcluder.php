@@ -180,7 +180,9 @@ class TestsUsageExcluder implements MemberUsageExcluder
             }
 
             foreach ($paths as $path) {
-                if (preg_match('#([a-z]:)?[/\\\\]#Ai', $path) !== false) {
+                $isAbsolute = preg_match('#([a-z]:)?[/\\\\]#Ai', $path);
+
+                if ($isAbsolute === 1) {
                     $absolutePath = $path;
                 } else {
                     $absolutePath = $basePath . '/' . $path;
