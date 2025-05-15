@@ -7,29 +7,19 @@ use LogicException;
 use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ShipMonk\PHPStan\DeadCode\Collector\BufferedUsageCollector;
-use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
-use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
-use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
-use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ReflectionClass;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
-use function array_keys;
 use function array_merge;
 use function class_exists;
-use function implode;
 use function in_array;
 use function interface_exists;
 use function str_replace;
@@ -55,7 +45,6 @@ class AllServicesInConfigTest extends PHPStanTestCase
 
         $directory = __DIR__ . '/../src';
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-        $missingClassNames = [];
         $excluded = [
             VirtualUsageData::class,
             UsageOrigin::class,
@@ -63,19 +52,10 @@ class AllServicesInConfigTest extends PHPStanTestCase
             ClassMethodRef::class,
             ClassConstantRef::class,
             ClassConstantUsage::class,
-            ClassMemberRef::class,
-            ClassMemberUsage::class,
-            ClassLikeKind::class,
             CollectedUsage::class,
-            Visibility::class,
             BlackMember::class,
-            MemberUsageProvider::class,
-            BufferedUsageCollector::class,
-            ReflectionBasedMemberUsageProvider::class,
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
-            MemberType::class,
-            NeverReportedReason::class,
         ];
 
         /** @var DirectoryIterator $file */
@@ -85,20 +65,28 @@ class AllServicesInConfigTest extends PHPStanTestCase
             }
 
             $className = $this->mapPathToClassName($file->getPathname());
+            $reflectionClass = new ReflectionClass($className);
+
+            if ($reflectionClass->isInterface() || $reflectionClass->isTrait() || $reflectionClass->isAbstract()) {
+                continue;
+            }
 
             if (in_array($className, $excluded, true)) {
                 continue;
             }
 
-            if (self::getContainer()->findServiceNamesByType($className) !== []) {
-                continue;
+            if (self::getContainer()->findServiceNamesByType($className) === []) {
+                self::fail('Class ' . $className . ' not registered in rules.neon');
             }
 
-            $missingClassNames[$className] = true;
-        }
+            $parameters = $reflectionClass->getConstructor() !== null ? $reflectionClass->getConstructor()->getParameters() : [];
 
-        if ($missingClassNames !== []) {
-            self::fail('Class ' . implode(', ', array_keys($missingClassNames)) . ' not registered in rules.neon');
+            foreach ($parameters as $parameter) {
+                if ($parameter->isDefaultValueAvailable()) {
+                    $why = 'This is not allowed to ensure we properly wire all (possibly configurable) parameters via DIC.';
+                    self::fail('Service ' . $className . ' uses default value for parameter ' . $parameter->getName() . '. ' . $why);
+                }
+            }
         }
     }
 
