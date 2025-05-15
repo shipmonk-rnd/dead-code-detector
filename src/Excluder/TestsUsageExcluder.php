@@ -42,7 +42,7 @@ class TestsUsageExcluder implements MemberUsageExcluder
     public function __construct(
         ReflectionProvider $reflectionProvider,
         bool $enabled,
-        ?array $devPaths = null
+        ?array $devPaths
     )
     {
         $this->reflectionProvider = $reflectionProvider;
