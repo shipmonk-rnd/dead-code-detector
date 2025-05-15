@@ -59,7 +59,6 @@ use function iterator_to_array;
 use function ob_end_clean;
 use function ob_start;
 use function preg_replace;
-use function str_contains;
 use function str_replace;
 use function strpos;
 use const E_ALL;
@@ -420,8 +419,12 @@ class DeadCodeRuleTest extends RuleTestCase
      * @param string|non-empty-list<string> $files
      * @dataProvider provideProviders
      */
-    public function testProvidersCanBeDisabled($files): void
+    public function testProvidersCanBeDisabled($files, bool $requirementsMet): void
     {
+        if (!$requirementsMet) {
+            self::markTestSkipped('Requirements not met');
+        }
+
         $filesArray = is_array($files) ? $files : [$files];
 
         $errorsWithEnabledProviders = $this->gatherAnalyserErrors($filesArray);
@@ -446,8 +449,11 @@ class DeadCodeRuleTest extends RuleTestCase
     public static function provideProviders(): Generator
     {
         foreach (self::provideFiles() as $name => $args) {
-            if (str_contains($name, 'provider')) {
-                yield $name => $args;
+            if (strpos($name, 'provider') !== false) {
+                yield $name => [
+                    $args[0],
+                    $args[1] ?? true,
+                ];
             }
         }
     }
