@@ -2,8 +2,10 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use Closure;
 use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
+use Generator;
 use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
@@ -16,6 +18,7 @@ use PHPStan\File\SimpleRelativePathHelper;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
@@ -45,14 +48,18 @@ use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use Throwable;
 use Traversable;
+use function array_map;
 use function array_merge;
+use function count;
 use function error_reporting;
 use function file_get_contents;
+use function implode;
 use function is_array;
 use function iterator_to_array;
 use function ob_end_clean;
 use function ob_start;
 use function preg_replace;
+use function str_contains;
 use function str_replace;
 use function strpos;
 use const E_ALL;
@@ -75,6 +82,8 @@ class DeadCodeRuleTest extends RuleTestCase
     private bool $emitErrorsInGroups = true;
 
     private bool $unwrapGroupedErrors = true;
+
+    private bool $providersEnabled = true;
 
     private ?DeadCodeRule $rule = null;
 
@@ -405,6 +414,42 @@ class DeadCodeRuleTest extends RuleTestCase
             'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
             'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
         ];
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     * @dataProvider provideProviders
+     */
+    public function testProvidersCanBeDisabled($files): void
+    {
+        $filesArray = is_array($files) ? $files : [$files];
+
+        $errorsWithEnabledProviders = $this->gatherAnalyserErrors($filesArray);
+        $this->providersEnabled = false;
+        $this->resetInternalAnalyser();
+        $errorsWithDisabledProviders = $this->gatherAnalyserErrors($filesArray);
+
+        $stringify = static function (Error $error): string {
+            return ($error->getLine() ?? -1) . ': ' . $error->getMessage();
+        };
+        $errorsWithEnabledProvidersString = implode("\n  ", array_map($stringify, $errorsWithEnabledProviders));
+        $errorsWithDisabledProvidersString = implode("\n  ", array_map($stringify, $errorsWithDisabledProviders));
+
+        self::assertTrue(
+            count($errorsWithEnabledProviders) < count($errorsWithDisabledProviders),
+            "It was expected that when a provider is disabled, more dead stuff will arise\n\n" .
+            "Found issues with enabled providers:\n  $errorsWithEnabledProvidersString\n" .
+            "Found issues with disabled providers:\n  $errorsWithDisabledProvidersString\n",
+        );
+    }
+
+    public static function provideProviders(): Generator
+    {
+        foreach (self::provideFiles() as $name => $args) {
+            if (str_contains($name, 'provider')) {
+                yield $name => $args;
+            }
+        }
     }
 
     private function getOutputMock(string &$actualOutput): Output
@@ -792,12 +837,41 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     private function getMemberUsageProviders(): array
     {
-        return [
+        $provides = [
             new ReflectionUsageProvider(
-                true,
+                $this->providersEnabled,
             ),
-            new class extends ReflectionBasedMemberUsageProvider
-            {
+            new VendorUsageProvider(
+                $this->providersEnabled,
+            ),
+            new PhpUnitUsageProvider(
+                $this->providersEnabled,
+                self::getContainer()->getByType(PhpDocParser::class),
+                self::getContainer()->getByType(Lexer::class),
+            ),
+            new DoctrineUsageProvider(
+                $this->providersEnabled,
+            ),
+            new PhpStanUsageProvider(
+                $this->providersEnabled,
+                $this->createPhpStanContainerMock(),
+            ),
+            new NetteUsageProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                $this->providersEnabled,
+            ),
+            new SymfonyUsageProvider(
+                $this->createContainerMockWithSymfonyConfig(),
+                $this->providersEnabled,
+                __DIR__ . '/data/providers/symfony/',
+            ),
+            new TwigUsageProvider(
+                $this->providersEnabled,
+            ),
+        ];
+
+        if ($this->providersEnabled) {
+            $provides[] = new class extends ReflectionBasedMemberUsageProvider {
 
                 public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
                 {
@@ -808,35 +882,10 @@ class DeadCodeRuleTest extends RuleTestCase
                     return null;
                 }
 
-            },
-            new VendorUsageProvider(
-                true,
-            ),
-            new PhpUnitUsageProvider(
-                true,
-                self::getContainer()->getByType(PhpDocParser::class),
-                self::getContainer()->getByType(Lexer::class),
-            ),
-            new DoctrineUsageProvider(
-                true,
-            ),
-            new PhpStanUsageProvider(
-                true,
-                $this->createPhpStanContainerMock(),
-            ),
-            new NetteUsageProvider(
-                self::getContainer()->getByType(ReflectionProvider::class),
-                true,
-            ),
-            new SymfonyUsageProvider(
-                $this->createContainerMockWithSymfonyConfig(),
-                true,
-                __DIR__ . '/data/providers/symfony/',
-            ),
-            new TwigUsageProvider(
-                true,
-            ),
-        ];
+            };
+        }
+
+        return $provides;
     }
 
     /**
@@ -971,6 +1020,18 @@ class DeadCodeRuleTest extends RuleTestCase
         }
 
         return $replaced;
+    }
+
+    /**
+     * Allows secondary analysis within same testcase with different setup
+     */
+    private function resetInternalAnalyser(): void
+    {
+        $this->rule = null;
+
+        Closure::bind(function (): void {
+            $this->analyser = null;
+        }, $this, OriginalRuleTestCase::class)();
     }
 
 }
