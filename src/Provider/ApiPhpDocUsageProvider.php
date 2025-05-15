@@ -2,19 +2,28 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use ReflectionClass;
+use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use ReflectionClassConstant;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHasOwnMemberTrait;
 use function strpos;
-use function ucfirst;
 
 class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
+    use ReflectionHasOwnMemberTrait;
+
+    private ReflectionProvider $reflectionProvider;
+
     private bool $enabled;
 
-    public function __construct(bool $enabled)
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        bool $enabled
+    )
     {
+        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled;
     }
 
@@ -33,43 +42,60 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     public function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
-        $reflectionClass = $member->getDeclaringClass();
+        $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
         $memberType = $member instanceof ReflectionClassConstant ? 'constant' : 'method';
         $memberName = $member->getName();
 
-        if ($this->isApiClass($reflectionClass)) {
+        if ($this->isApiMember($reflectionClass, $member)) {
             return VirtualUsageData::withNote("Class {$reflectionClass->getName()} is public @api");
         }
 
         do {
-            if ($this->isApiMember($reflectionClass, $memberName)) {
-                return VirtualUsageData::withNote(ucfirst("$memberType {$reflectionClass->getName()}::{$memberName} is public @api"));
-            }
-
             foreach ($reflectionClass->getInterfaces() as $interface) {
-                if ($this->isApiClass($interface)) {
-                    return VirtualUsageData::withNote("Interface {$interface->getName()} is public @api");
-                }
-
-                if ($this->isApiMember($interface, $memberName)) {
+                if ($this->isApiMember($interface, $member)) {
                     return VirtualUsageData::withNote("Interface $memberType {$interface->getName()}::{$memberName} is public @api");
                 }
             }
 
+            foreach ($reflectionClass->getParents() as $parent) {
+                if ($this->isApiMember($parent, $member)) {
+                    return VirtualUsageData::withNote("Class $memberType {$parent->getName()}::{$memberName} is public @api");
+                }
+            }
+
             $reflectionClass = $reflectionClass->getParentClass();
-        } while ($reflectionClass !== false);
+        } while ($reflectionClass !== null);
 
         return null;
     }
 
     /**
-     * @param ReflectionClass<object> $reflection
+     * @param ReflectionClassConstant|ReflectionMethod $member
      */
-    private function isApiClass(ReflectionClass $reflection): bool
+    private function isApiMember(ClassReflection $reflection, object $member): bool
     {
-        $phpDoc = $reflection->getDocComment();
+        if (!$this->hasOwnMember($reflection, $member)) {
+            return false;
+        }
 
-        if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
+        if ($this->isApiClass($reflection)) {
+            return true;
+        }
+
+        if ($member instanceof ReflectionClassConstant) {
+            $constant = $reflection->getConstant($member->getName());
+            $phpDoc = $constant->getDocComment();
+
+            if ($this->isApiPhpDoc($phpDoc)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        $phpDoc = $reflection->getNativeMethod($member->getName())->getDocComment();
+
+        if ($this->isApiPhpDoc($phpDoc)) {
             return true;
         }
 
@@ -77,29 +103,35 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass<object> $reflection
+     * @param ReflectionClassConstant|ReflectionMethod $member
      */
-    private function isApiMember(ReflectionClass $reflection, string $memberName): bool
+    private function hasOwnMember(ClassReflection $reflection, object $member): bool
     {
-        if ($reflection->hasMethod($memberName)) {
-            $phpDoc = $reflection->getMethod($memberName)->getDocComment(); // @phpstan-ignore missingType.checkedException (ReflectionException handled by hasMethod)
-
-            if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
-                return true;
-            }
+        if ($member instanceof ReflectionClassConstant) {
+            return $this->hasOwnConstant($reflection, $member->getName());
         }
 
-        if ($reflection->hasConstant($memberName)) {
-            /** @var ReflectionClassConstant $constant */
-            $constant = $reflection->getReflectionConstant($memberName);
-            $phpDoc = $constant->getDocComment();
+        return $this->hasOwnMethod($reflection, $member->getName());
+    }
 
-            if ($phpDoc !== false && strpos($phpDoc, '@api') !== false) {
-                return true;
-            }
+    private function isApiClass(ClassReflection $reflection): bool
+    {
+        $phpDoc = $reflection->getResolvedPhpDoc();
+
+        if ($phpDoc === null) {
+            return false;
+        }
+
+        if ($this->isApiPhpDoc($phpDoc->getPhpDocString())) {
+            return true;
         }
 
         return false;
+    }
+
+    private function isApiPhpDoc(?string $phpDoc): bool
+    {
+        return $phpDoc !== null && strpos($phpDoc, '@api') !== false;
     }
 
 }
