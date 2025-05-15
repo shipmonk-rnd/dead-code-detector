@@ -94,6 +94,7 @@ Those providers are enabled by default, but you can disable them if needed.
 - By default, all usages within scanned paths can mark members as used
 - But that might not be desirable if class declared in `src` is **only used in `tests`**
 - You can exclude those usages by enabling `tests` usage excluder:
+  - This **will not disable analysis for tests** as only usages of src-defined classes will be excluded
 
 ```neon
 parameters:
