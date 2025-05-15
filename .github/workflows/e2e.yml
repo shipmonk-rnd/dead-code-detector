@@ -9,6 +9,8 @@ jobs:
             matrix:
                 include:
                     -
+                        repo: spaze/phpstan-disallowed-calls
+                    -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
                     -
                         repo: shipmonk-rnd/doctrine-two-phase-migrations
