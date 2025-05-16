@@ -15,6 +15,13 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.apiPhpDoc.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -137,6 +144,8 @@ parameters:
         trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
         usageProviders:
+            apiPhpDoc:
+                enabled: true
             vendor:
                 enabled: true
             reflection:
@@ -168,6 +177,9 @@ parametersSchema:
         trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
         reportTransitivelyDeadMethodAsSeparateError: bool()
         usageProviders: structure([
+            apiPhpDoc: structure([
+                enabled: bool()
+            ])
             vendor: structure([
                 enabled: bool()
             ])

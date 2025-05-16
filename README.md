@@ -420,6 +420,11 @@ If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-form
 > [!TIP]
 > You can change the list of debug references without affecting result cache, so rerun is instant!
 
+## Usage in libraries:
+- Libraries typically contain public api, that is unused
+  - If you mark such methods with `@api` phpdoc, those will be considered entrypoints
+  - You can also mark whole class or interface with `@api` to mark all its methods as entrypoints
+
 ## Future scope:
 - Dead class property detection
 - Dead class detection
