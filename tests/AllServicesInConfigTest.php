@@ -20,6 +20,7 @@ use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_merge;
 use function class_exists;
+use function count;
 use function in_array;
 use function interface_exists;
 use function str_replace;
@@ -71,6 +72,10 @@ class AllServicesInConfigTest extends PHPStanTestCase
                 continue;
             }
 
+            if ($this->hasAllMethodsStatic($reflectionClass)) {
+                continue;
+            }
+
             if (in_array($className, $excluded, true)) {
                 continue;
             }
@@ -104,6 +109,26 @@ class AllServicesInConfigTest extends PHPStanTestCase
         }
 
         return $classString;
+    }
+
+    /**
+     * @param ReflectionClass<object> $reflectionClass
+     */
+    private function hasAllMethodsStatic(ReflectionClass $reflectionClass): bool
+    {
+        $methods = $reflectionClass->getMethods();
+
+        if (count($methods) === 0) {
+            return false;
+        }
+
+        foreach ($methods as $method) {
+            if (!$method->isStatic()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }

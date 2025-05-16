@@ -5,10 +5,10 @@ namespace ShipMonk\PHPStan\DeadCode\Reflection;
 use PHPStan\Reflection\ClassReflection;
 use ReflectionException;
 
-trait ReflectionHasOwnMemberTrait
+final class ReflectionHelper
 {
 
-    private function hasOwnMethod(ClassReflection $classReflection, string $methodName): bool
+    public static function hasOwnMethod(ClassReflection $classReflection, string $methodName): bool
     {
         if (!$classReflection->hasMethod($methodName)) {
             return false;
@@ -21,7 +21,7 @@ trait ReflectionHasOwnMemberTrait
         }
     }
 
-    private function hasOwnConstant(ClassReflection $classReflection, string $constantName): bool
+    public static function hasOwnConstant(ClassReflection $classReflection, string $constantName): bool
     {
         $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
 
@@ -32,7 +32,7 @@ trait ReflectionHasOwnMemberTrait
         return $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
     }
 
-    private function hasOwnProperty(ClassReflection $classReflection, string $propertyName): bool
+    public static function hasOwnProperty(ClassReflection $classReflection, string $propertyName): bool
     {
         if (!$classReflection->hasProperty($propertyName)) {
             return false;

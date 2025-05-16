@@ -6,13 +6,11 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionClassConstant;
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHasOwnMemberTrait;
+use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function strpos;
 
 class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 {
-
-    use ReflectionHasOwnMemberTrait;
 
     private ReflectionProvider $reflectionProvider;
 
@@ -108,10 +106,10 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     private function hasOwnMember(ClassReflection $reflection, object $member): bool
     {
         if ($member instanceof ReflectionClassConstant) {
-            return $this->hasOwnConstant($reflection, $member->getName());
+            return ReflectionHelper::hasOwnConstant($reflection, $member->getName());
         }
 
-        return $this->hasOwnMethod($reflection, $member->getName());
+        return ReflectionHelper::hasOwnMethod($reflection, $member->getName());
     }
 
     private function isApiClass(ClassReflection $reflection): bool

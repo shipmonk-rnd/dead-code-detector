@@ -13,7 +13,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
-use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHasOwnMemberTrait;
+use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_map;
 use function array_sum;
 use function array_unique;
@@ -29,8 +29,6 @@ use function strpos;
 
 class DebugUsagePrinter
 {
-
-    use ReflectionHasOwnMemberTrait;
 
     public const ANY_MEMBER = "\0";
 
@@ -346,13 +344,13 @@ class DebugUsagePrinter
 
             $classReflection = $this->reflectionProvider->getClass($normalizedClass);
 
-            if ($this->hasOwnMethod($classReflection, $memberName)) {
+            if (ReflectionHelper::hasOwnMethod($classReflection, $memberName)) {
                 $key = ClassMethodRef::buildKey($normalizedClass, $memberName);
 
-            } elseif ($this->hasOwnConstant($classReflection, $memberName)) {
+            } elseif (ReflectionHelper::hasOwnConstant($classReflection, $memberName)) {
                 $key = ClassConstantRef::buildKey($normalizedClass, $memberName);
 
-            } elseif ($this->hasOwnProperty($classReflection, $memberName)) {
+            } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
                 throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
 
             } else {
