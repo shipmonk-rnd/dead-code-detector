@@ -9,6 +9,9 @@ jobs:
             matrix:
                 include:
                     -
+                        repo: phpstan/phpstan-src
+                        executable: bin/phpstan
+                    -
                         repo: spaze/phpstan-disallowed-calls
                     -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
@@ -47,4 +50,4 @@ jobs:
 
             -
                 name: Run analysis
-                run: vendor/bin/phpstan -vvv --ansi
+                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} -vvv --ansi
