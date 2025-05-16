@@ -9,8 +9,8 @@ interface PublicApiInterface {
     const CONST1 = 1;
     const CONST2 = 2;
 
-    public function method1() {}
-    public function method2() {}
+    public function method1();
+    public function method2();
 
 }
 
@@ -45,8 +45,8 @@ interface PartialPublicApiInterface {
     const CONST2 = 2; // error: Unused ApiPhpdoc1\PartialPublicApiInterface::CONST2
 
     /** @api */
-    public function method1() {}
-    public function method2() {} // error: Unused ApiPhpdoc1\PartialPublicApiInterface::method2
+    public function method1();
+    public function method2(); // error: Unused ApiPhpdoc1\PartialPublicApiInterface::method2
 
 }
 
@@ -80,9 +80,9 @@ interface InheritedPublicApi3 extends PublicApiInterface {
     const CONST2 = 2;
     const CONST3 = 3; // error: Unused ApiPhpdoc1\InheritedPublicApi3::CONST3
 
-    public function method1() {}
-    public function method2() {}
-    public function method3() {} // error: Unused ApiPhpdoc1\InheritedPublicApi3::method3
+    public function method1();
+    public function method2();
+    public function method3(); // error: Unused ApiPhpdoc1\InheritedPublicApi3::method3
 }
 
 class InheritedPublicApi4 implements PartialPublicApiInterface {
