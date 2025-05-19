@@ -26,6 +26,15 @@ includes:
     - vendor/shipmonk/dead-code-detector/rules.neon
 ```
 
+## Usage:
+
+```sh
+$ vendor/bin/phpstan
+```
+
+> [!NOTE]
+> Make sure you analyse whole codebase (e.g. both `src` and `tests`) so that all usages are found.
+
 ## Supported libraries:
 
 #### Symfony:
