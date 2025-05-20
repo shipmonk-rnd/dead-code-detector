@@ -121,3 +121,20 @@ final class SomeExtendingTest extends TestCaseBase
         return [];
     }
 }
+
+
+abstract class TestCaseParent extends TestCase
+{
+    public static function providerInParent(): array
+    {
+        return [];
+    }
+}
+
+final class TestProviderInParent extends TestCaseParent
+{
+    #[DataProvider('providerInParent')]
+    public function testFoo(): void
+    {
+    }
+}
