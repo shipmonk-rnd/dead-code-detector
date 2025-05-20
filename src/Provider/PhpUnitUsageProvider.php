@@ -10,7 +10,6 @@ use PHPStan\Node\InClassNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
@@ -48,21 +47,27 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         }
 
         $usages = [];
+        $className = $classReflection->getName();
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
-            $dataProviders = array_merge(
+            $methodName = $method->getName();
+
+            $externalDataProviderMethods = $this->getExternalDataProvidersFromAttributes($method);
+            $localDataProviderMethods = array_merge(
                 $this->getDataProvidersFromAnnotations($method->getDocComment()),
                 $this->getDataProvidersFromAttributes($method),
             );
 
-            foreach ($dataProviders as $dataProvider) {
-                if ($classReflection->hasNativeMethod($dataProvider)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($dataProvider), 'Data provider method');
-                }
+            foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
+                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
+            }
+
+            foreach ($localDataProviderMethods as $dataProvider) {
+                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
             }
 
             if ($this->isTestCaseMethod($method)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Test method');
+                $usages[] = $this->createUsage($className, $methodName, 'Test method');
             }
         }
 
@@ -128,6 +133,25 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         return $result;
     }
 
+    /**
+     * @return list<array{string, string}>
+     */
+    private function getExternalDataProvidersFromAttributes(ReflectionMethod $method): array
+    {
+        $result = [];
+
+        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProviderExternal') as $providerAttributeReflection) {
+            $className = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['className'] ?? null;
+            $methodName = $providerAttributeReflection->getArguments()[1] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
+
+            if (is_string($className) && is_string($methodName)) {
+                $result[] = [$className, $methodName];
+            }
+        }
+
+        return $result;
+    }
+
     private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
     {
         return $method->getAttributes($attributeClass) !== [];
@@ -142,13 +166,13 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         return strpos($method->getDocComment(), $string) !== false;
     }
 
-    private function createUsage(ExtendedMethodReflection $getNativeMethod, string $reason): ClassMethodUsage
+    private function createUsage(string $className, string $methodName, string $reason): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),
             new ClassMethodRef(
-                $getNativeMethod->getDeclaringClass()->getName(),
-                $getNativeMethod->getName(),
+                $className,
+                $methodName,
                 false,
             ),
         );
