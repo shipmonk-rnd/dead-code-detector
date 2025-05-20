@@ -4,6 +4,7 @@ namespace PhpUnit;
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -11,6 +12,18 @@ trait TraitTestCase {
     #[Before] // need to be checked in context of user, not in context of trait
     public function callBefore(): void
     {
+    }
+}
+
+class ExternalProvider {
+    public static function provideOne(): array
+    {
+        return [];
+    }
+
+    public static function provideTwo(): array
+    {
+        return [];
     }
 }
 
@@ -27,6 +40,16 @@ class SomeTest extends TestCase
 
     #[DataProvider(methodName: 'provideFromAttributeWithNamedArgument')]
     public function testFoo2(string $arg): void
+    {
+    }
+
+    #[DataProviderExternal(ExternalProvider::class, 'provideOne')]
+    public function testExternal1(string $arg): void
+    {
+    }
+
+    #[DataProviderExternal(methodName: 'provideTwo', className: ExternalProvider::class)]
+    public function testExternal2(string $arg): void
     {
     }
 
