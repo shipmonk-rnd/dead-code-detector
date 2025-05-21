@@ -156,8 +156,6 @@ class DebugUsagePrinter
                         $this->getExampleCaller([$usages]),
                     ),
                 );
-
-                $output->writeLineFormatted('');
             }
 
             $output->writeLineFormatted('');
