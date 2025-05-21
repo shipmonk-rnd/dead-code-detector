@@ -14,6 +14,10 @@ jobs:
                     -
                         repo: spaze/phpstan-disallowed-calls
                     -
+                        repo: infection/infection
+                        args: -c devTools/phpstan.neon
+                        php: 8.2
+                    -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
                     -
                         repo: shipmonk-rnd/doctrine-two-phase-migrations
@@ -46,8 +50,8 @@ jobs:
                 name: Update Dead Code Detector
                 run: |
                     composer config repositories.pr vcs https://github.com/${{ github.event.pull_request.head.repo.full_name }}
-                    composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies
+                    composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }}
 
             -
                 name: Run analysis
-                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} -vvv --ansi
+                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} analyse ${{ matrix.args }} -vvv --ansi
