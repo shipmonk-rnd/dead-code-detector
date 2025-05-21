@@ -16,6 +16,7 @@ jobs:
                     -
                         repo: infection/infection
                         args: -c devTools/phpstan.neon
+                        php: 8.2
                     -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
                     -
