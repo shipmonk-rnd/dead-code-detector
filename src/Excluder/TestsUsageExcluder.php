@@ -68,14 +68,14 @@ class TestsUsageExcluder implements MemberUsageExcluder
             return false;
         }
 
-        return $this->isWithinDevPaths($this->realpath($scope->getFile()))
-            && !$this->isWithinDevPaths($this->getDeclarationFile($usage->getMemberRef()->getClassName()));
+        return $this->isWithinDevPaths($this->realpath($scope->getFile())) === true
+            && $this->isWithinDevPaths($this->getDeclarationFile($usage->getMemberRef()->getClassName())) === false;
     }
 
-    private function isWithinDevPaths(?string $filePath): bool
+    private function isWithinDevPaths(?string $filePath): ?bool
     {
         if ($filePath === null) {
-            return false;
+            return null;
         }
 
         foreach ($this->devPaths as $devPath) {

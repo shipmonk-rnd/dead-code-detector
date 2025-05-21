@@ -12,9 +12,10 @@ class DeclaredInTestsUsedInSrc {
     const CONST = 1;
 }
 
-function test1() {
+function test1($mixed) {
     echo DeclaredInSrcUsedInBoth::CONST;
     echo DeclaredInSrcUsedInTests::CONST;
     echo DeclaredInTestsUsedInTests::CONST;
     echo DeclaredInTestsUsedInBoth::CONST;
+    $mixed::MIXED;
 }
