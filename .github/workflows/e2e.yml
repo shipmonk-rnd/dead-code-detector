@@ -15,7 +15,7 @@ jobs:
                         repo: spaze/phpstan-disallowed-calls
                     -
                         repo: infection/infection
-                        args: analyse --configuration devTools/phpstan.neon
+                        args: -c devTools/phpstan.neon
                     -
                         repo: shipmonk-rnd/doctrine-mysql-index-hints
                     -
@@ -53,4 +53,4 @@ jobs:
 
             -
                 name: Run analysis
-                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} ${{ matrix.args }} -vvv --ansi
+                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} analyse ${{ matrix.args }} -vvv --ansi
