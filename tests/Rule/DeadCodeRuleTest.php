@@ -255,7 +255,6 @@ class DeadCodeRuleTest extends RuleTestCase
         <fg=red>Found 1 UNKNOWN call over UNKNOWN type!!</>
         $ec • method call in <fg=white>data/mixed-member/full-mixed-method.php:12</>
 
-
         Such usages basically break whole dead code analysis, because any method on any class can be called there!
         All those usages were ignored!
 
@@ -277,7 +276,6 @@ class DeadCodeRuleTest extends RuleTestCase
         $expectedOutput = <<<"OUTPUT"
         <fg=red>Found 1 UNKNOWN fetch over UNKNOWN type!!</>
         $ec • constant fetch in <fg=white>data/mixed-member/full-mixed-const.php:12</>
-
 
         Such usages basically break whole dead code analysis, because any constant on any class can be fetched there!
         All those usages were ignored!
