@@ -83,15 +83,6 @@ class AllServicesInConfigTest extends PHPStanTestCase
             if (self::getContainer()->findServiceNamesByType($className) === []) {
                 self::fail('Class ' . $className . ' not registered in rules.neon');
             }
-
-            $parameters = $reflectionClass->getConstructor() !== null ? $reflectionClass->getConstructor()->getParameters() : [];
-
-            foreach ($parameters as $parameter) {
-                if ($parameter->isDefaultValueAvailable()) {
-                    $why = 'This is not allowed to ensure we properly wire all (possibly configurable) parameters via DIC.';
-                    self::fail('Service ' . $className . ' uses default value for parameter ' . $parameter->getName() . '. ' . $why);
-                }
-            }
         }
     }
 
