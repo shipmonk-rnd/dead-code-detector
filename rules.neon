@@ -48,6 +48,7 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
+            configDir: %shipmonkDeadCode.usageProviders.symfony.configDir%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider
