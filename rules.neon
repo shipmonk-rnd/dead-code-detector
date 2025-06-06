@@ -141,9 +141,6 @@ parameters:
     parametersNotInvalidatingCache:
         - parameters.shipmonkDeadCode.debug.usagesOf
         - parameters.shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError
-    expandRelativePaths:
-        - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
-        - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
     shipmonkDeadCode:
         trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
@@ -175,6 +172,10 @@ parameters:
                 enabled: false
         debug:
             usagesOf: []
+
+expandRelativePaths:
+    - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
+    - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
 parametersSchema:
     shipmonkDeadCode: structure([
