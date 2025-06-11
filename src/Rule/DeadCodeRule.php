@@ -520,9 +520,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         if ($includeParentLookup) {
-            $parentNames = $memberType === MemberType::CONSTANT
-                ? $this->getAncestorNames($className) // constants can be declared in interfaces
-                : $this->getParentNames($className);
+            $parentNames = $this->getAncestorNames($className);
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
@@ -736,14 +734,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         return $builder->build();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getParentNames(string $typeName): array
-    {
-        return array_keys($this->typeDefinitions[$typeName]['parents'] ?? []);
     }
 
     /**
