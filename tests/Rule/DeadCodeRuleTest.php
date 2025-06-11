@@ -713,6 +713,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-indirect-interface-6' => [__DIR__ . '/data/methods/indirect-interface-6.php'];
         yield 'method-indirect-interface-7' => [__DIR__ . '/data/methods/indirect-interface-7.php'];
         yield 'method-indirect-interface-8' => [__DIR__ . '/data/methods/indirect-interface-8.php'];
+        yield 'method-indirect-interface-9' => [__DIR__ . '/data/methods/indirect-interface-9.php'];
         yield 'method-parent-call-1' => [__DIR__ . '/data/methods/parent-call-1.php'];
         yield 'method-parent-call-2' => [__DIR__ . '/data/methods/parent-call-2.php'];
         yield 'method-parent-call-3' => [__DIR__ . '/data/methods/parent-call-3.php'];
@@ -777,6 +778,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-indirect-6' => [__DIR__ . '/data/mixed-member/indirect-interface-6.php'];
         yield 'mixed-member-indirect-7' => [__DIR__ . '/data/mixed-member/indirect-interface-7.php'];
         yield 'mixed-member-indirect-8' => [__DIR__ . '/data/mixed-member/indirect-interface-8.php'];
+        yield 'mixed-member-indirect-9' => [__DIR__ . '/data/mixed-member/indirect-interface-9.php'];
         yield 'mixed-member-overwriting-1' => [__DIR__ . '/data/mixed-member/overwriting-methods-1.php'];
         yield 'mixed-member-overwriting-2' => [__DIR__ . '/data/mixed-member/overwriting-methods-2.php'];
         yield 'mixed-member-overwriting-3' => [__DIR__ . '/data/mixed-member/overwriting-methods-3.php'];
