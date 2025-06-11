@@ -465,9 +465,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         if ($includeParentLookup) {
-            $parentNames = $memberType === MemberType::CONSTANT
-                ? $this->getAncestorNames($className) // constants can be declared in interfaces
-                : $this->getParentNames($className);
+            $parentNames = $this->getAncestorNames($className);
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
