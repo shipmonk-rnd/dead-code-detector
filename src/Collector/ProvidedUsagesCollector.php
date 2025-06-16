@@ -107,7 +107,11 @@ class ProvidedUsagesCollector implements Collector
         }
     }
 
-    private function resolveExclusion(ClassMemberUsage $usage, Node $node, Scope $scope): CollectedUsage
+    private function resolveExclusion(
+        ClassMemberUsage $usage,
+        Node $node,
+        Scope $scope
+    ): CollectedUsage
     {
         $excluderName = null;
 

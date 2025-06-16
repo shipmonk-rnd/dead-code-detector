@@ -24,7 +24,10 @@ class OutputEnhancer
         $this->editorUrl = $editorUrl;
     }
 
-    public function getOriginLink(UsageOrigin $origin, string $title): string
+    public function getOriginLink(
+        UsageOrigin $origin,
+        string $title
+    ): string
     {
         $file = $origin->getFile();
         $line = $origin->getLine();
@@ -40,7 +43,10 @@ class OutputEnhancer
         return $title;
     }
 
-    public function getOriginReference(UsageOrigin $origin, bool $preferFileLine = true): string
+    public function getOriginReference(
+        UsageOrigin $origin,
+        bool $preferFileLine = true
+    ): string
     {
         $file = $origin->getFile();
         $line = $origin->getLine();
@@ -63,7 +69,11 @@ class OutputEnhancer
         throw new LogicException('Unknown state of usage origin');
     }
 
-    private function getLinkOrPlain(string $title, string $file, int $line): string
+    private function getLinkOrPlain(
+        string $title,
+        string $file,
+        int $line
+    ): string
     {
         if ($this->editorUrl === null) {
             return $title;

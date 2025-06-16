@@ -27,14 +27,21 @@ class PhpUnitUsageProvider implements MemberUsageProvider
 
     private Lexer $lexer;
 
-    public function __construct(?bool $enabled, PhpDocParser $phpDocParser, Lexer $lexer)
+    public function __construct(
+        ?bool $enabled,
+        PhpDocParser $phpDocParser,
+        Lexer $lexer
+    )
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpunit/phpunit');
         $this->lexer = $lexer;
         $this->phpDocParser = $phpDocParser;
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
@@ -152,12 +159,18 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         return $result;
     }
 
-    private function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    private function hasAttribute(
+        ReflectionMethod $method,
+        string $attributeClass
+    ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    private function hasAnnotation(ReflectionMethod $method, string $string): bool
+    private function hasAnnotation(
+        ReflectionMethod $method,
+        string $string
+    ): bool
     {
         if ($method->getDocComment() === false) {
             return false;
@@ -166,7 +179,11 @@ class PhpUnitUsageProvider implements MemberUsageProvider
         return strpos($method->getDocComment(), $string) !== false;
     }
 
-    private function createUsage(string $className, string $methodName, string $reason): ClassMethodUsage
+    private function createUsage(
+        string $className,
+        string $methodName,
+        string $reason
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),

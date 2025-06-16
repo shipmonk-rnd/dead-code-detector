@@ -86,7 +86,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
         }
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled) {
             return [];
@@ -164,7 +167,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    private function getUsagesOfEventSubscriber(Return_ $node, Scope $scope): array
+    private function getUsagesOfEventSubscriber(
+        Return_ $node,
+        Scope $scope
+    ): array
     {
         if ($node->expr === null) {
             return [];
@@ -276,7 +282,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    private function getMethodUsagesFromAttributeReflection(InClassMethodNode $node, Scope $scope): array
+    private function getMethodUsagesFromAttributeReflection(
+        InClassMethodNode $node,
+        Scope $scope
+    ): array
     {
         $usages = [];
         $usageOrigin = UsageOrigin::createRegular($node, $scope);
@@ -545,7 +554,11 @@ class SymfonyUsageProvider implements MemberUsageProvider
      * @param ReflectionClass|ReflectionMethod $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
-    protected function hasAttribute(Reflector $classOrMethod, string $attributeClass, int $flags = 0): bool
+    protected function hasAttribute(
+        Reflector $classOrMethod,
+        string $attributeClass,
+        int $flags = 0
+    ): bool
     {
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
             return true;
@@ -570,7 +583,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
+    private function createUsage(
+        ExtendedMethodReflection $methodReflection,
+        string $reason
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),

@@ -60,7 +60,10 @@ class DebugUsagePrinter
     /**
      * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
      */
-    public function printMixedMemberUsages(Output $output, array $mixedMemberUsages): void
+    public function printMixedMemberUsages(
+        Output $output,
+        array $mixedMemberUsages
+    ): void
     {
         if ($mixedMemberUsages === [] || !$output->isDebug()) {
             return;
@@ -92,7 +95,10 @@ class DebugUsagePrinter
     /**
      * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
      */
-    private function printMixedClassNameUsages(Output $output, array $mixedMemberUsages): void
+    private function printMixedClassNameUsages(
+        Output $output,
+        array $mixedMemberUsages
+    ): void
     {
         $totalCount = array_sum(array_map('count', $mixedMemberUsages));
 
@@ -134,7 +140,10 @@ class DebugUsagePrinter
     /**
      * @param array<MemberType::*, non-empty-list<CollectedUsage>> $fullyMixedUsages
      */
-    private function printMixedEverythingUsages(Output $output, array $fullyMixedUsages): void
+    private function printMixedEverythingUsages(
+        Output $output,
+        array $fullyMixedUsages
+    ): void
     {
         if ($fullyMixedUsages === []) {
             return;
@@ -191,7 +200,10 @@ class DebugUsagePrinter
     /**
      * @param array<string, mixed> $analysedClasses
      */
-    public function printDebugMemberUsages(Output $output, array $analysedClasses): void
+    public function printDebugMemberUsages(
+        Output $output,
+        array $analysedClasses
+    ): void
     {
         if ($this->debugMembers === [] || !$output->isDebug()) {
             return;
@@ -279,7 +291,10 @@ class DebugUsagePrinter
     /**
      * @param list<string> $alternativeKeys
      */
-    public function recordUsage(CollectedUsage $collectedUsage, array $alternativeKeys): void
+    public function recordUsage(
+        CollectedUsage $collectedUsage,
+        array $alternativeKeys
+    ): void
     {
         $memberKeys = array_unique([
             $collectedUsage->getUsage()->getMemberRef()->toKey(),
@@ -298,7 +313,10 @@ class DebugUsagePrinter
     /**
      * @param array<string, non-empty-list<ClassMemberUsage>> $eliminationPath
      */
-    public function markMemberAsWhite(BlackMember $blackMember, array $eliminationPath): void
+    public function markMemberAsWhite(
+        BlackMember $blackMember,
+        array $eliminationPath
+    ): void
     {
         $memberKey = $blackMember->getMember()->toKey();
 
@@ -309,7 +327,10 @@ class DebugUsagePrinter
         $this->debugMembers[$memberKey]['eliminationPath'] = $eliminationPath;
     }
 
-    public function markMemberAsNeverReported(BlackMember $blackMember, string $reason): void
+    public function markMemberAsNeverReported(
+        BlackMember $blackMember,
+        string $reason
+    ): void
     {
         $memberKey = $blackMember->getMember()->toKey();
 

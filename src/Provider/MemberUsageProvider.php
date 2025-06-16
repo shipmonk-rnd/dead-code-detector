@@ -23,6 +23,9 @@ interface MemberUsageProvider
     /**
      * @return list<ClassMemberUsage>
      */
-    public function getUsages(Node $node, Scope $scope): array;
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array;
 
 }

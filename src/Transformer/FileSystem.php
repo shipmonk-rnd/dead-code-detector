@@ -20,7 +20,10 @@ class FileSystem
         return $contents;
     }
 
-    public function write(string $path, string $content): void
+    public function write(
+        string $path,
+        string $content
+    ): void
     {
         $success = file_put_contents($path, $content);
 

@@ -21,7 +21,11 @@ class MixedUsageExcluder implements MemberUsageExcluder
         return 'usageOverMixed';
     }
 
-    public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+    public function shouldExclude(
+        ClassMemberUsage $usage,
+        Node $node,
+        Scope $scope
+    ): bool
     {
         if (!$this->enabled) {
             return false;

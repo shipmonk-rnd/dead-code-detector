@@ -70,7 +70,10 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClassConstant|ReflectionMethod $member
      */
-    private function isApiMember(ClassReflection $reflection, object $member): bool
+    private function isApiMember(
+        ClassReflection $reflection,
+        object $member
+    ): bool
     {
         if (!$this->hasOwnMember($reflection, $member)) {
             return false;
@@ -103,7 +106,10 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClassConstant|ReflectionMethod $member
      */
-    private function hasOwnMember(ClassReflection $reflection, object $member): bool
+    private function hasOwnMember(
+        ClassReflection $reflection,
+        object $member
+    ): bool
     {
         if ($member instanceof ReflectionClassConstant) {
             return ReflectionHelper::hasOwnConstant($reflection, $member->getName());

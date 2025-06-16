@@ -22,7 +22,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMemberUsage>
      */
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $classReflection = $node->getClassReflection();
@@ -94,7 +97,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    private function createConstantUsage(ReflectionClassConstant $constantReflection, VirtualUsageData $data): ClassConstantUsage
+    private function createConstantUsage(
+        ReflectionClassConstant $constantReflection,
+        VirtualUsageData $data
+    ): ClassConstantUsage
     {
         return new ClassConstantUsage(
             UsageOrigin::createVirtual($this, $data),
@@ -106,7 +112,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         );
     }
 
-    private function createMethodUsage(ReflectionMethod $methodReflection, VirtualUsageData $data): ClassMethodUsage
+    private function createMethodUsage(
+        ReflectionMethod $methodReflection,
+        VirtualUsageData $data
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, $data),

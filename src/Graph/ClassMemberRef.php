@@ -62,7 +62,10 @@ abstract class ClassMemberRef
         return static::buildKey($classRef, $memberRef);
     }
 
-    abstract public static function buildKey(string $typeName, string $memberName): string;
+    abstract public static function buildKey(
+        string $typeName,
+        string $memberName
+    ): string;
 
     /**
      * @return MemberType::*

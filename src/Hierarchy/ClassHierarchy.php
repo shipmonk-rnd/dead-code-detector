@@ -14,7 +14,10 @@ class ClassHierarchy
      */
     private array $classDescendants = [];
 
-    public function registerClassPair(string $ancestorName, string $descendantName): void
+    public function registerClassPair(
+        string $ancestorName,
+        string $descendantName
+    ): void
     {
         $this->classDescendants[$ancestorName][$descendantName] = true;
     }

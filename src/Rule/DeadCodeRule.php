@@ -323,7 +323,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
      * @param list<string> $overriddenMethods
      */
-    private function fillTraitMethodUsages(string $typeName, array $usedTraits, array $overriddenMethods): void
+    private function fillTraitMethodUsages(
+        string $typeName,
+        array $usedTraits,
+        array $overriddenMethods
+    ): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
             $traitMethods = $this->typeDefinitions[$traitName]['methods'] ?? [];
@@ -361,14 +365,18 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
      * @param list<string> $overriddenConstants
      */
-    private function fillTraitConstantUsages(string $typeName, array $usedTraits, array $overriddenConstants): void
+    private function fillTraitConstantUsages(
+        string $typeName,
+        array $usedTraits,
+        array $overriddenConstants
+    ): void
     {
-        foreach ($usedTraits as $traitName => $_) {
+        foreach ($usedTraits as $traitName => $traitInfo) {
             $traitConstants = $this->typeDefinitions[$traitName]['constants'] ?? [];
 
             $excludedConstants = $overriddenConstants;
 
-            foreach ($traitConstants as $traitConstant => $__) {
+            foreach ($traitConstants as $traitConstant => $constantInfo) {
                 if (in_array($traitConstant, $excludedConstants, true)) {
                     continue;
                 }
@@ -384,7 +392,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @param list<string> $ancestorNames
      */
-    private function fillClassHierarchy(string $typeName, array $ancestorNames): void
+    private function fillClassHierarchy(
+        string $typeName,
+        array $ancestorNames
+    ): void
     {
         foreach ($ancestorNames as $ancestorName) {
             $this->classHierarchy->registerClassPair($ancestorName, $typeName);
@@ -534,7 +545,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return $result;
     }
 
-    private function getDeclaringTraitMemberKey(int $memberType, string $className, string $memberName): ?string
+    private function getDeclaringTraitMemberKey(
+        int $memberType,
+        string $className,
+        string $memberName
+    ): ?string
     {
         foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
@@ -547,7 +562,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return null;
     }
 
-    private function buildMemberKey(int $memberType, string $className, string $memberName): string
+    private function buildMemberKey(
+        int $memberType,
+        string $className,
+        string $memberName
+    ): string
     {
         if ($memberType === MemberType::METHOD) {
             return ClassMethodRef::buildKey($className, $memberName);
@@ -591,14 +610,17 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param array<string, null> $visitedKeys
      * @return list<string>
      */
-    private function getTransitiveDeadCalls(string $callerKey, array $visitedKeys = []): array
+    private function getTransitiveDeadCalls(
+        string $callerKey,
+        array $visitedKeys = []
+    ): array
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
         $callees = $this->usageGraph[$callerKey] ?? [];
 
         $result = [];
 
-        foreach ($callees as $calleeKey => $_) {
+        foreach ($callees as $calleeKey => $calleeInfo) {
             if (array_key_exists($calleeKey, $visitedKeys)) {
                 continue;
             }
@@ -634,7 +656,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            foreach ($callees as $callee => $_) {
+            foreach ($callees as $callee => $calleeInfo) {
                 if (array_key_exists($callee, $this->blackMembers)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
@@ -766,7 +788,11 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @param MemberType::* $memberType
      */
-    private function hasMember(string $typeName, string $memberName, int $memberType): bool
+    private function hasMember(
+        string $typeName,
+        string $memberName,
+        int $memberType
+    ): bool
     {
         $key = $this->getTypeDefinitionKeyForMemberType($memberType);
 
@@ -777,7 +803,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param MemberType::* $memberType
      * @return list<string>
      */
-    private function getMemberNames(string $typeName, int $memberType): array
+    private function getMemberNames(
+        string $typeName,
+        int $memberType
+    ): array
     {
         $key = $this->getTypeDefinitionKeyForMemberType($memberType);
 

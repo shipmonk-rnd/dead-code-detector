@@ -22,7 +22,10 @@ final class ClassMethodRef extends ClassMemberRef
         parent::__construct($className, $methodName, $possibleDescendant);
     }
 
-    public static function buildKey(string $typeName, string $memberName): string
+    public static function buildKey(
+        string $typeName,
+        string $memberName
+    ): string
     {
         return 'm/' . $typeName . '::' . $memberName;
     }

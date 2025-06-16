@@ -53,7 +53,10 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         return $this->isNetteMagic($reflection, $methodName);
     }
 
-    private function isNetteMagic(ClassReflection $reflection, string $methodName): ?VirtualUsageData
+    private function isNetteMagic(
+        ClassReflection $reflection,
+        string $methodName
+    ): ?VirtualUsageData
     {
         if (
             $reflection->is(SignalReceiver::class)
@@ -118,6 +121,7 @@ class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 
     /**
      * @return array<string, true>
+     *
      * @see ObjectHelpers::getMagicProperties() Modified to use static reflection
      */
     private function getMagicProperties(ClassReflection $reflection): array

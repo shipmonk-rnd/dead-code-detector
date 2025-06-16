@@ -76,7 +76,10 @@ class ConstantFetchCollector implements Collector
         return $this->emitUsages($scope);
     }
 
-    private function registerFunctionCall(FuncCall $node, Scope $scope): void
+    private function registerFunctionCall(
+        FuncCall $node,
+        Scope $scope
+    ): void
     {
         if (count($node->args) !== 1) {
             return;
@@ -127,7 +130,10 @@ class ConstantFetchCollector implements Collector
         }
     }
 
-    private function registerFetch(ClassConstFetch $node, Scope $scope): void
+    private function registerFetch(
+        ClassConstFetch $node,
+        Scope $scope
+    ): void
     {
         if ($node->class instanceof Expr) {
             $ownerType = $scope->getType($node->class);
@@ -160,7 +166,10 @@ class ConstantFetchCollector implements Collector
     /**
      * @return list<string|null>
      */
-    private function getConstantNames(ClassConstFetch $fetch, Scope $scope): array
+    private function getConstantNames(
+        ClassConstFetch $fetch,
+        Scope $scope
+    ): array
     {
         if ($fetch->name instanceof Expr) {
             $possibleConstantNames = [];
@@ -203,7 +212,11 @@ class ConstantFetchCollector implements Collector
         return $result;
     }
 
-    private function registerUsage(ClassConstantUsage $usage, Node $node, Scope $scope): void
+    private function registerUsage(
+        ClassConstantUsage $usage,
+        Node $node,
+        Scope $scope
+    ): void
     {
         $excluderName = null;
 

@@ -89,7 +89,10 @@ final class CollectedUsage
         }
     }
 
-    public static function deserialize(string $data, string $scopeFile): self
+    public static function deserialize(
+        string $data,
+        string $scopeFile
+    ): self
     {
         try {
             /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool}} $result */
