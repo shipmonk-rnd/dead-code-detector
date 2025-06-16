@@ -31,7 +31,10 @@ abstract class RuleTestCase extends OriginalRuleTestCase
     /**
      * @param non-empty-list<string> $files
      */
-    protected function analyseFiles(array $files, bool $autofix = false): void
+    protected function analyseFiles(
+        array $files,
+        bool $autofix = false
+    ): void
     {
         sort($files);
 
@@ -129,7 +132,10 @@ abstract class RuleTestCase extends OriginalRuleTestCase
         return array_values($expectedErrors);
     }
 
-    private function formatErrorForAssert(string $message, int $line): string
+    private function formatErrorForAssert(
+        string $message,
+        int $line
+    ): string
     {
         return sprintf('%02d: %s', $line, $message);
     }
@@ -137,7 +143,10 @@ abstract class RuleTestCase extends OriginalRuleTestCase
     /**
      * @param list<Error> $analyserErrors
      */
-    private function autofix(string $file, array $analyserErrors): void
+    private function autofix(
+        string $file,
+        array $analyserErrors
+    ): void
     {
         $errorsByLines = [];
 

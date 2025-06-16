@@ -36,7 +36,10 @@ class TwigUsageProvider implements MemberUsageProvider
         return InstalledVersions::isInstalled('twig/twig');
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled) {
             return [];
@@ -64,7 +67,10 @@ class TwigUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    private function getMethodUsageFromNew(New_ $node, Scope $scope): array
+    private function getMethodUsageFromNew(
+        New_ $node,
+        Scope $scope
+    ): array
     {
         if (!$node->class instanceof Name) {
             return [];
@@ -204,12 +210,18 @@ class TwigUsageProvider implements MemberUsageProvider
         return $this->hasAttribute($method, 'Twig\Attribute\AsTwigTest');
     }
 
-    protected function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    protected function hasAttribute(
+        ReflectionMethod $method,
+        string $attributeClass
+    ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    private function createUsage(ExtendedMethodReflection $methodReflection, string $reason): ClassMethodUsage
+    private function createUsage(
+        ExtendedMethodReflection $methodReflection,
+        string $reason
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($reason)),

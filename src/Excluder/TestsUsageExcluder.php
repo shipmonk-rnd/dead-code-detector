@@ -62,7 +62,11 @@ class TestsUsageExcluder implements MemberUsageExcluder
         return 'tests';
     }
 
-    public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+    public function shouldExclude(
+        ClassMemberUsage $usage,
+        Node $node,
+        Scope $scope
+    ): bool
     {
         if (!$this->enabled) {
             return false;
@@ -170,7 +174,10 @@ class TestsUsageExcluder implements MemberUsageExcluder
      * @param array<string|array<string>> $autoload
      * @return list<string>
      */
-    private function extractAutoloadPaths(string $basePath, array $autoload): array
+    private function extractAutoloadPaths(
+        string $basePath,
+        array $autoload
+    ): array
     {
         $result = [];
 

@@ -25,6 +25,10 @@ interface MemberUsageExcluder
      */
     public function getIdentifier(): string;
 
-    public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool;
+    public function shouldExclude(
+        ClassMemberUsage $usage,
+        Node $node,
+        Scope $scope
+    ): bool;
 
 }

@@ -129,9 +129,13 @@ class DeadCodeRuleTest extends RuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
+     *
      * @dataProvider provideFiles
      */
-    public function testDead($files, bool $requirementsMet = true): void
+    public function testDead(
+        $files,
+        bool $requirementsMet = true
+    ): void
     {
         $this->emitErrorsInGroups = false;
         $this->doTestDead($files, $requirementsMet);
@@ -139,9 +143,13 @@ class DeadCodeRuleTest extends RuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
+     *
      * @dataProvider provideFiles
      */
-    public function testDeadWithGroups($files, bool $requirementsMet = true): void
+    public function testDeadWithGroups(
+        $files,
+        bool $requirementsMet = true
+    ): void
     {
         $this->doTestDead($files, $requirementsMet);
     }
@@ -196,7 +204,10 @@ class DeadCodeRuleTest extends RuleTestCase
     /**
      * @param string|non-empty-list<string> $files
      */
-    private function doTestDead($files, bool $requirementsMet): void
+    private function doTestDead(
+        $files,
+        bool $requirementsMet
+    ): void
     {
         if (!$requirementsMet) {
             self::markTestSkipped('Requirements not met');
@@ -390,7 +401,10 @@ class DeadCodeRuleTest extends RuleTestCase
     /**
      * @dataProvider provideDebugUsageInvalidArgs
      */
-    public function testDebugUsageInvalidArgs(string $member, string $error): void
+    public function testDebugUsageInvalidArgs(
+        string $member,
+        string $error
+    ): void
     {
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage($error);
@@ -416,9 +430,13 @@ class DeadCodeRuleTest extends RuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
+     *
      * @dataProvider provideProviders
      */
-    public function testProvidersCanBeDisabled($files, bool $requirementsMet): void
+    public function testProvidersCanBeDisabled(
+        $files,
+        bool $requirementsMet
+    ): void
     {
         if (!$requirementsMet) {
             self::markTestSkipped('Requirements not met');
@@ -544,9 +562,13 @@ class DeadCodeRuleTest extends RuleTestCase
     /**
      * @param string|list<string> $files
      * @param list<array{0: string, 1: int, 2?: string|null}> $expectedErrors
+     *
      * @dataProvider provideGroupingFiles
      */
-    public function testGrouping($files, array $expectedErrors): void
+    public function testGrouping(
+        $files,
+        array $expectedErrors
+    ): void
     {
         $this->unwrapGroupedErrors = false;
 
@@ -919,7 +941,11 @@ class DeadCodeRuleTest extends RuleTestCase
                     return 'mixedPrefix';
                 }
 
-                public function shouldExclude(ClassMemberUsage $usage, Node $node, Scope $scope): bool
+                public function shouldExclude(
+                    ClassMemberUsage $usage,
+                    Node $node,
+                    Scope $scope
+                ): bool
                 {
                     $memberName = $usage->getMemberRef()->getMemberName();
                     return $memberName !== null && strpos($memberName, 'mixed') === 0;
@@ -1014,7 +1040,10 @@ class DeadCodeRuleTest extends RuleTestCase
         return PHP_VERSION_ID >= $lowestPhpVersion;
     }
 
-    private static function requiresPackage(string $package, string $constraint): bool
+    private static function requiresPackage(
+        string $package,
+        string $constraint
+    ): bool
     {
         return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
     }

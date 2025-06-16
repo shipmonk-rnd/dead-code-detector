@@ -27,7 +27,10 @@ class RemoveDeadCodeTransformer
      * @param list<string> $deadMethods
      * @param list<string> $deadConstants
      */
-    public function __construct(array $deadMethods, array $deadConstants)
+    public function __construct(
+        array $deadMethods,
+        array $deadConstants
+    )
     {
         $this->phpLexer = new Lexer();
         $this->phpParser = new Php8($this->phpLexer);

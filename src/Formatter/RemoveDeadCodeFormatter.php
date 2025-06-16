@@ -108,7 +108,10 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
     /**
      * @param list<ClassMemberUsage> $excludedUsages
      */
-    private function printExcludedUsages(Output $output, array $excludedUsages): void
+    private function printExcludedUsages(
+        Output $output,
+        array $excludedUsages
+    ): void
     {
         foreach ($excludedUsages as $excludedUsage) {
             $originLink = $this->getOriginLink($excludedUsage->getOrigin());

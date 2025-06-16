@@ -34,7 +34,7 @@ class BackwardCompatibilityChecker
     public function check(): void
     {
         if (count($this->servicesWithOldTag) > 0) {
-            $serviceClassNames = implode(' and ', array_map(static fn(object $service) => get_class($service), $this->servicesWithOldTag));
+            $serviceClassNames = implode(' and ', array_map(static fn (object $service) => get_class($service), $this->servicesWithOldTag));
             $plural = count($this->servicesWithOldTag) > 1 ? 's' : '';
             $isAre = count($this->servicesWithOldTag) > 1 ? 'are' : 'is';
 

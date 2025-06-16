@@ -10,7 +10,11 @@ class SerializationTest extends TestCase
     /**
      * @dataProvider provideData
      */
-    public function testSerialization(string $filePath, CollectedUsage $expected, string $serialized): void
+    public function testSerialization(
+        string $filePath,
+        CollectedUsage $expected,
+        string $serialized
+    ): void
     {
         self::assertSame($serialized, $expected->serialize($filePath));
         self::assertEquals($expected, CollectedUsage::deserialize($serialized, $filePath));

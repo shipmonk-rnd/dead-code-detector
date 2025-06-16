@@ -19,7 +19,10 @@ final class ClassConstantRef extends ClassMemberRef
         parent::__construct($className, $constantName, $possibleDescendant);
     }
 
-    public static function buildKey(string $typeName, string $memberName): string
+    public static function buildKey(
+        string $typeName,
+        string $memberName
+    ): string
     {
         return 'c/' . $typeName . '::' . $memberName;
     }

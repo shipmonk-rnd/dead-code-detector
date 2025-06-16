@@ -63,7 +63,10 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClass<object> $reflectionClass
      */
-    private function isForeignMethod(ReflectionClass $reflectionClass, string $methodName): bool
+    private function isForeignMethod(
+        ReflectionClass $reflectionClass,
+        string $methodName
+    ): bool
     {
         if (!$reflectionClass->hasMethod($methodName)) {
             return false;

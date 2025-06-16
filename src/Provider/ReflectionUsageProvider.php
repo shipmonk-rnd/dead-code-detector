@@ -34,7 +34,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled;
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled) {
             return [];
@@ -50,7 +53,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMemberUsage>
      */
-    private function processMethodCall(MethodCall $node, Scope $scope): array
+    private function processMethodCall(
+        MethodCall $node,
+        Scope $scope
+    ): array
     {
         $callerType = $scope->getType($node->var);
         $methodNames = $this->getMethodNames($node, $scope);
@@ -157,7 +163,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
      * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
      * @return list<string>
      */
-    private function getMethodNames(CallLike $call, Scope $scope): array
+    private function getMethodNames(
+        CallLike $call,
+        Scope $scope
+    ): array
     {
         if ($call instanceof New_) {
             return ['__construct'];

@@ -36,7 +36,10 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
      * @param list<string> $deadMethods
      * @param list<string> $deadConstants
      */
-    public function __construct(array $deadMethods, array $deadConstants)
+    public function __construct(
+        array $deadMethods,
+        array $deadConstants
+    )
     {
         $this->deadMethods = array_fill_keys($deadMethods, true);
         $this->deadConstants = array_fill_keys($deadConstants, true);

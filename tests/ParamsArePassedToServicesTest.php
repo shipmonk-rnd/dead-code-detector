@@ -45,7 +45,10 @@ class ParamsArePassedToServicesTest extends PHPStanTestCase
      * @param array<mixed> $input
      * @return list<string>
      */
-    private function getArrayPaths(array $input, string $currentPath = ''): array
+    private function getArrayPaths(
+        array $input,
+        string $currentPath = ''
+    ): array
     {
         $resultPaths = [];
 

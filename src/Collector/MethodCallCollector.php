@@ -193,7 +193,10 @@ class MethodCallCollector implements Collector
         }
     }
 
-    private function registerAttribute(Attribute $node, Scope $scope): void
+    private function registerAttribute(
+        Attribute $node,
+        Scope $scope
+    ): void
     {
         $this->registerUsage(
             new ClassMethodUsage(
@@ -205,7 +208,10 @@ class MethodCallCollector implements Collector
         );
     }
 
-    private function registerClone(Clone_ $node, Scope $scope): void
+    private function registerClone(
+        Clone_ $node,
+        Scope $scope
+    ): void
     {
         $methodName = '__clone';
         $callerType = $scope->getType($node->expr);
@@ -226,7 +232,10 @@ class MethodCallCollector implements Collector
      * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
      * @return list<string|null>
      */
-    private function getMethodNames(CallLike $call, Scope $scope): array
+    private function getMethodNames(
+        CallLike $call,
+        Scope $scope
+    ): array
     {
         if ($call instanceof New_) {
             return ['__construct'];
@@ -278,7 +287,11 @@ class MethodCallCollector implements Collector
         return $result;
     }
 
-    private function registerUsage(ClassMethodUsage $usage, Node $node, Scope $scope): void
+    private function registerUsage(
+        ClassMethodUsage $usage,
+        Node $node,
+        Scope $scope
+    ): void
     {
         $excluderName = null;
 

@@ -8,7 +8,10 @@ use ReflectionException;
 final class ReflectionHelper
 {
 
-    public static function hasOwnMethod(ClassReflection $classReflection, string $methodName): bool
+    public static function hasOwnMethod(
+        ClassReflection $classReflection,
+        string $methodName
+    ): bool
     {
         if (!$classReflection->hasMethod($methodName)) {
             return false;
@@ -21,7 +24,10 @@ final class ReflectionHelper
         }
     }
 
-    public static function hasOwnConstant(ClassReflection $classReflection, string $constantName): bool
+    public static function hasOwnConstant(
+        ClassReflection $classReflection,
+        string $constantName
+    ): bool
     {
         $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
 
@@ -32,7 +38,10 @@ final class ReflectionHelper
         return $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
     }
 
-    public static function hasOwnProperty(ClassReflection $classReflection, string $propertyName): bool
+    public static function hasOwnProperty(
+        ClassReflection $classReflection,
+        string $propertyName
+    ): bool
     {
         if (!$classReflection->hasProperty($propertyName)) {
             return false;

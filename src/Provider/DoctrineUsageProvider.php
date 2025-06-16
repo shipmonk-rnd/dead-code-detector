@@ -25,7 +25,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled) {
             return [];
@@ -78,7 +81,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    private function getUsagesOfEventSubscriber(Return_ $node, Scope $scope): array
+    private function getUsagesOfEventSubscriber(
+        Return_ $node,
+        Scope $scope
+    ): array
     {
         if ($node->expr === null) {
             return [];
@@ -179,12 +185,18 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || $methodName === 'onClear';
     }
 
-    protected function hasAttribute(ReflectionMethod $method, string $attributeClass): bool
+    protected function hasAttribute(
+        ReflectionMethod $method,
+        string $attributeClass
+    ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    protected function isPartOfAsEntityListener(ReflectionClass $class, string $methodName): bool
+    protected function isPartOfAsEntityListener(
+        ReflectionClass $class,
+        string $methodName
+    ): bool
     {
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
             $listenerMethodName = $attribute->getArguments()['method'] ?? $attribute->getArguments()[1] ?? null;
@@ -197,7 +209,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    protected function isEntityRepositoryConstructor(ReflectionClass $class, ReflectionMethod $method): bool
+    protected function isEntityRepositoryConstructor(
+        ReflectionClass $class,
+        ReflectionMethod $method
+    ): bool
     {
         if (!$method->isConstructor()) {
             return false;
@@ -213,7 +228,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || InstalledVersions::isInstalled('doctrine/doctrine-bundle');
     }
 
-    private function createMethodUsage(ExtendedMethodReflection $methodReflection, string $note): ClassMethodUsage
+    private function createMethodUsage(
+        ExtendedMethodReflection $methodReflection,
+        string $note
+    ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),

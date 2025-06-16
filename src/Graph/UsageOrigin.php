@@ -51,7 +51,10 @@ final class UsageOrigin
     /**
      * Creates virtual usage origin with no reference to any place in code
      */
-    public static function createVirtual(MemberUsageProvider $provider, VirtualUsageData $data): self
+    public static function createVirtual(
+        MemberUsageProvider $provider,
+        VirtualUsageData $data
+    ): self
     {
         return new self(
             null,
@@ -66,7 +69,10 @@ final class UsageOrigin
     /**
      * Creates usage origin with reference to file:line
      */
-    public static function createRegular(Node $node, Scope $scope): self
+    public static function createRegular(
+        Node $node,
+        Scope $scope
+    ): self
     {
         $file = $scope->isInTrait()
             ? $scope->getTraitReflection()->getFileName()

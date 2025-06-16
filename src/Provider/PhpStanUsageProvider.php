@@ -12,7 +12,10 @@ class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private Container $container;
 
-    public function __construct(bool $enabled, Container $container)
+    public function __construct(
+        bool $enabled,
+        Container $container
+    )
     {
         $this->enabled = $enabled;
         $this->container = $container;
