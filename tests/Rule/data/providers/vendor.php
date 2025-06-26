@@ -4,11 +4,18 @@ namespace Default;
 
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use PHPStan\Rules\Properties\ReadWritePropertiesExtensionProvider;
 use PHPStan\Rules\Rule as RuleFromVendor;
 
 interface IMyRule extends RuleFromVendor
 {
     public function getNodeType(): string;
+}
+
+interface MyPropertiesExtensionProvider extends ReadWritePropertiesExtensionProvider {
+
+    public const EXTENSION_TAG = 'overridden-from-vendor';
+
 }
 
 class MyRule implements IMyRule {
