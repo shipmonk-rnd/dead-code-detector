@@ -4,7 +4,9 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\Autoload\ClassLoader;
 use ReflectionClass;
+use ReflectionClassConstant;
 use ReflectionMethod;
+use Reflector;
 use function array_keys;
 use function strlen;
 use function strpos;
@@ -32,24 +34,40 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
             return null;
         }
 
-        $reflectionClass = $method->getDeclaringClass();
-        $methodName = $method->getName();
+        return $this->shouldMarkMemberAsUsed($method);
+    }
 
-        $usage = VirtualUsageData::withNote('Method overrides vendor one, thus is expected to be used by vendor code');
+    protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        return $this->shouldMarkMemberAsUsed($constant);
+    }
+
+    /**
+     * @param ReflectionMethod|ReflectionClassConstant $member
+     */
+    private function shouldMarkMemberAsUsed(Reflector $member): ?VirtualUsageData
+    {
+        $reflectionClass = $member->getDeclaringClass();
+        $memberString = $member instanceof ReflectionMethod ? 'Method' : 'Constant';
+        $usage = VirtualUsageData::withNote($memberString . ' overrides vendor one, thus is expected to be used by vendor code');
 
         do {
-            if ($this->isForeignMethod($reflectionClass, $methodName)) {
+            if ($this->isForeignMember($reflectionClass, $member)) {
                 return $usage;
             }
 
             foreach ($reflectionClass->getInterfaces() as $interface) {
-                if ($this->isForeignMethod($interface, $methodName)) {
+                if ($this->isForeignMember($interface, $member)) {
                     return $usage;
                 }
             }
 
             foreach ($reflectionClass->getTraits() as $trait) {
-                if ($this->isForeignMethod($trait, $methodName)) {
+                if ($this->isForeignMember($trait, $member)) {
                     return $usage;
                 }
             }
@@ -61,14 +79,19 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
+     * @param ReflectionMethod|ReflectionClassConstant $member
      * @param ReflectionClass<object> $reflectionClass
      */
-    private function isForeignMethod(
+    private function isForeignMember(
         ReflectionClass $reflectionClass,
-        string $methodName
+        Reflector $member
     ): bool
     {
-        if (!$reflectionClass->hasMethod($methodName)) {
+        if ($member instanceof ReflectionMethod && !$reflectionClass->hasMethod($member->getName())) {
+            return false;
+        }
+
+        if ($member instanceof ReflectionClassConstant && !$reflectionClass->hasConstant($member->getName())) {
             return false;
         }
 
