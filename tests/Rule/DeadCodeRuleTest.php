@@ -916,7 +916,7 @@ class DeadCodeRuleTest extends RuleTestCase
                 $this->providersEnabled,
             ),
             new EnumUsageProvider(
-                true,
+                $this->providersEnabled,
             ),
         ];
 

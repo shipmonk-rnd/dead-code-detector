@@ -31,7 +31,10 @@ class EnumUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled;
     }
 
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if ($this->enabled === false) {
             return [];
@@ -47,7 +50,10 @@ class EnumUsageProvider implements MemberUsageProvider
     /**
      * @return list<EnumCaseUsage>
      */
-    private function getTryFromUsages(StaticCall $staticCall, Scope $scope): array
+    private function getTryFromUsages(
+        StaticCall $staticCall,
+        Scope $scope
+    ): array
     {
         $methodNames = $this->getMethodNames($staticCall, $scope);
         $firstArgType = $this->getArgType($staticCall, $scope, 0);
@@ -75,7 +81,7 @@ class EnumUsageProvider implements MemberUsageProvider
                 $valueToCaseMapping = $this->getValueToEnumCaseMapping($classReflection->getNativeReflection());
                 $triedValues = $firstArgType->getConstantScalarValues() === []
                     ? [null]
-                    : array_filter($firstArgType->getConstantScalarValues(), static fn($value): bool => is_string($value) || is_int($value));
+                    : array_filter($firstArgType->getConstantScalarValues(), static fn ($value): bool => is_string($value) || is_int($value));
 
                 foreach ($triedValues as $value) {
                     $enumCase = $value === null ? null : $valueToCaseMapping[$value] ?? null;
@@ -93,7 +99,10 @@ class EnumUsageProvider implements MemberUsageProvider
     /**
      * @return list<string|null>
      */
-    private function getMethodNames(StaticCall $call, Scope $scope): array
+    private function getMethodNames(
+        StaticCall $call,
+        Scope $scope
+    ): array
     {
         if ($call->name instanceof Expr) {
             $possibleMethodNames = [];
@@ -110,7 +119,11 @@ class EnumUsageProvider implements MemberUsageProvider
         return [$call->name->name];
     }
 
-    private function getArgType(StaticCall $staticCall, Scope $scope, int $position): Type
+    private function getArgType(
+        StaticCall $staticCall,
+        Scope $scope,
+        int $position
+    ): Type
     {
         $args = $staticCall->getArgs();
 

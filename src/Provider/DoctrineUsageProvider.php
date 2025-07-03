@@ -60,7 +60,10 @@ class DoctrineUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMemberUsage>
      */
-    private function getUsagesFromReflection(InClassNode $node, Scope $scope): array
+    private function getUsagesFromReflection(
+        InClassNode $node,
+        Scope $scope
+    ): array
     {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
@@ -260,7 +263,11 @@ class DoctrineUsageProvider implements MemberUsageProvider
     /**
      * @return list<EnumCaseUsage>
      */
-    private function getUsagesOfEnumColumn(string $className, string $propertyName, ExtendedPropertyReflection $property): array
+    private function getUsagesOfEnumColumn(
+        string $className,
+        string $propertyName,
+        ExtendedPropertyReflection $property
+    ): array
     {
         $usages = [];
 
