@@ -161,7 +161,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         );
     }
 
-    private function createEnumCaseUsage(ReflectionEnumUnitCase $enumCaseReflection, VirtualUsageData $usage): EnumCaseUsage
+    private function createEnumCaseUsage(
+        ReflectionEnumUnitCase $enumCaseReflection,
+        VirtualUsageData $usage
+    ): EnumCaseUsage
     {
         return new EnumCaseUsage(
             UsageOrigin::createVirtual($this, $usage),

@@ -22,7 +22,10 @@ final class EnumCaseRef extends ClassMemberRef
         parent::__construct($className, $enumCaseName, $possibleDescendant);
     }
 
-    public static function buildKey(string $typeName, string $memberName): string
+    public static function buildKey(
+        string $typeName,
+        string $memberName
+    ): string
     {
         return 'e/' . $typeName . '::' . $memberName;
     }
