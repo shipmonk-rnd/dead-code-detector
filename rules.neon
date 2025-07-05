@@ -22,6 +22,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.apiPhpDoc.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.enum.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -147,6 +154,8 @@ parameters:
         usageProviders:
             apiPhpDoc:
                 enabled: true
+            enum:
+                enabled: true
             vendor:
                 enabled: true
             reflection:
@@ -179,6 +188,9 @@ parametersSchema:
         reportTransitivelyDeadMethodAsSeparateError: bool()
         usageProviders: structure([
             apiPhpDoc: structure([
+                enabled: bool()
+            ])
+            enum: structure([
                 enabled: bool()
             ])
             vendor: structure([

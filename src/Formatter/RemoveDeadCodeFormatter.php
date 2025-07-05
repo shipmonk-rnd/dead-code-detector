@@ -55,6 +55,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             if (
                 $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_METHOD
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_CONSTANT
+                && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_ENUM_CASE
             ) {
                 continue;
             }
@@ -77,10 +78,12 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             $deadConstants = $deadMembersByType[MemberType::CONSTANT] ?? [];
             /** @var array<string, list<ClassMemberUsage>> $deadMethods */
             $deadMethods = $deadMembersByType[MemberType::METHOD] ?? [];
+            /** @var array<string, list<ClassMemberUsage>> $deadEnumCases */
+            $deadEnumCases = $deadMembersByType[MemberType::ENUM_CASE] ?? [];
 
-            $membersCount += count($deadConstants) + count($deadMethods);
+            $membersCount += count($deadConstants) + count($deadMethods) + count($deadEnumCases);
 
-            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants));
+            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants), array_keys($deadEnumCases));
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
@@ -92,6 +95,11 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
 
             foreach ($deadMethods as $method => $excludedUsages) {
                 $output->writeLineFormatted(" • Removed method <fg=white>$method</>");
+                $this->printExcludedUsages($output, $excludedUsages);
+            }
+
+            foreach ($deadEnumCases as $case => $excludedUsages) {
+                $output->writeLineFormatted(" • Removed enum case <fg=white>$case</>");
                 $this->printExcludedUsages($output, $excludedUsages);
             }
         }

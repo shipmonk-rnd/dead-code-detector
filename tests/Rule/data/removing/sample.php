@@ -25,6 +25,7 @@ class Child1 extends AbstractClass
 {
     public function foo(): void
     {
+        MyEnum::TransitiveDead;
     }
 }
 
@@ -41,6 +42,11 @@ class Child2 extends AbstractClass
     public function mixedExcludedUsage(): void {
         echo self::TRANSITIVE_DEAD;
     }
+}
+
+enum MyEnum
+{
+    case TransitiveDead;
 }
 
 function testIt(Child2 $child2): void

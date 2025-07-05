@@ -36,6 +36,7 @@ use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
@@ -503,6 +504,10 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1 to test enum case removal');
+        }
+
         $writtenOutput = '';
 
         $output = $this->createOutput();
@@ -751,15 +756,17 @@ class DeadCodeRuleTest extends RuleTestCase
         // providers
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
+        yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php', self::requiresPhp(8_01_00)];
         yield 'provider-reflection-no-t' => [__DIR__ . '/data/providers/reflection-no-generics.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
-        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_00_00)];
+        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
+        yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
 
         // excluders
         yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/code.php', __DIR__ . '/data/excluders/tests/tests/code.php']];
@@ -791,7 +798,12 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-21' => [__DIR__ . '/data/constants/traits-21.php'];
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
+        // enums
+        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
+        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
+
         // mixed member
+        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
@@ -840,7 +852,8 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
 
         // other
-        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php'];
+        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];
+        yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php', self::requiresPhp(8_01_00)];
     }
 
     /**
@@ -900,6 +913,9 @@ class DeadCodeRuleTest extends RuleTestCase
             ),
             new ApiPhpDocUsageProvider(
                 self::createReflectionProvider(),
+                $this->providersEnabled,
+            ),
+            new EnumUsageProvider(
                 $this->providersEnabled,
             ),
         ];

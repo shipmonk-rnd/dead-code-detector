@@ -8,6 +8,7 @@
  • Removed method Removal\AbstractClass::foo
  • Removed method Removal\Child1::foo
  • Removed method Removal\Child2::mixedExcludedUsage
-   ! Excluded usage at data/removing/sample.php:49 left intact
+   ! Excluded usage at data/removing/sample.php:55 left intact
+ • Removed enum case Removal\MyEnum::TransitiveDead
 
-Removed 10 dead members in 1 file.
+Removed 11 dead members in 1 file.
