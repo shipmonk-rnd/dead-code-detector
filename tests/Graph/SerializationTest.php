@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use PHPStan\TrinaryLogic;
 use PHPUnit\Framework\TestCase;
 
 class SerializationTest extends TestCase
@@ -30,11 +31,11 @@ class SerializationTest extends TestCase
             new CollectedUsage(
                 new ClassConstantUsage(
                     new UsageOrigin('Clazz', 'method', '/app/index.php', 7, null, null),
-                    new ClassConstantRef(null, 'CONSTANT', true),
+                    new ClassConstantRef(null, 'CONSTANT', true, TrinaryLogic::createNo()),
                 ),
                 'excluder',
             ),
-            '{"e":"excluder","t":2,"o":{"c":"Clazz","m":"method","f":"_","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true}}',
+            '{"e":"excluder","t":2,"o":{"c":"Clazz","m":"method","f":"_","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":-1}}',
         ];
 
         yield 'path differs' => [
@@ -42,11 +43,11 @@ class SerializationTest extends TestCase
             new CollectedUsage(
                 new ClassConstantUsage(
                     new UsageOrigin('Clazz', 'method', '/app/index.php', 7, null, null),
-                    new ClassConstantRef(null, 'CONSTANT', true),
+                    new ClassConstantRef(null, 'CONSTANT', true, TrinaryLogic::createMaybe()),
                 ),
                 'excluder',
             ),
-            '{"e":"excluder","t":2,"o":{"c":"Clazz","m":"method","f":"\/app\/index.php","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true}}',
+            '{"e":"excluder","t":2,"o":{"c":"Clazz","m":"method","f":"\/app\/index.php","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":0}}',
         ];
     }
 

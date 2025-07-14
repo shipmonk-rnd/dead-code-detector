@@ -11,11 +11,14 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 final class ClassConstantUsage extends ClassMemberUsage
 {
 
+    /**
+     * @var ClassConstantRef<string|null, string|null>
+     */
     private ClassConstantRef $fetch;
 
     /**
      * @param UsageOrigin $origin The method where the fetch occurs
-     * @param ClassConstantRef $fetch The fetch of the constant
+     * @param ClassConstantRef<string|null, string|null> $fetch The fetch of the constant or enum case
      */
     public function __construct(
         UsageOrigin $origin,
@@ -34,6 +37,9 @@ final class ClassConstantUsage extends ClassMemberUsage
         return MemberType::CONSTANT;
     }
 
+    /**
+     * @return ClassConstantRef<string|null, string|null>
+     */
     public function getMemberRef(): ClassConstantRef
     {
         return $this->fetch;
@@ -51,6 +57,7 @@ final class ClassConstantUsage extends ClassMemberUsage
                 $className,
                 $this->fetch->getMemberName(),
                 $this->fetch->isPossibleDescendant(),
+                $this->fetch->isEnumCase(),
             ),
         );
     }

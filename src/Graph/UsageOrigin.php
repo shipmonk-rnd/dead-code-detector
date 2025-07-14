@@ -134,6 +134,9 @@ final class UsageOrigin
         return $this->className !== null && $this->methodName !== null;
     }
 
+    /**
+     * @return ClassMethodRef<string, string>
+     */
     public function toClassMethodRef(): ClassMethodRef
     {
         if ($this->className === null || $this->methodName === null) {

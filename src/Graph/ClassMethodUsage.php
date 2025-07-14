@@ -11,11 +11,14 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 final class ClassMethodUsage extends ClassMemberUsage
 {
 
+    /**
+     * @var ClassMethodRef<string|null, string|null>
+     */
     private ClassMethodRef $callee;
 
     /**
      * @param UsageOrigin $origin The method where the call occurs
-     * @param ClassMethodRef $callee The method being called
+     * @param ClassMethodRef<string|null, string|null> $callee The method being called
      */
     public function __construct(
         UsageOrigin $origin,
@@ -35,6 +38,9 @@ final class ClassMethodUsage extends ClassMemberUsage
         return MemberType::METHOD;
     }
 
+    /**
+     * @return ClassMethodRef<string|null, string|null>
+     */
     public function getMemberRef(): ClassMethodRef
     {
         return $this->callee;

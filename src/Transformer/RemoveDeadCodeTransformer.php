@@ -26,12 +26,10 @@ class RemoveDeadCodeTransformer
     /**
      * @param list<string> $deadMethods
      * @param list<string> $deadConstants
-     * @param list<string> $deadEnumCases
      */
     public function __construct(
         array $deadMethods,
-        array $deadConstants,
-        array $deadEnumCases
+        array $deadConstants
     )
     {
         $this->phpLexer = new Lexer();
@@ -41,7 +39,7 @@ class RemoveDeadCodeTransformer
         $this->cloningTraverser->addVisitor(new CloningVisitor());
 
         $this->removingTraverser = new PhpTraverser();
-        $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMethods, $deadConstants, $deadEnumCases));
+        $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMethods, $deadConstants));
 
         $this->phpPrinter = new PhpPrinter();
     }

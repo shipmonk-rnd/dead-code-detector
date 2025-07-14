@@ -12,11 +12,12 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 
 class DoctrineUsageProvider implements MemberUsageProvider
@@ -261,7 +262,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<EnumCaseUsage>
+     * @return list<ClassConstantUsage>
      */
     private function getUsagesOfEnumColumn(
         string $className,
@@ -282,12 +283,13 @@ class DoctrineUsageProvider implements MemberUsageProvider
                 }
 
                 foreach ($type->getConstantStrings() as $constantString) {
-                    $usages[] = new EnumCaseUsage(
+                    $usages[] = new ClassConstantUsage(
                         UsageOrigin::createVirtual($this, VirtualUsageData::withNote("Used in enumType of #[Column] of $className::$propertyName")),
-                        new EnumCaseRef(
+                        new ClassConstantRef(
                             $constantString->getValue(),
                             null,
                             false,
+                            TrinaryLogic::createYes(),
                         ),
                     );
                 }

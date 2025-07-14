@@ -257,7 +257,7 @@ class MethodCallCollector implements Collector
     }
 
     /**
-     * @return list<ClassMethodRef>
+     * @return list<ClassMethodRef<?string, ?string>>
      */
     private function getDeclaringTypesWithMethod(
         ?string $methodName,

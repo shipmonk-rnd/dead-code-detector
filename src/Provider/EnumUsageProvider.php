@@ -6,14 +6,15 @@ use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
+use PHPStan\TrinaryLogic;
 use PHPStan\Type\MixedType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
 use ReflectionEnum;
 use ReflectionEnumBackedCase;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use UnitEnum;
 use function array_filter;
@@ -48,7 +49,7 @@ class EnumUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<EnumCaseUsage>
+     * @return list<ClassConstantUsage>
      */
     private function getTryFromUsages(
         StaticCall $staticCall,
@@ -85,9 +86,9 @@ class EnumUsageProvider implements MemberUsageProvider
 
                 foreach ($triedValues as $value) {
                     $enumCase = $value === null ? null : $valueToCaseMapping[$value] ?? null;
-                    $result[] = new EnumCaseUsage(
+                    $result[] = new ClassConstantUsage(
                         UsageOrigin::createRegular($staticCall, $scope),
-                        new EnumCaseRef($classReflection->getName(), $enumCase, false),
+                        new ClassConstantRef($classReflection->getName(), $enumCase, false, TrinaryLogic::createYes()),
                     );
                 }
             }

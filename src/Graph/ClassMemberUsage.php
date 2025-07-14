@@ -31,6 +31,9 @@ abstract class ClassMemberUsage
      */
     abstract public function getMemberType(): int;
 
+    /**
+     * @return ClassMemberRef<string|null, string|null>
+     */
     abstract public function getMemberRef(): ClassMemberRef;
 
     /**

@@ -11,14 +11,13 @@ use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
+use PHPStan\TrinaryLogic;
 use ReflectionClass;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_key_first;
 use function count;
@@ -136,7 +135,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
     /**
      * @param array<Arg> $args
-     * @return list<EnumCaseUsage>
+     * @return list<ClassConstantUsage>
      */
     private function extractEnumCasesUsedByReflection(
         ?string $genericClassName,
@@ -235,6 +234,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
                 $className,
                 $constantName,
                 true,
+                TrinaryLogic::createMaybe(),
             ),
         );
     }
@@ -244,14 +244,15 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Scope $scope,
         ?string $className,
         ?string $enumCaseName
-    ): EnumCaseUsage
+    ): ClassConstantUsage
     {
-        return new EnumCaseUsage(
+        return new ClassConstantUsage(
             UsageOrigin::createRegular($node, $scope),
-            new EnumCaseRef(
+            new ClassConstantRef(
                 $className,
                 $enumCaseName,
                 false,
+                TrinaryLogic::createYes(),
             ),
         );
     }

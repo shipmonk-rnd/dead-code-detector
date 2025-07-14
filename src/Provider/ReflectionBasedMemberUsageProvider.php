@@ -6,6 +6,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\TrinaryLogic;
 use ReflectionClassConstant;
 use ReflectionEnum;
 use ReflectionEnumUnitCase;
@@ -15,8 +16,6 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_merge;
 
@@ -108,7 +107,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<EnumCaseUsage>
+     * @return list<ClassConstantUsage>
      */
     private function getEnumCaseUsages(ClassReflection $classReflection): array
     {
@@ -142,6 +141,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
                 false,
+                TrinaryLogic::createNo(),
             ),
         );
     }
@@ -164,14 +164,15 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function createEnumCaseUsage(
         ReflectionEnumUnitCase $enumCaseReflection,
         VirtualUsageData $usage
-    ): EnumCaseUsage
+    ): ClassConstantUsage
     {
-        return new EnumCaseUsage(
+        return new ClassConstantUsage(
             UsageOrigin::createVirtual($this, $usage),
-            new EnumCaseRef(
+            new ClassConstantRef(
                 $enumCaseReflection->getDeclaringClass()->getName(),
                 $enumCaseReflection->getName(),
                 false,
+                TrinaryLogic::createYes(),
             ),
         );
     }
