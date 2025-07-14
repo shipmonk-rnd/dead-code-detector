@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 enum InvoiceStatus: string {
     case Closed = 'closed';
     case Open = 'open';
+    const Unused = 'unused'; // error: Unused Doctrine\InvoiceStatus::Unused
 }
 
 class MyEntity
