@@ -20,13 +20,14 @@ use function array_sum;
 use function array_unique;
 use function count;
 use function explode;
+use function implode;
 use function ltrim;
 use function next;
-use function preg_replace;
 use function reset;
 use function sprintf;
 use function str_repeat;
 use function strpos;
+use function substr;
 
 class DebugUsagePrinter
 {
@@ -227,7 +228,8 @@ class DebugUsagePrinter
                         $output->writeLineFormatted(sprintf('| <fg=gray>entry</> <fg=white>%s</>', $entrypoint));
                     }
 
-                    $indent = str_repeat('  ', $depth) . '<fg=gray>calls</> ';
+                    $usage = $this->getUsageWord($fragmentUsages[0]->getMemberType());
+                    $indent = str_repeat('  ', $depth) . "<fg=gray>$usage</> ";
 
                     $nextFragmentUsages = next($debugMember['eliminationPath']);
                     $nextFragmentFirstUsage = $nextFragmentUsages !== false ? reset($nextFragmentUsages) : null;
@@ -280,13 +282,15 @@ class DebugUsagePrinter
 
     private function prettyMemberKey(string $memberKey): string
     {
-        $replaced = preg_replace('/^(m|c)\//', '', $memberKey);
-
-        if ($replaced === null) {
-            throw new LogicException('Failed to pretty member key ' . $memberKey);
+        if (
+            strpos($memberKey, 'm/') === false
+            && strpos($memberKey, 'c/') === false
+            && strpos($memberKey, 'e/') === false
+        ) {
+            throw new LogicException("Invalid member key format: '$memberKey'");
         }
 
-        return $replaced;
+        return substr($memberKey, 2);
     }
 
     /**
@@ -374,6 +378,9 @@ class DebugUsagePrinter
             } elseif (ReflectionHelper::hasOwnConstant($classReflection, $memberName)) {
                 $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createNo()))->toKeys();
 
+            } elseif (ReflectionHelper::hasOwnEnumCase($classReflection, $memberName)) {
+                $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createYes()))->toKeys();
+
             } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
                 throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
 
@@ -381,12 +388,13 @@ class DebugUsagePrinter
                 throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
             }
 
-            foreach ($keys as $key) {
-                $result[$key] = [
-                    'typename' => $normalizedClass,
-                ];
+            if (count($keys) !== 1) {
+                throw new LogicException('Found definition should always relate to single member, but got: ' . implode(', ', $keys));
             }
 
+            $result[$keys[0]] = [
+                'typename' => $normalizedClass,
+            ];
         }
 
         return $result;
@@ -404,6 +412,20 @@ class DebugUsagePrinter
         }
 
         return true;
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     */
+    private function getUsageWord(int $memberType): string
+    {
+        if ($memberType === MemberType::METHOD) {
+            return 'calls';
+        } elseif ($memberType === MemberType::CONSTANT) {
+            return 'fetches';
+        } else {
+            throw new LogicException("Unsupported member type: $memberType");
+        }
     }
 
 }

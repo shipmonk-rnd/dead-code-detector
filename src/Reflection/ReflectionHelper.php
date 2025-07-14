@@ -35,7 +35,21 @@ final class ReflectionHelper
             return false;
         }
 
-        return $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
+        return !$constantReflection->isEnumCase() && $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
+    }
+
+    public static function hasOwnEnumCase(
+        ClassReflection $classReflection,
+        string $constantName
+    ): bool
+    {
+        $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
+
+        if ($constantReflection === false) {
+            return false;
+        }
+
+        return $constantReflection->isEnumCase() && $constantReflection->getBetterReflection()->getDeclaringClass()->getName() === $classReflection->getName();
     }
 
     public static function hasOwnProperty(
