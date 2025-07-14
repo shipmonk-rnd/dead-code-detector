@@ -192,18 +192,25 @@ class ConstantFetchCollector implements Collector
         ?bool $isPossibleDescendant
     ): array
     {
-        $typeNormalized = TypeUtils::toBenevolentUnion($type); // extract possible fetches even from Class|int
-        $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        $typeNormalized = TypeUtils::toBenevolentUnion($type) // extract possible fetches even from Class|int
+            ->getObjectTypeOrClassStringObjectType();
+        $classReflections = $typeNormalized->getObjectClassReflections();
 
         $result = [];
+        $isEnumCaseFetch = $typeNormalized->isEnum()->no() ? TrinaryLogic::createNo() : TrinaryLogic::createMaybe();
 
         foreach ($classReflections as $classReflection) {
             $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
-            $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant, TrinaryLogic::createMaybe());
+            $result[] = new ClassConstantRef(
+                $classReflection->getName(),
+                $constantName,
+                $possibleDescendant,
+                $isEnumCaseFetch,
+            );
         }
 
         if ($result === []) { // call over unknown type
-            $result[] = new ClassConstantRef(null, $constantName, true, TrinaryLogic::createMaybe());
+            $result[] = new ClassConstantRef(null, $constantName, true, $isEnumCaseFetch);
         }
 
         return $result;
