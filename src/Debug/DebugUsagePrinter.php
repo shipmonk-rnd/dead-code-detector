@@ -6,6 +6,7 @@ use LogicException;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -150,10 +151,6 @@ class DebugUsagePrinter
         }
 
         foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
-            if ($memberType === MemberType::ENUM_CASE) {
-                continue; // any fully mixed fetch is emitted twice (once as enum, once as const); report only once here
-            }
-
             $fullyMixedCount = count($collectedUsages);
 
             $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
@@ -301,7 +298,7 @@ class DebugUsagePrinter
     ): void
     {
         $memberKeys = array_unique([
-            $collectedUsage->getUsage()->getMemberRef()->toKey(),
+            ...$collectedUsage->getUsage()->getMemberRef()->toKeys(),
             ...$alternativeKeys,
         ]);
 
@@ -322,13 +319,15 @@ class DebugUsagePrinter
         array $eliminationPath
     ): void
     {
-        $memberKey = $blackMember->getMember()->toKey();
+        $memberKeys = $blackMember->getMember()->toKeys();
 
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
+        foreach ($memberKeys as $memberKey) {
+            if (!isset($this->debugMembers[$memberKey])) {
+                continue;
+            }
+
+            $this->debugMembers[$memberKey]['eliminationPath'] = $eliminationPath;
         }
-
-        $this->debugMembers[$memberKey]['eliminationPath'] = $eliminationPath;
     }
 
     public function markMemberAsNeverReported(
@@ -336,13 +335,15 @@ class DebugUsagePrinter
         string $reason
     ): void
     {
-        $memberKey = $blackMember->getMember()->toKey();
+        $memberKeys = $blackMember->getMember()->toKeys();
 
-        if (!isset($this->debugMembers[$memberKey])) {
-            return;
+        foreach ($memberKeys as $memberKey) {
+            if (!isset($this->debugMembers[$memberKey])) {
+                continue;
+            }
+
+            $this->debugMembers[$memberKey]['neverReported'] = $reason;
         }
-
-        $this->debugMembers[$memberKey]['neverReported'] = $reason;
     }
 
     /**
@@ -368,10 +369,10 @@ class DebugUsagePrinter
             $classReflection = $this->reflectionProvider->getClass($normalizedClass);
 
             if (ReflectionHelper::hasOwnMethod($classReflection, $memberName)) {
-                $key = ClassMethodRef::buildKey($normalizedClass, $memberName);
+                $keys = (new ClassMethodRef($normalizedClass, $memberName, false))->toKeys();
 
             } elseif (ReflectionHelper::hasOwnConstant($classReflection, $memberName)) {
-                $key = ClassConstantRef::buildKey($normalizedClass, $memberName);
+                $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createNo()))->toKeys();
 
             } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
                 throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
@@ -380,9 +381,12 @@ class DebugUsagePrinter
                 throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
             }
 
-            $result[$key] = [
-                'typename' => $normalizedClass,
-            ];
+            foreach ($keys as $key) {
+                $result[$key] = [
+                    'typename' => $normalizedClass,
+                ];
+            }
+
         }
 
         return $result;

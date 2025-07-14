@@ -11,16 +11,14 @@ use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseRef;
-use ShipMonk\PHPStan\DeadCode\Graph\EnumCaseUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function count;
@@ -124,7 +122,7 @@ class ConstantFetchCollector implements Collector
                 $this->registerUsage(
                     new ClassConstantUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassConstantRef($className, $constantName, true),
+                        new ClassConstantRef($className, $constantName, true, TrinaryLogic::createMaybe()),
                     ),
                     $node,
                     $scope,
@@ -155,10 +153,7 @@ class ConstantFetchCollector implements Collector
 
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName, $possibleDescendantFetch) as $constantRef) {
                 $origin = UsageOrigin::createRegular($node, $scope);
-
-                $usage = $constantRef instanceof EnumCaseRef
-                    ? new EnumCaseUsage($origin, $constantRef)
-                    : new ClassConstantUsage($origin, $constantRef);
+                $usage = new ClassConstantUsage($origin, $constantRef);
 
                 $this->registerUsage($usage, $node, $scope);
             }
@@ -189,7 +184,7 @@ class ConstantFetchCollector implements Collector
     }
 
     /**
-     * @return list<ClassConstantRef|EnumCaseRef>
+     * @return list<ClassConstantRef<?string, ?string>>
      */
     private function getDeclaringTypesWithConstant(
         Type $type,
@@ -201,31 +196,21 @@ class ConstantFetchCollector implements Collector
         $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         $result = [];
-        $mayBeEnum = !$typeNormalized->isEnum()->no();
 
         foreach ($classReflections as $classReflection) {
             $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
-
-            if ($mayBeEnum) {
-                $result[] = new EnumCaseRef($classReflection->getName(), $constantName, $typeNormalized->isEnum()->maybe());
-            }
-
-            $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant);
+            $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant, TrinaryLogic::createMaybe());
         }
 
         if ($result === []) { // call over unknown type
-            $result[] = new ClassConstantRef(null, $constantName, true);
-            $result[] = new EnumCaseRef(null, $constantName, true);
+            $result[] = new ClassConstantRef(null, $constantName, true, TrinaryLogic::createMaybe());
         }
 
         return $result;
     }
 
-    /**
-     * @param ClassConstantUsage|EnumCaseUsage $usage
-     */
     private function registerUsage(
-        ClassMemberUsage $usage,
+        ClassConstantUsage $usage,
         Node $node,
         Scope $scope
     ): void

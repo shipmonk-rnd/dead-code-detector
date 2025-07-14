@@ -7,6 +7,5 @@ interface MemberType
 
     public const METHOD = 1;
     public const CONSTANT = 2;
-    public const ENUM_CASE = 3;
 
 }

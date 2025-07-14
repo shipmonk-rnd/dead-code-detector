@@ -34,24 +34,16 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
     private array $deadConstants;
 
     /**
-     * @var array<string, true>
-     */
-    private array $deadEnumCases;
-
-    /**
      * @param list<string> $deadMethods
      * @param list<string> $deadConstants
-     * @param list<string> $deadEnumCases
      */
     public function __construct(
         array $deadMethods,
-        array $deadConstants,
-        array $deadEnumCases
+        array $deadConstants
     )
     {
         $this->deadMethods = array_fill_keys($deadMethods, true);
         $this->deadConstants = array_fill_keys($deadConstants, true);
-        $this->deadEnumCases = array_fill_keys($deadEnumCases, true);
     }
 
     public function enterNode(Node $node): ?Node
@@ -104,7 +96,7 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
         if ($node instanceof EnumCase) {
             $enumCaseKey = $this->getNamespacedName($node->name);
 
-            if (isset($this->deadEnumCases[$enumCaseKey])) {
+            if (isset($this->deadConstants[$enumCaseKey])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
