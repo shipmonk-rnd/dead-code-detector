@@ -492,7 +492,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         // search for definition in traits
-        $traitMethodKey = $this->getDeclaringTraitMemberKey($memberRef);
+        $traitMethodKey = $this->getDeclaringTraitMemberKeys($memberRef);
 
         if ($traitMethodKey !== []) {
             return $traitMethodKey;
@@ -577,7 +577,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param ClassMemberRef<string, string> $memberRef
      * @return list<string>
      */
-    private function getDeclaringTraitMemberKey(
+    private function getDeclaringTraitMemberKeys(
         ClassMemberRef $memberRef
     ): array
     {
