@@ -20,6 +20,8 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use ReflectionClassConstant;
+use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -693,7 +695,6 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-cycles' => [__DIR__ . '/data/methods/cycles.php'];
         yield 'method-abstract-1' => [__DIR__ . '/data/methods/abstract-1.php'];
         yield 'method-abstract-2' => [__DIR__ . '/data/methods/abstract-2.php'];
-        yield 'method-entrypoint' => [__DIR__ . '/data/methods/entrypoint.php'];
         yield 'method-clone' => [__DIR__ . '/data/methods/clone.php'];
         yield 'method-magic' => [__DIR__ . '/data/methods/magic.php'];
         yield 'method-mixed' => [__DIR__ . '/data/methods/mixed/tracked.php'];
@@ -756,6 +757,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-unknown-class' => [__DIR__ . '/data/methods/unknown-class.php'];
 
         // providers
+        yield 'provider-custom' => [__DIR__ . '/data/providers/custom.php', self::requiresPhp(8_01_00)];
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
         yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php', self::requiresPhp(8_01_00)];
@@ -927,11 +929,23 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
                 {
-                    if ($method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint') {
-                        return VirtualUsageData::withNote('test');
-                    }
+                    return strpos($method->getDeclaringClass()->getName(), 'CustomProvider\Methods') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
 
-                    return null;
+                protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
+                {
+                    return strpos($constant->getDeclaringClass()->getName(), 'CustomProvider\Constants') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
+
+                protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
+                {
+                    return strpos($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
                 }
 
             };
