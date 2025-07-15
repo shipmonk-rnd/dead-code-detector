@@ -75,7 +75,12 @@ abstract class ClassMemberRef
     {
         $classRef = $this->className ?? self::UNKNOWN_CLASS;
         $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
-        return $this->buildKeys($classRef, $memberRef);
+
+        $result = [];
+        foreach ($this->getKeyPrefixes() as $prefix) {
+            $result[] = "$prefix/$classRef::$memberRef";
+        }
+        return $result;
     }
 
     /**
@@ -107,10 +112,7 @@ abstract class ClassMemberRef
     /**
      * @return list<string>
      */
-    abstract protected function buildKeys(
-        string $typeName,
-        string $memberName
-    ): array;
+    abstract protected function getKeyPrefixes(): array;
 
     /**
      * @return MemberType::*

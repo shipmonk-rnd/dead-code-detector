@@ -26,12 +26,12 @@ final class ClassMethodRef extends ClassMemberRef
         parent::__construct($className, $methodName, $possibleDescendant);
     }
 
-    protected function buildKeys(
-        string $typeName,
-        string $memberName
-    ): array
+    /**
+     * @return list<string>
+     */
+    protected function getKeyPrefixes(): array
     {
-        return ['m/' . $typeName . '::' . $memberName];
+        return ['m'];
     }
 
     /**
@@ -45,7 +45,7 @@ final class ClassMethodRef extends ClassMemberRef
     public function withKnownNames(
         string $className,
         string $memberName
-    ): ClassMemberRef
+    ): self
     {
         return new self(
             $className,
@@ -54,7 +54,7 @@ final class ClassMethodRef extends ClassMemberRef
         );
     }
 
-    public function withKnownClass(string $className): ClassMemberRef
+    public function withKnownClass(string $className): self
     {
         return new self(
             $className,
@@ -63,7 +63,7 @@ final class ClassMethodRef extends ClassMemberRef
         );
     }
 
-    public function withKnownMember(string $memberName): ClassMemberRef
+    public function withKnownMember(string $memberName): self
     {
         return new self(
             $this->getClassName(),

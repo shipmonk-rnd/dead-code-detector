@@ -460,12 +460,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($meAndDescendants as $className) {
             if ($member->getMemberName() !== null) {
-                foreach ($this->findDefinerMemberKeys($member->withKnownNames($className, $member->getMemberName())) as $definerKey) {
+                foreach ($this->findDefinerKeys($member->withKnownNames($className, $member->getMemberName())) as $definerKey) {
                     $result[] = $definerKey;
                 }
 
             } else {
-                foreach ($this->getPossibleDefinerMemberKeys($member->withKnownClass($className)) as $possibleDefinerKey) {
+                foreach ($this->getPossibleDefinerKeys($member->withKnownClass($className)) as $possibleDefinerKey) {
                     $result[] = $possibleDefinerKey;
                 }
             }
@@ -482,20 +482,20 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param ClassMemberRef<string, string> $memberRef
      * @return list<string>
      */
-    private function findDefinerMemberKeys(
+    private function findDefinerKeys(
         ClassMemberRef $memberRef,
         bool $includeParentLookup = true
     ): array
     {
-        if ($this->hasMember($memberRef)) {
+        if ($this->isExistingRef($memberRef)) {
             return $memberRef->toKeys();
         }
 
         // search for definition in traits
-        $traitMethodKey = $this->getDeclaringTraitMemberKeys($memberRef);
+        $traitMethodKeys = $this->getDeclaringTraitKeys($memberRef);
 
-        if ($traitMethodKey !== []) {
-            return $traitMethodKey;
+        if ($traitMethodKeys !== []) {
+            return $traitMethodKeys;
         }
 
         if ($includeParentLookup) {
@@ -503,7 +503,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                $found = $this->findDefinerMemberKeys($memberRef->withKnownClass($parentName), false);
+                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), false);
 
                 if ($found !== []) {
                     return $found;
@@ -519,7 +519,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
      */
-    private function getPossibleDefinerMemberKeys(
+    private function getPossibleDefinerKeys(
         ClassMemberRef $memberRef,
         bool $includeParentLookup = true,
         array &$foundMemberNames = []
@@ -565,7 +565,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             foreach ($parentNames as $parentName) {
                 $result = [
                     ...$result,
-                    ...$this->getPossibleDefinerMemberKeys($memberRef->withKnownClass($parentName), false, $foundMemberNames),
+                    ...$this->getPossibleDefinerKeys($memberRef->withKnownClass($parentName), false, $foundMemberNames),
                 ];
             }
         }
@@ -577,7 +577,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      * @param ClassMemberRef<string, string> $memberRef
      * @return list<string>
      */
-    private function getDeclaringTraitMemberKeys(
+    private function getDeclaringTraitKeys(
         ClassMemberRef $memberRef
     ): array
     {
@@ -805,7 +805,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * @param ClassMemberRef<string, string> $memberRef
      */
-    private function hasMember(
+    private function isExistingRef(
         ClassMemberRef $memberRef
     ): bool
     {
