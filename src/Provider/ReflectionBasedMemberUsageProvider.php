@@ -96,6 +96,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 continue; // skip constants from ancestors
             }
 
+            if ($nativeConstantReflection->isEnumCase()) {
+                continue; // handled separately
+            }
+
             $usage = $this->shouldMarkConstantAsUsed($nativeConstantReflection);
 
             if ($usage !== null) {
