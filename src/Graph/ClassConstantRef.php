@@ -31,21 +31,14 @@ final class ClassConstantRef extends ClassMemberRef
         $this->isEnumCase = $isEnumCase;
     }
 
-    protected function buildKeys(
-        string $typeName,
-        string $memberName
-    ): array
+    protected function getKeyPrefixes(): array
     {
         if ($this->isEnumCase->maybe()) {
-            return [
-                'c/' . $typeName . '::' . $memberName,
-                'e/' . $typeName . '::' . $memberName,
-            ];
+            return ['c', 'e'];
         } elseif ($this->isEnumCase->yes()) {
-            return ['e/' . $typeName . '::' . $memberName];
-
+            return ['e'];
         } else {
-            return ['c/' . $typeName . '::' . $memberName];
+            return ['c'];
         }
     }
 
@@ -65,7 +58,7 @@ final class ClassConstantRef extends ClassMemberRef
     public function withKnownNames(
         string $className,
         string $memberName
-    ): ClassMemberRef
+    ): self
     {
         return new self(
             $className,
@@ -75,7 +68,7 @@ final class ClassConstantRef extends ClassMemberRef
         );
     }
 
-    public function withKnownClass(string $className): ClassMemberRef
+    public function withKnownClass(string $className): self
     {
         return new self(
             $className,
@@ -85,7 +78,7 @@ final class ClassConstantRef extends ClassMemberRef
         );
     }
 
-    public function withKnownMember(string $memberName): ClassMemberRef
+    public function withKnownMember(string $memberName): self
     {
         return new self(
             $this->getClassName(),
