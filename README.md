@@ -343,6 +343,21 @@ $methods = $reflection->getMethods(); // all Foo methods are used here
 
 - All that applies even to constant fetches (e.g. `Foo::{$unknown}`)
 
+## Detected class members:
+Default configuration is:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        detect:
+            deadMethods: true
+            deadConstants: true
+            deadEnumCases: false
+```
+
+Enum cases are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
+
+
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
 - Basically, their analysis is less precise and less flexible. Mainly:
