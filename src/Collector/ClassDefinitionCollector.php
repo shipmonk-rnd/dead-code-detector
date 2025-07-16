@@ -39,9 +39,23 @@ class ClassDefinitionCollector implements Collector
 
     private ReflectionProvider $reflectionProvider;
 
-    public function __construct(ReflectionProvider $reflectionProvider)
+    private bool $detectDeadMethods;
+
+    private bool $detectDeadConstants;
+
+    private bool $detectDeadEnumCases;
+
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        bool $detectDeadMethods,
+        bool $detectDeadConstants,
+        bool $detectDeadEnumCases
+    )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->detectDeadMethods = $detectDeadMethods;
+        $this->detectDeadConstants = $detectDeadConstants;
+        $this->detectDeadEnumCases = $detectDeadEnumCases;
     }
 
     public function getNodeType(): string
@@ -79,28 +93,33 @@ class ClassDefinitionCollector implements Collector
         $constants = [];
         $cases = [];
 
-        foreach ($node->getMethods() as $method) {
-            $methods[$method->name->toString()] = [
-                'line' => $method->name->getStartLine(),
-                'params' => count($method->params),
-                'abstract' => $method->isAbstract() || $node instanceof Interface_,
-                'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
-            ];
-        }
-
-        foreach ($node->getConstants() as $constant) {
-            foreach ($constant->consts as $const) {
-                $constants[$const->name->toString()] = [
-                    'line' => $const->getStartLine(),
+        if ($this->detectDeadMethods) {
+            foreach ($node->getMethods() as $method) {
+                $methods[$method->name->toString()] = [
+                    'line' => $method->name->getStartLine(),
+                    'params' => count($method->params),
+                    'abstract' => $method->isAbstract() || $node instanceof Interface_,
+                    'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
                 ];
             }
         }
 
-        foreach ($this->getEnumCases($node) as $case) {
-            $cases[$case->name->toString()] = [
-                'line' => $case->name->getStartLine(),
-            ];
+        if ($this->detectDeadConstants) {
+            foreach ($node->getConstants() as $constant) {
+                foreach ($constant->consts as $const) {
+                    $constants[$const->name->toString()] = [
+                        'line' => $const->getStartLine(),
+                    ];
+                }
+            }
+        }
 
+        if ($this->detectDeadEnumCases) {
+            foreach ($this->getEnumCases($node) as $case) {
+                $cases[$case->name->toString()] = [
+                    'line' => $case->name->getStartLine(),
+                ];
+            }
         }
 
         return [

@@ -52,12 +52,14 @@ use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use Throwable;
 use Traversable;
+use function array_filter;
 use function array_map;
 use function array_merge;
 use function count;
 use function error_reporting;
 use function file_get_contents;
 use function implode;
+use function in_array;
 use function is_array;
 use function iterator_to_array;
 use function ob_end_clean;
@@ -87,6 +89,12 @@ class DeadCodeRuleTest extends RuleTestCase
     private bool $unwrapGroupedErrors = true;
 
     private bool $providersEnabled = true;
+
+    private bool $detectDeadMethods = true;
+
+    private bool $detectDeadConstants = true;
+
+    private bool $detectDeadEnumCases = true;
 
     private ?DeadCodeRule $rule = null;
 
@@ -124,7 +132,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadMethods, $this->detectDeadConstants, $this->detectDeadEnumCases),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
         ];
@@ -431,6 +439,62 @@ class DeadCodeRuleTest extends RuleTestCase
             'no class' => ['InvalidClass::foo', "Class 'InvalidClass' does not exist"],
             'invalid format' => ['InvalidFormat', "Invalid debug member format: 'InvalidFormat', expected 'ClassName::memberName'"],
         ];
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     *
+     * @dataProvider provideFiles
+     */
+    public function testDetectionCanBeDisabled(
+        $files,
+        bool $requirementsMet = true
+    ): void
+    {
+        if (!$requirementsMet) {
+            self::markTestSkipped('Requirements not met');
+        }
+
+        $this->detectDeadMethods = false;
+        $this->detectDeadConstants = false;
+        $this->detectDeadEnumCases = false;
+
+        $ownIdentifiers = [
+            DeadCodeRule::IDENTIFIER_METHOD,
+            DeadCodeRule::IDENTIFIER_CONSTANT,
+            DeadCodeRule::IDENTIFIER_ENUM_CASE,
+        ];
+        $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
+
+        $filesArray = is_array($files) ? $files : [$files];
+        self::assertCount(0, array_filter($this->gatherAnalyserErrors($filesArray), $filterOwnErrors));
+    }
+
+    public function testMethodDetectionCanBeDisabled(): void
+    {
+        $this->detectDeadMethods = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 13],
+        ]);
+    }
+
+    public function testConstantDetectionCanBeDisabled(): void
+    {
+        $this->detectDeadConstants = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\MyEnum::EnumCase', 13],
+            ['Unused MemberTypes\Clazz::method', 8],
+        ]);
+    }
+
+    public function testEnumCaseDetectionCanBeDisabled(): void
+    {
+        $this->detectDeadEnumCases = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\Clazz::method', 8],
+        ]);
     }
 
     /**
@@ -858,6 +922,7 @@ class DeadCodeRuleTest extends RuleTestCase
         // other
         yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];
         yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php', self::requiresPhp(8_01_00)];
+        yield 'member-types' => [__DIR__ . '/data/other/member-types.php', self::requiresPhp(8_01_00)];
     }
 
     /**
