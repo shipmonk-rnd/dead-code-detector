@@ -310,6 +310,10 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testDebugUsage(): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
         $this->debugMembers = [
             'DateTime::format',
             'DebugAlternative\Foo::foo',
@@ -472,6 +476,10 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testMethodDetectionCanBeDisabled(): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
         $this->detectDeadMethods = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
@@ -481,6 +489,10 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testConstantDetectionCanBeDisabled(): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
         $this->detectDeadConstants = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\MyEnum::EnumCase', 13],
@@ -490,6 +502,10 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testEnumCaseDetectionCanBeDisabled(): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
         $this->detectDeadEnumCases = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
