@@ -9,6 +9,7 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\EnumCase;
 use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
@@ -88,6 +89,14 @@ class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $constKey = $this->getNamespacedName($node->name);
 
             if (isset($this->deadConstants[$constKey])) {
+                return NodeTraverser::REMOVE_NODE;
+            }
+        }
+
+        if ($node instanceof EnumCase) {
+            $enumCaseKey = $this->getNamespacedName($node->name);
+
+            if (isset($this->deadConstants[$enumCaseKey])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }

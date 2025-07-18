@@ -11,6 +11,7 @@ use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
+use PHPStan\TrinaryLogic;
 use ReflectionClass;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -63,6 +64,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
         $usedConstants = [];
         $usedMethods = [];
+        $usedEnumCases = [];
 
         foreach ($methodNames as $methodName) {
             foreach ($callerType->getObjectClassReflections() as $reflection) {
@@ -86,6 +88,10 @@ class ReflectionUsageProvider implements MemberUsageProvider
                             ...$usedMethods,
                             ...$this->extractMethodsUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
                         ];
+                        $usedEnumCases = [
+                            ...$usedEnumCases,
+                            ...$this->extractEnumCasesUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
+                        ];
                     }
                 }
             }
@@ -94,6 +100,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
         return [
             ...$usedConstants,
             ...$usedMethods,
+            ...$usedEnumCases,
         ];
     }
 
@@ -120,6 +127,35 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
                 $usedConstants[] = $this->createConstantUsage($node, $scope, $genericClassName, $constantString->getValue());
+            }
+        }
+
+        return $usedConstants;
+    }
+
+    /**
+     * @param array<Arg> $args
+     * @return list<ClassConstantUsage>
+     */
+    private function extractEnumCasesUsedByReflection(
+        ?string $genericClassName,
+        string $methodName,
+        array $args,
+        Node $node,
+        Scope $scope
+    ): array
+    {
+        $usedConstants = [];
+
+        if ($methodName === 'getCases') {
+            $usedConstants[] = $this->createEnumCaseUsage($node, $scope, $genericClassName, null);
+        }
+
+        if (($methodName === 'getCase') && count($args) === 1) {
+            $firstArg = $args[array_key_first($args)];
+
+            foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
+                $usedConstants[] = $this->createEnumCaseUsage($node, $scope, $genericClassName, $constantString->getValue());
             }
         }
 
@@ -198,6 +234,25 @@ class ReflectionUsageProvider implements MemberUsageProvider
                 $className,
                 $constantName,
                 true,
+                TrinaryLogic::createMaybe(),
+            ),
+        );
+    }
+
+    private function createEnumCaseUsage(
+        Node $node,
+        Scope $scope,
+        ?string $className,
+        ?string $enumCaseName
+    ): ClassConstantUsage
+    {
+        return new ClassConstantUsage(
+            UsageOrigin::createRegular($node, $scope),
+            new ClassConstantRef(
+                $className,
+                $enumCaseName,
+                false,
+                TrinaryLogic::createYes(),
             ),
         );
     }

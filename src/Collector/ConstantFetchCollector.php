@@ -11,6 +11,7 @@ use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
@@ -121,7 +122,7 @@ class ConstantFetchCollector implements Collector
                 $this->registerUsage(
                     new ClassConstantUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassConstantRef($className, $constantName, true),
+                        new ClassConstantRef($className, $constantName, true, TrinaryLogic::createMaybe()),
                     ),
                     $node,
                     $scope,
@@ -151,14 +152,10 @@ class ConstantFetchCollector implements Collector
             }
 
             foreach ($this->getDeclaringTypesWithConstant($ownerType, $constantName, $possibleDescendantFetch) as $constantRef) {
-                $this->registerUsage(
-                    new ClassConstantUsage(
-                        UsageOrigin::createRegular($node, $scope),
-                        $constantRef,
-                    ),
-                    $node,
-                    $scope,
-                );
+                $origin = UsageOrigin::createRegular($node, $scope);
+                $usage = new ClassConstantUsage($origin, $constantRef);
+
+                $this->registerUsage($usage, $node, $scope);
             }
         }
     }
@@ -187,7 +184,7 @@ class ConstantFetchCollector implements Collector
     }
 
     /**
-     * @return list<ClassConstantRef>
+     * @return list<ClassConstantRef<?string, ?string>>
      */
     private function getDeclaringTypesWithConstant(
         Type $type,
@@ -195,18 +192,25 @@ class ConstantFetchCollector implements Collector
         ?bool $isPossibleDescendant
     ): array
     {
-        $typeNormalized = TypeUtils::toBenevolentUnion($type); // extract possible fetches even from Class|int
-        $classReflections = $typeNormalized->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        $typeNormalized = TypeUtils::toBenevolentUnion($type) // extract possible fetches even from Class|int
+            ->getObjectTypeOrClassStringObjectType();
+        $classReflections = $typeNormalized->getObjectClassReflections();
 
         $result = [];
+        $isEnumCaseFetch = $typeNormalized->isEnum()->no() ? TrinaryLogic::createNo() : TrinaryLogic::createMaybe();
 
         foreach ($classReflections as $classReflection) {
             $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
-            $result[] = new ClassConstantRef($classReflection->getName(), $constantName, $possibleDescendant);
+            $result[] = new ClassConstantRef(
+                $classReflection->getName(),
+                $constantName,
+                $possibleDescendant,
+                $isEnumCaseFetch,
+            );
         }
 
-        if ($result === []) {
-            $result[] = new ClassConstantRef(null, $constantName, true); // call over unknown type
+        if ($result === []) { // call over unknown type
+            $result[] = new ClassConstantRef(null, $constantName, true, $isEnumCaseFetch);
         }
 
         return $result;

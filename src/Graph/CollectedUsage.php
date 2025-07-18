@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use JsonException;
 use LogicException;
+use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use function json_decode;
 use function json_encode;
@@ -79,6 +80,7 @@ final class CollectedUsage
                 'c' => $memberRef->getClassName(),
                 'm' => $memberRef->getMemberName(),
                 'd' => $memberRef->isPossibleDescendant(),
+                'e' => $memberRef instanceof ClassConstantRef ? $this->serializeTrinary($memberRef->isEnumCase()) : null,
             ],
         ];
 
@@ -95,7 +97,7 @@ final class CollectedUsage
     ): self
     {
         try {
-            /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool}} $result */
+            /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
             $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
@@ -112,17 +114,52 @@ final class CollectedUsage
         );
         $exclusionReason = $result['e'];
 
-        $usage = $memberType === MemberType::CONSTANT
-            ? new ClassConstantUsage(
+        if ($memberType === MemberType::CONSTANT) {
+            $usage = new ClassConstantUsage(
                 $origin,
-                new ClassConstantRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
-            )
-            : new ClassMethodUsage(
+                new ClassConstantRef(
+                    $result['m']['c'],
+                    $result['m']['m'],
+                    $result['m']['d'],
+                    self::deserializeTrinary($result['m']['e']),
+                ),
+            );
+        } elseif ($memberType === MemberType::METHOD) {
+            $usage = new ClassMethodUsage(
                 $origin,
                 new ClassMethodRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
             );
+        } else {
+            throw new LogicException('Unknown member type: ' . $memberType);
+        }
 
         return new self($usage, $exclusionReason);
+    }
+
+    private function serializeTrinary(TrinaryLogic $isEnumCaseFetch): int
+    {
+        if ($isEnumCaseFetch->no()) {
+            return -1;
+        }
+
+        if ($isEnumCaseFetch->yes()) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    public static function deserializeTrinary(int $value): TrinaryLogic
+    {
+        if ($value === -1) {
+            return TrinaryLogic::createNo();
+        }
+
+        if ($value === 1) {
+            return TrinaryLogic::createYes();
+        }
+
+        return TrinaryLogic::createMaybe();
     }
 
 }

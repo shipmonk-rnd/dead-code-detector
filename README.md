@@ -58,6 +58,7 @@ $ vendor/bin/phpstan
 - `Doctrine\Common\EventSubscriber` methods
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
+- enums in `#[Column(enumType: UserStatus::class)]`
 
 #### PHPUnit:
 - **data provider methods**
@@ -90,12 +91,15 @@ parameters:
 ## Generic usage providers:
 
 #### Reflection:
-- Any constant or method accessed via `ReflectionClass` is detected as used
-  - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, ...
+- Any enum, constant or method accessed via `ReflectionClass` is detected as used
+  - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, `$reflection->getCases()`...
 
 #### Vendor:
 - Any overridden method that originates in `vendor` is not reported as dead
   - e.g. implementing `Psr\Log\LoggerInterface::log` is automatically considered used
+
+#### Enum:
+- Detects usages caused by `BackedEnum::from`, `BackedEnum::tryFrom` and `UnitEnum::cases`
 
 Those providers are enabled by default, but you can disable them if needed.
 
@@ -339,6 +343,21 @@ $methods = $reflection->getMethods(); // all Foo methods are used here
 ```
 
 - All that applies even to constant fetches (e.g. `Foo::{$unknown}`)
+
+## Detected class members:
+Default configuration is:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        detect:
+            deadMethods: true
+            deadConstants: true
+            deadEnumCases: false
+```
+
+Enum cases are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
+
 
 ## Comparison with tomasvotruba/unused-public
 - You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)

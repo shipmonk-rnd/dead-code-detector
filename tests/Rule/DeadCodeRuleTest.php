@@ -20,6 +20,8 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use ReflectionClassConstant;
+use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -36,6 +38,7 @@ use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
@@ -49,12 +52,14 @@ use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use Throwable;
 use Traversable;
+use function array_filter;
 use function array_map;
 use function array_merge;
 use function count;
 use function error_reporting;
 use function file_get_contents;
 use function implode;
+use function in_array;
 use function is_array;
 use function iterator_to_array;
 use function ob_end_clean;
@@ -84,6 +89,12 @@ class DeadCodeRuleTest extends RuleTestCase
     private bool $unwrapGroupedErrors = true;
 
     private bool $providersEnabled = true;
+
+    private bool $detectDeadMethods = true;
+
+    private bool $detectDeadConstants = true;
+
+    private bool $detectDeadEnumCases = true;
 
     private ?DeadCodeRule $rule = null;
 
@@ -121,7 +132,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadMethods, $this->detectDeadConstants, $this->detectDeadEnumCases),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
         ];
@@ -299,10 +310,15 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testDebugUsage(): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
         $this->debugMembers = [
             'DateTime::format',
             'DebugAlternative\Foo::foo',
             'DebugCtor\Foo::__construct',
+            'DebugEnum\Foo::Two',
             'DebugExclude\Foo::mixedExcluder1',
             'DebugExclude\Foo::mixedExcluder2',
             'DebugNever\Foo::__get',
@@ -317,6 +333,7 @@ class DeadCodeRuleTest extends RuleTestCase
         $this->analyseFiles([
             __DIR__ . '/data/debug/alternative.php',
             __DIR__ . '/data/debug/ctor.php',
+            __DIR__ . '/data/debug/enum.php',
             __DIR__ . '/data/debug/exclude.php',
             __DIR__ . '/data/debug/cycle.php',
             __DIR__ . '/data/debug/foreign.php',
@@ -431,6 +448,74 @@ class DeadCodeRuleTest extends RuleTestCase
     /**
      * @param string|non-empty-list<string> $files
      *
+     * @dataProvider provideFiles
+     */
+    public function testDetectionCanBeDisabled(
+        $files,
+        bool $requirementsMet = true
+    ): void
+    {
+        if (!$requirementsMet) {
+            self::markTestSkipped('Requirements not met');
+        }
+
+        $this->detectDeadMethods = false;
+        $this->detectDeadConstants = false;
+        $this->detectDeadEnumCases = false;
+
+        $ownIdentifiers = [
+            DeadCodeRule::IDENTIFIER_METHOD,
+            DeadCodeRule::IDENTIFIER_CONSTANT,
+            DeadCodeRule::IDENTIFIER_ENUM_CASE,
+        ];
+        $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
+
+        $filesArray = is_array($files) ? $files : [$files];
+        self::assertCount(0, array_filter($this->gatherAnalyserErrors($filesArray), $filterOwnErrors));
+    }
+
+    public function testMethodDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectDeadMethods = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 13],
+        ]);
+    }
+
+    public function testConstantDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectDeadConstants = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\MyEnum::EnumCase', 13],
+            ['Unused MemberTypes\Clazz::method', 8],
+        ]);
+    }
+
+    public function testEnumCaseDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectDeadEnumCases = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\Clazz::method', 8],
+        ]);
+    }
+
+    /**
+     * @param string|non-empty-list<string> $files
+     *
      * @dataProvider provideProviders
      */
     public function testProvidersCanBeDisabled(
@@ -503,6 +588,10 @@ class DeadCodeRuleTest extends RuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1 to test enum case removal');
+        }
+
         $writtenOutput = '';
 
         $output = $this->createOutput();
@@ -686,7 +775,6 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-cycles' => [__DIR__ . '/data/methods/cycles.php'];
         yield 'method-abstract-1' => [__DIR__ . '/data/methods/abstract-1.php'];
         yield 'method-abstract-2' => [__DIR__ . '/data/methods/abstract-2.php'];
-        yield 'method-entrypoint' => [__DIR__ . '/data/methods/entrypoint.php'];
         yield 'method-clone' => [__DIR__ . '/data/methods/clone.php'];
         yield 'method-magic' => [__DIR__ . '/data/methods/magic.php'];
         yield 'method-mixed' => [__DIR__ . '/data/methods/mixed/tracked.php'];
@@ -749,17 +837,20 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-unknown-class' => [__DIR__ . '/data/methods/unknown-class.php'];
 
         // providers
+        yield 'provider-custom' => [__DIR__ . '/data/providers/custom.php', self::requiresPhp(8_01_00)];
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
+        yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php', self::requiresPhp(8_01_00)];
         yield 'provider-reflection-no-t' => [__DIR__ . '/data/providers/reflection-no-generics.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
-        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_00_00)];
+        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
+        yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
 
         // excluders
         yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/code.php', __DIR__ . '/data/excluders/tests/tests/code.php']];
@@ -791,7 +882,12 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-traits-21' => [__DIR__ . '/data/constants/traits-21.php'];
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
+        // enums
+        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
+        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
+
         // mixed member
+        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
@@ -840,7 +936,9 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
 
         // other
-        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php'];
+        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];
+        yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php', self::requiresPhp(8_01_00)];
+        yield 'member-types' => [__DIR__ . '/data/other/member-types.php', self::requiresPhp(8_01_00)];
     }
 
     /**
@@ -902,6 +1000,9 @@ class DeadCodeRuleTest extends RuleTestCase
                 self::createReflectionProvider(),
                 $this->providersEnabled,
             ),
+            new EnumUsageProvider(
+                $this->providersEnabled,
+            ),
         ];
 
         if ($this->providersEnabled) {
@@ -909,11 +1010,23 @@ class DeadCodeRuleTest extends RuleTestCase
 
                 public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
                 {
-                    if ($method->getDeclaringClass()->getName() === 'DeadEntrypoint\Entrypoint') {
-                        return VirtualUsageData::withNote('test');
-                    }
+                    return strpos($method->getDeclaringClass()->getName(), 'CustomProvider\Methods') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
 
-                    return null;
+                protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
+                {
+                    return strpos($constant->getDeclaringClass()->getName(), 'CustomProvider\Constants') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
+
+                protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
+                {
+                    return strpos($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
                 }
 
             };

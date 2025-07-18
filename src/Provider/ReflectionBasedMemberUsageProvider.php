@@ -6,7 +6,10 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\TrinaryLogic;
 use ReflectionClassConstant;
+use ReflectionEnum;
+use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -33,6 +36,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             return array_merge(
                 $this->getMethodUsages($classReflection),
                 $this->getConstantUsages($classReflection),
+                $this->getEnumCaseUsages($classReflection),
             );
         }
 
@@ -45,6 +49,11 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     }
 
     protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
+    {
+        return null; // Expected to be overridden by subclasses.
+    }
+
+    protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
     {
         return null; // Expected to be overridden by subclasses.
     }
@@ -87,10 +96,38 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 continue; // skip constants from ancestors
             }
 
+            if ($nativeConstantReflection->isEnumCase()) {
+                continue; // handled separately
+            }
+
             $usage = $this->shouldMarkConstantAsUsed($nativeConstantReflection);
 
             if ($usage !== null) {
                 $usages[] = $this->createConstantUsage($nativeConstantReflection, $usage);
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassConstantUsage>
+     */
+    private function getEnumCaseUsages(ClassReflection $classReflection): array
+    {
+        $nativeClassReflection = $classReflection->getNativeReflection();
+
+        if (!$nativeClassReflection instanceof ReflectionEnum) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($nativeClassReflection->getCases() as $nativeEnumCaseReflection) {
+            $usage = $this->shouldMarkEnumCaseAsUsed($nativeEnumCaseReflection);
+
+            if ($usage !== null) {
+                $usages[] = $this->createEnumCaseUsage($nativeEnumCaseReflection, $usage);
             }
         }
 
@@ -108,6 +145,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
                 false,
+                TrinaryLogic::createNo(),
             ),
         );
     }
@@ -123,6 +161,22 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
                 false,
+            ),
+        );
+    }
+
+    private function createEnumCaseUsage(
+        ReflectionEnumUnitCase $enumCaseReflection,
+        VirtualUsageData $usage
+    ): ClassConstantUsage
+    {
+        return new ClassConstantUsage(
+            UsageOrigin::createVirtual($this, $usage),
+            new ClassConstantRef(
+                $enumCaseReflection->getDeclaringClass()->getName(),
+                $enumCaseReflection->getName(),
+                false,
+                TrinaryLogic::createYes(),
             ),
         );
     }

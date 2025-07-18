@@ -19,6 +19,7 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\TrinaryLogic;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
@@ -680,6 +681,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
                     $classReflection->getName(),
                     $constantName,
                     false,
+                    TrinaryLogic::createNo(),
                 ),
             );
         }

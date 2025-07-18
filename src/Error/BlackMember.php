@@ -6,6 +6,7 @@ use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use function array_keys;
@@ -15,6 +16,9 @@ use function implode;
 final class BlackMember
 {
 
+    /**
+     * @var ClassMemberRef<string, string>
+     */
     private ClassMemberRef $member;
 
     private string $file;
@@ -26,22 +30,21 @@ final class BlackMember
      */
     private array $excludedUsages = [];
 
+    /**
+     * @param ClassMemberRef<string, string> $member
+     */
     public function __construct(
         ClassMemberRef $member,
         string $file,
         int $line
     )
     {
-        if ($member->getClassName() === null) {
-            throw new LogicException('Class name must be known');
-        }
-
-        if ($member->getMemberName() === null) {
-            throw new LogicException('Member name must be known');
-        }
-
         if ($member->isPossibleDescendant()) {
             throw new LogicException('Using possible descendant does not make sense here');
+        }
+
+        if ($member instanceof ClassConstantRef && $member->isEnumCase()->maybe()) {
+            throw new LogicException('Black member cannot be unresolved, it references definition, not usage');
         }
 
         $this->member = $member;
@@ -49,6 +52,9 @@ final class BlackMember
         $this->line = $line;
     }
 
+    /**
+     * @return ClassMemberRef<string, string>
+     */
     public function getMember(): ClassMemberRef
     {
         return $this->member;
@@ -77,9 +83,23 @@ final class BlackMember
 
     public function getErrorIdentifier(): string
     {
-        return $this->member instanceof ClassConstantRef
-            ? DeadCodeRule::IDENTIFIER_CONSTANT
-            : DeadCodeRule::IDENTIFIER_METHOD;
+        if ($this->member instanceof ClassConstantRef) {
+            if ($this->member->isEnumCase()->yes()) {
+                return DeadCodeRule::IDENTIFIER_ENUM_CASE;
+
+            } elseif ($this->member->isEnumCase()->no()) {
+                return DeadCodeRule::IDENTIFIER_CONSTANT;
+
+            } else {
+                throw new LogicException('Cannot happen, ensured in constructor');
+            }
+
+        } elseif ($this->member instanceof ClassMethodRef) {
+            return DeadCodeRule::IDENTIFIER_METHOD;
+
+        } else {
+            throw new LogicException('Unknown member type');
+        }
     }
 
     public function getExclusionMessage(): string

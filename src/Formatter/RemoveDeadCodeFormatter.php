@@ -55,6 +55,7 @@ class RemoveDeadCodeFormatter implements ErrorFormatter
             if (
                 $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_METHOD
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_CONSTANT
+                && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_ENUM_CASE
             ) {
                 continue;
             }

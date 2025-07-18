@@ -11,6 +11,7 @@ use PHPStan\Node\CollectedDataNode;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
@@ -37,6 +38,7 @@ use function array_merge_recursive;
 use function array_slice;
 use function array_unique;
 use function array_values;
+use function implode;
 use function in_array;
 use function ksort;
 use function strpos;
@@ -49,6 +51,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';
     public const IDENTIFIER_CONSTANT = 'shipmonk.deadConstant';
+    public const IDENTIFIER_ENUM_CASE = 'shipmonk.deadEnumCase';
 
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,
@@ -79,6 +82,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
      *      kind: string,
      *      name: string,
      *      file: string,
+     *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
@@ -117,7 +121,9 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     private array $mixedClassNameUsages = [];
 
     /**
-     * @var array<string, array<string, non-empty-list<ClassMemberUsage>>> callerKey => array<calleeKey, usages[]>
+     * callerKey => array<calleeKey, usages[]>
+     *
+     * @var array<string, array<string, non-empty-list<ClassMemberUsage>>>
      */
     private array $usageGraph = [];
 
@@ -191,6 +197,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     'kind' => $typeData['kind'],
                     'name' => $typeName,
                     'file' => $file,
+                    'cases' => $typeData['cases'],
                     'constants' => $typeData['constants'],
                     'methods' => $typeData['methods'],
                     'parents' => $typeData['parents'],
@@ -205,6 +212,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
             $constants = $typeDefinition['constants'];
+            $cases = $typeDefinition['cases'];
             $file = $typeDefinition['file'];
 
             $ancestorNames = $this->getAncestorNames($typeName);
@@ -215,23 +223,39 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($methods as $methodName => $methodData) {
                 $methodRef = new ClassMethodRef($typeName, $methodName, false);
-                $methodKey = $methodRef->toKey();
+                $methodKeys = $methodRef->toKeys();
 
-                $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
+                foreach ($methodKeys as $methodKey) {
+                    $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
+                }
             }
 
             foreach ($constants as $constantName => $constantData) {
-                $constantRef = new ClassConstantRef($typeName, $constantName, false);
-                $constantKey = $constantRef->toKey();
+                $constantRef = new ClassConstantRef($typeName, $constantName, false, TrinaryLogic::createNo());
+                $constantKeys = $constantRef->toKeys();
 
-                $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
+                foreach ($constantKeys as $constantKey) {
+                    $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
+                }
+            }
+
+            foreach ($cases as $enumCaseName => $enumCaseData) {
+                $enumCaseRef = new ClassConstantRef($typeName, $enumCaseName, false, TrinaryLogic::createYes());
+                $enumCaseKeys = $enumCaseRef->toKeys();
+
+                foreach ($enumCaseKeys as $enumCaseKey) {
+                    $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);
+                }
             }
         }
 
         foreach ($this->typeDefinitions as $typeName => $typeDef) {
             $memberNamesForMixedExpand = [
                 MemberType::METHOD => array_keys($typeDef['methods']),
-                MemberType::CONSTANT => array_keys($typeDef['constants']),
+                MemberType::CONSTANT => array_merge(
+                    array_keys($typeDef['constants']),
+                    array_keys($typeDef['cases']),
+                ),
             ];
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
@@ -409,17 +433,18 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
+     * @param ClassMemberRef<?string, ?string> $member
      * @return list<string>
      */
     private function getAlternativeMemberKeys(ClassMemberRef $member): array
     {
-        if ($member->getClassName() === null) {
+        if (!$member->hasKnownClass()) {
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $memberKey = $member->toKey();
+        $memberKeys = $member->toKeys();
         $possibleDescendant = $member->isPossibleDescendant();
-        $cacheKey = $memberKey . ';' . ($possibleDescendant ? '1' : '0');
+        $cacheKey = implode('|', $memberKeys) . ';' . ($possibleDescendant ? '1' : '0');
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {
             return $this->memberAlternativesCache[$cacheKey];
@@ -435,13 +460,12 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($meAndDescendants as $className) {
             if ($member->getMemberName() !== null) {
-                $definerKey = $this->findDefinerMemberKey($member->getMemberType(), $className, $member->getMemberName());
-
-                if ($definerKey !== null) {
+                foreach ($this->findDefinerKeys($member->withKnownNames($className, $member->getMemberName())) as $definerKey) {
                     $result[] = $definerKey;
                 }
+
             } else {
-                foreach ($this->getPossibleDefinerMemberKeys($member->getMemberType(), $className) as $possibleDefinerKey) {
+                foreach ($this->getPossibleDefinerKeys($member->withKnownClass($className)) as $possibleDefinerKey) {
                     $result[] = $possibleDefinerKey;
                 }
             }
@@ -455,65 +479,67 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param MemberType::* $memberType
+     * @param ClassMemberRef<string, string> $memberRef
+     * @return list<string>
      */
-    private function findDefinerMemberKey(
-        int $memberType,
-        string $className,
-        string $memberName,
+    private function findDefinerKeys(
+        ClassMemberRef $memberRef,
         bool $includeParentLookup = true
-    ): ?string
+    ): array
     {
-        if ($this->hasMember($className, $memberName, $memberType)) {
-            return $this->buildMemberKey($memberType, $className, $memberName);
+        if ($this->isExistingRef($memberRef)) {
+            return $memberRef->toKeys();
         }
 
         // search for definition in traits
-        $traitMethodKey = $this->getDeclaringTraitMemberKey($memberType, $className, $memberName);
+        $traitMethodKeys = $this->getDeclaringTraitKeys($memberRef);
 
-        if ($traitMethodKey !== null) {
-            return $traitMethodKey;
+        if ($traitMethodKeys !== []) {
+            return $traitMethodKeys;
         }
 
         if ($includeParentLookup) {
-            $parentNames = $this->getAncestorNames($className);
+            $parentNames = $this->getAncestorNames($memberRef->getClassName());
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                $found = $this->findDefinerMemberKey($memberType, $parentName, $memberName, false);
+                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), false);
 
-                if ($found !== null) {
+                if ($found !== []) {
                     return $found;
                 }
             }
         }
 
-        return null;
+        return [];
     }
 
     /**
-     * @param MemberType::* $memberType
+     * @param ClassMemberRef<string, ?string> $memberRef
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
      */
-    private function getPossibleDefinerMemberKeys(
-        int $memberType,
-        string $className,
+    private function getPossibleDefinerKeys(
+        ClassMemberRef $memberRef,
         bool $includeParentLookup = true,
         array &$foundMemberNames = []
     ): array
     {
         /** @var list<string> $result */
         $result = [];
+        $className = $memberRef->getClassName();
+        $memberType = $memberRef->getMemberType();
 
-        foreach ($this->getMemberNames($className, $memberType) as $memberName) {
-            $memberKey = $this->buildMemberKey($memberType, $className, $memberName);
+        foreach ($this->getMemberNames($memberRef) as $memberName) {
+            $memberKeys = $memberRef->withKnownMember($memberName)->toKeys();
 
             if (isset($foundMemberNames[$memberName])) {
                 continue;
             }
 
-            $result[] = $memberKey;
+            foreach ($memberKeys as $memberKey) {
+                $result[] = $memberKey;
+            }
             $foundMemberNames[$memberName] = true;
         }
 
@@ -524,8 +550,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
                     continue;
                 }
 
-                $traitKey = $this->buildMemberKey($memberType, $traitName, $traitMemberName);
-                $result[] = $traitKey;
+                $traitKeys = $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys();
+                foreach ($traitKeys as $traitKey) {
+                    $result[] = $traitKey;
+                }
                 $foundMemberNames[$aliasedMemberName] = true;
             }
         }
@@ -537,7 +565,7 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             foreach ($parentNames as $parentName) {
                 $result = [
                     ...$result,
-                    ...$this->getPossibleDefinerMemberKeys($memberType, $parentName, false, $foundMemberNames),
+                    ...$this->getPossibleDefinerKeys($memberRef->withKnownClass($parentName), false, $foundMemberNames),
                 ];
             }
         }
@@ -545,38 +573,27 @@ class DeadCodeRule implements Rule, DiagnoseExtension
         return $result;
     }
 
-    private function getDeclaringTraitMemberKey(
-        int $memberType,
-        string $className,
-        string $memberName
-    ): ?string
+    /**
+     * @param ClassMemberRef<string, string> $memberRef
+     * @return list<string>
+     */
+    private function getDeclaringTraitKeys(
+        ClassMemberRef $memberRef
+    ): array
     {
+        $memberType = $memberRef->getMemberType();
+        $className = $memberRef->getClassName();
+        $memberName = $memberRef->getMemberName();
+
         foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
                 if ($memberName === $aliasedMemberName) {
-                    return $this->buildMemberKey($memberType, $traitName, $traitMemberName);
+                    return $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys();
                 }
             }
         }
 
-        return null;
-    }
-
-    private function buildMemberKey(
-        int $memberType,
-        string $className,
-        string $memberName
-    ): string
-    {
-        if ($memberType === MemberType::METHOD) {
-            return ClassMethodRef::buildKey($className, $memberName);
-
-        } elseif ($memberType === MemberType::CONSTANT) {
-            return ClassConstantRef::buildKey($className, $memberName);
-
-        } else {
-            throw new LogicException('Unsupported member type');
-        }
+        return [];
     }
 
     /**
@@ -786,46 +803,67 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
-     * @param MemberType::* $memberType
+     * @param ClassMemberRef<string, string> $memberRef
      */
-    private function hasMember(
-        string $typeName,
-        string $memberName,
-        int $memberType
+    private function isExistingRef(
+        ClassMemberRef $memberRef
     ): bool
     {
-        $key = $this->getTypeDefinitionKeyForMemberType($memberType);
+        $typeName = $memberRef->getClassName();
+        $memberName = $memberRef->getMemberName();
 
-        return array_key_exists($memberName, $this->typeDefinitions[$typeName][$key] ?? []);
+        $keys = $this->getTypeDefinitionKeysForMemberType($memberRef);
+
+        foreach ($keys as $key) {
+            if (array_key_exists($memberName, $this->typeDefinitions[$typeName][$key] ?? [])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * @param MemberType::* $memberType
+     * @param ClassMemberRef<string, ?string> $memberRef
      * @return list<string>
      */
     private function getMemberNames(
-        string $typeName,
-        int $memberType
+        ClassMemberRef $memberRef
     ): array
     {
-        $key = $this->getTypeDefinitionKeyForMemberType($memberType);
+        $typeName = $memberRef->getClassName();
+        $keys = $this->getTypeDefinitionKeysForMemberType($memberRef);
 
-        return array_keys($this->typeDefinitions[$typeName][$key] ?? []);
+        $result = [];
+        foreach ($keys as $key) {
+            $result = [
+                ...$result,
+                ...array_keys($this->typeDefinitions[$typeName][$key] ?? []),
+            ];
+
+        }
+
+        return array_values(array_unique($result));
     }
 
     /**
-     * @param MemberType::* $memberType
-     * @return 'methods'|'constants'
+     * @param ClassMemberRef<string, ?string> $memberRef
+     * @return list<'methods'|'constants'|'cases'>
      */
-    private function getTypeDefinitionKeyForMemberType(int $memberType): string
+    private function getTypeDefinitionKeysForMemberType(ClassMemberRef $memberRef): array
     {
-        if ($memberType === MemberType::METHOD) {
-            return 'methods';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            return 'constants';
+        if ($memberRef instanceof ClassMethodRef) {
+            return ['methods'];
+        } elseif ($memberRef instanceof ClassConstantRef) {
+            if ($memberRef->isEnumCase()->yes()) {
+                return ['cases'];
+            } elseif ($memberRef->isEnumCase()->no()) {
+                return ['constants'];
+            } else {
+                return ['constants', 'cases'];
+            }
         }
 
-        throw new LogicException('Invalid member type'); // @phpstan-ignore deadCode.unreachable (keep it future safe)
+        throw new LogicException('Invalid member type');
     }
 
     /**
@@ -854,14 +892,6 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
         $typeName = $blackMember->getMember()->getClassName();
         $memberName = $blackMember->getMember()->getMemberName();
-
-        if ($typeName === null) {
-            throw new LogicException('Ensured by BlackMember constructor');
-        }
-
-        if ($memberName === null) {
-            throw new LogicException('Ensured by BlackMember constructor');
-        }
 
         $kind = $this->typeDefinitions[$typeName]['kind'] ?? null;
         $params = $this->typeDefinitions[$typeName]['methods'][$memberName]['params'] ?? 0;

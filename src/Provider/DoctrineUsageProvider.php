@@ -10,7 +10,12 @@ use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\ExtendedPropertyReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -39,7 +44,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [
                 ...$usages,
-                ...$this->getUsagesFromReflection($node),
+                ...$this->getUsagesFromReflection($node, $scope),
             ];
         }
 
@@ -54,14 +59,27 @@ class DoctrineUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMemberUsage>
      */
-    private function getUsagesFromReflection(InClassNode $node): array
+    private function getUsagesFromReflection(
+        InClassNode $node,
+        Scope $scope
+    ): array
     {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
 
         $usages = [];
+
+        foreach ($nativeReflection->getProperties() as $nativePropertyReflection) {
+            $propertyName = $nativePropertyReflection->name;
+            $propertyReflection = $classReflection->getProperty($propertyName, $scope);
+
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesOfEnumColumn($classReflection->getName(), $propertyName, $propertyReflection),
+            ];
+        }
 
         foreach ($nativeReflection->getMethods() as $method) {
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -241,6 +259,44 @@ class DoctrineUsageProvider implements MemberUsageProvider
                 false,
             ),
         );
+    }
+
+    /**
+     * @return list<ClassConstantUsage>
+     */
+    private function getUsagesOfEnumColumn(
+        string $className,
+        string $propertyName,
+        ExtendedPropertyReflection $property
+    ): array
+    {
+        $usages = [];
+
+        foreach ($property->getAttributes() as $attribute) {
+            if ($attribute->getName() !== 'Doctrine\ORM\Mapping\Column') {
+                continue;
+            }
+
+            foreach ($attribute->getArgumentTypes() as $name => $type) {
+                if ($name !== 'enumType') {
+                    continue;
+                }
+
+                foreach ($type->getConstantStrings() as $constantString) {
+                    $usages[] = new ClassConstantUsage(
+                        UsageOrigin::createVirtual($this, VirtualUsageData::withNote("Used in enumType of #[Column] of $className::$propertyName")),
+                        new ClassConstantRef(
+                            $constantString->getValue(),
+                            null,
+                            false,
+                            TrinaryLogic::createYes(),
+                        ),
+                    );
+                }
+            }
+        }
+
+        return $usages;
     }
 
 }

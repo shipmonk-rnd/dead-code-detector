@@ -5,3 +5,8 @@ interface Remove
     const DEAD = 1;
     public function dead(): void;
 }
+
+enum MyEnum
+{
+    case DEAD;
+}

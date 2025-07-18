@@ -5,12 +5,16 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
- * @immutable
+ * @template-covariant C of string|null
+ * @template-covariant M of string|null
+ * @template-extends ClassMemberRef<C, M>
  */
 final class ClassMethodRef extends ClassMemberRef
 {
 
     /**
+     * @param C $className
+     * @param M $methodName
      * @param bool $possibleDescendant True if the $className can be a descendant of the actual class
      */
     public function __construct(
@@ -22,12 +26,12 @@ final class ClassMethodRef extends ClassMemberRef
         parent::__construct($className, $methodName, $possibleDescendant);
     }
 
-    public static function buildKey(
-        string $typeName,
-        string $memberName
-    ): string
+    /**
+     * @return list<string>
+     */
+    protected function getKeyPrefixes(): array
     {
-        return 'm/' . $typeName . '::' . $memberName;
+        return ['m'];
     }
 
     /**
@@ -36,6 +40,36 @@ final class ClassMethodRef extends ClassMemberRef
     public function getMemberType(): int
     {
         return MemberType::METHOD;
+    }
+
+    public function withKnownNames(
+        string $className,
+        string $memberName
+    ): self
+    {
+        return new self(
+            $className,
+            $memberName,
+            $this->isPossibleDescendant(),
+        );
+    }
+
+    public function withKnownClass(string $className): self
+    {
+        return new self(
+            $className,
+            $this->getMemberName(),
+            $this->isPossibleDescendant(),
+        );
+    }
+
+    public function withKnownMember(string $memberName): self
+    {
+        return new self(
+            $this->getClassName(),
+            $memberName,
+            $this->isPossibleDescendant(),
+        );
     }
 
 }

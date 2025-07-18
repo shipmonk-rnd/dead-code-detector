@@ -33,6 +33,16 @@ DebugCtor\Foo::__construct
 |  • data/debug/ctor.php:9
 
 
+DebugEnum\Foo::Two
+|
+| Marked as alive at:
+| entry data/debug/enum.php:12
+|   fetches DebugEnum\Foo::Two
+|
+| Found 1 usage:
+|  • data/debug/enum.php:12
+
+
 DebugExclude\Foo::mixedExcluder1
 |
 | Dead because:
