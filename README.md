@@ -58,6 +58,7 @@ $ vendor/bin/phpstan
 - `Doctrine\Common\EventSubscriber` methods
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
+- enums in `#[Column(enumType: UserStatus::class)]`
 
 #### PHPUnit:
 - **data provider methods**
