@@ -4,6 +4,8 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\CallLike;
+use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\TrinaryLogic;
@@ -41,7 +43,7 @@ class EnumUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if ($node instanceof StaticCall) {
+        if ($node instanceof StaticCall || $node instanceof MethodCall) {
             return $this->getTryFromUsages($node, $scope);
         }
 
@@ -49,19 +51,24 @@ class EnumUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * @param StaticCall|MethodCall $methodCall
      * @return list<ClassConstantUsage>
      */
     private function getTryFromUsages(
-        StaticCall $staticCall,
+        CallLike $methodCall,
         Scope $scope
     ): array
     {
-        $methodNames = $this->getMethodNames($staticCall, $scope);
-        $firstArgType = $this->getArgType($staticCall, $scope, 0);
+        $methodNames = $this->getMethodNames($methodCall, $scope);
+        $firstArgType = $this->getArgType($methodCall, $scope, 0);
 
-        $callerType = $staticCall->class instanceof Expr
-            ? $scope->getType($staticCall->class)
-            : $scope->resolveTypeByName($staticCall->class);
+        if ($methodCall instanceof StaticCall) {
+            $callerType = $methodCall->class instanceof Expr
+                ? $scope->getType($methodCall->class)
+                : $scope->resolveTypeByName($methodCall->class);
+        } else {
+            $callerType = $scope->getType($methodCall->var);
+        }
 
         $typeNoNull = TypeCombinator::removeNull($callerType); // remove null to support nullsafe calls
         $typeNormalized = TypeUtils::toBenevolentUnion($typeNoNull); // extract possible calls even from Class|int
@@ -87,7 +94,7 @@ class EnumUsageProvider implements MemberUsageProvider
                 foreach ($triedValues as $value) {
                     $enumCase = $value === null ? null : $valueToCaseMapping[$value] ?? null;
                     $result[] = new ClassConstantUsage(
-                        UsageOrigin::createRegular($staticCall, $scope),
+                        UsageOrigin::createRegular($methodCall, $scope),
                         new ClassConstantRef($classReflection->getName(), $enumCase, false, TrinaryLogic::createYes()),
                     );
                 }
@@ -98,10 +105,11 @@ class EnumUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * @param StaticCall|MethodCall $call
      * @return list<string|null>
      */
     private function getMethodNames(
-        StaticCall $call,
+        CallLike $call,
         Scope $scope
     ): array
     {
@@ -120,13 +128,16 @@ class EnumUsageProvider implements MemberUsageProvider
         return [$call->name->name];
     }
 
+    /**
+     * @param StaticCall|MethodCall $call
+     */
     private function getArgType(
-        StaticCall $staticCall,
+        CallLike $call,
         Scope $scope,
         int $position
     ): Type
     {
-        $args = $staticCall->getArgs();
+        $args = $call->getArgs();
 
         if (isset($args[$position])) {
             return $scope->getType($args[$position]->value);
