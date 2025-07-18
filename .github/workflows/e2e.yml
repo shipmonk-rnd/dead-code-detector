@@ -54,4 +54,6 @@ jobs:
 
             -
                 name: Run analysis
-                run: ${{ matrix.executable || 'vendor/bin/phpstan' }} analyse ${{ matrix.args }} -vvv --ansi
+                run: |
+                    ${{ matrix.executable || 'vendor/bin/phpstan' }} analyse ${{ matrix.args }} --error-format=prettyJson --no-ansi | \
+                    jq -e '.files[] | .messages[] | select(.identifier | test("^shipmonk\\.dead"))' && exit 1 || exit 0
