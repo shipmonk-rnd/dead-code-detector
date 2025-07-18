@@ -97,6 +97,16 @@ DebugMixed\Foo::any
 |  • data/debug/mixed.php:13
 
 
+DebugMixedMember\Foo::method
+|
+| Marked as alive at:
+| entry data/debug/mixed-member.php:11
+|   calls DebugMixedMember\Foo::method
+|
+| Found 1 usage:
+|  • data/debug/mixed-member.php:11
+
+
 DebugCycle\Foo::__construct
 |
 | Dead because:

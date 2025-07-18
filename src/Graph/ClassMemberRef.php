@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use LogicException;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -73,12 +74,17 @@ abstract class ClassMemberRef
      */
     public function toKeys(): array
     {
-        $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
+        if ($this->className === null) {
+            throw new LogicException('Cannot convert to keys without known class name.');
+        }
+
+        if ($this->memberName === null) {
+            throw new LogicException('Cannot convert to keys without known member name.');
+        }
 
         $result = [];
         foreach ($this->getKeyPrefixes() as $prefix) {
-            $result[] = "$prefix/$classRef::$memberRef";
+            $result[] = "$prefix/$this->className::$this->memberName";
         }
         return $result;
     }
@@ -89,6 +95,14 @@ abstract class ClassMemberRef
     public function hasKnownClass(): bool
     {
         return $this->className !== null;
+    }
+
+    /**
+     * @phpstan-assert-if-true self<C, string> $this
+     */
+    public function hasKnownMember(): bool
+    {
+        return $this->memberName !== null;
     }
 
     /**

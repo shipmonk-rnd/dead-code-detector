@@ -38,9 +38,9 @@ use function array_merge_recursive;
 use function array_slice;
 use function array_unique;
 use function array_values;
-use function implode;
 use function in_array;
 use function ksort;
+use function serialize;
 use function strpos;
 
 /**
@@ -442,15 +442,13 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $memberKeys = $member->toKeys();
-        $possibleDescendant = $member->isPossibleDescendant();
-        $cacheKey = implode('|', $memberKeys) . ';' . ($possibleDescendant ? '1' : '0');
+        $cacheKey = serialize($member);
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {
             return $this->memberAlternativesCache[$cacheKey];
         }
 
-        $descendantsToCheck = $possibleDescendant ? $this->classHierarchy->getClassDescendants($member->getClassName()) : [];
+        $descendantsToCheck = $member->isPossibleDescendant() ? $this->classHierarchy->getClassDescendants($member->getClassName()) : [];
         $meAndDescendants = [
             $member->getClassName(),
             ...$descendantsToCheck,
