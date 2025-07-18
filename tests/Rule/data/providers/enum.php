@@ -26,9 +26,48 @@ enum MyEnum3: string {
     case UsedToo = 'used_too';
 }
 
-function test(string $any) {
+enum MyEnum4: string {
+    case One = 'one';
+    case Two = 'two';
+}
+
+enum MyEnum5: string {
+    case One = 'one';
+    case Two = 'two'; // error: Unused EnumProvider\MyEnum5::Two
+}
+
+enum MyEnum6: string {
+    case One = 'one';
+    case Two = 'two';
+}
+
+enum MyEnum7: string {
+    case One = 'one';
+    case Two = 'two'; // error: Unused EnumProvider\MyEnum7::Two
+    case Three = 'three';
+}
+
+/**
+ * @param class-string<MyEnum7> $myEnum7Class
+ */
+function test(
+    string $any,
+    MyEnum4 $myEnum4,
+    MyEnum5 $myEnum5,
+    MyEnum6 $myEnum6,
+    MyEnum7 $myEnum7,
+    string $myEnum7Class
+): void
+{
     MyEnum0::tryFrom(1);
     MyEnum1::tryFrom('used');
     MyEnum2::from($any);
     MyEnum3::cases();
+
+    $myEnum4->cases();
+    $myEnum5->tryFrom('one');
+
+    $myEnum6::cases();
+    $myEnum7::tryFrom('one');
+    $myEnum7Class::tryFrom('three');
 }
