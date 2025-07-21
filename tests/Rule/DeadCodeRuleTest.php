@@ -318,6 +318,7 @@ class DeadCodeRuleTest extends RuleTestCase
             'DateTime::format',
             'DebugAlternative\Foo::foo',
             'DebugCtor\Foo::__construct',
+            'DebugBuiltin\Iter::getIterator',
             'DebugEnum\Foo::Two',
             'DebugExclude\Foo::mixedExcluder1',
             'DebugExclude\Foo::mixedExcluder2',
@@ -333,6 +334,7 @@ class DeadCodeRuleTest extends RuleTestCase
         ];
         $this->analyseFiles([
             __DIR__ . '/data/debug/alternative.php',
+            __DIR__ . '/data/debug/builtin.php',
             __DIR__ . '/data/debug/ctor.php',
             __DIR__ . '/data/debug/enum.php',
             __DIR__ . '/data/debug/exclude.php',
