@@ -98,6 +98,10 @@ parameters:
 - Any overridden method that originates in `vendor` is not reported as dead
   - e.g. implementing `Psr\Log\LoggerInterface::log` is automatically considered used
 
+#### Builtin:
+- Any overridden method that originates from PHP core or extensions is not reported as dead
+  - e.g. implementing `IteratorAggregate::getIterator` is automatically considered used
+
 #### Enum:
 - Detects usages caused by `BackedEnum::from`, `BackedEnum::tryFrom` and `UnitEnum::cases`
 

@@ -37,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -318,6 +319,7 @@ class DeadCodeRuleTest extends RuleTestCase
             'DateTime::format',
             'DebugAlternative\Foo::foo',
             'DebugCtor\Foo::__construct',
+            'DebugBuiltin\Iter::getIterator',
             'DebugEnum\Foo::Two',
             'DebugExclude\Foo::mixedExcluder1',
             'DebugExclude\Foo::mixedExcluder2',
@@ -333,6 +335,7 @@ class DeadCodeRuleTest extends RuleTestCase
         ];
         $this->analyseFiles([
             __DIR__ . '/data/debug/alternative.php',
+            __DIR__ . '/data/debug/builtin.php',
             __DIR__ . '/data/debug/ctor.php',
             __DIR__ . '/data/debug/enum.php',
             __DIR__ . '/data/debug/exclude.php',
@@ -974,6 +977,9 @@ class DeadCodeRuleTest extends RuleTestCase
                 $this->providersEnabled,
             ),
             new VendorUsageProvider(
+                $this->providersEnabled,
+            ),
+            new BuiltinUsageProvider(
                 $this->providersEnabled,
             ),
             new PhpUnitUsageProvider(
