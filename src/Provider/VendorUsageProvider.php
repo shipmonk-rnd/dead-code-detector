@@ -96,7 +96,7 @@ class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         if ($reflectionClass->getExtensionName() !== false) {
-            return false;
+            return false; // many built-in classes have stubs in PHPStan (with filepath in vendor); BuiltinUsageProvider will handle them
         }
 
         $filePath = $reflectionClass->getFileName();
