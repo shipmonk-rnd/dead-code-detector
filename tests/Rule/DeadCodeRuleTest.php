@@ -37,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -976,6 +977,9 @@ class DeadCodeRuleTest extends RuleTestCase
                 $this->providersEnabled,
             ),
             new VendorUsageProvider(
+                $this->providersEnabled,
+            ),
+            new BuiltinUsageProvider(
                 $this->providersEnabled,
             ),
             new PhpUnitUsageProvider(

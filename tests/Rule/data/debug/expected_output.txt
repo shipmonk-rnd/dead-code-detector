@@ -36,11 +36,11 @@ DebugCtor\Foo::__construct
 DebugBuiltin\Iter::getIterator
 |
 | Marked as alive at:
-| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
+| entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
 |   calls DebugBuiltin\Iter::getIterator
 |
 | Found 1 usage:
-|  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
+|  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
 
 
 DebugEnum\Foo::Two
