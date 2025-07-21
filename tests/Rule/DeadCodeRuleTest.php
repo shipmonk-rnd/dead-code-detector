@@ -832,6 +832,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-parent-call-4' => [__DIR__ . '/data/methods/parent-call-4.php'];
         yield 'method-parent-call-5' => [__DIR__ . '/data/methods/parent-call-5.php'];
         yield 'method-parent-call-6' => [__DIR__ . '/data/methods/parent-call-6.php'];
+        yield 'method-soft-final' => [__DIR__ . '/data/methods/soft-final.php'];
         yield 'method-attribute' => [__DIR__ . '/data/methods/attribute.php'];
         yield 'method-dynamic-method' => [__DIR__ . '/data/methods/dynamic-method.php'];
         yield 'method-call-on-class-string' => [__DIR__ . '/data/methods/class-string.php'];
@@ -869,6 +870,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'const-expr' => [__DIR__ . '/data/constants/expr.php'];
         yield 'const-magic' => [__DIR__ . '/data/constants/magic.php'];
         yield 'const-mixed' => [__DIR__ . '/data/constants/mixed/tracked.php'];
+        yield 'const-soft-final' => [__DIR__ . '/data/constants/soft-final.php'];
         yield 'const-override' => [__DIR__ . '/data/constants/override.php'];
         yield 'const-traits-1' => [__DIR__ . '/data/constants/traits-1.php'];
         yield 'const-traits-2' => [__DIR__ . '/data/constants/traits-2.php'];

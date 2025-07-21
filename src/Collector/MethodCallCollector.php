@@ -273,7 +273,7 @@ class MethodCallCollector implements Collector
         $result = [];
 
         foreach ($classReflections as $classReflection) {
-            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
+            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinalByKeyword();
             $result[] = new ClassMethodRef($classReflection->getName(), $methodName, $possibleDescendant);
         }
 
