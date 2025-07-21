@@ -200,7 +200,7 @@ class ConstantFetchCollector implements Collector
         $isEnumCaseFetch = $typeNormalized->isEnum()->no() ? TrinaryLogic::createNo() : TrinaryLogic::createMaybe();
 
         foreach ($classReflections as $classReflection) {
-            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinal();
+            $possibleDescendant = $isPossibleDescendant ?? !$classReflection->isFinalByKeyword();
             $result[] = new ClassConstantRef(
                 $classReflection->getName(),
                 $constantName,
