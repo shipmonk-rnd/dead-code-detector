@@ -3,9 +3,13 @@
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PHPStan\Analyser\Scope;
+use PHPStan\Collectors\Collector;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
 
+/**
+ * @phpstan-require-implements Collector
+ */
 trait BufferedUsageCollector
 {
 
