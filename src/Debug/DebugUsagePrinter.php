@@ -17,7 +17,6 @@ use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_map;
 use function array_sum;
-use function array_unique;
 use function count;
 use function explode;
 use function implode;
@@ -301,10 +300,15 @@ class DebugUsagePrinter
         array $alternativeKeys
     ): void
     {
-        $memberKeys = array_unique([
-            ...$collectedUsage->getUsage()->getMemberRef()->toKeys(),
-            ...$alternativeKeys,
-        ]);
+        if ($alternativeKeys === []) {
+            // this can happen for references outside analysed files
+            $originalRef = $collectedUsage->getUsage()->getMemberRef();
+            $memberKeys = $originalRef->hasKnownClass() && $originalRef->hasKnownMember()
+                    ? $originalRef->toKeys()
+                    : [];
+        } else {
+            $memberKeys = $alternativeKeys;
+        }
 
         foreach ($memberKeys as $memberKey) {
             if (!isset($this->debugMembers[$memberKey])) {
