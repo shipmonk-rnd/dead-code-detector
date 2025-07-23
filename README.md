@@ -42,6 +42,7 @@ $ vendor/bin/phpstan
    - constructors, calls, factory methods
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
 - `#[AsEventListener]` attribute
+- `#[AsMessageHandler]` attribute
 - `#[AsController]` attribute
 - `#[AsCommand]` attribute
 - `#[Required]` attribute
