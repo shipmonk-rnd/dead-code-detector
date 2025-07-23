@@ -363,6 +363,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             return 'Event listener method via #[AsEventListener] attribute';
         }
 
+        if ($this->isMethodWithMessageHandlerAttribute($method)) {
+            return 'Message Handler method via #[AsMessageHandler] attribute';
+        }
+
         if ($this->isAutowiredWithRequiredAttribute($method)) {
             return 'Autowired with #[Required] (called by DIC)';
         }
@@ -516,6 +520,14 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', $isInstanceOf)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
+    }
+
+    protected function isMethodWithMessageHandlerAttribute(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+
+        return $this->hasAttribute($class, 'Symfony\Component\Messenger\Attribute\AsMessageHandler')
+            || $this->hasAttribute($method, 'Symfony\Component\Messenger\Attribute\AsMessageHandler');
     }
 
     protected function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
