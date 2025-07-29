@@ -16,7 +16,7 @@ use PhpParser\NodeVisitorAbstract;
 use function array_fill_keys;
 use function ltrim;
 
-class RemoveClassMemberVisitor extends NodeVisitorAbstract
+final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 {
 
     private string $currentNamespace = '';

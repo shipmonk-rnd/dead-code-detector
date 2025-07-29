@@ -24,7 +24,7 @@ use function in_array;
 use function is_int;
 use function is_string;
 
-class EnumUsageProvider implements MemberUsageProvider
+final class EnumUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;

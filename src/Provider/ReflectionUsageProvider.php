@@ -23,7 +23,7 @@ use function array_key_first;
 use function count;
 use function in_array;
 
-class ReflectionUsageProvider implements MemberUsageProvider
+final class ReflectionUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;

@@ -4,7 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Hierarchy;
 
 use function array_keys;
 
-class ClassHierarchy
+final class ClassHierarchy
 {
 
     /**

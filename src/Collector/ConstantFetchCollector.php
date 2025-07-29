@@ -29,7 +29,7 @@ use function strpos;
 /**
  * @implements Collector<Node, list<string>>
  */
-class ConstantFetchCollector implements Collector
+final class ConstantFetchCollector implements Collector
 {
 
     use BufferedUsageCollector;
