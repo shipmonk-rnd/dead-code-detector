@@ -79,7 +79,7 @@ use const PHP_VERSION_ID;
 /**
  * @extends ShipMonkRuleTestCase<DeadCodeRule>
  */
-class DeadCodeRuleTest extends ShipMonkRuleTestCase
+final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 {
 
     /**

@@ -21,7 +21,7 @@ use function count;
 use function explode;
 use function in_array;
 
-class TwigUsageProvider implements MemberUsageProvider
+final class TwigUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -178,7 +178,7 @@ class TwigUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    protected function shouldMarkAsUsed(ReflectionMethod $method): ?string
+    private function shouldMarkAsUsed(ReflectionMethod $method): ?string
     {
         if ($this->isMethodWithAsTwigFilterAttribute($method)) {
             return 'Twig filter method via #[AsTwigFilter] attribute';
@@ -195,22 +195,22 @@ class TwigUsageProvider implements MemberUsageProvider
         return null;
     }
 
-    protected function isMethodWithAsTwigFilterAttribute(ReflectionMethod $method): bool
+    private function isMethodWithAsTwigFilterAttribute(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Twig\Attribute\AsTwigFilter');
     }
 
-    protected function isMethodWithAsTwigFunctionAttribute(ReflectionMethod $method): bool
+    private function isMethodWithAsTwigFunctionAttribute(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Twig\Attribute\AsTwigFunction');
     }
 
-    protected function isMethodWithAsTwigTestAttribute(ReflectionMethod $method): bool
+    private function isMethodWithAsTwigTestAttribute(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Twig\Attribute\AsTwigTest');
     }
 
-    protected function hasAttribute(
+    private function hasAttribute(
         ReflectionMethod $method,
         string $attributeClass
     ): bool

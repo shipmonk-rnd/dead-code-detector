@@ -17,7 +17,7 @@ use function sprintf;
 /**
  * @implements Collector<Node, list<string>>
  */
-class ProvidedUsagesCollector implements Collector
+final class ProvidedUsagesCollector implements Collector
 {
 
     use BufferedUsageCollector;

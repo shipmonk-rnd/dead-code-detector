@@ -34,7 +34,7 @@ use function count;
  *       interfaces: array<string, null>,
  *  }>
  */
-class ClassDefinitionCollector implements Collector
+final class ClassDefinitionCollector implements Collector
 {
 
     private ReflectionProvider $reflectionProvider;

@@ -14,7 +14,7 @@ use function in_array;
 /**
  * See: https://php.net/manual/en/class.streamwrapper.php
  */
-class StreamWrapperUsageProvider implements MemberUsageProvider
+final class StreamWrapperUsageProvider implements MemberUsageProvider
 {
 
     private const STREAM_WRAPPER_METHODS = [

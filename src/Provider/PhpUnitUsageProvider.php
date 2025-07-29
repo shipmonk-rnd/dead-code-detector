@@ -18,7 +18,7 @@ use function array_merge;
 use function is_string;
 use function strpos;
 
-class PhpUnitUsageProvider implements MemberUsageProvider
+final class PhpUnitUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;

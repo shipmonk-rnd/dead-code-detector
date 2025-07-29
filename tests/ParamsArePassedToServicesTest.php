@@ -8,7 +8,7 @@ use function file_get_contents;
 use function is_array;
 use function strpos;
 
-class ParamsArePassedToServicesTest extends PHPStanTestCase
+final class ParamsArePassedToServicesTest extends PHPStanTestCase
 {
 
     /**

@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function strpos;
 
-class BehatUsageProvider implements MemberUsageProvider
+final class BehatUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;

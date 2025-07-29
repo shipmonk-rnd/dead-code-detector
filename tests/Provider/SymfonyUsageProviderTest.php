@@ -9,7 +9,7 @@ use function realpath;
 use function rmdir;
 use const PHP_VERSION_ID;
 
-class SymfonyUsageProviderTest extends PHPStanTestCase
+final class SymfonyUsageProviderTest extends PHPStanTestCase
 {
 
     public function testAutodetectConfigDir(): void

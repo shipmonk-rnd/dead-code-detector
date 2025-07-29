@@ -12,7 +12,7 @@ use function strlen;
 use function strpos;
 use function substr;
 
-class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
+final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     /**

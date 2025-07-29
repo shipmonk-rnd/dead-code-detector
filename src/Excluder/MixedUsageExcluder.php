@@ -6,7 +6,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 
-class MixedUsageExcluder implements MemberUsageExcluder
+final class MixedUsageExcluder implements MemberUsageExcluder
 {
 
     private bool $enabled;

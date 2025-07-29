@@ -9,7 +9,7 @@ use function get_class;
 use function implode;
 use function var_export;
 
-class BackwardCompatibilityChecker
+final class BackwardCompatibilityChecker
 {
 
     /**
