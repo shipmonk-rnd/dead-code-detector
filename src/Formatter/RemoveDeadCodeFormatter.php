@@ -15,7 +15,7 @@ use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use function array_keys;
 use function count;
 
-class RemoveDeadCodeFormatter implements ErrorFormatter
+final class RemoveDeadCodeFormatter implements ErrorFormatter
 {
 
     private FileSystem $fileSystem;

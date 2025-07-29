@@ -8,7 +8,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function sprintf;
 use function str_replace;
 
-class OutputEnhancer
+final class OutputEnhancer
 {
 
     private RelativePathHelper $relativePathHelper;

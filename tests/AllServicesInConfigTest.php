@@ -26,7 +26,7 @@ use function interface_exists;
 use function str_replace;
 use function trait_exists;
 
-class AllServicesInConfigTest extends PHPStanTestCase
+final class AllServicesInConfigTest extends PHPStanTestCase
 {
 
     /**

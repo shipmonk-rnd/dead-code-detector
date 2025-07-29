@@ -75,7 +75,7 @@ use const PHP_VERSION_ID;
 /**
  * @extends RuleTestCase<DeadCodeRule>
  */
-class DeadCodeRuleTest extends RuleTestCase
+final class DeadCodeRuleTest extends RuleTestCase
 {
 
     /**
