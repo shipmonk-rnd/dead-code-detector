@@ -11,5 +11,12 @@
         </service>
         <service id="Symfony\DicClass3" class="Symfony\DicClass3" public="true" autowire="true" autoconfigure="true" constructor="create">
         </service>
+        <!-- Anonymous service without class attribute -->
+        <service id=".4_TokenConfig~abc123">
+            <factory service="some.id2" method="calledViaAnonymousServiceFactory"/>
+        </service>
+        <service id="Symfony\DicClass4" class="Symfony\DicClass4" public="true" autowire="true" autoconfigure="true">
+            <argument type="service" id=".4_TokenConfig~abc123"/>
+        </service>
     </services>
 </container>

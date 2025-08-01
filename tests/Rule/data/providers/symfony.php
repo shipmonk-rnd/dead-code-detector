@@ -106,6 +106,7 @@ class DicClass1 extends DicClassParent {
 class DicClass2 {
     public function __construct() {}
     public function calledViaDicFactory(): void {}
+    public function calledViaAnonymousServiceFactory(): void {}
 }
 
 class DicClass3 {
@@ -113,6 +114,10 @@ class DicClass3 {
     public function create(): self {
         return new self();
     }
+}
+
+class DicClass4 {
+    public function __construct() {}
 }
 
 class Sftp {
