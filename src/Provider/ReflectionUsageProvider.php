@@ -19,7 +19,9 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function array_filter;
 use function array_key_first;
+use function array_values;
 use function count;
 use function in_array;
 
@@ -97,16 +99,16 @@ class ReflectionUsageProvider implements MemberUsageProvider
             }
         }
 
-        return [
+        return array_values(array_filter([
             ...$usedConstants,
             ...$usedMethods,
             ...$usedEnumCases,
-        ];
+        ], static fn (?ClassMemberUsage $usage): bool => $usage !== null));
     }
 
     /**
      * @param array<Arg> $args
-     * @return list<ClassConstantUsage>
+     * @return list<ClassConstantUsage|null>
      */
     private function extractConstantsUsedByReflection(
         ?string $genericClassName,
@@ -135,7 +137,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
     /**
      * @param array<Arg> $args
-     * @return list<ClassConstantUsage>
+     * @return list<ClassConstantUsage|null>
      */
     private function extractEnumCasesUsedByReflection(
         ?string $genericClassName,
@@ -164,7 +166,7 @@ class ReflectionUsageProvider implements MemberUsageProvider
 
     /**
      * @param array<Arg> $args
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMethodUsage|null>
      */
     private function extractMethodsUsedByReflection(
         ?string $genericClassName,
@@ -226,8 +228,12 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Scope $scope,
         ?string $className,
         ?string $constantName
-    ): ClassConstantUsage
+    ): ?ClassConstantUsage
     {
+        if ($className === null && $constantName === null) {
+            return null;
+        }
+
         return new ClassConstantUsage(
             UsageOrigin::createRegular($node, $scope),
             new ClassConstantRef(
@@ -244,8 +250,12 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Scope $scope,
         ?string $className,
         ?string $enumCaseName
-    ): ClassConstantUsage
+    ): ?ClassConstantUsage
     {
+        if ($className === null && $enumCaseName === null) {
+            return null;
+        }
+
         return new ClassConstantUsage(
             UsageOrigin::createRegular($node, $scope),
             new ClassConstantRef(
@@ -262,8 +272,12 @@ class ReflectionUsageProvider implements MemberUsageProvider
         Scope $scope,
         ?string $className,
         ?string $methodName
-    ): ClassMethodUsage
+    ): ?ClassMethodUsage
     {
+        if ($className === null && $methodName === null) {
+            return null;
+        }
+
         return new ClassMethodUsage(
             UsageOrigin::createRegular($node, $scope),
             new ClassMethodRef(

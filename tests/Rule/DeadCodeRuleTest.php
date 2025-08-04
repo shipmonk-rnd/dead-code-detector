@@ -345,6 +345,7 @@ class DeadCodeRuleTest extends RuleTestCase
             __DIR__ . '/data/debug/mixed.php',
             __DIR__ . '/data/debug/mixed-member.php',
             __DIR__ . '/data/debug/never.php',
+            __DIR__ . '/data/debug/reflection.php',
             __DIR__ . '/data/debug/regular.php',
             __DIR__ . '/data/debug/unsupported.php',
             __DIR__ . '/data/debug/virtual.php',
