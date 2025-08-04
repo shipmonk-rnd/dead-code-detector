@@ -420,22 +420,20 @@ class SymfonyUsageProvider implements MemberUsageProvider
             $class = isset($serviceAttributes->class) ? (string) $serviceAttributes->class : null;
             $constructor = isset($serviceAttributes->constructor) ? (string) $serviceAttributes->constructor : '__construct';
 
-            if ($class === null) {
-                continue;
-            }
+            if ($class !== null) {
+                $this->dicCalls[$class][$constructor] = true;
 
-            $this->dicCalls[$class][$constructor] = true;
+                foreach ($serviceDefinition->call ?? [] as $callDefinition) {
+                    /** @var SimpleXMLElement $callAttributes */
+                    $callAttributes = $callDefinition->attributes();
+                    $method = $callAttributes->method !== null ? (string) $callAttributes->method : null;
 
-            foreach ($serviceDefinition->call ?? [] as $callDefinition) {
-                /** @var SimpleXMLElement $callAttributes */
-                $callAttributes = $callDefinition->attributes();
-                $method = $callAttributes->method !== null ? (string) $callAttributes->method : null;
+                    if ($method === null) {
+                        continue;
+                    }
 
-                if ($method === null) {
-                    continue;
+                    $this->dicCalls[$class][$method] = true;
                 }
-
-                $this->dicCalls[$class][$method] = true;
             }
 
             foreach ($serviceDefinition->factory ?? [] as $factoryDefinition) {
