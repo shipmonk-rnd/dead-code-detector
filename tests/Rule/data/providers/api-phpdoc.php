@@ -95,3 +95,24 @@ class InheritedPublicApi4 implements PartialPublicApiInterface {
     public function method2() {} // error: Unused ApiPhpdoc1\InheritedPublicApi4::method2
     public function method3() {} // error: Unused ApiPhpdoc1\InheritedPublicApi4::method3
 }
+
+enum PartiallyPublicEnum: string
+{
+    /** @api */
+    case Case1 = 'case1';
+    case Case3 = 'case2'; // error: Unused ApiPhpdoc1\PartiallyPublicEnum::Case3
+
+    /** @api */
+    public function method1(): void {}
+    public function method2(): void {} // error: Unused ApiPhpdoc1\PartiallyPublicEnum::method2
+}
+
+/** @api */
+enum PublicApiEnum: string
+{
+    case Case1 = 'case1';
+    case Case3 = 'case2';
+
+    public function method1(): void {}
+    public function method2(): void {}
+}

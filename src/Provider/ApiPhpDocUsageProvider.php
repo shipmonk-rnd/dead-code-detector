@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionClassConstant;
+use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function strpos;
@@ -33,6 +34,11 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     public function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
         return $this->enabled ? $this->shouldMarkMemberAsUsed($constant) : null;
+    }
+
+    public function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
+    {
+        return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
     }
 
     /**
@@ -111,6 +117,10 @@ class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         object $member
     ): bool
     {
+        if ($member instanceof ReflectionEnumUnitCase) {
+            return ReflectionHelper::hasOwnEnumCase($reflection, $member->getName());
+        }
+
         if ($member instanceof ReflectionClassConstant) {
             return ReflectionHelper::hasOwnConstant($reflection, $member->getName());
         }
