@@ -28,5 +28,5 @@ class Holder3
 function testNoGenericTypeKnown(\ReflectionClass $reflection) {
     echo $reflection->getConstant('CONST1'); // marks all constants named CONST1 as used
     echo $reflection->getMethod('bar'); // marks all methods named bar as used
-    echo $reflection->getMethods(); // we ignore mixed over mixed calls
+    echo $reflection->getMethods(); // not emitted + we ignore mixed over mixed calls
 }
