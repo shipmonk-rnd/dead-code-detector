@@ -24,7 +24,7 @@ use function reset;
 use function strpos;
 use const JSON_ERROR_NONE;
 
-class TestsUsageExcluder implements MemberUsageExcluder
+final class TestsUsageExcluder implements MemberUsageExcluder
 {
 
     private ReflectionProvider $reflectionProvider;

@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use PHPStan\TrinaryLogic;
 use PHPUnit\Framework\TestCase;
 
-class SerializationTest extends TestCase
+final class SerializationTest extends TestCase
 {
 
     /**

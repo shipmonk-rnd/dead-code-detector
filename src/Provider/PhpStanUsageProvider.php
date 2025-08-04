@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\DependencyInjection\Container;
 use ReflectionMethod;
 
-class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
+final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     private bool $enabled;

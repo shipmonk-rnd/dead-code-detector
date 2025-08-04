@@ -30,7 +30,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 /**
  * @implements Collector<Node, list<string>>
  */
-class MethodCallCollector implements Collector
+final class MethodCallCollector implements Collector
 {
 
     use BufferedUsageCollector;

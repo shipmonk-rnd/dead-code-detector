@@ -10,7 +10,7 @@ use PhpParser\Parser;
 use PhpParser\Parser\Php8;
 use PhpParser\PrettyPrinter\Standard as PhpPrinter;
 
-class RemoveDeadCodeTransformer
+final class RemoveDeadCodeTransformer
 {
 
     private Lexer $phpLexer;
