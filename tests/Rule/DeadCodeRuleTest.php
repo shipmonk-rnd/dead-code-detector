@@ -787,6 +787,7 @@ class DeadCodeRuleTest extends RuleTestCase
         yield 'method-new-in-initializers' => [__DIR__ . '/data/methods/new-in-initializers.php'];
         yield 'method-first-class-callable' => [__DIR__ . '/data/methods/first-class-callable.php'];
         yield 'method-hierarchy-in-vendor' => [__DIR__ . '/data/methods/hierarchy-in-vendor.php'];
+        yield 'method-hooks-1' => [__DIR__ . '/data/methods/hooks-1.php'];
         yield 'method-overwriting-1' => [__DIR__ . '/data/methods/overwriting-methods-1.php'];
         yield 'method-overwriting-2' => [__DIR__ . '/data/methods/overwriting-methods-2.php'];
         yield 'method-overwriting-3' => [__DIR__ . '/data/methods/overwriting-methods-3.php'];
