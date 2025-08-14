@@ -40,7 +40,7 @@ parameters:
             superclassToSuffixMapping:
                 PHPStan\Rules\Rule: Rule
                 PHPStan\Collectors\Collector: Collector
-                ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase: RuleTest
+                ShipMonk\PHPStanDev\RuleTestCase: RuleTest
                 ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef: Ref
                 ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage: Usage
                 ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider: UsageProvider

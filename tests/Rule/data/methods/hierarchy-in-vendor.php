@@ -4,7 +4,7 @@ namespace HierachyInVendor;
 
 use PHPStan\Rules\Rule;
 use PHPUnit\Framework\TestCase;
-use ShipMonk\PHPStan\DeadCode\Rule\RuleTestCase;
+use ShipMonk\PHPStanDev\RuleTestCase;
 
 abstract class SomeTest extends RuleTestCase {
 
