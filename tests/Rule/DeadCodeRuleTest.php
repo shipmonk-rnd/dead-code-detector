@@ -51,6 +51,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
+use ShipMonk\PHPStanDev\RuleTestCase as ShipMonkRuleTestCase;
 use Throwable;
 use Traversable;
 use function array_filter;
@@ -73,9 +74,9 @@ use const E_DEPRECATED;
 use const PHP_VERSION_ID;
 
 /**
- * @extends RuleTestCase<DeadCodeRule>
+ * @extends ShipMonkRuleTestCase<DeadCodeRule>
  */
-class DeadCodeRuleTest extends RuleTestCase
+class DeadCodeRuleTest extends ShipMonkRuleTestCase
 {
 
     /**
@@ -225,25 +226,25 @@ class DeadCodeRuleTest extends RuleTestCase
             self::markTestSkipped('Requirements not met');
         }
 
-        $this->analyseFiles(is_array($files) ? $files : [$files]);
+        $this->analyzeFiles(is_array($files) ? $files : [$files]);
     }
 
     public function testMixedCallsTracked(): void
     {
-        $this->analyseFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
-        $this->analyseFiles([__DIR__ . '/data/constants/mixed/tracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/constants/mixed/tracked.php']);
     }
 
     public function testMixedCallsNotTracked(): void
     {
         $this->trackMixedAccess = false;
-        $this->analyseFiles([__DIR__ . '/data/methods/mixed/untracked.php']);
-        $this->analyseFiles([__DIR__ . '/data/constants/mixed/untracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/methods/mixed/untracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/constants/mixed/untracked.php']);
     }
 
     public function testDiagnoseMixedCalls(): void
     {
-        $this->analyseFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
         $rule = $this->getRule();
 
         $actualOutput = '';
@@ -267,7 +268,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testDiagnoseFullyMixedCalls(): void
     {
-        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-method.php']);
+        $this->analyzeFiles([__DIR__ . '/data/mixed-member/full-mixed-method.php']);
         $rule = $this->getRule();
 
         $actualOutput = '';
@@ -289,7 +290,7 @@ class DeadCodeRuleTest extends RuleTestCase
 
     public function testDiagnoseFullyMixedFetches(): void
     {
-        $this->analyseFiles([__DIR__ . '/data/mixed-member/full-mixed-const.php']);
+        $this->analyzeFiles([__DIR__ . '/data/mixed-member/full-mixed-const.php']);
         $rule = $this->getRule();
 
         $actualOutput = '';
@@ -333,7 +334,7 @@ class DeadCodeRuleTest extends RuleTestCase
             'DebugUnsupported\Foo::notDead',
             'DebugZero\Foo::__construct',
         ];
-        $this->analyseFiles([
+        $this->analyzeFiles([
             __DIR__ . '/data/debug/alternative.php',
             __DIR__ . '/data/debug/builtin.php',
             __DIR__ . '/data/debug/ctor.php',
@@ -433,7 +434,7 @@ class DeadCodeRuleTest extends RuleTestCase
         $this->expectExceptionMessage($error);
 
         $this->debugMembers = [$member];
-        $this->analyseFiles([__DIR__ . '/data/debug/alternative.php']);
+        $this->analyzeFiles([__DIR__ . '/data/debug/alternative.php']);
         $this->getRule();
     }
 
@@ -1186,6 +1187,20 @@ class DeadCodeRuleTest extends RuleTestCase
         }
 
         return $replaced;
+    }
+
+    /**
+     * @param list<Error> $actualErrors
+     * @return list<string>
+     */
+    protected function processActualErrors(array $actualErrors): array
+    {
+        foreach ($actualErrors as $error) {
+            self::assertNotNull($error->getIdentifier(), "Missing error identifier for error: {$error->getMessage()}");
+            self::assertStringStartsWith('shipmonk.', $error->getIdentifier(), "Unexpected error identifier for: {$error->getMessage()}");
+        }
+
+        return parent::processActualErrors($actualErrors);
     }
 
     /**
