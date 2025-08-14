@@ -16,6 +16,7 @@ use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Service\Attribute\Required;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -45,6 +46,18 @@ class CreateUserCommand extends Command {
         parent::__construct();
     }
 
+}
+
+#[AsMessageHandler]
+class SomeMessageHandler {
+}
+
+class SomeMessageHandlerClass
+{
+    #[AsMessageHandler]
+    public function onSomething(): void
+    {
+    }
 }
 
 class FooBundle extends Bundle {
