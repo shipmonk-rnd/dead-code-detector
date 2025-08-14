@@ -1190,6 +1190,20 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
     }
 
     /**
+     * @param list<Error> $actualErrors
+     * @return list<string>
+     */
+    protected function processActualErrors(array $actualErrors): array
+    {
+        foreach ($actualErrors as $error) {
+            self::assertNotNull($error->getIdentifier(), "Missing error identifier for error: {$error->getMessage()}");
+            self::assertStringStartsWith('shipmonk.', $error->getIdentifier(), "Unexpected error identifier for: {$error->getMessage()}");
+        }
+
+        return parent::processActualErrors($actualErrors);
+    }
+
+    /**
      * Allows secondary analysis within same testcase with different setup
      */
     private function resetInternalAnalyser(): void
