@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9295314afb8a7da3b550db849ddad752",
+    "content-hash": "e8fe312dd12eeb1a75cb0a0edc2137d1",
     "packages": [
         {
             "name": "phpstan/phpstan",
@@ -4351,16 +4351,16 @@
         },
         {
             "name": "shipmonk/phpstan-dev",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/phpstan-dev.git",
-                "reference": "d2d02fb885bd6c99c1c6b1893a1d5ca381094cda"
+                "reference": "ec564f68d893fa966f70afa8274d03fa8f0103df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-dev/zipball/d2d02fb885bd6c99c1c6b1893a1d5ca381094cda",
-                "reference": "d2d02fb885bd6c99c1c6b1893a1d5ca381094cda",
+                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-dev/zipball/ec564f68d893fa966f70afa8274d03fa8f0103df",
+                "reference": "ec564f68d893fa966f70afa8274d03fa8f0103df",
                 "shasum": ""
             },
             "require": {
@@ -4400,9 +4400,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/phpstan-dev/issues",
-                "source": "https://github.com/shipmonk-rnd/phpstan-dev/tree/0.1.0"
+                "source": "https://github.com/shipmonk-rnd/phpstan-dev/tree/0.1.1"
             },
-            "time": "2025-08-06T08:14:26+00:00"
+            "time": "2025-08-25T12:16:48+00:00"
         },
         {
             "name": "shipmonk/phpstan-rules",
