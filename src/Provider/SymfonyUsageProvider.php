@@ -363,6 +363,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             return 'Event listener method via #[AsEventListener] attribute';
         }
 
+        if ($this->isMessageHandlerMethodWithAsMessageHandlerAttribute($method)) {
+            return 'Message handler method via #[AsMessageHandler] attribute';
+        }
+
         if ($this->isWorkflowEventListenerMethod($method)) {
             return 'Workflow event listener method via workflow attribute';
         }
@@ -498,6 +502,49 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         return $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
+    }
+
+    protected function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+        $methodName = $method->getName();
+
+        // Check if this method has the attribute directly (fallback to method name itself if no target specified)
+        foreach ($method->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $targetMethod = $arguments['method'] ?? $arguments[3] ?? $methodName;
+
+            if ($targetMethod === $methodName) {
+                return true;
+            }
+        }
+
+        // Check class-level attributes (fallback to __invoke if no target specified)
+        foreach ($class->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $targetMethod = $arguments['method'] ?? $arguments[3] ?? '__invoke';
+
+            if ($targetMethod === $methodName) {
+                return true;
+            }
+        }
+
+        // Check if any other method points to this method (only if explicitly specified)
+        foreach ($class->getMethods() as $otherMethod) {
+            if ($otherMethod->getName() === $methodName) {
+                continue;
+            }
+
+            foreach ($otherMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+                $arguments = $attribute->getArguments();
+                $targetMethod = $arguments['method'] ?? $arguments[3] ?? null;
+                if ($methodName === $targetMethod) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     protected function isWorkflowEventListenerMethod(ReflectionMethod $method): bool
