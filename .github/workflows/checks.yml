@@ -38,6 +38,7 @@ jobs:
 
             -
                 name: Report patch coverage
+                if: github.event_name == 'pull_request'
                 run: |
                     if git diff --name-only ${{ github.event.pull_request.base.sha }} | grep -q '\.php$'; then
                         git diff ${{ github.event.pull_request.base.sha }} > changes.patch
