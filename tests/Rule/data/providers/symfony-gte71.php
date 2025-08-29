@@ -4,6 +4,7 @@ namespace Symfony;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Workflow\Attribute\AsAnnounceListener;
 use Symfony\Component\Workflow\Attribute\AsCompletedListener;
@@ -97,6 +98,79 @@ class WorkflowEventListener
     }
 
     public function deadMethod(): void // error: Unused Symfony\WorkflowEventListener::deadMethod
+    {
+    }
+}
+
+// Test AsMessageHandler with default __invoke method
+#[AsMessageHandler]
+class MessageHandlerWithInvoke
+{
+    public function __invoke(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithInvoke::deadMethod
+    {
+    }
+}
+
+// Test AsMessageHandler with custom method
+#[AsMessageHandler(method: 'handleMessage')]
+class MessageHandlerWithCustomMethod
+{
+    public function handleMessage(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithCustomMethod::deadMethod
+    {
+    }
+}
+
+// Test AsMessageHandler on method level without parameters
+class MessageHandlerWithMethodAttribute
+{
+    #[AsMessageHandler]
+    public function handleDirectly(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithMethodAttribute::deadMethod
+    {
+    }
+}
+
+// Test AsMessageHandler on method level with method parameter (edge case)
+class MessageHandlerWithMethodLevelRedirect
+{
+    #[AsMessageHandler(null, null, null, 'actualHandler')]
+    public function annotatedMethod(): void // error: Unused Symfony\MessageHandlerWithMethodLevelRedirect::annotatedMethod
+    {
+    }
+
+    public function actualHandler(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithMethodLevelRedirect::deadMethod
+    {
+    }
+}
+
+// Test AsMessageHandler on method level with named parameter (edge case)
+class MessageHandlerWithMethodLevelNamedRedirect
+{
+    #[AsMessageHandler(method: 'realHandler')]
+    public function annotatedMethod(): void // error: Unused Symfony\MessageHandlerWithMethodLevelNamedRedirect::annotatedMethod
+    {
+    }
+
+    public function realHandler(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithMethodLevelNamedRedirect::deadMethod
     {
     }
 }
