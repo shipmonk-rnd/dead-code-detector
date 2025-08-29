@@ -14,6 +14,8 @@ jobs:
             -
                 name: Checkout code
                 uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
             -
                 name: Setup PHP
                 uses: shivammathur/setup-php@v2
@@ -33,6 +35,12 @@ jobs:
             -
                 name: Output line coverage
                 run: head cache/coverage/coverage.txt | grep Lines
+
+            -
+                name: Report patch coverage
+                run: |
+                    git diff ${{ github.event.pull_request.base.sha }} > changes.patch
+                    vendor/bin/phpcov patch-coverage --path-prefix $(pwd) cache/coverage/coverage.cov changes.patch
 
     cda:
         runs-on: ubuntu-latest
