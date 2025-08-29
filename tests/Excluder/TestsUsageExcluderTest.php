@@ -16,6 +16,7 @@ class TestsUsageExcluderTest extends PHPStanTestCase
 
         $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
         $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');
+        $devPathsPropertyReflection->setAccessible(true);
 
         self::assertSame([
             realpath(__DIR__ . '/../../tests'),
