@@ -11,6 +11,18 @@
         failOnWarning="true"
         cacheResultFile="cache/phpunit.result.cache"
 >
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <report>
+            <clover outputFile="cache/coverage/phpstorm/clover.xml"/>
+            <cobertura outputFile="cache/coverage/ci/cobertura.xml"/>
+            <html outputDirectory="cache/coverage/html"/>
+            <text outputFile="cache/coverage/coverage.txt"/>
+            <php outputFile="cache/coverage/coverage.cov"/>
+        </report>
+    </coverage>
     <php>
         <ini name="error_reporting" value="-1"/>
     </php>
