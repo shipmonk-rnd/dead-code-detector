@@ -5,6 +5,13 @@ namespace Symfony;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Workflow\Attribute\AsAnnounceListener;
+use Symfony\Component\Workflow\Attribute\AsCompletedListener;
+use Symfony\Component\Workflow\Attribute\AsEnterListener;
+use Symfony\Component\Workflow\Attribute\AsEnteredListener;
+use Symfony\Component\Workflow\Attribute\AsGuardListener;
+use Symfony\Component\Workflow\Attribute\AsLeaveListener;
+use Symfony\Component\Workflow\Attribute\AsTransitionListener;
 
 class SomeController2 {
 
@@ -49,5 +56,47 @@ class SomeThing2 implements SomeInterface, SomeFooInterface
     public function someOther(): string
     {
         return 'SomeThing2';
+    }
+}
+
+class WorkflowEventListener
+{
+    #[AsAnnounceListener]
+    public function announceHandler(): void
+    {
+    }
+
+    #[AsCompletedListener]
+    public function completedHandler(): void
+    {
+    }
+
+    #[AsEnterListener]
+    public function enterHandler(): void
+    {
+    }
+
+    #[AsEnteredListener]
+    public function enteredHandler(): void
+    {
+    }
+
+    #[AsGuardListener]
+    public function guardHandler(): void
+    {
+    }
+
+    #[AsLeaveListener]
+    public function leaveHandler(): void
+    {
+    }
+
+    #[AsTransitionListener]
+    public function transitionHandler(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\WorkflowEventListener::deadMethod
+    {
     }
 }

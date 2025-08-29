@@ -363,6 +363,10 @@ class SymfonyUsageProvider implements MemberUsageProvider
             return 'Event listener method via #[AsEventListener] attribute';
         }
 
+        if ($this->isWorkflowEventListenerMethod($method)) {
+            return 'Workflow event listener method via workflow attribute';
+        }
+
         if ($this->isAutowiredWithRequiredAttribute($method)) {
             return 'Autowired with #[Required] (called by DIC)';
         }
@@ -494,6 +498,17 @@ class SymfonyUsageProvider implements MemberUsageProvider
 
         return $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
+    }
+
+    protected function isWorkflowEventListenerMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsAnnounceListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsCompletedListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsEnterListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsEnteredListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsGuardListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsLeaveListener')
+            || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsTransitionListener');
     }
 
     protected function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
