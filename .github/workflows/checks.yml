@@ -39,8 +39,12 @@ jobs:
             -
                 name: Report patch coverage
                 run: |
-                    git diff ${{ github.event.pull_request.base.sha }} > changes.patch
-                    vendor/bin/phpcov patch-coverage --path-prefix $(pwd) cache/coverage/coverage.cov changes.patch
+                    if git diff --name-only ${{ github.event.pull_request.base.sha }} | grep -q '\.php$'; then
+                        git diff ${{ github.event.pull_request.base.sha }} > changes.patch
+                        vendor/bin/phpcov patch-coverage --path-prefix $(pwd) cache/coverage/coverage.cov changes.patch || true
+                    else
+                        echo "No PHP files changed, skipping patch coverage report"
+                    fi
 
     cda:
         runs-on: ubuntu-latest
