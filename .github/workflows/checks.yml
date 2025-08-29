@@ -19,13 +19,20 @@ jobs:
                 uses: shivammathur/setup-php@v2
                 with:
                     php-version: 8.4
+                    extensions: xdebug
             -
                 name: Install dependencies
                 run: composer install --no-progress --prefer-dist --no-interaction
 
             -
                 name: Run checks
+                env:
+                    XDEBUG_MODE: coverage
                 run: composer check
+
+            -
+                name: Output line coverage
+                run: head cache/coverage/coverage.txt | grep Lines
 
     cda:
         runs-on: ubuntu-latest
