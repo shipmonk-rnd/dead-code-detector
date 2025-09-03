@@ -112,7 +112,7 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
+                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction  ${{ matrix.php-version == '8.5' && '--ignore-platform-req=php+' || '' }}
             -
                 name: Run tests
                 run: vendor/bin/phpunit --no-coverage tests
