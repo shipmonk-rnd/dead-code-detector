@@ -128,7 +128,6 @@ services:
         tags:
             - phpstan.collector
         arguments:
-            detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
 
@@ -146,6 +145,7 @@ services:
             - phpstan.rules.rule
             - phpstan.diagnoseExtension
         arguments:
+            detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
     -

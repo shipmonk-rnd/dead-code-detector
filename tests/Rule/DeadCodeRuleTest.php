@@ -117,6 +117,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
                     self::createReflectionProvider(),
                 ),
                 new ClassHierarchy(),
+                $this->detectDeadMethods,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
             );
@@ -134,7 +135,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadMethods, $this->detectDeadConstants, $this->detectDeadEnumCases),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
         ];
@@ -490,7 +491,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadMethods = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
-            ['Unused MemberTypes\MyEnum::EnumCase', 13],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
         ]);
     }
 
@@ -502,8 +503,8 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         $this->detectDeadConstants = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
-            ['Unused MemberTypes\MyEnum::EnumCase', 13],
-            ['Unused MemberTypes\Clazz::method', 8],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
+            ['Unused MemberTypes\Clazz::method', 10],
         ]);
     }
 
@@ -516,7 +517,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadEnumCases = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
-            ['Unused MemberTypes\Clazz::method', 8],
+            ['Unused MemberTypes\Clazz::method', 10],
         ]);
     }
 
