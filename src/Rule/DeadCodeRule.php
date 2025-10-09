@@ -75,6 +75,8 @@ class DeadCodeRule implements Rule, DiagnoseExtension
 
     private ClassHierarchy $classHierarchy;
 
+    private bool $detectDeadMethods;
+
     /**
      * typename => data
      *
@@ -130,12 +132,14 @@ class DeadCodeRule implements Rule, DiagnoseExtension
     public function __construct(
         DebugUsagePrinter $debugUsagePrinter,
         ClassHierarchy $classHierarchy,
+        bool $detectDeadMethods,
         bool $reportTransitivelyDeadMethodAsSeparateError,
         BackwardCompatibilityChecker $checker
     )
     {
         $this->debugUsagePrinter = $debugUsagePrinter;
         $this->classHierarchy = $classHierarchy;
+        $this->detectDeadMethods = $detectDeadMethods;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
 
         $checker->check();
@@ -309,6 +313,10 @@ class DeadCodeRule implements Rule, DiagnoseExtension
             if ($neverReportedReason !== null) {
                 $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason);
 
+                unset($this->blackMembers[$blackMemberKey]);
+            }
+
+            if (!$this->detectDeadMethods && $blackMember->getMember() instanceof ClassMethodRef) {
                 unset($this->blackMembers[$blackMemberKey]);
             }
         }

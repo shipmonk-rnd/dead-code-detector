@@ -39,21 +39,17 @@ class ClassDefinitionCollector implements Collector
 
     private ReflectionProvider $reflectionProvider;
 
-    private bool $detectDeadMethods;
-
     private bool $detectDeadConstants;
 
     private bool $detectDeadEnumCases;
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        bool $detectDeadMethods,
         bool $detectDeadConstants,
         bool $detectDeadEnumCases
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->detectDeadMethods = $detectDeadMethods;
         $this->detectDeadConstants = $detectDeadConstants;
         $this->detectDeadEnumCases = $detectDeadEnumCases;
     }
@@ -93,15 +89,13 @@ class ClassDefinitionCollector implements Collector
         $constants = [];
         $cases = [];
 
-        if ($this->detectDeadMethods) {
-            foreach ($node->getMethods() as $method) {
-                $methods[$method->name->toString()] = [
-                    'line' => $method->name->getStartLine(),
-                    'params' => count($method->params),
-                    'abstract' => $method->isAbstract() || $node instanceof Interface_,
-                    'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
-                ];
-            }
+        foreach ($node->getMethods() as $method) {
+            $methods[$method->name->toString()] = [
+                'line' => $method->name->getStartLine(),
+                'params' => count($method->params),
+                'abstract' => $method->isAbstract() || $node instanceof Interface_,
+                'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
+            ];
         }
 
         if ($this->detectDeadConstants) {
