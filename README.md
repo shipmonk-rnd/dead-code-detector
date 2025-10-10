@@ -52,10 +52,13 @@ $ vendor/bin/phpstan
 - `onKernelResponse`, `onKernelRequest`, etc
 - `!php const` references in `config` yamls
 - `defaultIndexMethod` in `#[AutowireLocator]` and `#[AutowireIterator]`
-- Workflow event listener attributes: `#[AsAnnounceListener]`, `#[AsCompletedListener]`, `#[AsEnterListener]`, `#[AsEnteredListener]`, `#[AsGuardListener]`, `#[AsLeaveListener]`, `#[AsTransitionListener]`
+- Workflow event listener attributes: `#[AsAnnounceListener]`, ...
+- `#[AutoconfigureTag('doctrine.event_listener')]` attribute
+
 
 #### Doctrine:
 - `#[AsEntityListener]` attribute
+- `#[AsDoctrineListener]` attribute
 - `Doctrine\ORM\Events::*` events
 - `Doctrine\Common\EventSubscriber` methods
 - `repositoryMethod` in `#[UniqueEntity]` attribute

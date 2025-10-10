@@ -164,6 +164,14 @@ class DoctrineUsageProvider implements MemberUsageProvider
             return 'Is part of AsEntityListener methods';
         }
 
+        if ($this->isPartOfAsDoctrineListener($class, $methodName)) {
+            return 'Is part of AsDoctrineListener methods';
+        }
+
+        if ($this->isPartOfAutoconfigureTagDoctrineListener($class, $methodName)) {
+            return 'Is part of AutoconfigureTag doctrine.event_listener methods';
+        }
+
         if ($this->isProbablyDoctrineListener($methodName)) {
             return 'Is probable listener method';
         }
@@ -220,6 +228,55 @@ class DoctrineUsageProvider implements MemberUsageProvider
             $listenerMethodName = $attribute->getArguments()['method'] ?? $attribute->getArguments()[1] ?? null;
 
             if ($listenerMethodName === $methodName) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function isPartOfAsDoctrineListener(
+        ReflectionClass $class,
+        string $methodName
+    ): bool
+    {
+        foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener') as $attribute) {
+            $eventName = $attribute->getArguments()['event'] ?? $attribute->getArguments()[0] ?? null;
+
+            // AsDoctrineListener doesn't have a 'method' parameter
+            // Symfony looks for a method named after the event, or falls back to __invoke
+            if ($eventName === $methodName || $methodName === '__invoke') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function isPartOfAutoconfigureTagDoctrineListener(
+        ReflectionClass $class,
+        string $methodName
+    ): bool
+    {
+        foreach ($class->getAttributes('Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $tagName = $arguments[0] ?? $arguments['name'] ?? null;
+
+            // Only handle doctrine.event_listener tags
+            if ($tagName !== 'doctrine.event_listener') {
+                continue;
+            }
+
+            $listenerMethodName = $arguments['method'] ?? null;
+
+            // If no method is specified, the listener method name is inferred from the event name
+            if ($listenerMethodName === null) {
+                $eventName = $arguments['event'] ?? null;
+
+                if ($eventName === $methodName) {
+                    return true;
+                }
+            } elseif ($listenerMethodName === $methodName) {
                 return true;
             }
         }
