@@ -70,3 +70,68 @@ class MySubscriber implements \Doctrine\Common\EventSubscriber {
     public function someMethod2(): void {} // error: Unused Doctrine\MySubscriber::someMethod2
 
 }
+
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'postGenerateSchema')]
+class FixDoctrineMigrationTableSchema {
+
+    public function postGenerateSchema(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\FixDoctrineMigrationTableSchema::unusedMethod
+
+}
+
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'postLoad')]
+class AsDoctrineListenerWithInvoke {
+
+    public function __invoke(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\AsDoctrineListenerWithInvoke::unusedMethod
+
+}
+
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', event: 'postGenerateSchema')]
+class FixDoctrineMigrationTableSchemaWithAutoconfigureTag {
+
+    public function postGenerateSchema(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\FixDoctrineMigrationTableSchemaWithAutoconfigureTag::unusedMethod
+
+}
+
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', event: 'postGenerateSchema', method: 'onPostGenerateSchema')]
+class FixDoctrineMigrationTableSchemaWithAutoconfigureTagAndMethod {
+
+    public function onPostGenerateSchema(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\FixDoctrineMigrationTableSchemaWithAutoconfigureTagAndMethod::unusedMethod
+
+}
+
+// Test multiple AsDoctrineListener attributes on same class (IS_REPEATABLE)
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'postPersist')]
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'postUpdate')]
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'preRemove')]
+class MultipleAsDoctrineListeners {
+
+    public function postPersist(): void {}
+
+    public function postUpdate(): void {}
+
+    public function preRemove(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\MultipleAsDoctrineListeners::unusedMethod
+
+}
+
+// Test multiple AutoconfigureTag attributes
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', event: 'postPersist')]
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', event: 'postUpdate', method: 'afterUpdate')]
+class MultipleAutoconfigureTags {
+
+    public function postPersist(): void {}
+
+    public function afterUpdate(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\MultipleAutoconfigureTags::unusedMethod
+
+}
