@@ -57,6 +57,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.phpunit.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.phpbench.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -181,6 +188,8 @@ parameters:
                 enabled: true
             phpunit:
                 enabled: null
+            phpbench:
+                enabled: null
             symfony:
                 enabled: null
                 configDir: null
@@ -228,6 +237,9 @@ parametersSchema:
                 enabled: bool()
             ])
             phpunit: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            phpbench: structure([
                 enabled: schema(bool(), nullable())
             ])
             symfony: structure([
