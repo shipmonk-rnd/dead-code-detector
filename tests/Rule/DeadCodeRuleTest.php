@@ -42,6 +42,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
@@ -766,7 +767,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
     }
 
     /**
-     * @return Traversable<string, array{0: string|list<string>, 1?: bool}>
+     * @return Traversable<string, array{0: string|non-empty-list<string>, 1?: bool}>
      */
     public static function provideFiles(): Traversable
     {
@@ -856,6 +857,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
+        yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php', self::requiresPhp(8_00_00)];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
@@ -987,6 +989,11 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
             ),
             new PhpUnitUsageProvider(
+                $this->providersEnabled,
+                self::getContainer()->getByType(PhpDocParser::class),
+                self::getContainer()->getByType(Lexer::class),
+            ),
+            new PhpBenchUsageProvider(
                 $this->providersEnabled,
                 self::getContainer()->getByType(PhpDocParser::class),
                 self::getContainer()->getByType(Lexer::class),

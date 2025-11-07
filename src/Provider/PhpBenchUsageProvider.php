@@ -16,12 +16,12 @@ use PHPStan\PhpDocParser\Parser\TokenIterator;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function array_map;
 use function array_merge;
 use function explode;
 use function in_array;
 use function is_array;
 use function is_string;
+use function preg_match;
 use function sprintf;
 use function strpos;
 use function substr;
@@ -69,7 +69,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             $methodName = $method->getName();
 
             $paramProviderMethods = array_merge(
-                $this->getParamProvidersFromAnnotations($method->getDocComment()),
+                $this->getMethodNamesFromAnnotation($method->getDocComment(), '@ParamProviders'),
                 $this->getParamProvidersFromAttributes($method),
             );
 
@@ -81,15 +81,26 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
                 );
             }
 
+            $beforeAfterMethodsFromAttributes = array_merge(
+                $this->getMethodNamesFromAttribute($method, BeforeMethods::class),
+                $this->getMethodNamesFromAttribute($method, AfterMethods::class),
+            );
+
+            foreach ($beforeAfterMethodsFromAttributes as $beforeAfterMethod) {
+                $usages[] = $this->createUsage(
+                    $className,
+                    $beforeAfterMethod,
+                    sprintf('Before/After method, used by %s', $methodName),
+                );
+            }
+
             if ($this->isBenchmarkMethod($method)) {
                 $usages[] = $this->createUsage($className, $methodName, 'Benchmark method');
             }
 
-            if (!$this->isBeforeOrAfterMethod($method, $className)) {
-                continue;
+            if ($this->isBeforeOrAfterMethod($method)) {
+                $usages[] = $this->createUsage($className, $methodName, 'Before/After method');
             }
-
-            $usages[] = $this->createUsage($className, $methodName, 'Before/After method');
         }
 
         return $usages;
@@ -100,26 +111,49 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         return strpos($method->getName(), 'bench') === 0;
     }
 
-    private function isBeforeOrAfterMethod(
+    /**
+     * @return list<string>
+     */
+    private function getMethodNamesFromAttribute(
         ReflectionMethod $method,
-        string $className
-    ): bool
+        string $attributeClass
+    ): array
+    {
+        $result = [];
+
+        foreach ($method->getAttributes($attributeClass) as $attribute) {
+            $methods = $attribute->getArguments()[0] ?? $attribute->getArguments()['methods'] ?? [];
+            if (!is_array($methods)) {
+                $methods = [$methods];
+            }
+
+            foreach ($methods as $methodName) {
+                if (is_string($methodName)) {
+                    $result[] = $methodName;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function isBeforeOrAfterMethod(ReflectionMethod $method): bool
     {
         $classReflection = $method->getDeclaringClass();
         $methodName = $method->getName();
 
-        // Check annotations
+        // Check class-level annotations
         $docComment = $classReflection->getDocComment();
         if ($docComment !== false) {
-            $beforeMethodsFromAnnotations = $this->getBeforeMethodsFromAnnotations($docComment);
-            $afterMethodsFromAnnotations = $this->getAfterMethodsFromAnnotations($docComment);
+            $beforeMethodsFromAnnotations = $this->getMethodNamesFromAnnotation($docComment, '@BeforeMethods');
+            $afterMethodsFromAnnotations = $this->getMethodNamesFromAnnotation($docComment, '@AfterMethods');
 
             if (in_array($methodName, $beforeMethodsFromAnnotations, true) || in_array($methodName, $afterMethodsFromAnnotations, true)) {
                 return true;
             }
         }
 
-        // Check attributes
+        // Check class-level attributes
         foreach ($classReflection->getAttributes(BeforeMethods::class) as $attribute) {
             $methods = $attribute->getArguments()[0] ?? $attribute->getArguments()['methods'] ?? [];
             if (!is_array($methods)) {
@@ -153,9 +187,12 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
      * @param false|string $rawPhpDoc
      * @return list<string>
      */
-    private function getParamProvidersFromAnnotations($rawPhpDoc): array
+    private function getMethodNamesFromAnnotation(
+        $rawPhpDoc,
+        string $annotationName
+    ): array
     {
-        if ($rawPhpDoc === false || strpos($rawPhpDoc, '@ParamProviders') === false) {
+        if ($rawPhpDoc === false || strpos($rawPhpDoc, $annotationName) === false) {
             return [];
         }
 
@@ -164,15 +201,30 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
 
         $result = [];
 
-        foreach ($phpDoc->getTagsByName('@ParamProviders') as $tag) {
+        foreach ($phpDoc->getTagsByName($annotationName) as $tag) {
             $value = (string) $tag->value;
-            // Parse the value which could be like "provideData" or {"provideData", "provideMore"}
-            // For simplicity, we'll extract method names from the string
-            // This is a basic implementation - PhpBench uses simple format like @ParamProviders({"provideData"})
-            $value = trim($value, '{}()');
-            $methods = array_map('trim', explode(',', $value));
+
+            // Extract content from parentheses: @BeforeMethods("setUp") -> "setUp"
+            // or @BeforeMethods({"setUp", "tearDown"}) -> {"setUp", "tearDown"}
+            if (preg_match('~\((.+)\)\s*$~', $value, $matches) === 1) {
+                $value = $matches[1];
+            }
+
+            $value = trim($value);
+            $value = trim($value, '"\'');
+
+            // If it's a single method name, add it directly
+            if (strpos($value, ',') === false && strpos($value, '{') === false) {
+                $result[] = $value;
+                continue;
+            }
+
+            // Handle array format: {"method1", "method2"}
+            $value = trim($value, '{}');
+            $methods = explode(',', $value);
             foreach ($methods as $method) {
-                $method = trim($method, '\'" ');
+                $method = trim($method);
+                $method = trim($method, '"\'');
                 if ($method !== '') {
                     $result[] = $method;
                 }
@@ -202,66 +254,6 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
                 }
 
                 $result[] = $provider;
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param false|string $rawPhpDoc
-     * @return list<string>
-     */
-    private function getBeforeMethodsFromAnnotations($rawPhpDoc): array
-    {
-        if ($rawPhpDoc === false || strpos($rawPhpDoc, '@BeforeMethods') === false) {
-            return [];
-        }
-
-        $tokens = new TokenIterator($this->lexer->tokenize($rawPhpDoc));
-        $phpDoc = $this->phpDocParser->parse($tokens);
-
-        $result = [];
-
-        foreach ($phpDoc->getTagsByName('@BeforeMethods') as $tag) {
-            $value = (string) $tag->value;
-            $value = trim($value, '{}()');
-            $methods = array_map('trim', explode(',', $value));
-            foreach ($methods as $method) {
-                $method = trim($method, '\'" ');
-                if ($method !== '') {
-                    $result[] = $method;
-                }
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param false|string $rawPhpDoc
-     * @return list<string>
-     */
-    private function getAfterMethodsFromAnnotations($rawPhpDoc): array
-    {
-        if ($rawPhpDoc === false || strpos($rawPhpDoc, '@AfterMethods') === false) {
-            return [];
-        }
-
-        $tokens = new TokenIterator($this->lexer->tokenize($rawPhpDoc));
-        $phpDoc = $this->phpDocParser->parse($tokens);
-
-        $result = [];
-
-        foreach ($phpDoc->getTagsByName('@AfterMethods') as $tag) {
-            $value = (string) $tag->value;
-            $value = trim($value, '{}()');
-            $methods = array_map('trim', explode(',', $value));
-            foreach ($methods as $method) {
-                $method = trim($method, '\'" ');
-                if ($method !== '') {
-                    $result[] = $method;
-                }
             }
         }
 
