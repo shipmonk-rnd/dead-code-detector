@@ -243,14 +243,15 @@ class RegisterCallbackUsageProvider implements MemberUsageProvider
         $items = $array->items;
 
         // Check that both items exist and are not unpacked
+        // @phpstan-ignore offsetAccess.notFound, offsetAccess.notFound, offsetAccess.notFound, offsetAccess.notFound, identical.alwaysFalse, identical.alwaysFalse
         if ($items[0] === null || $items[0]->unpack || $items[1] === null || $items[1]->unpack) {
             return [];
         }
 
         /** @var ArrayItem $firstItem */
-        $firstItem = $items[0];
+        $firstItem = $items[0]; // @phpstan-ignore offsetAccess.notFound
         /** @var ArrayItem $secondItem */
-        $secondItem = $items[1];
+        $secondItem = $items[1]; // @phpstan-ignore offsetAccess.notFound
 
         // Second item should be the method name (string)
         $methodNameType = $scope->getType($secondItem->value);
