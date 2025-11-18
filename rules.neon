@@ -99,6 +99,13 @@ services:
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\RegisterCallbackUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.registerCallback.enabled%
+
 
     -
         class: ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder
@@ -199,6 +206,8 @@ parameters:
                 enabled: null
             nette:
                 enabled: null
+            registerCallback:
+                enabled: true
         usageExcluders:
             tests:
                 enabled: false
@@ -254,6 +263,9 @@ parametersSchema:
             ])
             nette: structure([
                 enabled: schema(bool(), nullable())
+            ])
+            registerCallback: structure([
+                enabled: bool()
             ])
         ])
         usageExcluders: structure([
