@@ -3,11 +3,10 @@
 namespace RegisterCallback;
 
 // Test stream_wrapper_register
-// Note: Stream wrapper/filter class registration detection needs more work
 class MyStreamWrapper
 {
-    public function stream_open($path, $mode, $options, &$opened_path) {} // error: Unused RegisterCallback\MyStreamWrapper::stream_open
-    public function stream_read($count) {} // error: Unused RegisterCallback\MyStreamWrapper::stream_read
+    public function stream_open($path, $mode, $options, &$opened_path) {}
+    public function stream_read($count) {}
 }
 
 class UnusedStreamWrapper

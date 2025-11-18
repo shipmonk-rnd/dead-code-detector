@@ -47,6 +47,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\RegisterCallbackUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
@@ -1007,6 +1008,10 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->createPhpStanContainerMock(),
             ),
             new NetteUsageProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                $this->providersEnabled,
+            ),
+            new RegisterCallbackUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
             ),
