@@ -100,8 +100,8 @@ function testAll() {
 // Edge cases
 class EdgeCaseHandler
 {
-    public function method1() {} // error: Unused RegisterCallback\EdgeCaseHandler::method1
-    public function method2() {} // error: Unused RegisterCallback\EdgeCaseHandler::method2
+    public static function method1() {}
+    public static function method2() {} // error: Unused RegisterCallback\EdgeCaseHandler::method2
 }
 
 // Actually call the test function
