@@ -43,7 +43,9 @@ class BehatUsageProvider implements MemberUsageProvider
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
             $methodName = $method->getName();
 
-            if ($this->isBehatContextMethod($method)) {
+            if ($method->isConstructor()) {
+                $usages[] = $this->createUsage($className, $methodName, 'Behat context constructor');
+            } elseif ($this->isBehatContextMethod($method)) {
                 $usages[] = $this->createUsage($className, $methodName, 'Behat step definition or hook');
             }
         }

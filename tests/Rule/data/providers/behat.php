@@ -85,8 +85,16 @@ use Behat\Step\Then;
 use Behat\Step\When;
 use Behat\Transformation\Transform;
 
+class SomeService
+{
+}
+
 class FeatureContext implements Context
 {
+    public function __construct(private SomeService $service)
+    {
+    }
+
     /**
      * @Given I have a product
      */
@@ -193,6 +201,10 @@ class AnotherContext implements Context
 // Context using PHP 8 attributes
 class AttributeContext implements Context
 {
+    public function __construct(private SomeService $service)
+    {
+    }
+
     #[Given('I have :count products')]
     public function iHaveProducts(int $count): void
     {
