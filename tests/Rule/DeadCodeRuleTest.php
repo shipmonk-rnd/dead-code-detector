@@ -37,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
@@ -859,6 +860,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php', self::requiresPhp(8_00_00)];
+        yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php', self::requiresPhp(8_00_00)];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
@@ -999,6 +1001,9 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
                 self::getContainer()->getByType(PhpDocParser::class),
                 self::getContainer()->getByType(Lexer::class),
+            ),
+            new BehatUsageProvider(
+                $this->providersEnabled,
             ),
             new DoctrineUsageProvider(
                 $this->providersEnabled,
