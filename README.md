@@ -115,6 +115,9 @@ parameters:
 #### Enum:
 - Detects usages caused by `BackedEnum::from`, `BackedEnum::tryFrom` and `UnitEnum::cases`
 
+#### StreamWrapper:
+- Detects usages caused by `stream_wrapper_register`
+
 Those providers are enabled by default, but you can disable them if needed.
 
 ## Excluding usages in tests:

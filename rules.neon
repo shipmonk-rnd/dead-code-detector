@@ -100,11 +100,11 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
     -
-        class: ShipMonk\PHPStan\DeadCode\Provider\RegisterCallbackUsageProvider
+        class: ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
-            enabled: %shipmonkDeadCode.usageProviders.registerCallback.enabled%
+            enabled: %shipmonkDeadCode.usageProviders.streamWrapper.enabled%
 
 
     -
@@ -206,7 +206,7 @@ parameters:
                 enabled: null
             nette:
                 enabled: null
-            registerCallback:
+            streamWrapper:
                 enabled: true
         usageExcluders:
             tests:
@@ -264,7 +264,7 @@ parametersSchema:
             nette: structure([
                 enabled: schema(bool(), nullable())
             ])
-            registerCallback: structure([
+            streamWrapper: structure([
                 enabled: bool()
             ])
         ])
