@@ -71,6 +71,11 @@ $ vendor/bin/phpstan
 - annotations like `@test`, `@before`, `@afterClass` etc
 - attributes like `#[Test]`, `#[Before]`, `#[AfterClass]` etc
 
+#### PhpBench:
+- `benchXxx` methods
+- `#[BeforeMethods]`, `#[AfterMethods]` attributes
+- `#[ParamProviders]` attribute for param provider methods
+
 #### PHPStan:
 - constructor calls for DIC services (rules, extensions, ...)
 
