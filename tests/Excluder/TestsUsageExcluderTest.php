@@ -6,6 +6,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\PHPStanTestCase;
 use ReflectionClass;
 use function realpath;
+use const PHP_VERSION_ID;
 
 class TestsUsageExcluderTest extends PHPStanTestCase
 {
@@ -16,7 +17,9 @@ class TestsUsageExcluderTest extends PHPStanTestCase
 
         $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
         $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');
-        $devPathsPropertyReflection->setAccessible(true);
+        if (PHP_VERSION_ID < 8_01_00) {
+            $devPathsPropertyReflection->setAccessible(true);
+        }
 
         self::assertSame([
             realpath(__DIR__ . '/../../tests'),
