@@ -217,6 +217,10 @@ parameters:
         debug:
             usagesOf: []
 
+expandRelativePaths:
+    - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
+    - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
+
 parametersSchema:
     shipmonkDeadCode: structure([
         trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
