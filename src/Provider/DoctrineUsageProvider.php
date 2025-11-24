@@ -77,7 +77,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
 
             $usages = [
                 ...$usages,
-                ...$this->getUsagesOfEnumColumn($classReflection->getName(), $propertyName, $propertyReflection),
+                ...$this->getUsagesOfEnumColumn($classReflection->getName(), $propertyReflection),
             ];
         }
 
@@ -323,11 +323,11 @@ class DoctrineUsageProvider implements MemberUsageProvider
      */
     private function getUsagesOfEnumColumn(
         string $className,
-        string $propertyName,
         ExtendedPropertyReflection $property
     ): array
     {
         $usages = [];
+        $propertyName = $property->getName();
 
         foreach ($property->getAttributes() as $attribute) {
             if ($attribute->getName() !== 'Doctrine\ORM\Mapping\Column') {
