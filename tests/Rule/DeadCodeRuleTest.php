@@ -47,6 +47,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
@@ -863,6 +864,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
+        yield 'provider-stream-wrapper' => [__DIR__ . '/data/providers/stream-wrapper.php'];
 
         // excluders
         yield 'excluder-tests' => [[__DIR__ . '/data/excluders/tests/src/code.php', __DIR__ . '/data/excluders/tests/tests/code.php']];
@@ -1007,6 +1009,9 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new NetteUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
+                $this->providersEnabled,
+            ),
+            new StreamWrapperUsageProvider(
                 $this->providersEnabled,
             ),
             new SymfonyUsageProvider(
