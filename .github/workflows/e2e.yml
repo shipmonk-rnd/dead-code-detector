@@ -36,6 +36,7 @@ jobs:
                 uses: actions/checkout@v4
                 with:
                     repository: ${{ matrix.repo }}
+                    token: ${{ secrets.PAT_GITHUB_CHECKOUT }}
 
             -
                 name: Setup PHP
@@ -50,7 +51,7 @@ jobs:
                 name: Update Dead Code Detector
                 run: |
                     composer config repositories.pr vcs https://github.com/${{ github.event.pull_request.head.repo.full_name }}
-                    composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }}
+                    composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies --minimal-changes
 
             -
                 name: Run analysis

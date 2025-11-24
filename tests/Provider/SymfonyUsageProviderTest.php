@@ -7,6 +7,7 @@ use ReflectionClass;
 use function mkdir;
 use function realpath;
 use function rmdir;
+use const PHP_VERSION_ID;
 
 class SymfonyUsageProviderTest extends PHPStanTestCase
 {
@@ -20,7 +21,9 @@ class SymfonyUsageProviderTest extends PHPStanTestCase
 
         $providerReflection = new ReflectionClass(SymfonyUsageProvider::class);
         $configDirPropertyReflection = $providerReflection->getProperty('configDir');
-        $configDirPropertyReflection->setAccessible(true);
+        if (PHP_VERSION_ID < 8_01_00) {
+            $configDirPropertyReflection->setAccessible(true);
+        }
 
         $configDirFromProperty = $configDirPropertyReflection->getValue($provider);
 
