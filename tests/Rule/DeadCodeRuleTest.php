@@ -179,8 +179,8 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testNoFatalError(): void
     {
-        if (PHP_VERSION_ID < 8_04_00) {
-            self::markTestSkipped('Requires PHP 8.4+ to allow any PHP feature in test code');
+        if (PHP_VERSION_ID < 8_05_00) {
+            self::markTestSkipped('Requires PHP 8.5+ to allow any PHP feature in test code');
         }
 
         // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
