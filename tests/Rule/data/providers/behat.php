@@ -179,6 +179,10 @@ class FeatureContext implements Context
     {
         return (int) $count;
     }
+
+    public function helperMethodNotUsed(): void // error: Unused Behat\FeatureContext::helperMethodNotUsed
+    {
+    }
 }
 
 class AnotherContext implements Context
@@ -254,5 +258,9 @@ class AttributeContext implements Context
     public function transformWithAttribute(string $value): int
     {
         return (int) $value;
+    }
+
+    public function anotherHelperNotUsed(): void // error: Unused Behat\AttributeContext::anotherHelperNotUsed
+    {
     }
 }
