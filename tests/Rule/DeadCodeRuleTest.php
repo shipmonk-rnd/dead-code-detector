@@ -179,8 +179,8 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testNoFatalError(): void
     {
-        if (PHP_VERSION_ID < 8_04_00) {
-            self::markTestSkipped('Requires PHP 8.4+ to allow any PHP feature in test code');
+        if (PHP_VERSION_ID < 8_05_00) {
+            self::markTestSkipped('Requires PHP 8.5+ to allow any PHP feature in test code');
         }
 
         // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
@@ -793,6 +793,7 @@ class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-first-class-callable' => [__DIR__ . '/data/methods/first-class-callable.php'];
         yield 'method-hierarchy-in-vendor' => [__DIR__ . '/data/methods/hierarchy-in-vendor.php'];
         yield 'method-hooks-1' => [__DIR__ . '/data/methods/hooks-1.php', self::requiresPhp(8_00_00)];
+        yield 'method-pipe-operator' => [__DIR__ . '/data/methods/pipe-operator.php', self::requiresPhp(8_00_00)];
         yield 'method-overwriting-1' => [__DIR__ . '/data/methods/overwriting-methods-1.php'];
         yield 'method-overwriting-2' => [__DIR__ . '/data/methods/overwriting-methods-2.php'];
         yield 'method-overwriting-3' => [__DIR__ . '/data/methods/overwriting-methods-3.php'];

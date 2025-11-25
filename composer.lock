@@ -1831,27 +1831,27 @@
         },
         {
             "name": "nette/application",
-            "version": "v3.2.6",
+            "version": "v3.2.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/application.git",
-                "reference": "9c288cc45df467dc012504f4ad64791279720af8"
+                "reference": "aaa18a09a488a2e632162539f77f90b3024c44f8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/application/zipball/9c288cc45df467dc012504f4ad64791279720af8",
-                "reference": "9c288cc45df467dc012504f4ad64791279720af8",
+                "url": "https://api.github.com/repos/nette/application/zipball/aaa18a09a488a2e632162539f77f90b3024c44f8",
+                "reference": "aaa18a09a488a2e632162539f77f90b3024c44f8",
                 "shasum": ""
             },
             "require": {
                 "nette/component-model": "^3.1",
-                "nette/http": "^3.3",
+                "nette/http": "^3.3.2",
                 "nette/routing": "^3.1",
                 "nette/utils": "^4.0",
-                "php": "8.1 - 8.4"
+                "php": "8.1 - 8.5"
             },
             "conflict": {
-                "latte/latte": "<2.7.1 || >=3.0.0 <3.0.18 || >=3.1",
+                "latte/latte": "<2.7.1 || >=3.0.0 <3.0.18 || >=3.2",
                 "nette/caching": "<3.2",
                 "nette/di": "<3.2",
                 "nette/forms": "<3.2",
@@ -1859,15 +1859,15 @@
                 "tracy/tracy": "<2.9"
             },
             "require-dev": {
-                "jetbrains/phpstorm-attributes": "dev-master",
+                "jetbrains/phpstorm-attributes": "^1.2",
                 "latte/latte": "^2.10.2 || ^3.0.18",
-                "mockery/mockery": "^2.0",
+                "mockery/mockery": "^1.6@stable",
                 "nette/di": "^3.2",
                 "nette/forms": "^3.2",
                 "nette/robot-loader": "^4.0",
                 "nette/security": "^3.2",
-                "nette/tester": "^2.5",
-                "phpstan/phpstan-nette": "^1.0",
+                "nette/tester": "^2.5.2",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.9"
             },
             "suggest": {
@@ -1881,6 +1881,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -1917,31 +1920,31 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/application/issues",
-                "source": "https://github.com/nette/application/tree/v3.2.6"
+                "source": "https://github.com/nette/application/tree/v3.2.8"
             },
-            "time": "2024-09-10T10:08:04+00:00"
+            "time": "2025-11-24T00:10:57+00:00"
         },
         {
             "name": "nette/component-model",
-            "version": "v3.1.1",
+            "version": "v3.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/component-model.git",
-                "reference": "fb7608fd5f1c378ef9ef8ddc459c6ef0b63e9d77"
+                "reference": "0d100ba05279a1f4b20acecaa617027fbda8ecb2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/component-model/zipball/fb7608fd5f1c378ef9ef8ddc459c6ef0b63e9d77",
-                "reference": "fb7608fd5f1c378ef9ef8ddc459c6ef0b63e9d77",
+                "url": "https://api.github.com/repos/nette/component-model/zipball/0d100ba05279a1f4b20acecaa617027fbda8ecb2",
+                "reference": "0d100ba05279a1f4b20acecaa617027fbda8ecb2",
                 "shasum": ""
             },
             "require": {
                 "nette/utils": "^4.0",
-                "php": "8.1 - 8.4"
+                "php": "8.1 - 8.5"
             },
             "require-dev": {
                 "nette/tester": "^2.5",
-                "phpstan/phpstan": "^1.0",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.9"
             },
             "type": "library",
@@ -1951,6 +1954,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -1979,27 +1985,27 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/component-model/issues",
-                "source": "https://github.com/nette/component-model/tree/v3.1.1"
+                "source": "https://github.com/nette/component-model/tree/v3.1.3"
             },
-            "time": "2024-08-07T00:35:59+00:00"
+            "time": "2025-11-22T18:56:33+00:00"
         },
         {
             "name": "nette/http",
-            "version": "v3.3.2",
+            "version": "v3.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/http.git",
-                "reference": "3e2587b34beb66f238f119b12fbb4f0b9ab2d6d1"
+                "reference": "c557f21c8cedd621dbfd7990752b1d55ef353f1d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/http/zipball/3e2587b34beb66f238f119b12fbb4f0b9ab2d6d1",
-                "reference": "3e2587b34beb66f238f119b12fbb4f0b9ab2d6d1",
+                "url": "https://api.github.com/repos/nette/http/zipball/c557f21c8cedd621dbfd7990752b1d55ef353f1d",
+                "reference": "c557f21c8cedd621dbfd7990752b1d55ef353f1d",
                 "shasum": ""
             },
             "require": {
                 "nette/utils": "^4.0.4",
-                "php": "8.1 - 8.4"
+                "php": "8.1 - 8.5"
             },
             "conflict": {
                 "nette/di": "<3.0.3",
@@ -2009,7 +2015,7 @@
                 "nette/di": "^3.0",
                 "nette/security": "^3.0",
                 "nette/tester": "^2.4",
-                "phpstan/phpstan": "^1.0",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.8"
             },
             "suggest": {
@@ -2025,6 +2031,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -2060,32 +2069,32 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/http/issues",
-                "source": "https://github.com/nette/http/tree/v3.3.2"
+                "source": "https://github.com/nette/http/tree/v3.3.3"
             },
-            "time": "2025-01-12T16:27:57+00:00"
+            "time": "2025-10-30T22:32:24+00:00"
         },
         {
             "name": "nette/routing",
-            "version": "v3.1.1",
+            "version": "v3.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/routing.git",
-                "reference": "5b0782d3b50af68614253a373fa663ed03206a3f"
+                "reference": "14c466f3383add0d4f78a82074d3c9841f8edf47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/routing/zipball/5b0782d3b50af68614253a373fa663ed03206a3f",
-                "reference": "5b0782d3b50af68614253a373fa663ed03206a3f",
+                "url": "https://api.github.com/repos/nette/routing/zipball/14c466f3383add0d4f78a82074d3c9841f8edf47",
+                "reference": "14c466f3383add0d4f78a82074d3c9841f8edf47",
                 "shasum": ""
             },
             "require": {
                 "nette/http": "^3.2 || ~4.0.0",
                 "nette/utils": "^4.0",
-                "php": "8.1 - 8.4"
+                "php": "8.1 - 8.5"
             },
             "require-dev": {
                 "nette/tester": "^2.5",
-                "phpstan/phpstan": "^1",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.9"
             },
             "type": "library",
@@ -2095,6 +2104,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -2122,31 +2134,31 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/routing/issues",
-                "source": "https://github.com/nette/routing/tree/v3.1.1"
+                "source": "https://github.com/nette/routing/tree/v3.1.2"
             },
-            "time": "2024-11-04T11:59:47+00:00"
+            "time": "2025-10-31T00:55:27+00:00"
         },
         {
             "name": "nette/schema",
-            "version": "v1.3.2",
+            "version": "v1.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/schema.git",
-                "reference": "da801d52f0354f70a638673c4a0f04e16529431d"
+                "reference": "2befc2f42d7c715fd9d95efc31b1081e5d765004"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/schema/zipball/da801d52f0354f70a638673c4a0f04e16529431d",
-                "reference": "da801d52f0354f70a638673c4a0f04e16529431d",
+                "url": "https://api.github.com/repos/nette/schema/zipball/2befc2f42d7c715fd9d95efc31b1081e5d765004",
+                "reference": "2befc2f42d7c715fd9d95efc31b1081e5d765004",
                 "shasum": ""
             },
             "require": {
                 "nette/utils": "^4.0",
-                "php": "8.1 - 8.4"
+                "php": "8.1 - 8.5"
             },
             "require-dev": {
                 "nette/tester": "^2.5.2",
-                "phpstan/phpstan-nette": "^1.0",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.8"
             },
             "type": "library",
@@ -2156,6 +2168,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -2184,35 +2199,35 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/schema/issues",
-                "source": "https://github.com/nette/schema/tree/v1.3.2"
+                "source": "https://github.com/nette/schema/tree/v1.3.3"
             },
-            "time": "2024-10-06T23:10:23+00:00"
+            "time": "2025-10-30T22:57:59+00:00"
         },
         {
             "name": "nette/utils",
-            "version": "v4.0.7",
+            "version": "v4.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/utils.git",
-                "reference": "e67c4061eb40b9c113b218214e42cb5a0dda28f2"
+                "reference": "505a30ad386daa5211f08a318e47015b501cad30"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/utils/zipball/e67c4061eb40b9c113b218214e42cb5a0dda28f2",
-                "reference": "e67c4061eb40b9c113b218214e42cb5a0dda28f2",
+                "url": "https://api.github.com/repos/nette/utils/zipball/505a30ad386daa5211f08a318e47015b501cad30",
+                "reference": "505a30ad386daa5211f08a318e47015b501cad30",
                 "shasum": ""
             },
             "require": {
-                "php": "8.0 - 8.4"
+                "php": "8.0 - 8.5"
             },
             "conflict": {
                 "nette/finder": "<3",
                 "nette/schema": "<1.2.2"
             },
             "require-dev": {
-                "jetbrains/phpstorm-attributes": "dev-master",
+                "jetbrains/phpstorm-attributes": "^1.2",
                 "nette/tester": "^2.5",
-                "phpstan/phpstan": "^1.0",
+                "phpstan/phpstan-nette": "^2.0@stable",
                 "tracy/tracy": "^2.9"
             },
             "suggest": {
@@ -2230,6 +2245,9 @@
                 }
             },
             "autoload": {
+                "psr-4": {
+                    "Nette\\": "src"
+                },
                 "classmap": [
                     "src/"
                 ]
@@ -2270,9 +2288,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/utils/issues",
-                "source": "https://github.com/nette/utils/tree/v4.0.7"
+                "source": "https://github.com/nette/utils/tree/v4.0.9"
             },
-            "time": "2025-06-03T04:55:08+00:00"
+            "time": "2025-10-31T00:45:47+00:00"
         },
         {
             "name": "nikic/php-parser",
