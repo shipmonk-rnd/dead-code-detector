@@ -7,7 +7,7 @@ use ReflectionClassConstant;
 use ReflectionMethod;
 use Reflector;
 
-class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
+final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     private bool $enabled;

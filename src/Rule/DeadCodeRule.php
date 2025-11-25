@@ -46,7 +46,7 @@ use function strpos;
 /**
  * @implements Rule<CollectedDataNode>
  */
-class DeadCodeRule implements Rule, DiagnoseExtension
+final class DeadCodeRule implements Rule, DiagnoseExtension
 {
 
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';

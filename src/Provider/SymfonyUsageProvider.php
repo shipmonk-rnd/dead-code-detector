@@ -47,7 +47,7 @@ use function simplexml_load_string;
 use function sprintf;
 use function strpos;
 
-class SymfonyUsageProvider implements MemberUsageProvider
+final class SymfonyUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -353,7 +353,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    protected function shouldMarkAsUsed(ReflectionMethod $method): ?string
+    private function shouldMarkAsUsed(ReflectionMethod $method): ?string
     {
         if ($this->isBundleConstructor($method)) {
             return 'Bundle constructor (created by Kernel)';
@@ -398,7 +398,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return null;
     }
 
-    protected function fillDicClasses(string $containerXmlPath): void
+    private function fillDicClasses(string $containerXmlPath): void
     {
         $fileContents = file_get_contents($containerXmlPath);
 
@@ -486,17 +486,17 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return $serviceMap;
     }
 
-    protected function isBundleConstructor(ReflectionMethod $method): bool
+    private function isBundleConstructor(ReflectionMethod $method): bool
     {
         return $method->isConstructor() && $method->getDeclaringClass()->isSubclassOf('Symfony\Component\HttpKernel\Bundle\Bundle');
     }
 
-    protected function isAutowiredWithRequiredAttribute(ReflectionMethod $method): bool
+    private function isAutowiredWithRequiredAttribute(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Symfony\Contracts\Service\Attribute\Required');
     }
 
-    protected function isEventListenerMethodWithAsEventListenerAttribute(ReflectionMethod $method): bool
+    private function isEventListenerMethodWithAsEventListenerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
 
@@ -504,7 +504,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
     }
 
-    protected function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool
+    private function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
         $methodName = $method->getName();
@@ -547,7 +547,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    protected function isWorkflowEventListenerMethod(ReflectionMethod $method): bool
+    private function isWorkflowEventListenerMethod(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsAnnounceListener')
             || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsCompletedListener')
@@ -558,19 +558,19 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsTransitionListener');
     }
 
-    protected function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
+    private function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
-    protected function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
+    private function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
     }
 
-    protected function isMethodWithRouteAttribute(ReflectionMethod $method): bool
+    private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
         $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
 
@@ -578,7 +578,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
     }
 
-    protected function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
+    private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
     {
         $attributes = $method->getDeclaringClass()->getAttributes('Symfony\Component\Validator\Constraints\Callback');
 
@@ -598,7 +598,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
-    protected function isProbablySymfonyListener(ReflectionMethod $method): bool
+    private function isProbablySymfonyListener(ReflectionMethod $method): bool
     {
         $methodName = $method->getName();
 
@@ -615,7 +615,7 @@ class SymfonyUsageProvider implements MemberUsageProvider
      * @param ReflectionClass|ReflectionMethod $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
-    protected function hasAttribute(
+    private function hasAttribute(
         Reflector $classOrMethod,
         string $attributeClass,
         int $flags = 0

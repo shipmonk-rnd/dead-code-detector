@@ -18,6 +18,7 @@
         <exclude name="SlevomatCodingStandard.Commenting.ForbiddenAnnotations.AnnotationForbidden"/><!-- It removes @dataProvider, but PHPUnit 9 does not yet have #[DataProvider] -->
     </rule>
 
+    <rule ref="SlevomatCodingStandard.Classes.RequireAbstractOrFinal"/>
     <rule ref="SlevomatCodingStandard.Functions.DisallowTrailingCommaInDeclaration">
         <properties>
             <property name="onlySingleLine" value="false"/>

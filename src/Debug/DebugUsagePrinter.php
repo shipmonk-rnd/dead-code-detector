@@ -28,7 +28,7 @@ use function str_repeat;
 use function strpos;
 use function substr;
 
-class DebugUsagePrinter
+final class DebugUsagePrinter
 {
 
     public const ANY_MEMBER = "\0";

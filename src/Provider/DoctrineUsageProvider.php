@@ -20,7 +20,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 
-class DoctrineUsageProvider implements MemberUsageProvider
+final class DoctrineUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
@@ -147,7 +147,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?string
+    private function shouldMarkMethodAsUsed(ReflectionMethod $method): ?string
     {
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
@@ -179,7 +179,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return null;
     }
 
-    protected function isLifecycleEventMethod(ReflectionMethod $method): bool
+    private function isLifecycleEventMethod(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostLoad')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostPersist')
@@ -194,7 +194,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      * - see Doctrine\ORM\Events::*
      */
-    protected function isProbablyDoctrineListener(string $methodName): bool
+    private function isProbablyDoctrineListener(string $methodName): bool
     {
         return $methodName === 'preRemove'
             || $methodName === 'postRemove'
@@ -211,7 +211,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
             || $methodName === 'onClear';
     }
 
-    protected function hasAttribute(
+    private function hasAttribute(
         ReflectionMethod $method,
         string $attributeClass
     ): bool
@@ -219,7 +219,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return $method->getAttributes($attributeClass) !== [];
     }
 
-    protected function isPartOfAsEntityListener(
+    private function isPartOfAsEntityListener(
         ReflectionClass $class,
         string $methodName
     ): bool
@@ -235,7 +235,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    protected function isPartOfAsDoctrineListener(
+    private function isPartOfAsDoctrineListener(
         ReflectionClass $class,
         string $methodName
     ): bool
@@ -253,7 +253,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    protected function isPartOfAutoconfigureTagDoctrineListener(
+    private function isPartOfAutoconfigureTagDoctrineListener(
         ReflectionClass $class,
         string $methodName
     ): bool
@@ -284,7 +284,7 @@ class DoctrineUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    protected function isEntityRepositoryConstructor(
+    private function isEntityRepositoryConstructor(
         ReflectionClass $class,
         ReflectionMethod $method
     ): bool

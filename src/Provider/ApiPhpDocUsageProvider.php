@@ -10,7 +10,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function strpos;
 
-class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
+final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     private ReflectionProvider $reflectionProvider;

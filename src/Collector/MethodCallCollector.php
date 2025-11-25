@@ -35,7 +35,7 @@ use function current;
 /**
  * @implements Collector<Node, list<string>>
  */
-class MethodCallCollector implements Collector
+final class MethodCallCollector implements Collector
 {
 
     use BufferedUsageCollector;

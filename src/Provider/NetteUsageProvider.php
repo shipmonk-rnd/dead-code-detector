@@ -18,7 +18,7 @@ use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
 
-class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
+final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
     private ReflectionProvider $reflectionProvider;

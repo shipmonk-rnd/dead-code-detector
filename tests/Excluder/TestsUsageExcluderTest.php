@@ -8,7 +8,7 @@ use ReflectionClass;
 use function realpath;
 use const PHP_VERSION_ID;
 
-class TestsUsageExcluderTest extends PHPStanTestCase
+final class TestsUsageExcluderTest extends PHPStanTestCase
 {
 
     public function testAutodetectComposerDevPaths(): void

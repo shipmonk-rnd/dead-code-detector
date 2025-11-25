@@ -6,7 +6,7 @@ use LogicException;
 use function file_get_contents;
 use function file_put_contents;
 
-class FileSystem
+class FileSystem // phpcs:ignore SlevomatCodingStandard.Classes.RequireAbstractOrFinal -- mocking needed
 {
 
     public function read(string $path): string
