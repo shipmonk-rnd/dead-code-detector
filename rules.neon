@@ -64,6 +64,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.phpbench.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.behat.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -197,6 +204,8 @@ parameters:
                 enabled: null
             phpbench:
                 enabled: null
+            behat:
+                enabled: null
             symfony:
                 enabled: null
                 configDir: null
@@ -253,6 +262,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             phpbench: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            behat: structure([
                 enabled: schema(bool(), nullable())
             ])
             symfony: structure([

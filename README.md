@@ -76,6 +76,12 @@ $ vendor/bin/phpstan
 - `#[BeforeMethods]`, `#[AfterMethods]` attributes
 - `#[ParamProviders]` attribute for param provider methods
 
+#### Behat:
+- context class constructors
+- step definitions via annotations (`@Given`, `@When`, `@Then`) or attributes (`#[Given]`, `#[When]`, `#[Then]`)
+- hooks via annotations (`@BeforeScenario`, `@AfterScenario`, etc.) or attributes (`#[BeforeScenario]`, `#[AfterScenario]`, etc.)
+- transformations via `@Transform` or `#[Transform]`
+
 #### PHPStan:
 - constructor calls for DIC services (rules, extensions, ...)
 
