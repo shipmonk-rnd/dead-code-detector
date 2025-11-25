@@ -13,14 +13,14 @@ jobs:
         steps:
             -
                 name: Checkout code
-                uses: actions/checkout@v4
+                uses: actions/checkout@v6
                 with:
                     fetch-depth: 0
             -
                 name: Setup PHP
                 uses: shivammathur/setup-php@v2
                 with:
-                    php-version: 8.4
+                    php-version: 8.5
                     extensions: xdebug
             -
                 name: Install dependencies
