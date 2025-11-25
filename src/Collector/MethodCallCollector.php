@@ -8,6 +8,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\Clone_;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -18,6 +19,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\TrinaryLogic;
+use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
@@ -26,6 +28,9 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function array_map;
+use function count;
+use function current;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -85,6 +90,10 @@ class MethodCallCollector implements Collector
 
         if ($node instanceof Clone_) {
             $this->registerClone($node, $scope);
+        }
+
+        if ($node instanceof FuncCall) {
+            $this->registerFunctionCall($node, $scope);
         }
 
         if ($node instanceof Attribute) {
@@ -225,6 +234,45 @@ class MethodCallCollector implements Collector
                 $node,
                 $scope,
             );
+        }
+    }
+
+    private function registerFunctionCall(
+        FuncCall $node,
+        Scope $scope
+    ): void
+    {
+        $args = $node->getArgs();
+        if (count($args) === 0) {
+            return;
+        }
+
+        $firstArg = current($args);
+
+        if ($node->name instanceof Name) {
+            $functionNames = [$node->name->toString()];
+        } else {
+            $nameType = $scope->getType($node->name);
+            $functionNames = array_map(static fn (ConstantStringType $string): string => $string->getValue(), $nameType->getConstantStrings());
+        }
+
+        foreach ($functionNames as $functionName) {
+            if ($functionName !== 'clone') {
+                continue;
+            }
+
+            $callerType = $scope->getType($firstArg->value);
+
+            foreach ($this->getDeclaringTypesWithMethod('__clone', $callerType, TrinaryLogic::createNo()) as $methodRef) {
+                $this->registerUsage(
+                    new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        $methodRef,
+                    ),
+                    $node,
+                    $scope,
+                );
+            }
         }
     }
 
