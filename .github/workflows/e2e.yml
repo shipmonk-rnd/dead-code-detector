@@ -34,7 +34,7 @@ jobs:
         steps:
             -
                 name: Clone ${{ matrix.repo }}
-                uses: actions/checkout@v4
+                uses: actions/checkout@v6
                 with:
                     repository: ${{ matrix.repo }}
                     token: ${{ secrets.PAT_GITHUB_CHECKOUT || github.token }}
