@@ -51,7 +51,7 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction
+                run: composer update --no-progress --prefer-dist --no-interaction --ignore-platform-req=php
             -
                 name: Run dependency analyser
                 run: composer check:dependencies
@@ -74,7 +74,7 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction
+                run: composer update --no-progress --prefer-dist --no-interaction --ignore-platform-req=php
             -
                 name: Run PHPStan
                 run: composer check:types
@@ -98,7 +98,7 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction  ${{ matrix.php-version == '8.5' && '--ignore-platform-req=php+' || '' }}
+                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction --ignore-platform-req=php
             -
                 name: Run tests
                 run: vendor/bin/phpunit --no-coverage tests
