@@ -28,6 +28,11 @@ class SimpleBench
     {
     }
 
+    #[ParamProviders([1])]
+    public function benchWithInvalidAttributeDontBreakIt(array $params): void
+    {
+    }
+
     public function provideParams(): array
     {
         return [];
