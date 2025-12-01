@@ -51,7 +51,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction --ignore-platform-req=php
+                run: |
+                    composer remove --dev shipmonk/coverage-guard
+                    composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run dependency analyser
                 run: composer check:dependencies
@@ -74,7 +76,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction --ignore-platform-req=php
+                run: |
+                    composer remove --dev shipmonk/coverage-guard
+                    composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run PHPStan
                 run: composer check:types
@@ -98,7 +102,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction --ignore-platform-req=php
+                run: |
+                    composer remove --dev shipmonk/coverage-guard
+                    composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
             -
                 name: Run tests
                 run: vendor/bin/phpunit --no-coverage tests
