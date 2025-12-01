@@ -52,7 +52,7 @@ jobs:
             -
                 name: Update dependencies
                 run: |
-                    composer remove --dev shipmonk/coverage-guard
+                    composer remove --dev shipmonk/coverage-guard --no-update
                     composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run dependency analyser
@@ -77,7 +77,7 @@ jobs:
             -
                 name: Update dependencies
                 run: |
-                    composer remove --dev shipmonk/coverage-guard
+                    composer remove --dev shipmonk/coverage-guard --no-update
                     composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run PHPStan
@@ -103,7 +103,7 @@ jobs:
             -
                 name: Update dependencies
                 run: |
-                    composer remove --dev shipmonk/coverage-guard
+                    composer remove --dev shipmonk/coverage-guard --no-update
                     composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
             -
                 name: Run tests
