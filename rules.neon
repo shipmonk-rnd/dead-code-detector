@@ -84,6 +84,7 @@ services:
         tags:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
+            analysedPaths: %analysedPaths%
             enabled: %shipmonkDeadCode.usageProviders.twig.enabled%
 
     -

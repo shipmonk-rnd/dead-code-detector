@@ -3,16 +3,24 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\ArgumentsNormalizer;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ParametersAcceptorSelector;
+use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Type\Type;
 use PHPStan\Type\UnionType;
+use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -20,20 +28,40 @@ use function array_map;
 use function count;
 use function explode;
 use function in_array;
+use function sprintf;
+use function strpos;
 
 final class TwigUsageProvider implements MemberUsageProvider
 {
 
     private bool $enabled;
 
-    public function __construct(?bool $enabled)
+    /**
+     * @var list<string>
+     */
+    private array $analysedPaths;
+
+    private ReflectionProvider $reflectionProvider;
+
+    /**
+     * @param list<string> $analysedPaths
+     */
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        array $analysedPaths,
+        ?bool $enabled
+    )
     {
+        $this->reflectionProvider = $reflectionProvider;
+        $this->analysedPaths = $analysedPaths;
         $this->enabled = $enabled ?? $this->isTwigInstalled();
     }
 
     private function isTwigInstalled(): bool
     {
-        return InstalledVersions::isInstalled('twig/twig');
+        return InstalledVersions::isInstalled('twig/twig')
+            || InstalledVersions::isInstalled('symfony/framework-bundle')
+            || InstalledVersions::isInstalled('symfony/twig-bridge');
     }
 
     public function getUsages(
@@ -58,6 +86,20 @@ final class TwigUsageProvider implements MemberUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getMethodUsageFromNew($node, $scope),
+            ];
+        }
+
+        if ($node instanceof Return_) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesFromTemplateReturn($node, $scope),
+            ];
+        }
+
+        if ($node instanceof MethodCall) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesFromRenderCall($node, $scope),
             ];
         }
 
@@ -231,6 +273,284 @@ final class TwigUsageProvider implements MemberUsageProvider
                 false,
             ),
         );
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromTemplateReturn(
+        Return_ $node,
+        Scope $scope
+    ): array
+    {
+        if (!$this->isInControllerMethodWithTemplate($scope)) {
+            return [];
+        }
+
+        if ($node->expr === null) {
+            return [];
+        }
+
+        $returnType = $scope->getType($node->expr);
+        $referencedClassNames = $this->extractObjectTypes($returnType);
+
+        $usages = [];
+        $visited = [];
+
+        foreach ($referencedClassNames as $className) {
+            $usages = [
+                ...$usages,
+                ...$this->traverseClassNameRecursively($className, $visited, ''),
+            ];
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromRenderCall(
+        MethodCall $node,
+        Scope $scope
+    ): array
+    {
+        if (!$scope->isInClass()) {
+            return [];
+        }
+
+        if (!$scope->getClassReflection()->is('Symfony\Bundle\FrameworkBundle\Controller\AbstractController')) {
+            return [];
+        }
+
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        $methodName = $node->name->toString();
+
+        // Check if it's one of the Twig rendering methods
+        $twigRenderMethods = [
+            'render' => 1,
+            'renderView' => 1,
+            'renderBlock' => 2,
+            'renderBlockView' => 2,
+            'stream' => 1,
+        ];
+
+        $parametersArgIndex = $twigRenderMethods[$methodName] ?? null;
+        if ($parametersArgIndex === null) {
+            return [];
+        }
+
+        $args = $node->getArgs();
+
+        if (!isset($args[$parametersArgIndex])) {
+            return [];
+        }
+
+        $parametersArg = $args[$parametersArgIndex];
+        $parametersType = $scope->getType($parametersArg->value);
+
+        $objectTypes = $this->extractObjectTypes($parametersType);
+
+        $usages = [];
+        $visited = [];
+
+        foreach ($objectTypes as $className) {
+            $usages = [
+                ...$usages,
+                ...$this->traverseClassNameRecursively($className, $visited, ''),
+            ];
+        }
+
+        return $usages;
+    }
+
+    private function isInControllerMethodWithTemplate(
+        Scope $scope
+    ): bool
+    {
+        if (!$scope->isInClass()) {
+            return false;
+        }
+        $methodName = $scope->getFunctionName();
+        if ($methodName === null) {
+            return false;
+        }
+        try {
+            $attributes = $scope->getClassReflection()->getNativeReflection()->getMethod($methodName)->getAttributes();
+        } catch (ReflectionException $e) {
+            throw new LogicException("Method $methodName must exist as it was returned from Scope. Should never happen.", 0, $e);
+        }
+
+        foreach ($attributes as $attribute) {
+            if (
+                $attribute->getName() === 'Symfony\Bridge\Twig\Attribute\Template' // Symfony 6.2+ (TwigBridge)
+                || $attribute->getName() === 'Sensio\Bundle\FrameworkExtraBundle\Configuration\Template' // SensioFrameworkExtraBundle (legacy)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractObjectTypes(Type $returnType): array
+    {
+        return $returnType->getReferencedClasses();
+    }
+
+    /**
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage>
+     */
+    private function traverseClassNameRecursively(
+        string $className,
+        array &$visited,
+        string $context
+    ): array
+    {
+        if (isset($visited[$className])) {
+            return []; // Cycle detection
+        }
+
+        $visited[$className] = true;
+
+        if (!$this->reflectionProvider->hasClass($className)) {
+            return [];
+        }
+
+        $classReflection = $this->reflectionProvider->getClass($className);
+
+        if ($this->shouldSkipClass($classReflection)) {
+            return [];
+        }
+
+        return $this->getPublicMembersUsages($classReflection, $visited, $context);
+    }
+
+    /**
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage>
+     */
+    private function getPublicMembersUsages(
+        ClassReflection $classReflection,
+        array &$visited,
+        string $context
+    ): array
+    {
+        $usages = [];
+        $className = $classReflection->getName();
+        $nativeReflection = $classReflection->getNativeReflection();
+
+        // Process public methods
+        foreach ($nativeReflection->getMethods() as $method) {
+            if (!$method->isPublic() || $method->isStatic()) {
+                continue;
+            }
+
+            // Skip magic methods
+            if ($this->shouldSkipMethod($method->getName())) {
+                continue;
+            }
+
+            // Mark method as used
+            $usages[] = $this->createMethodUsage($className, $method->getName(), $context);
+
+            // Traverse method return type
+            $extendedMethodReflection = $classReflection->getNativeMethod($method->getName());
+            $variants = $extendedMethodReflection->getVariants();
+
+            foreach ($variants as $variant) {
+                $returnType = $variant->getReturnType();
+
+                foreach ($returnType->getObjectClassNames() as $returnClassName) {
+                    $newContext = $context !== ''
+                        ? "{$context} -> {$className}::{$method->getName()}"
+                        : "{$className}::{$method->getName()}";
+
+                    $usages = [
+                        ...$usages,
+                        ...$this->traverseClassNameRecursively(
+                            $returnClassName,
+                            $visited,
+                            $newContext,
+                        ),
+                    ];
+                }
+            }
+        }
+
+        // Process public properties
+        foreach ($nativeReflection->getProperties() as $property) {
+            if (!$property->isPublic() || $property->isStatic()) {
+                continue;
+            }
+
+            $propertyReflection = $classReflection->getNativeProperty($property->getName());
+
+            foreach ($propertyReflection->getReadableType()->getObjectClassNames() as $propertyClassName) {
+                $newContext = $context !== ''
+                    ? "{$context} -> {$className}::\${$property->getName()}"
+                    : "{$className}::\${$property->getName()}";
+
+                $usages = [
+                    ...$usages,
+                    ...$this->traverseClassNameRecursively(
+                        $propertyClassName,
+                        $visited,
+                        $newContext,
+                    ),
+                ];
+            }
+        }
+
+        return $usages;
+    }
+
+    private function createMethodUsage(
+        string $className,
+        string $methodName,
+        string $context
+    ): ClassMethodUsage
+    {
+        $note = $context !== ''
+            ? sprintf('Accessible in Twig template (from controller return value via %s)', $context)
+            : 'Accessible in Twig template (from controller return value)';
+
+        return new ClassMethodUsage(
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
+            new ClassMethodRef($className, $methodName, false),
+        );
+    }
+
+    private function shouldSkipMethod(string $methodName): bool
+    {
+        return strpos($methodName, '__') === 0;
+    }
+
+    private function shouldSkipClass(ClassReflection $classReflection): bool
+    {
+        if ($classReflection->isInternal()) {
+            return true;
+        }
+
+        $fileName = $classReflection->getFileName();
+        if ($fileName === null) {
+            return true;
+        }
+
+        foreach ($this->analysedPaths as $path) {
+            if (strpos($fileName, $path) === 0) {
+                return false; // do not traverse non-analyzed classes (e.g. vendor)
+            }
+        }
+
+        return true;
     }
 
 }
