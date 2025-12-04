@@ -28,7 +28,6 @@ use function array_map;
 use function count;
 use function explode;
 use function in_array;
-use function sprintf;
 use function strpos;
 
 final class TwigUsageProvider implements MemberUsageProvider
@@ -296,11 +295,12 @@ final class TwigUsageProvider implements MemberUsageProvider
 
         $usages = [];
         $visited = [];
+        $rootContext = $this->getRootContext($node, $scope);
 
         foreach ($referencedClassNames as $className) {
             $usages = [
                 ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, ''),
+                ...$this->traverseClassNameRecursively($className, $visited, $rootContext),
             ];
         }
 
@@ -356,15 +356,31 @@ final class TwigUsageProvider implements MemberUsageProvider
 
         $usages = [];
         $visited = [];
+        $rootContext = $this->getRootContext($node, $scope);
 
         foreach ($objectTypes as $className) {
             $usages = [
                 ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, ''),
+                ...$this->traverseClassNameRecursively($className, $visited, $rootContext),
             ];
         }
 
         return $usages;
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    private function getRootContext(
+        Node $node,
+        Scope $scope
+    ): string
+    {
+        $functionName = $scope->getFunctionName();
+        if (!$scope->isInClass() || $functionName === null) {
+            return 'unknown';
+        }
+        return "{$scope->getClassReflection()->getName()}::{$functionName}({$node->getStartLine()})";
     }
 
     private function isInControllerMethodWithTemplate(
@@ -409,6 +425,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * @param non-empty-string $context
      * @param array<string, true> $visited
      * @return list<ClassMethodUsage>
      */
@@ -439,6 +456,7 @@ final class TwigUsageProvider implements MemberUsageProvider
 
     /**
      * @param array<string, true> $visited
+     * @param non-empty-string $context
      * @return list<ClassMethodUsage>
      */
     private function getPublicMembersUsages(
@@ -450,6 +468,7 @@ final class TwigUsageProvider implements MemberUsageProvider
         $usages = [];
         $className = $classReflection->getName();
         $nativeReflection = $classReflection->getNativeReflection();
+        $shortClassName = $nativeReflection->getShortName();
 
         // Process public methods
         foreach ($nativeReflection->getMethods() as $method) {
@@ -468,15 +487,12 @@ final class TwigUsageProvider implements MemberUsageProvider
             // Traverse method return type
             $extendedMethodReflection = $classReflection->getNativeMethod($method->getName());
             $variants = $extendedMethodReflection->getVariants();
+            $newContext = "{$context} -> {$shortClassName}::{$method->getName()}";
 
             foreach ($variants as $variant) {
                 $returnType = $variant->getReturnType();
 
                 foreach ($returnType->getObjectClassNames() as $returnClassName) {
-                    $newContext = $context !== ''
-                        ? "{$context} -> {$className}::{$method->getName()}"
-                        : "{$className}::{$method->getName()}";
-
                     $usages = [
                         ...$usages,
                         ...$this->traverseClassNameRecursively(
@@ -496,12 +512,9 @@ final class TwigUsageProvider implements MemberUsageProvider
             }
 
             $propertyReflection = $classReflection->getNativeProperty($property->getName());
+            $newContext = "{$context} -> {$shortClassName}::\${$property->getName()}";
 
             foreach ($propertyReflection->getReadableType()->getObjectClassNames() as $propertyClassName) {
-                $newContext = $context !== ''
-                    ? "{$context} -> {$className}::\${$property->getName()}"
-                    : "{$className}::\${$property->getName()}";
-
                 $usages = [
                     ...$usages,
                     ...$this->traverseClassNameRecursively(
@@ -516,18 +529,17 @@ final class TwigUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
+    /**
+     * @param non-empty-string $context
+     */
     private function createMethodUsage(
         string $className,
         string $methodName,
         string $context
     ): ClassMethodUsage
     {
-        $note = $context !== ''
-            ? sprintf('Accessible in Twig template (from controller return value via %s)', $context)
-            : 'Accessible in Twig template (from controller return value)';
-
         return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
             new ClassMethodRef($className, $methodName, false),
         );
     }
