@@ -90,6 +90,9 @@ $ vendor/bin/phpstan
 - `SmartObject` magic calls for `@property` annotations
 
 #### Twig:
+- Twig parameters (including nested referenced ones)
+  - Passed to `$controller->render('my.twig', ['param' => $viewModel])`,
+  - Returned from `#[Template]` controller methods
 - `#[AsTwigFilter]`, `#[AsTwigFunction]`, `#[AsTwigTest]`
 - `new TwigFilter(..., callback)`, `new TwigFunction(..., callback)`, `new TwigTest(..., callback)`
 
