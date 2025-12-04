@@ -374,10 +374,14 @@ final class TwigUsageProvider implements MemberUsageProvider
         if (!$scope->isInClass()) {
             return false;
         }
-        $methodName = $scope->getFunctionName();
-        if ($methodName === null) {
+        $function = $scope->getFunction();
+        if ($function === null) {
             return false;
         }
+        if ($function->isMethodOrPropertyHook() && $function->isPropertyHook()) {
+            return false;
+        }
+        $methodName = $function->getName();
         try {
             $attributes = $scope->getClassReflection()->getNativeReflection()->getMethod($methodName)->getAttributes();
         } catch (ReflectionException $e) {
