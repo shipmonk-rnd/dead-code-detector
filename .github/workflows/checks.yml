@@ -33,21 +33,6 @@ jobs:
                     XDEBUG_MODE: coverage
                 run: composer check
 
-            -
-                name: Output line coverage
-                run: head cache/coverage/coverage.txt | grep Lines
-
-            -
-                name: Report patch coverage
-                if: github.event_name == 'pull_request'
-                run: |
-                    if git diff --name-only ${{ github.event.pull_request.base.sha }} | grep -q '\.php$'; then
-                        git diff ${{ github.event.pull_request.base.sha }} > changes.patch
-                        vendor/bin/phpcov patch-coverage --path-prefix $(pwd) cache/coverage/coverage.cov changes.patch || true
-                    else
-                        echo "No PHP files changed, skipping patch coverage report"
-                    fi
-
     cda:
         runs-on: ubuntu-latest
         strategy:
@@ -66,7 +51,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction
+                run: |
+                    composer remove --dev shipmonk/coverage-guard --no-update
+                    composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run dependency analyser
                 run: composer check:dependencies
@@ -89,7 +76,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --prefer-dist --no-interaction
+                run: |
+                    composer remove --dev shipmonk/coverage-guard --no-update
+                    composer update --no-progress --prefer-dist --no-interaction
             -
                 name: Run PHPStan
                 run: composer check:types
@@ -113,7 +102,9 @@ jobs:
                     ini-file: development
             -
                 name: Update dependencies
-                run: composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction  ${{ matrix.php-version == '8.5' && '--ignore-platform-req=php+' || '' }}
+                run: |
+                    composer remove --dev shipmonk/coverage-guard --no-update
+                    composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
             -
                 name: Run tests
                 run: vendor/bin/phpunit --no-coverage tests

@@ -7,6 +7,8 @@ class Methods
     const SOME_CONSTANT = 1; // error: Unused CustomProvider\Methods::SOME_CONSTANT
 
     public function method(): void {}
+
+    public function mixedTestThatExcludersCanExcludeProvidedUsage(): void {} // error: Unused CustomProvider\Methods::mixedTestThatExcludersCanExcludeProvidedUsage (all usages excluded by mixedPrefix excluder)
 }
 
 class Constants
