@@ -914,9 +914,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
-        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php'];
-        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php'];
-        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php'];
+        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php', self::requiresPhp(8_00_00)];
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
         yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
