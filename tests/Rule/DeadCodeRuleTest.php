@@ -26,6 +26,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
@@ -101,6 +102,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectDeadEnumCases = true;
 
+    private bool $detectDeadProperties = true;
+
     private ?DeadCodeRule $rule = null;
 
     private ?string $editorUrl = null;
@@ -138,9 +141,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectDeadProperties),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
+            new PropertyAccessCollector($this->getMemberUsageExcluders()),
         ];
     }
 
@@ -472,11 +476,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadMethods = false;
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
+        $this->detectDeadProperties = false;
 
         $ownIdentifiers = [
             DeadCodeRule::IDENTIFIER_METHOD,
             DeadCodeRule::IDENTIFIER_CONSTANT,
             DeadCodeRule::IDENTIFIER_ENUM_CASE,
+            DeadCodeRule::IDENTIFIER_PROPERTY,
         ];
         $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
 
@@ -855,6 +861,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
         yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php', self::requiresPhp(8_01_00)];
         yield 'provider-reflection-no-t' => [__DIR__ . '/data/providers/reflection-no-generics.php'];
+        yield 'provider-reflection-properties' => [__DIR__ . '/data/providers/reflection-properties.php', self::requiresPhp(8_01_00)];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
@@ -866,6 +873,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
+        yield 'provider-builtin' => [__DIR__ . '/data/providers/builtin.php'];
         yield 'provider-stream-wrapper' => [__DIR__ . '/data/providers/stream-wrapper.php'];
 
         // excluders
@@ -902,6 +910,22 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         // enums
         yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
         yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
+
+        // properties
+        yield 'property-basic' => [__DIR__ . '/data/properties/basic.php'];
+        yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
+        yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
+        yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
+        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php', self::requiresPhp(8_00_00)];
+        yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
+        yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
+        yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
+        yield 'property-write-array' => [__DIR__ . '/data/properties/write-array.php'];
+        yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
+        yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
+        yield 'property-write-inc-dec' => [__DIR__ . '/data/properties/write-inc-dec.php'];
 
         // mixed member
         yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
@@ -965,6 +989,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         yield 'sample' => [__DIR__ . '/data/removing/sample.php'];
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
+        yield 'properties' => [__DIR__ . '/data/removing/properties.php'];
+        yield 'promoted-properties' => [__DIR__ . '/data/removing/promoted-properties.php'];
     }
 
     private function getAutoremoveTransformedFilePath(string $file): string
@@ -1231,6 +1257,17 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         Closure::bind(function (): void {
             $this->analyser = null;
         }, $this, OriginalRuleTestCase::class)();
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getAdditionalConfigFiles(): array
+    {
+        return array_merge(
+            parent::getAdditionalConfigFiles(),
+            [__DIR__ . '/data/visitors.neon'],
+        );
     }
 
 }
