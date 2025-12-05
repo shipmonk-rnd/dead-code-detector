@@ -1,0 +1,5 @@
+services:
+    -
+        class: ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor
+        tags:
+            - phpstan.parser.richParserNodeVisitor

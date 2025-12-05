@@ -17,7 +17,7 @@ class MyEntity
 {
 
     #[\Doctrine\ORM\Mapping\Column(type: Types::STRING, enumType: InvoiceStatus::class)]
-    private InvoiceStatus $status;
+    private InvoiceStatus $status; // error: Unused Doctrine\MyEntity::status
 
     #[\Doctrine\ORM\Mapping\PreUpdate]
     public function onUpdate(PreUpdateEventArgs $args): void {}

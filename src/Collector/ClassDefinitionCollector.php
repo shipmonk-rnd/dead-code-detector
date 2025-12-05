@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\Enum_;
@@ -21,6 +22,7 @@ use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
 use function array_fill_keys;
 use function array_map;
 use function count;
+use function is_string;
 
 /**
  * @implements Collector<ClassLike, array{
@@ -28,6 +30,7 @@ use function count;
  *       name: string,
  *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
+ *       properties: array<string, array{line: int}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -43,15 +46,19 @@ final class ClassDefinitionCollector implements Collector
 
     private bool $detectDeadEnumCases;
 
+    private bool $detectDeadProperties;
+
     public function __construct(
         ReflectionProvider $reflectionProvider,
         bool $detectDeadConstants,
-        bool $detectDeadEnumCases
+        bool $detectDeadEnumCases,
+        bool $detectDeadProperties
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->detectDeadConstants = $detectDeadConstants;
         $this->detectDeadEnumCases = $detectDeadEnumCases;
+        $this->detectDeadProperties = $detectDeadProperties;
     }
 
     public function getNodeType(): string
@@ -66,6 +73,7 @@ final class ClassDefinitionCollector implements Collector
      *      name: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
+     *      properties: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -88,32 +96,60 @@ final class ClassDefinitionCollector implements Collector
         $methods = [];
         $constants = [];
         $cases = [];
+        $properties = [];
 
         foreach ($node->getMethods() as $method) {
-            $methods[$method->name->toString()] = [
+            $methodName = $method->name->toString();
+            $methods[$methodName] = [
                 'line' => $method->name->getStartLine(),
                 'params' => count($method->params),
                 'abstract' => $method->isAbstract() || $node instanceof Interface_,
                 'visibility' => $method->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
             ];
-        }
 
-        if ($this->detectDeadConstants) {
-            foreach ($node->getConstants() as $constant) {
-                foreach ($constant->consts as $const) {
-                    $constants[$const->name->toString()] = [
-                        'line' => $const->getStartLine(),
-                    ];
+            if ($methodName === '__construct') {
+                foreach ($method->getParams() as $param) {
+                    if ($param->isPromoted() && $param->var instanceof Variable && is_string($param->var->name)) {
+                        $properties[$param->var->name] = [
+                            'line' => $param->getStartLine(),
+                        ];
+                    }
                 }
             }
         }
 
-        if ($this->detectDeadEnumCases) {
-            foreach ($this->getEnumCases($node) as $case) {
-                $cases[$case->name->toString()] = [
-                    'line' => $case->name->getStartLine(),
+        foreach ($node->getConstants() as $constant) {
+            foreach ($constant->consts as $const) {
+                $constants[$const->name->toString()] = [
+                    'line' => $const->getStartLine(),
                 ];
             }
+        }
+
+        foreach ($this->getEnumCases($node) as $case) {
+            $cases[$case->name->toString()] = [
+                'line' => $case->name->getStartLine(),
+            ];
+        }
+
+        foreach ($node->getProperties() as $property) {
+            foreach ($property->props as $prop) {
+                $properties[$prop->name->toString()] = [
+                    'line' => $prop->getStartLine(),
+                ];
+            }
+        }
+
+        if (!$this->detectDeadConstants) {
+            $constants = [];
+        }
+
+        if (!$this->detectDeadEnumCases) {
+            $cases = [];
+        }
+
+        if (!$this->detectDeadProperties) {
+            $properties = [];
         }
 
         return [
@@ -122,6 +158,7 @@ final class ClassDefinitionCollector implements Collector
             'methods' => $methods,
             'cases' => $cases,
             'constants' => $constants,
+            'properties' => $properties,
             'parents' => $this->getParents($reflection),
             'traits' => $this->getTraits($node),
             'interfaces' => $this->getInterfaces($reflection),
