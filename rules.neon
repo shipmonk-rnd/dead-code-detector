@@ -145,12 +145,20 @@ services:
             memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector
+        tags:
+            - phpstan.collector
+        arguments:
+            memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
         arguments:
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
+            detectDeadProperties: %shipmonkDeadCode.detect.deadProperties%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector
@@ -175,6 +183,10 @@ services:
             servicesWithOldTag: tagged(shipmonk.deadCode.entrypointProvider)
             trackMixedAccessParameterValue: %shipmonkDeadCode.trackMixedAccess%
 
+    -
+        class: ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor
+        tags:
+            - phpstan.parser.richParserNodeVisitor
 
 parameters:
     parametersNotInvalidatingCache:
@@ -187,6 +199,7 @@ parameters:
             deadMethods: true
             deadConstants: true
             deadEnumCases: false
+            deadProperties: false
         usageProviders:
             apiPhpDoc:
                 enabled: true
@@ -238,6 +251,7 @@ parametersSchema:
             deadMethods: bool()
             deadConstants: bool()
             deadEnumCases: bool()
+            deadProperties: bool()
         ])
         usageProviders: structure([
             apiPhpDoc: structure([

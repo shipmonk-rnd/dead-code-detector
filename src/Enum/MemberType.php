@@ -7,5 +7,6 @@ interface MemberType
 
     public const METHOD = 1;
     public const CONSTANT = 2;
+    public const PROPERTY = 3;
 
 }
