@@ -1,0 +1,6 @@
+ • Removed property Removal\ClassWithProperties::deadProperty
+ • Removed property Removal\ClassWithProperties::deadProperty1
+ • Removed property Removal\ClassWithProperties::deadProperty2
+ • Removed property Removal\ClassWithProperties::deadStaticProperty
+
+Removed 4 dead members in 1 file.
