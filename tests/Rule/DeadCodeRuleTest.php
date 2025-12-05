@@ -26,6 +26,7 @@ use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
@@ -101,6 +102,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectDeadEnumCases = true;
 
+    private bool $detectDeadProperties = true;
+
     private ?DeadCodeRule $rule = null;
 
     private ?string $editorUrl = null;
@@ -138,9 +141,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         return [
             new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectDeadProperties),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
+            new PropertyAccessCollector($this->getMemberUsageExcluders()),
         ];
     }
 
@@ -472,11 +476,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadMethods = false;
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
+        $this->detectDeadProperties = false;
 
         $ownIdentifiers = [
             DeadCodeRule::IDENTIFIER_METHOD,
             DeadCodeRule::IDENTIFIER_CONSTANT,
             DeadCodeRule::IDENTIFIER_ENUM_CASE,
+            DeadCodeRule::IDENTIFIER_PROPERTY,
         ];
         $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
 
@@ -903,6 +909,14 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
         yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
 
+        // properties
+        yield 'property-basic' => [__DIR__ . '/data/properties/basic.php'];
+        yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
+        yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
+        yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
+        yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
+        yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
+
         // mixed member
         yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
@@ -1231,6 +1245,17 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         Closure::bind(function (): void {
             $this->analyser = null;
         }, $this, OriginalRuleTestCase::class)();
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getAdditionalConfigFiles(): array
+    {
+        return array_merge(
+            parent::getAdditionalConfigFiles(),
+            [__DIR__ . '/data/visitors.neon'],
+        );
     }
 
 }

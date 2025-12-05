@@ -129,6 +129,11 @@ final class CollectedUsage
                 $origin,
                 new ClassMethodRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
             );
+        } elseif ($memberType === MemberType::PROPERTY) {
+            $usage = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
+            );
         } else {
             throw new LogicException('Unknown member type: ' . $memberType);
         }
