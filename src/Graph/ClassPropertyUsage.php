@@ -17,8 +17,8 @@ final class ClassPropertyUsage extends ClassMemberUsage
     private ClassPropertyRef $access;
 
     /**
-     * @param UsageOrigin $origin The method where the access occurs
-     * @param ClassPropertyRef<string|null, string|null> $access The property being accessed
+     * @param UsageOrigin $origin The method where the read occurs
+     * @param ClassPropertyRef<string|null, string|null> $access The property being read
      */
     public function __construct(
         UsageOrigin $origin,

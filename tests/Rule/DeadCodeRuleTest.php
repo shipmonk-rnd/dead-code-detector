@@ -914,8 +914,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
+        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php'];
+        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php'];
+        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php'];
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
+        yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
+        yield 'property-write-array' => [__DIR__ . '/data/properties/write-array.php'];
+        yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
+        yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
+        yield 'property-write-inc-dec' => [__DIR__ . '/data/properties/write-inc-dec.php'];
 
         // mixed member
         yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
