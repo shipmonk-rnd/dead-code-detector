@@ -858,6 +858,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
+        yield 'provider-twig-template' => [__DIR__ . '/data/providers/twig-template.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
         yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php', self::requiresPhp(8_00_00)];
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php', self::requiresPhp(8_00_00)];
@@ -1025,6 +1026,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 __DIR__ . '/data/providers/symfony/',
             ),
             new TwigUsageProvider(
+                self::createReflectionProvider(),
+                [__DIR__ . '/data/providers/twig-template.php'],
                 $this->providersEnabled,
             ),
             new ApiPhpDocUsageProvider(
