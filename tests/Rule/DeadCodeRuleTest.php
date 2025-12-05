@@ -989,6 +989,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         yield 'sample' => [__DIR__ . '/data/removing/sample.php'];
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
+        yield 'properties' => [__DIR__ . '/data/removing/properties.php'];
+        yield 'promoted-properties' => [__DIR__ . '/data/removing/promoted-properties.php'];
     }
 
     private function getAutoremoveTransformedFilePath(string $file): string
