@@ -7,6 +7,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function strpos;
 
@@ -41,13 +42,18 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
     }
 
+    public function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?VirtualUsageData
+    {
+        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+    }
+
     /**
-     * @param ReflectionClassConstant|ReflectionMethod $member
+     * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
     public function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
         $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
-        $memberType = $member instanceof ReflectionClassConstant ? 'constant' : 'method';
+        $memberType = ReflectionHelper::getMemberType($member);
         $memberName = $member->getName();
 
         if ($this->isApiMember($reflectionClass, $member)) {
@@ -74,7 +80,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionClassConstant|ReflectionMethod $member
+     * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
     private function isApiMember(
         ClassReflection $reflection,
@@ -100,6 +106,17 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
             return false;
         }
 
+        if ($member instanceof ReflectionProperty) {
+            $property = $reflection->getNativeProperty($member->getName());
+            $phpDoc = $property->getDocComment();
+
+            if ($this->isApiPhpDoc($phpDoc)) {
+                return true;
+            }
+
+            return false;
+        }
+
         $phpDoc = $reflection->getNativeMethod($member->getName())->getDocComment();
 
         if ($this->isApiPhpDoc($phpDoc)) {
@@ -110,7 +127,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionClassConstant|ReflectionMethod $member
+     * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
     private function hasOwnMember(
         ClassReflection $reflection,
@@ -123,6 +140,10 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 
         if ($member instanceof ReflectionClassConstant) {
             return ReflectionHelper::hasOwnConstant($reflection, $member->getName());
+        }
+
+        if ($member instanceof ReflectionProperty) {
+            return ReflectionHelper::hasOwnProperty($reflection, $member->getName());
         }
 
         return ReflectionHelper::hasOwnMethod($reflection, $member->getName());

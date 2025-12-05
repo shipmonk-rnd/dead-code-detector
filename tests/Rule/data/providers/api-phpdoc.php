@@ -20,6 +20,9 @@ class PublicApi {
     const CONST1 = 1;
     const CONST2 = 2;
 
+    public string $property1;
+    public string $property2;
+
     public function method1() {}
     public function method2() {}
 
@@ -30,6 +33,10 @@ class PartialPublicApi {
     /** @api */
     const CONST1 = 1;
     const CONST2 = 2; // error: Unused ApiPhpdoc1\PartialPublicApi::CONST2
+
+    /** @api */
+    public string $property1;
+    public string $property2; // error: Unused ApiPhpdoc1\PartialPublicApi::property2
 
     /** @api */
     public function method1() {}
@@ -55,6 +62,10 @@ class InheritedPublicApi1 extends PublicApi {
     const CONST1 = 1;
     const CONST2 = 2;
     const CONST3 = 3; // error: Unused ApiPhpdoc1\InheritedPublicApi1::CONST3
+
+    public string $property1;
+    public string $property2;
+    public string $property3; // error: Unused ApiPhpdoc1\InheritedPublicApi1::property3
 
     public function method1() {}
     public function method2() {}
