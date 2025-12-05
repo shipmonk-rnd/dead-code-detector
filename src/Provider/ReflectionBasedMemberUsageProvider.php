@@ -11,11 +11,14 @@ use ReflectionClassConstant;
 use ReflectionEnum;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_merge;
 
@@ -37,6 +40,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $this->getMethodUsages($classReflection),
                 $this->getConstantUsages($classReflection),
                 $this->getEnumCaseUsages($classReflection),
+                $this->getPropertyUsages($classReflection),
             );
         }
 
@@ -54,6 +58,11 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     }
 
     protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
+    {
+        return null; // Expected to be overridden by subclasses.
+    }
+
+    protected function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?VirtualUsageData
     {
         return null; // Expected to be overridden by subclasses.
     }
@@ -134,6 +143,30 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
+    /**
+     * @return list<ClassPropertyUsage>
+     */
+    private function getPropertyUsages(ClassReflection $classReflection): array
+    {
+        $nativeClassReflection = $classReflection->getNativeReflection();
+
+        $usages = [];
+
+        foreach ($nativeClassReflection->getProperties() as $nativePropertyReflection) {
+            if ($nativePropertyReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
+                continue; // skip properties from ancestors
+            }
+
+            $usage = $this->shouldMarkPropertyAsUsed($nativePropertyReflection);
+
+            if ($usage !== null) {
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $usage);
+            }
+        }
+
+        return $usages;
+    }
+
     private function createConstantUsage(
         ReflectionClassConstant $constantReflection,
         VirtualUsageData $data
@@ -177,6 +210,21 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $enumCaseReflection->getName(),
                 false,
                 TrinaryLogic::createYes(),
+            ),
+        );
+    }
+
+    private function createPropertyUsage(
+        ReflectionProperty $propertyReflection,
+        VirtualUsageData $data
+    ): ClassPropertyUsage
+    {
+        return new ClassPropertyUsage(
+            UsageOrigin::createVirtual($this, $data),
+            new ClassPropertyRef(
+                $propertyReflection->getDeclaringClass()->getName(),
+                $propertyReflection->getName(),
+                false,
             ),
         );
     }
