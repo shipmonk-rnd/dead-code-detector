@@ -340,6 +340,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             'DebugRegular\Another::call',
             'DebugUnsupported\Foo::notDead',
             'DebugZero\Foo::__construct',
+            'DebugProperty\Foo::prop',
         ];
         $this->analyzeFiles([
             __DIR__ . '/data/debug/alternative.php',
@@ -353,6 +354,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             __DIR__ . '/data/debug/mixed.php',
             __DIR__ . '/data/debug/mixed-member.php',
             __DIR__ . '/data/debug/never.php',
+            __DIR__ . '/data/debug/property.php',
             __DIR__ . '/data/debug/reflection.php',
             __DIR__ . '/data/debug/regular.php',
             __DIR__ . '/data/debug/unsupported.php',

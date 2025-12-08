@@ -151,3 +151,13 @@ DebugUnsupported\Foo::notDead
 DebugZero\Foo::__construct
 |
 | No usages found
+
+
+DebugProperty\Foo::prop
+|
+| Marked as alive at:
+| entry data/debug/property.php:12
+|   reads DebugProperty\Foo::prop
+|
+| Found 1 usage:
+|  • data/debug/property.php:12
