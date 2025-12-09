@@ -332,6 +332,8 @@ class UserFacade
    ! Excluded usage at tests/User/UserFacadeTest.php:241 left intact
 ```
 
+- Also, removing dead properties currently only removes its definition (leaving all write usages as is).
+
 
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
@@ -382,6 +384,8 @@ parameters:
 
 Enum cases and properties are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
 But libraries should be able to enable those easily.
+
+Properties are considered dead if they are never read.
 
 
 ## Comparison with tomasvotruba/unused-public
