@@ -111,7 +111,7 @@ final class ClassDefinitionCollector implements Collector
                 foreach ($method->getParams() as $param) {
                     if ($param->isPromoted() && $param->var instanceof Variable && is_string($param->var->name)) {
                         $properties[$param->var->name] = [
-                            'line' => $param->getStartLine(),
+                            'line' => $param->var->getStartLine(),
                         ];
                     }
                 }
