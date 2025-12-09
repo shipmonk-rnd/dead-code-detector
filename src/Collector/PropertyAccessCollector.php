@@ -15,7 +15,6 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -57,11 +56,11 @@ final class PropertyAccessCollector implements Collector
             return null;
         }
 
-        if ($node instanceof PropertyFetch && $this->isPropertyRead($node)) {
+        if ($node instanceof PropertyFetch && !$scope->isInExpressionAssign($node)) {
             $this->registerInstancePropertyAccess($node, $scope);
         }
 
-        if ($node instanceof StaticPropertyFetch && $this->isPropertyRead($node)) {
+        if ($node instanceof StaticPropertyFetch && !$scope->isInExpressionAssign($node)) {
             $this->registerStaticPropertyAccess($node, $scope);
         }
 
@@ -194,11 +193,6 @@ final class PropertyAccessCollector implements Collector
         }
 
         return $function->isMethodOrPropertyHook() && $function->isPropertyHook();
-    }
-
-    private function isPropertyRead(Node $node): bool
-    {
-        return $node->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE, false) !== true;
     }
 
 }
