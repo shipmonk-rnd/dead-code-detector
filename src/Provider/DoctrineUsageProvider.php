@@ -22,7 +22,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function str_starts_with;
+use function strpos;
 
 final class DoctrineUsageProvider implements MemberUsageProvider
 {
@@ -196,7 +196,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
         foreach ($attributes as $attribute) {
             $attributeName = $attribute->getName();
 
-            if (str_starts_with($attributeName, 'Doctrine\ORM\Mapping\\')) {
+            if (strpos($attributeName, 'Doctrine\ORM\Mapping\\') === 0) {
                 return 'Doctrine ORM mapped property';
             }
         }
