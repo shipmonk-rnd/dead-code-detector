@@ -8,6 +8,7 @@ use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
@@ -18,7 +19,10 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function str_starts_with;
 
 final class DoctrineUsageProvider implements MemberUsageProvider
 {
@@ -79,6 +83,12 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                 ...$usages,
                 ...$this->getUsagesOfEnumColumn($classReflection->getName(), $propertyReflection),
             ];
+
+            $propertyUsageNote = $this->shouldMarkPropertyAsUsed($nativePropertyReflection);
+
+            if ($propertyUsageNote !== null) {
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $propertyUsageNote);
+            }
         }
 
         foreach ($nativeReflection->getMethods() as $method) {
@@ -174,6 +184,21 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
         if ($this->isProbablyDoctrineListener($methodName)) {
             return 'Is probable listener method';
+        }
+
+        return null;
+    }
+
+    private function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?string
+    {
+        $attributes = $property->getAttributes();
+
+        foreach ($attributes as $attribute) {
+            $attributeName = $attribute->getName();
+
+            if (str_starts_with($attributeName, 'Doctrine\ORM\Mapping\\')) {
+                return 'Doctrine ORM mapped property';
+            }
         }
 
         return null;
@@ -313,6 +338,21 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
+                false,
+            ),
+        );
+    }
+
+    private function createPropertyUsage(
+        ReflectionProperty $propertyReflection,
+        string $note
+    ): ClassPropertyUsage
+    {
+        return new ClassPropertyUsage(
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
+            new ClassPropertyRef(
+                $propertyReflection->getDeclaringClass()->getName(),
+                $propertyReflection->getName(),
                 false,
             ),
         );
