@@ -90,7 +90,7 @@
         ],
         "check:coverage": [
             "XDEBUG_MODE=coverage phpunit tests --coverage-clover cache/clover.xml",
-            "coverage-guard check cache/clover.xml"
+            "coverage-guard check cache/clover.xml --color"
         ],
         "check:cs": "phpcs",
         "check:dependencies": "composer-dependency-analyser",
