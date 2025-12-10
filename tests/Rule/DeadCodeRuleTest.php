@@ -240,6 +240,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         $this->analyzeFiles([__DIR__ . '/data/methods/mixed/tracked.php']);
         $this->analyzeFiles([__DIR__ . '/data/constants/mixed/tracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/properties/mixed/tracked.php']);
     }
 
     public function testMixedCallsNotTracked(): void
@@ -247,6 +248,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->trackMixedAccess = false;
         $this->analyzeFiles([__DIR__ . '/data/methods/mixed/untracked.php']);
         $this->analyzeFiles([__DIR__ . '/data/constants/mixed/untracked.php']);
+        $this->analyzeFiles([__DIR__ . '/data/properties/mixed/untracked.php']);
     }
 
     public function testDiagnoseMixedCalls(): void
@@ -917,6 +919,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-basic' => [__DIR__ . '/data/properties/basic.php'];
         yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
+        yield 'property-dynamic' => [__DIR__ . '/data/properties/dynamic.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
         yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
@@ -928,11 +931,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
         yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
         yield 'property-write-inc-dec' => [__DIR__ . '/data/properties/write-inc-dec.php'];
+        yield 'property-mixed' => [__DIR__ . '/data/properties/mixed/tracked.php'];
 
         // mixed member
         yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
+        yield 'mixed-member-full-prop' => [__DIR__ . '/data/mixed-member/full-mixed-property.php'];
         yield 'mixed-member-indirect-2' => [__DIR__ . '/data/mixed-member/indirect-interface-2.php'];
         yield 'mixed-member-indirect-4' => [__DIR__ . '/data/mixed-member/indirect-interface-4.php'];
         yield 'mixed-member-indirect-5' => [__DIR__ . '/data/mixed-member/indirect-interface-5.php'];
@@ -977,6 +982,15 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'mixed-member-const-traits-10' => [__DIR__ . '/data/mixed-member/traits-const-10.php'];
         yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
+        yield 'mixed-member-prop-traits-1' => [__DIR__ . '/data/mixed-member/traits-prop-1.php'];
+        yield 'mixed-member-prop-traits-2' => [__DIR__ . '/data/mixed-member/traits-prop-2.php'];
+        yield 'mixed-member-prop-traits-3' => [__DIR__ . '/data/mixed-member/traits-prop-3.php'];
+        yield 'mixed-member-prop-traits-5' => [__DIR__ . '/data/mixed-member/traits-prop-5.php'];
+        yield 'mixed-member-prop-traits-7' => [__DIR__ . '/data/mixed-member/traits-prop-7.php'];
+        yield 'mixed-member-prop-traits-9' => [__DIR__ . '/data/mixed-member/traits-prop-9.php'];
+        yield 'mixed-member-prop-traits-10' => [__DIR__ . '/data/mixed-member/traits-prop-10.php'];
+        yield 'mixed-member-prop-traits-14' => [__DIR__ . '/data/mixed-member/traits-prop-14.php'];
+        yield 'mixed-member-prop-traits-21' => [__DIR__ . '/data/mixed-member/traits-prop-21.php'];
 
         // other
         yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];

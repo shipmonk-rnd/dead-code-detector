@@ -7,6 +7,8 @@ trait TheTrait
     const MINUS = -1;
 
     public function minus() {}
+
+    public string $minusProperty;
 }
 
 interface TheInterface {
@@ -19,6 +21,8 @@ class ParentClass
 
     const ONE = 1;
     public function one() {}
+
+    public string $oneProperty;
 }
 
 class Tester extends ParentClass implements TheInterface
@@ -28,6 +32,9 @@ class Tester extends ParentClass implements TheInterface
 
     public function two() {}
     public function three() {}
+
+    public string $twoProperty;
+    public string $threeProperty;
 }
 
 class Descendant extends Tester
@@ -35,10 +42,13 @@ class Descendant extends Tester
     const FOUR = 4; // error: Unused MixedMember2\Descendant::FOUR
 
     public function four() {} // error: Unused MixedMember2\Descendant::four
+
+    public string $fourProperty; // error: Unused MixedMember2\Descendant::fourProperty
 }
 
 function test(string $unknown)
 {
     echo (new Tester)->$unknown(); // cannot be descendant
     echo Tester::{$unknown}; // cannot be descendant
+    echo (new Tester)->$unknown; // cannot be descendant
 }

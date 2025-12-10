@@ -10,6 +10,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
+use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
@@ -142,7 +143,7 @@ final class PropertyAccessCollector implements Collector
     }
 
     /**
-     * @return list<ClassPropertyRef<string, string|null>>
+     * @return list<ClassPropertyRef<string|null, string|null>>
      */
     private function getDeclaringTypesWithProperty(
         ?string $propertyName,
@@ -150,7 +151,9 @@ final class PropertyAccessCollector implements Collector
         ?bool $isPossibleDescendant
     ): array
     {
-        $typeNoNull = TypeCombinator::removeNull($callerType);
+        $typeNoNull = TypeUtils::toBenevolentUnion( // extract possible accesses even from Class|int
+            TypeCombinator::removeNull($callerType), // remove null to support nullsafe access
+        );
         $classReflections = $typeNoNull->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
 
         $propertyRefs = [];
@@ -162,6 +165,10 @@ final class PropertyAccessCollector implements Collector
                 $propertyName,
                 $possibleDescendant,
             );
+        }
+
+        if ($propertyRefs === []) { // access over unknown type
+            $propertyRefs[] = new ClassPropertyRef(null, $propertyName, true);
         }
 
         return $propertyRefs;
