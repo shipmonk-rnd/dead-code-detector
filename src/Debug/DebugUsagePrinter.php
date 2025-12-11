@@ -15,19 +15,18 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
+use ShipMonk\PHPStan\DeadCode\Output\TextUtils;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_map;
 use function array_sum;
 use function count;
 use function explode;
 use function implode;
-use function in_array;
 use function ltrim;
 use function next;
 use function reset;
 use function sprintf;
 use function str_repeat;
-use function strlen;
 use function strpos;
 use function substr;
 
@@ -168,7 +167,7 @@ final class DebugUsagePrinter
                 $memberAccessPastTense = 'fetched';
             }
 
-            $output->writeLineFormatted(sprintf('<fg=red>Found %d UNKNOWN %s over UNKNOWN type!!</>', $fullyMixedCount, $this->pluralize($fullyMixedCount, $memberAccessString)));
+            $output->writeLineFormatted(sprintf('<fg=red>Found %d UNKNOWN %s over UNKNOWN type!!</>', $fullyMixedCount, TextUtils::pluralize($fullyMixedCount, $memberAccessString)));
 
             foreach ($collectedUsages as $usages) {
                 $output->writeLineFormatted(
@@ -447,26 +446,6 @@ final class DebugUsagePrinter
         } else {
             throw new LogicException("Unsupported member type: $memberType");
         }
-    }
-
-    private function pluralize(
-        int $count,
-        string $singular
-    ): string
-    {
-        if ($count === 1) {
-            return $singular;
-        }
-
-        if (substr($singular, -1) === 's' || substr($singular, -1) === 'x' || substr($singular, -2) === 'sh' || substr($singular, -2) === 'ch') {
-            return $singular . 'es';
-        }
-
-        if (substr($singular, -1) === 'y' && !in_array($singular[strlen($singular) - 2], ['a', 'e', 'i', 'o', 'u'], true)) {
-            return substr($singular, 0, -1) . 'ies';
-        }
-
-        return $singular . 's';
     }
 
     /**
