@@ -983,9 +983,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
         yield 'mixed-member-prop-traits-1' => [__DIR__ . '/data/mixed-member/traits-prop-1.php'];
-        yield 'mixed-member-prop-traits-2' => [__DIR__ . '/data/mixed-member/traits-prop-2.php'];
-        yield 'mixed-member-prop-traits-3' => [__DIR__ . '/data/mixed-member/traits-prop-3.php'];
-        yield 'mixed-member-prop-traits-5' => [__DIR__ . '/data/mixed-member/traits-prop-5.php'];
+        yield 'mixed-member-prop-traits-2' => [__DIR__ . '/data/mixed-member/traits-prop-2.php', self::requiresPhp(8_00_00)];
+        yield 'mixed-member-prop-traits-3' => [__DIR__ . '/data/mixed-member/traits-prop-3.php', self::requiresPhp(8_00_00)];
+        yield 'mixed-member-prop-traits-5' => [__DIR__ . '/data/mixed-member/traits-prop-5.php', self::requiresPhp(8_00_00)];
         yield 'mixed-member-prop-traits-7' => [__DIR__ . '/data/mixed-member/traits-prop-7.php'];
         yield 'mixed-member-prop-traits-9' => [__DIR__ . '/data/mixed-member/traits-prop-9.php'];
         yield 'mixed-member-prop-traits-10' => [__DIR__ . '/data/mixed-member/traits-prop-10.php'];
