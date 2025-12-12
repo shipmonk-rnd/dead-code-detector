@@ -56,6 +56,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_METHOD
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_CONSTANT
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_ENUM_CASE
+                && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_PROPERTY
             ) {
                 continue;
             }
@@ -78,10 +79,12 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
             $deadConstants = $deadMembersByType[MemberType::CONSTANT] ?? [];
             /** @var array<string, list<ClassMemberUsage>> $deadMethods */
             $deadMethods = $deadMembersByType[MemberType::METHOD] ?? [];
+            /** @var array<string, list<ClassMemberUsage>> $deadProperties */
+            $deadProperties = $deadMembersByType[MemberType::PROPERTY] ?? [];
 
-            $membersCount += count($deadConstants) + count($deadMethods);
+            $membersCount += count($deadConstants) + count($deadMethods) + count($deadProperties);
 
-            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants));
+            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants), array_keys($deadProperties));
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
@@ -93,6 +96,11 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
 
             foreach ($deadMethods as $method => $excludedUsages) {
                 $output->writeLineFormatted(" • Removed method <fg=white>$method</>");
+                $this->printExcludedUsages($output, $excludedUsages);
+            }
+
+            foreach ($deadProperties as $property => $excludedUsages) {
+                $output->writeLineFormatted(" • Removed property <fg=white>$property</>");
                 $this->printExcludedUsages($output, $excludedUsages);
             }
         }

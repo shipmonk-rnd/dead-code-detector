@@ -1,0 +1,4 @@
+ • Removed property Removal\ClassWithPromotedProperties::deadPromoted
+ • Removed property Removal\ClassWithPromotedProperties::deadPrivatePromoted
+
+Removed 2 dead members in 1 file.

@@ -13,6 +13,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
@@ -53,6 +55,8 @@ final class AllServicesInConfigTest extends PHPStanTestCase
             ClassMethodRef::class,
             ClassConstantRef::class,
             ClassConstantUsage::class,
+            ClassPropertyRef::class,
+            ClassPropertyUsage::class,
             CollectedUsage::class,
             BlackMember::class,
             RemoveDeadCodeTransformer::class,

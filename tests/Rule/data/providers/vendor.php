@@ -6,6 +6,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Properties\ReadWritePropertiesExtensionProvider;
 use PHPStan\Rules\Rule as RuleFromVendor;
+use PHPUnit\Framework\TestCase;
 
 interface IMyRule extends RuleFromVendor
 {
@@ -50,4 +51,9 @@ class MyRuleDirect implements RuleFromVendor
         return [];
     }
 
+}
+
+class MyTest extends TestCase {
+    protected $backupGlobals;
+    protected $dead; // error: Unused Default\MyTest::dead
 }

@@ -5,7 +5,6 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
-use PHPStan\Reflection\Php\PhpMethodFromParserNodeReflection;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use function get_class;
@@ -79,7 +78,7 @@ final class UsageOrigin
             : $scope->getFile();
 
         $function = $scope->getFunction();
-        $isRegularMethod = $function instanceof PhpMethodFromParserNodeReflection && !$function->isPropertyHook(); // @phpstan-ignore phpstanApi.instanceofAssumption
+        $isRegularMethod = $function !== null && $function->isMethodOrPropertyHook() && !$function->isPropertyHook();
 
         if (!$scope->isInClass() || !$isRegularMethod) {
             return new self(

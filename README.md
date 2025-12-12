@@ -107,7 +107,7 @@ parameters:
 ## Generic usage providers:
 
 #### Reflection:
-- Any enum, constant or method accessed via `ReflectionClass` is detected as used
+- Any property, enum, constant or method accessed via `ReflectionClass` is detected as used
   - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, `$reflection->getCases()`...
 
 #### Vendor:
@@ -332,6 +332,8 @@ class UserFacade
    ! Excluded usage at tests/User/UserFacadeTest.php:241 left intact
 ```
 
+- Also, removing dead properties currently only removes its definition (leaving all write usages as is).
+
 
 ## Calls over unknown types
 - In order to prevent false positives, we support even calls over unknown types (e.g. `$unknown->method()`) by marking all methods named `method` as used
@@ -376,10 +378,14 @@ parameters:
         detect:
             deadMethods: true
             deadConstants: true
-            deadEnumCases: false
+            deadProperties: false # opt-in
+            deadEnumCases: false # opt-in
 ```
 
-Enum cases are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
+Enum cases and properties are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
+But libraries should be able to enable those easily.
+
+Properties are considered dead if they are never read.
 
 
 ## Comparison with tomasvotruba/unused-public
@@ -477,8 +483,9 @@ If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-form
   - You can also mark whole class or interface with `@api` to mark all its methods as entrypoints
 
 ## Future scope:
-- Dead class property detection
 - Dead class detection
+- Dead parameters detection
+- Useless public/protected visibility
 
 ## Contributing
 - Check your code by `composer check`

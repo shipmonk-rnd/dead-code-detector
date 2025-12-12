@@ -12,8 +12,10 @@ use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
+use ShipMonk\PHPStan\DeadCode\Output\TextUtils;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_map;
 use function array_sum;
@@ -115,8 +117,8 @@ final class DebugUsagePrinter
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
             foreach ($collectedUsages as $memberName => $usages) {
                 $examplesShown++;
-                $memberAccessString = $memberType === MemberType::METHOD ? 'method' : 'constant';
-                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberAccessString));
+                $memberTypeString = $this->getMemberTypeString($memberType);
+                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
 
                 $exampleCaller = $this->getExampleCaller($usages);
                 $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));
@@ -152,17 +154,27 @@ final class DebugUsagePrinter
 
         foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
             $fullyMixedCount = count($collectedUsages);
+            $memberTypeString = $this->getMemberTypeString($memberType);
 
-            $memberTypeString = $memberType === MemberType::METHOD ? 'method' : 'constant';
-            $memberAccessString = $memberType === MemberType::METHOD ? 'call' : 'fetch';
-            $fullyMixedPlural = $fullyMixedCount > 1 ? ($memberType === MemberType::METHOD ? 's' : 'es') : '';
-            $output->writeLineFormatted(sprintf('<fg=red>Found %d UNKNOWN %s%s over UNKNOWN type!!</>', $fullyMixedCount, $memberAccessString, $fullyMixedPlural));
+            if ($memberType === MemberType::METHOD) {
+                $memberAccessString = 'call';
+                $memberAccessPastTense = 'called';
+            } elseif ($memberType === MemberType::PROPERTY) {
+                $memberAccessString = 'read';
+                $memberAccessPastTense = 'read';
+            } else {
+                $memberAccessString = 'fetch';
+                $memberAccessPastTense = 'fetched';
+            }
+
+            $output->writeLineFormatted(sprintf('<fg=red>Found %d UNKNOWN %s over UNKNOWN type!!</>', $fullyMixedCount, TextUtils::pluralize($fullyMixedCount, $memberAccessString)));
 
             foreach ($collectedUsages as $usages) {
                 $output->writeLineFormatted(
                     sprintf(
-                        ' • %s in <fg=white>%s</>',
-                        $memberType === MemberType::METHOD ? 'method call' : 'constant fetch',
+                        ' • %s %s in <fg=white>%s</>',
+                        $memberTypeString,
+                        $memberAccessString,
                         $this->getExampleCaller([$usages]),
                     ),
                 );
@@ -170,9 +182,9 @@ final class DebugUsagePrinter
 
             $output->writeLineFormatted('');
             $output->writeLineFormatted(sprintf(
-                'Such usages basically break whole dead code analysis, because any %s on any class can be %sed there!',
+                'Such usages basically break whole dead code analysis, because any %s on any class can be %s there!',
                 $memberTypeString,
-                $memberAccessString,
+                $memberAccessPastTense,
             ));
             $output->writeLineFormatted('All those usages were ignored!');
             $output->writeLineFormatted('');
@@ -285,6 +297,7 @@ final class DebugUsagePrinter
             strpos($memberKey, 'm/') === false
             && strpos($memberKey, 'c/') === false
             && strpos($memberKey, 'e/') === false
+            && strpos($memberKey, 'p/') === false
         ) {
             throw new LogicException("Invalid member key format: '$memberKey'");
         }
@@ -369,6 +382,7 @@ final class DebugUsagePrinter
 
             [$class, $memberName] = explode('::', $debugMember); // @phpstan-ignore offsetAccess.notFound
             $normalizedClass = ltrim($class, '\\');
+            $memberName = ltrim($memberName, '$');
 
             if (!$this->reflectionProvider->hasClass($normalizedClass)) {
                 throw new LogicException("Class '$normalizedClass' does not exist");
@@ -386,7 +400,7 @@ final class DebugUsagePrinter
                 $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createYes()))->toKeys();
 
             } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
-                throw new LogicException("Cannot debug '$debugMember', properties are not supported yet");
+                $keys = (new ClassPropertyRef($normalizedClass, $memberName, false))->toKeys();
 
             } else {
                 throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
@@ -427,6 +441,24 @@ final class DebugUsagePrinter
             return 'calls';
         } elseif ($memberType === MemberType::CONSTANT) {
             return 'fetches';
+        } elseif ($memberType === MemberType::PROPERTY) {
+            return 'reads';
+        } else {
+            throw new LogicException("Unsupported member type: $memberType");
+        }
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     */
+    private function getMemberTypeString(int $memberType): string
+    {
+        if ($memberType === MemberType::METHOD) {
+            return 'method';
+        } elseif ($memberType === MemberType::CONSTANT) {
+            return 'constant';
+        } elseif ($memberType === MemberType::PROPERTY) {
+            return 'property';
         } else {
             throw new LogicException("Unsupported member type: $memberType");
         }

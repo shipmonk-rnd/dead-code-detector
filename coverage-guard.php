@@ -48,11 +48,7 @@ $config->addRule(new class implements CoverageRule {
      */
     private function getRequiredCoverage(ReflectionClass $classReflection): int
     {
-        $isPoor = in_array($classReflection->getName(), [
-            BackwardCompatibilityChecker::class,
-            ReflectionHelper::class,
-        ], true);
-
+        $isPoor = $classReflection->getName() === BackwardCompatibilityChecker::class;
         $isCore = $classReflection->implementsInterface(MemberUsageProvider::class)
             || $classReflection->implementsInterface(Collector::class)
             || $classReflection->implementsInterface(Rule::class);
