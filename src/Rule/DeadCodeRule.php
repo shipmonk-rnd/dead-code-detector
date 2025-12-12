@@ -271,6 +271,15 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
+        return $this->processKnownCollectedUsages($knownCollectedUsages);
+    }
+
+    /**
+     * @param list<CollectedUsage> $knownCollectedUsages
+     * @return list<IdentifierRuleError>
+     */
+    private function processKnownCollectedUsages(array $knownCollectedUsages): array
+    {
         /** @var array<string, non-empty-list<ClassMemberUsage>> $whiteMembers */
         $whiteMembers = [];
         /** @var list<CollectedUsage> $excludedMemberUsages */
