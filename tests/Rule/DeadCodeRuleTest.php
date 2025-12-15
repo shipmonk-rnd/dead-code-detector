@@ -1280,4 +1280,15 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         }, $this, OriginalRuleTestCase::class)();
     }
 
+    /**
+     * @return string[]
+     */
+    public static function getAdditionalConfigFiles(): array
+    {
+        return array_merge(
+            parent::getAdditionalConfigFiles(),
+            [__DIR__ . '/data/visitors.neon'],
+        );
+    }
+
 }

@@ -17,6 +17,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -54,25 +55,34 @@ final class PropertyAccessCollector implements Collector
         Scope $scope
     ): ?array
     {
-        if ($node instanceof PropertyFetch) {
-            $this->registerInstancePropertyAccess($node, $scope);
+        if (!$node instanceof PropertyFetch && !$node instanceof StaticPropertyFetch) {
+            return null;
         }
 
-        if ($node instanceof StaticPropertyFetch) {
-            $this->registerStaticPropertyAccess($node, $scope);
+        foreach ($this->getAccessTypes($node) as $accessType) {
+            if ($node instanceof PropertyFetch) {
+                $this->registerInstancePropertyAccess($node, $scope, $accessType);
+            }
+
+            if ($node instanceof StaticPropertyFetch) {
+                $this->registerStaticPropertyAccess($node, $scope, $accessType);
+            }
         }
 
         return $this->emitUsages($scope);
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function registerInstancePropertyAccess(
         PropertyFetch $node,
-        Scope $scope
+        Scope $scope,
+        int $accessType
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
         $callerType = $scope->getType($node->var);
-        $accessType = $scope->isInExpressionAssign($node) ? AccessType::WRITE : AccessType::READ;
 
         foreach ($propertyNames as $propertyName) {
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
@@ -89,14 +99,17 @@ final class PropertyAccessCollector implements Collector
         }
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function registerStaticPropertyAccess(
         StaticPropertyFetch $node,
-        Scope $scope
+        Scope $scope,
+        int $accessType
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
         $possibleDescendant = $node->class instanceof Expr || $node->class->toString() === 'static';
-        $accessType = $scope->isInExpressionAssign($node) ? AccessType::WRITE : AccessType::READ;
 
         if ($node->class instanceof Expr) {
             $callerType = $scope->getType($node->class);
@@ -191,6 +204,22 @@ final class PropertyAccessCollector implements Collector
         }
 
         $this->usages[] = new CollectedUsage($usage, $excluderName);
+    }
+
+    /**
+     * @return iterable<AccessType::*>
+     */
+    private function getAccessTypes(Node $node): iterable
+    {
+        if ($node->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE, false) === true) {
+            yield AccessType::WRITE;
+
+            if ($node->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE_AND_READ, false) === true) {
+                yield AccessType::READ;
+            }
+        } else {
+            yield AccessType::READ;
+        }
     }
 
 }
