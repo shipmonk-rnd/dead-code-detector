@@ -55,16 +55,14 @@ final class PropertyAccessCollector implements Collector
         Scope $scope
     ): ?array
     {
-        if (!$node instanceof PropertyFetch && !$node instanceof StaticPropertyFetch) {
-            return null;
-        }
-
-        foreach ($this->getAccessTypes($node) as $accessType) {
-            if ($node instanceof PropertyFetch) {
+        if ($node instanceof PropertyFetch) {
+            foreach ($this->getAccessTypes($node) as $accessType) {
                 $this->registerInstancePropertyAccess($node, $scope, $accessType);
             }
+        }
 
-            if ($node instanceof StaticPropertyFetch) {
+        if ($node instanceof StaticPropertyFetch) {
+            foreach ($this->getAccessTypes($node) as $accessType) {
                 $this->registerStaticPropertyAccess($node, $scope, $accessType);
             }
         }
@@ -210,14 +208,15 @@ final class PropertyAccessCollector implements Collector
     }
 
     /**
+     * @param PropertyFetch|StaticPropertyFetch $fetch
      * @return iterable<AccessType::*>
      */
-    private function getAccessTypes(Node $node): iterable
+    private function getAccessTypes(Expr $fetch): iterable
     {
-        if ($node->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE, false) === true) {
+        if ($fetch->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE, false) === true) {
             yield AccessType::WRITE;
 
-            if ($node->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE_AND_READ, false) === true) {
+            if ($fetch->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE_AND_READ, false) === true) {
                 yield AccessType::READ;
             }
         } else {
@@ -225,7 +224,10 @@ final class PropertyAccessCollector implements Collector
         }
     }
 
-    private function isSelfReferenceInPropertyHook(Scope $scope, string $propertyName): bool
+    private function isSelfReferenceInPropertyHook(
+        Scope $scope,
+        string $propertyName
+    ): bool
     {
         $function = $scope->getFunction();
         if ($function === null) {
