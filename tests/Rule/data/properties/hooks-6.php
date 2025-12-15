@@ -20,7 +20,7 @@ class Example
         }
     }
 
-    public static function used() {
+    public static function used() { // error: Unused PropertyHooks6\Example::used
 
     }
 }
