@@ -486,4 +486,4 @@ If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-form
 - All functionality must be tested
 
 ## Supported PHP versions
-- PHP 7.4 - 8.4
+- PHP 7.4 - 8.5
