@@ -7,14 +7,14 @@ class Example
 
     public string $foo {
         get {
-            return $this->foo = 'value';
+            return $this->foo = 'value'; // self-referencing set hook is not called
         }
         set(string $value) {
-            self::used();
+            self::unused();
         }
     }
 
-    public static function used() {}
+    public static function unused() {} // error: Unused PropertyHooks8\Example::unused
 }
 
 function test(Example $example) {

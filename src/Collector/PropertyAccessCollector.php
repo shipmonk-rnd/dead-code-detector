@@ -85,6 +85,9 @@ final class PropertyAccessCollector implements Collector
         $callerType = $scope->getType($node->var);
 
         foreach ($propertyNames as $propertyName) {
+            if ($propertyName !== null && $this->isSelfReferenceInPropertyHook($scope, $propertyName)) {
+                continue; // read, nor write access calls other a hook when within a hook
+            }
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
                 $this->registerUsage(
                     new ClassPropertyUsage(
@@ -220,6 +223,16 @@ final class PropertyAccessCollector implements Collector
         } else {
             yield AccessType::READ;
         }
+    }
+
+    private function isSelfReferenceInPropertyHook(Scope $scope, string $propertyName): bool
+    {
+        $function = $scope->getFunction();
+        if ($function === null) {
+            return false;
+        }
+
+        return $function->isMethodOrPropertyHook() && $function->getHookedPropertyName() === $propertyName;
     }
 
 }
