@@ -6,15 +6,21 @@ namespace Hooks1;
 
 class State
 {
-    public static function empty(): self
-    {
-        return new self();
-    }
+    public static function call1() {}
+    public static function call2() {} // error: Unused Hooks1\State::call2
 }
 
 final class Test
 {
-    public State $state { // error: Unused Hooks1\Test::state
-        get => State::empty(); // hooks are considered always called, thus currently not part of the transitivity chain
+    public State $prop1 {
+        get => State::call1();
     }
+
+    public State $prop2 { // error: Unused Hooks1\Test::prop2
+        get => State::call2();
+    }
+}
+
+function test(): mixed {
+    return new Test()->prop1;
 }

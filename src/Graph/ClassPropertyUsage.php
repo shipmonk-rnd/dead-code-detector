@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use LogicException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -17,16 +18,24 @@ final class ClassPropertyUsage extends ClassMemberUsage
     private ClassPropertyRef $access;
 
     /**
+     * @var AccessType::*
+     */
+    private int $accessType;
+
+    /**
      * @param UsageOrigin $origin The method where the read occurs
      * @param ClassPropertyRef<string|null, string|null> $access The property being read
+     * @param AccessType::* $accessType
      */
     public function __construct(
         UsageOrigin $origin,
-        ClassPropertyRef $access
+        ClassPropertyRef $access,
+        int $accessType
     )
     {
         parent::__construct($origin);
         $this->access = $access;
+        $this->accessType = $accessType;
     }
 
     /**
@@ -45,6 +54,11 @@ final class ClassPropertyUsage extends ClassMemberUsage
         return $this->access;
     }
 
+    public function getAccessType(): int
+    {
+        return $this->accessType;
+    }
+
     public function concretizeMixedClassNameUsage(string $className): self
     {
         if ($this->access->getClassName() !== null) {
@@ -58,6 +72,7 @@ final class ClassPropertyUsage extends ClassMemberUsage
                 $this->access->getMemberName(),
                 $this->access->isPossibleDescendant(),
             ),
+            $this->accessType,
         );
     }
 
