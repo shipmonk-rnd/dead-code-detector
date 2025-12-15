@@ -689,10 +689,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            if (!isset($this->blackMembers[$calleeKey])) {
-                continue;
-            }
-
             $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]));
         }
     }
