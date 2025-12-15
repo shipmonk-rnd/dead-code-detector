@@ -54,8 +54,8 @@ final class OutputEnhancer
         if ($file !== null && $line !== null) {
             $relativeFile = $this->relativePathHelper->getRelativePath($file);
 
-            $title = $origin->getClassName() !== null && $origin->getMethodName() !== null && !$preferFileLine
-                ? sprintf('%s::%s:%d', $origin->getClassName(), $origin->getMethodName(), $line)
+            $title = $origin->getClassName() !== null && $origin->getMemberName() !== null && !$preferFileLine
+                ? sprintf('%s::%s:%d', $origin->getClassName(), $origin->getMemberName(), $line)
                 : sprintf('%s:%s', $relativeFile, $line);
 
             return $this->getLinkOrPlain($title, $file, $line);

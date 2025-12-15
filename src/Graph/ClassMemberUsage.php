@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -35,6 +36,11 @@ abstract class ClassMemberUsage
      * @return ClassMemberRef<string|null, string|null>
      */
     abstract public function getMemberRef(): ClassMemberRef;
+
+    /**
+     * @return AccessType::*
+     */
+    abstract public function getAccessType(): int;
 
     /**
      * @return static

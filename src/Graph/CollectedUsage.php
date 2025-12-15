@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use JsonException;
 use LogicException;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use function json_decode;
 use function json_encode;
@@ -68,9 +69,12 @@ final class CollectedUsage
         $data = [
             'e' => $this->excludedBy,
             't' => $this->usage->getMemberType(),
+            'a' => $this->usage->getAccessType(),
             'o' => [
                     'c' => $origin->getClassName(),
-                    'm' => $origin->getMethodName(),
+                    'm' => $origin->getMemberName(),
+                    'a' => $origin->getAccessType(),
+                    't' => $origin->getMemberType(),
                     'f' => $origin->getFile() === $scopeFile ? '_' : $origin->getFile(),
                     'l' => $origin->getLine(),
                     'p' => $origin->getProvider(),
@@ -97,7 +101,7 @@ final class CollectedUsage
     ): self
     {
         try {
-            /** @var array{e: string|null, t: MemberType::*, o: array{c: string|null, m: string|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
+            /** @var array{e: string|null, t: MemberType::*, a: AccessType::*, o: array{c: string|null, m: string|null, a: AccessType::*, t: MemberType::PROPERTY|MemberType::METHOD|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
             $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
@@ -107,11 +111,14 @@ final class CollectedUsage
         $origin = new UsageOrigin(
             $result['o']['c'],
             $result['o']['m'],
+            $result['o']['t'],
+            $result['o']['a'],
             $result['o']['f'] === '_' ? $scopeFile : $result['o']['f'],
             $result['o']['l'],
             $result['o']['p'],
             $result['o']['n'],
         );
+        $accessType = $result['a'];
         $exclusionReason = $result['e'];
 
         if ($memberType === MemberType::CONSTANT) {
@@ -133,6 +140,7 @@ final class CollectedUsage
             $usage = new ClassPropertyUsage(
                 $origin,
                 new ClassPropertyRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
+                $accessType,
             );
         } else {
             throw new LogicException('Unknown member type: ' . $memberType);

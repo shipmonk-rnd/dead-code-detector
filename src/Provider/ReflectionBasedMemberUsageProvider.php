@@ -12,6 +12,7 @@ use ReflectionEnum;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ReflectionProperty;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -226,6 +227,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $propertyReflection->getName(),
                 false,
             ),
+            AccessType::READ,
         );
     }
 

@@ -13,6 +13,7 @@ use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\TrinaryLogic;
 use ReflectionClass;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -347,6 +348,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
                 $propertyName,
                 true,
             ),
+            AccessType::READ,
         );
     }
 

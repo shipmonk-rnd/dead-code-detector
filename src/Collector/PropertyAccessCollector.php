@@ -11,6 +11,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
@@ -53,15 +54,11 @@ final class PropertyAccessCollector implements Collector
         Scope $scope
     ): ?array
     {
-        if ($this->isInPropertyHook($scope)) {
-            return null;
-        }
-
-        if ($node instanceof PropertyFetch && !$scope->isInExpressionAssign($node)) {
+        if ($node instanceof PropertyFetch) {
             $this->registerInstancePropertyAccess($node, $scope);
         }
 
-        if ($node instanceof StaticPropertyFetch && !$scope->isInExpressionAssign($node)) {
+        if ($node instanceof StaticPropertyFetch) {
             $this->registerStaticPropertyAccess($node, $scope);
         }
 
@@ -75,6 +72,7 @@ final class PropertyAccessCollector implements Collector
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
         $callerType = $scope->getType($node->var);
+        $accessType = $scope->isInExpressionAssign($node) ? AccessType::WRITE : AccessType::READ;
 
         foreach ($propertyNames as $propertyName) {
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
@@ -82,6 +80,7 @@ final class PropertyAccessCollector implements Collector
                     new ClassPropertyUsage(
                         UsageOrigin::createRegular($node, $scope),
                         $propertyRef,
+                        $accessType,
                     ),
                     $node,
                     $scope,
@@ -97,6 +96,7 @@ final class PropertyAccessCollector implements Collector
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
         $possibleDescendant = $node->class instanceof Expr || $node->class->toString() === 'static';
+        $accessType = $scope->isInExpressionAssign($node) ? AccessType::WRITE : AccessType::READ;
 
         if ($node->class instanceof Expr) {
             $callerType = $scope->getType($node->class);
@@ -110,6 +110,7 @@ final class PropertyAccessCollector implements Collector
                     new ClassPropertyUsage(
                         UsageOrigin::createRegular($node, $scope),
                         $propertyRef,
+                        $accessType,
                     ),
                     $node,
                     $scope,
@@ -190,16 +191,6 @@ final class PropertyAccessCollector implements Collector
         }
 
         $this->usages[] = new CollectedUsage($usage, $excluderName);
-    }
-
-    private function isInPropertyHook(Scope $scope): bool
-    {
-        $function = $scope->getFunction();
-        if ($function === null) {
-            return false;
-        }
-
-        return $function->isMethodOrPropertyHook() && $function->isPropertyHook();
     }
 
 }
