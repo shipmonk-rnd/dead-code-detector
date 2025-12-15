@@ -15,7 +15,7 @@ class Example
         }
         set(string $value) {
             $this->foo = $value;
-            $this->writeCounter += 1; // TODO not detected as write
+            $this->writeCounter += 1;
             self::used();
         }
     }
