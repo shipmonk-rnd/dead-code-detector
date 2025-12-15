@@ -1,0 +1,32 @@
+<?php declare(strict_types=1);
+
+namespace PropertyHooks6;
+
+class Example
+{
+    private int $readCounter = 0;
+    private int $writeCounter = 0; // error: Unused PropertyHooks6\Example::writeCounter
+
+    public string $foo = 'default value' {
+        get {
+            $this->readCounter += 1;
+            $this->foo = $this->foo . ' ' . $this->readCounter;
+            return $this->foo;
+        }
+        set(string $value) {
+            $this->foo = $value;
+            $this->writeCounter += 1;
+            self::used();
+        }
+    }
+
+    public static function used() {
+
+    }
+}
+
+function test(Example $example) {
+    echo $example->foo;
+}
+
+

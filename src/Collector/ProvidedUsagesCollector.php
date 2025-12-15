@@ -85,7 +85,7 @@ final class ProvidedUsagesCollector implements Collector
     {
         $origin = $usage->getOrigin();
         $originClass = $origin->getClassName();
-        $originMethod = $origin->getMethodName();
+        $originMethod = $origin->getMemberName();
 
         $context = sprintf(
             "It emitted usage of %s by %s for node '%s' in '%s' on line %s",

@@ -19,6 +19,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
@@ -235,7 +236,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($methods as $methodName => $methodData) {
                 $methodRef = new ClassMethodRef($typeName, $methodName, false);
-                $methodKeys = $methodRef->toKeys();
+                $methodKeys = $methodRef->toKeys(AccessType::READ);
 
                 foreach ($methodKeys as $methodKey) {
                     $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
@@ -244,7 +245,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($constants as $constantName => $constantData) {
                 $constantRef = new ClassConstantRef($typeName, $constantName, false, TrinaryLogic::createNo());
-                $constantKeys = $constantRef->toKeys();
+                $constantKeys = $constantRef->toKeys(AccessType::READ);
 
                 foreach ($constantKeys as $constantKey) {
                     $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
@@ -253,7 +254,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($cases as $enumCaseName => $enumCaseData) {
                 $enumCaseRef = new ClassConstantRef($typeName, $enumCaseName, false, TrinaryLogic::createYes());
-                $enumCaseKeys = $enumCaseRef->toKeys();
+                $enumCaseKeys = $enumCaseRef->toKeys(AccessType::READ);
 
                 foreach ($enumCaseKeys as $enumCaseKey) {
                     $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);
@@ -262,7 +263,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($properties as $propertyName => $propertyData) {
                 $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
-                $propertyKeys = $propertyRef->toKeys();
+                $propertyKeys = $propertyRef->toKeys(AccessType::READ);
 
                 foreach ($propertyKeys as $propertyKey) {
                     $this->blackMembers[$propertyKey] = new BlackMember($propertyRef, $file, $propertyData['line']);
@@ -310,11 +311,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             $memberUsage = $collectedUsage->getUsage();
+            $accessType = $memberUsage->getAccessType();
             $isWhite = $this->isConsideredWhite($memberUsage);
 
-            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUsage->getMemberRef());
-            $alternativeOriginKeys = $memberUsage->getOrigin()->hasClassMethodRef()
-                ? $this->getAlternativeMemberKeys($memberUsage->getOrigin()->toClassMethodRef())
+            $alternativeMemberKeys = $this->getAlternativeMemberKeys($memberUsage->getMemberRef(), $accessType);
+            $alternativeOriginKeys = $memberUsage->getOrigin()->hasClassMemberRef()
+                ? $this->getAlternativeMemberKeys($memberUsage->getOrigin()->toClassMemberRef(), $memberUsage->getOrigin()->getAccessType())
                 : [];
 
             foreach ($alternativeMemberKeys as $alternativeMemberKey) {
@@ -350,7 +352,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($excludedMemberUsages as $excludedMemberUsage) {
             $excludedMemberRef = $excludedMemberUsage->getUsage()->getMemberRef();
-            $alternativeExcludedMemberKeys = $this->getAlternativeMemberKeys($excludedMemberRef);
+            $accessType = $excludedMemberUsage->getUsage()->getAccessType();
+            $alternativeExcludedMemberKeys = $this->getAlternativeMemberKeys($excludedMemberRef, $accessType);
 
             foreach ($alternativeExcludedMemberKeys as $alternativeExcludedMemberKey) {
                 if (!isset($this->blackMembers[$alternativeExcludedMemberKey])) {
@@ -497,15 +500,19 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<?string, ?string> $member
+     * @param AccessType::* $accessType
      * @return list<string>
      */
-    private function getAlternativeMemberKeys(ClassMemberRef $member): array
+    private function getAlternativeMemberKeys(
+        ClassMemberRef $member,
+        int $accessType
+    ): array
     {
         if (!$member->hasKnownClass()) {
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $cacheKey = serialize($member);
+        $cacheKey = serialize([$member, $accessType]);
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {
             return $this->memberAlternativesCache[$cacheKey];
@@ -521,12 +528,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($meAndDescendants as $className) {
             if ($member->getMemberName() !== null) {
-                foreach ($this->findDefinerKeys($member->withKnownNames($className, $member->getMemberName())) as $definerKey) {
+                foreach ($this->findDefinerKeys($member->withKnownNames($className, $member->getMemberName()), $accessType) as $definerKey) {
                     $result[] = $definerKey;
                 }
 
             } else {
-                foreach ($this->getPossibleDefinerKeys($member->withKnownClass($className)) as $possibleDefinerKey) {
+                foreach ($this->getPossibleDefinerKeys($member->withKnownClass($className), $accessType) as $possibleDefinerKey) {
                     $result[] = $possibleDefinerKey;
                 }
             }
@@ -541,19 +548,21 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, string> $memberRef
+     * @param AccessType::* $accessType
      * @return list<string>
      */
     private function findDefinerKeys(
         ClassMemberRef $memberRef,
+        int $accessType,
         bool $includeParentLookup = true
     ): array
     {
         if ($this->isExistingRef($memberRef)) {
-            return $memberRef->toKeys();
+            return $memberRef->toKeys($accessType);
         }
 
         // search for definition in traits
-        $traitMethodKeys = $this->getDeclaringTraitKeys($memberRef);
+        $traitMethodKeys = $this->getDeclaringTraitKeys($memberRef, $accessType);
 
         if ($traitMethodKeys !== []) {
             return $traitMethodKeys;
@@ -564,7 +573,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), false);
+                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), $accessType, false);
 
                 if ($found !== []) {
                     return $found;
@@ -577,11 +586,13 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, ?string> $memberRef
+     * @param AccessType::* $accessType
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
      */
     private function getPossibleDefinerKeys(
         ClassMemberRef $memberRef,
+        int $accessType,
         bool $includeParentLookup = true,
         array &$foundMemberNames = []
     ): array
@@ -592,7 +603,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $memberType = $memberRef->getMemberType();
 
         foreach ($this->getMemberNames($memberRef) as $memberName) {
-            $memberKeys = $memberRef->withKnownMember($memberName)->toKeys();
+            $memberKeys = $memberRef->withKnownMember($memberName)->toKeys($accessType);
 
             if (isset($foundMemberNames[$memberName])) {
                 continue;
@@ -611,7 +622,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                     continue;
                 }
 
-                $traitKeys = $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys();
+                $traitKeys = $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys($accessType);
                 foreach ($traitKeys as $traitKey) {
                     $result[] = $traitKey;
                 }
@@ -626,7 +637,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             foreach ($parentNames as $parentName) {
                 $result = [
                     ...$result,
-                    ...$this->getPossibleDefinerKeys($memberRef->withKnownClass($parentName), false, $foundMemberNames),
+                    ...$this->getPossibleDefinerKeys($memberRef->withKnownClass($parentName), $accessType, false, $foundMemberNames),
                 ];
             }
         }
@@ -636,10 +647,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, string> $memberRef
+     * @param AccessType::* $accessType
      * @return list<string>
      */
     private function getDeclaringTraitKeys(
-        ClassMemberRef $memberRef
+        ClassMemberRef $memberRef,
+        int $accessType
     ): array
     {
         $memberType = $memberRef->getMemberType();
@@ -649,7 +662,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
                 if ($memberName === $aliasedMemberName) {
-                    return $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys();
+                    return $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys($accessType);
                 }
             }
         }
@@ -951,7 +964,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     {
         return $memberUsage->getOrigin()->getClassName() === null // out-of-class scope
             || $this->isAnonymousClass($memberUsage->getOrigin()->getClassName())
-            || (array_key_exists((string) $memberUsage->getOrigin()->getMethodName(), self::UNSUPPORTED_MAGIC_METHODS));
+            || (array_key_exists((string) $memberUsage->getOrigin()->getMemberName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
 
     /**
