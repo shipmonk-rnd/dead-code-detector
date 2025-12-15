@@ -184,6 +184,11 @@ services:
             servicesWithOldTag: tagged(shipmonk.deadCode.entrypointProvider)
             trackMixedAccessParameterValue: %shipmonkDeadCode.trackMixedAccess%
 
+    -
+        class: ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor
+        tags:
+            - phpstan.parser.richParserNodeVisitor
+
 parameters:
     parametersNotInvalidatingCache:
         - parameters.shipmonkDeadCode.debug.usagesOf
