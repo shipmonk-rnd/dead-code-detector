@@ -6,6 +6,15 @@ class Methods
 {
     const SOME_CONSTANT = 1; // error: Unused CustomProvider\Methods::SOME_CONSTANT
 
+    public function __construct(
+        public string $foo { // error: Unused CustomProvider\Methods::foo
+            set (string $value) {
+                NotPartOfCustomProvider::method(); // test that property write is derived from emitted constructor usage
+            }
+        },
+    ) {
+    }
+
     public function method(): void {}
 
     public function mixedTestThatExcludersCanExcludeProvidedUsage(): void {} // error: Unused CustomProvider\Methods::mixedTestThatExcludersCanExcludeProvidedUsage (all usages excluded by mixedPrefix excluder)
@@ -37,4 +46,8 @@ enum MethodsInEnum: string {
     const Two = 'two'; // error: Unused CustomProvider\MethodsInEnum::Two
 
     public function method(): void {}
+}
+
+class NotPartOfCustomProvider {
+    public static function method(): void {}
 }

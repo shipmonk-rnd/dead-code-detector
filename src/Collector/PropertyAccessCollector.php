@@ -4,8 +4,10 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticPropertyFetch;
+use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Type\Type;
@@ -65,6 +67,10 @@ final class PropertyAccessCollector implements Collector
             foreach ($this->getAccessTypes($node) as $accessType) {
                 $this->registerStaticPropertyAccess($node, $scope, $accessType);
             }
+        }
+
+        if ($node instanceof New_) {
+            $this->registerPromotedPropertyWrite($node, $scope);
         }
 
         return $this->emitUsages($scope);
@@ -155,6 +161,52 @@ final class PropertyAccessCollector implements Collector
         }
 
         return [$fetch->name->toString()];
+    }
+
+    private function registerPromotedPropertyWrite(
+        New_ $new,
+        Scope $scope
+    ): void
+    {
+        if ($new->class instanceof Expr) {
+            $callerType = $scope->getType($new);
+            $possibleDescendantCall = null;
+
+        } elseif ($new->class instanceof Name) {
+            $callerType = $scope->resolveTypeByName($new->class);
+            $possibleDescendantCall = $new->class->toString() === 'static';
+
+        } else {
+            return;
+        }
+
+        $classReflections = $callerType->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        foreach ($classReflections as $classReflection) {
+            $constructor = $classReflection->getNativeReflection()->getConstructor();
+            if ($constructor === null) {
+                continue;
+            }
+            $parameters = $constructor->getParameters(); // ideally, we should pick only those where arg was provided
+            foreach ($parameters as $parameter) {
+                if (!$parameter->isPromoted()) {
+                    continue;
+                }
+
+                $this->registerUsage(
+                    new ClassPropertyUsage(
+                        UsageOrigin::createRegular($new, $scope),
+                        new ClassPropertyRef(
+                            $classReflection->getName(),
+                            $parameter->getName(),
+                            $possibleDescendantCall ?? !$classReflection->isFinalByKeyword(),
+                        ),
+                        AccessType::WRITE,
+                    ),
+                    $new,
+                    $scope,
+                );
+            }
+        }
     }
 
     /**
