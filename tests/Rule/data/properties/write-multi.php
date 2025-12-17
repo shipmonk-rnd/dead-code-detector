@@ -4,8 +4,8 @@ namespace PropertyMultiWrite;
 
 class Person
 {
-    public string $first; // error: Unused PropertyMultiWrite\Person::first
-    public string $last; // error: Unused PropertyMultiWrite\Person::last
+    public string $first; // error: Property PropertyMultiWrite\Person::first is never read
+    public string $last; // error: Property PropertyMultiWrite\Person::last is never read
 
     public function __construct(string $name) {
         [$this->first, $this->last] = explode(' ', $name, 2);

@@ -20,6 +20,7 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
@@ -30,6 +31,8 @@ use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
@@ -1193,20 +1196,27 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $result = [];
         $errors = parent::gatherAnalyserErrors($files);
 
+        $ruleMock = (new ReflectionClass(DeadCodeRule::class))->newInstanceWithoutConstructor();
+        $buildMainErrorMessages = Closure::bind(
+            fn (int $type, int $access, string $member): string => $this->buildMainErrorMessages($type, $access, $member), // @phpstan-ignore argument.type, argument.type
+            $ruleMock,
+            DeadCodeRule::class,
+        );
+
         foreach ($errors as $error) {
             $result[] = $error;
 
-            /** @var array<string, array{file: string, line: int}> $metadata */
+            /** @var array<string, array{file: string, line: int, type: MemberType::*, access: AccessType::*}> $metadata */
             $metadata = $error->getMetadata();
 
-            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive]) {
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive, 'access' => $access, 'type' => $type]) {
                 if (!$transitive) {
                     continue;
                 }
 
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    "Unused $alsoDead",
+                    $buildMainErrorMessages($type, $access, $alsoDead),
                     $file,
                     $line,
                     true,

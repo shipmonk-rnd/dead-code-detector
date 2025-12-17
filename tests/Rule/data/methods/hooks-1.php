@@ -16,7 +16,7 @@ final class Test
         get => State::call1();
     }
 
-    public State $prop2 { // error: Unused Hooks1\Test::prop2
+    public State $prop2 { // error: Property Hooks1\Test::prop2 is never read
         get => State::call2();
     }
 }

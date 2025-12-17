@@ -5,7 +5,7 @@ namespace MixedMemberTraitProp5;
 trait MyTrait1 {
 
     // because all children override this property, it is unused
-    public int $used = 1; // error: Unused MixedMemberTraitProp5\MyTrait1::used
+    public int $used = 1; // error: Property MixedMemberTraitProp5\MyTrait1::used is never read
 }
 
 interface TraitInterface
