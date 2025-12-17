@@ -7,7 +7,7 @@ class Methods
     const SOME_CONSTANT = 1; // error: Unused CustomProvider\Methods::SOME_CONSTANT
 
     public function __construct(
-        public string $foo { // error: Unused CustomProvider\Methods::foo
+        public string $foo { // error: Property CustomProvider\Methods::foo is never read
             set (string $value) {
                 NotPartOfCustomProvider::method(); // test that property write is derived from emitted constructor usage
             }

@@ -4,7 +4,7 @@ namespace PropertyWriteCoalesce;
 
 class Coalesce
 {
-    public $prop; // error: Unused PropertyWriteCoalesce\Coalesce::prop
+    public $prop; // error: Property PropertyWriteCoalesce\Coalesce::prop is never read
 }
 
 function test(Coalesce $c): void {

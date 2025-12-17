@@ -13,7 +13,7 @@ class Example
 
     }
 
-    public string $bar { // error: Unused PropertyHooks9\Example::bar
+    public string $bar { // error: Property PropertyHooks9\Example::bar is never read
         set(string $value) {
             self::used();
         }

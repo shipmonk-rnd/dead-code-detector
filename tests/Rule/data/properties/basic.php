@@ -6,7 +6,7 @@ class TestClass {
 
     public string $usedPublicProperty;
     public string $usedPublicPropertyByChild;
-    public string $unusedPublicProperty; // error: Unused DeadPropertyBasic\TestClass::unusedPublicProperty
+    public string $unusedPublicProperty; // error: Property DeadPropertyBasic\TestClass::unusedPublicProperty is never read
     public string $readNotWritten = 'default';
 
     public function __construct()

@@ -36,7 +36,7 @@ class PartialPublicApi {
 
     /** @api */
     public string $property1;
-    public string $property2; // error: Unused ApiPhpdoc1\PartialPublicApi::property2
+    public string $property2; // error: Property ApiPhpdoc1\PartialPublicApi::property2 is never read
 
     /** @api */
     public function method1() {}
@@ -65,7 +65,7 @@ class InheritedPublicApi1 extends PublicApi {
 
     public string $property1;
     public string $property2;
-    public string $property3; // error: Unused ApiPhpdoc1\InheritedPublicApi1::property3
+    public string $property3; // error: Property ApiPhpdoc1\InheritedPublicApi1::property3 is never read
 
     public function method1() {}
     public function method2() {}

@@ -55,5 +55,5 @@ class MyRuleDirect implements RuleFromVendor
 
 class MyTest extends TestCase {
     protected $backupGlobals;
-    protected $dead; // error: Unused Default\MyTest::dead
+    protected $dead; // error: Property Default\MyTest::dead is never read
 }

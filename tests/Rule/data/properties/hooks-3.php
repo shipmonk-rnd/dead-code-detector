@@ -3,7 +3,7 @@
 namespace PropertyHooks3;
 
 interface Named {
-    public string $name { get; } // error: Unused PropertyHooks3\Named::name
+    public string $name { get; } // error: Property PropertyHooks3\Named::name is never read
 }
 
 class User implements Named {
