@@ -378,7 +378,8 @@ parameters:
         detect:
             deadMethods: true
             deadConstants: true
-            deadProperties: false # opt-in
+            deadProperties:
+                neverRead: false # opt-in
             deadEnumCases: false # opt-in
 ```
 

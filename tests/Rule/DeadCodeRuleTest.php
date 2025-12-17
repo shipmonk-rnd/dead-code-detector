@@ -105,7 +105,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectDeadEnumCases = true;
 
-    private bool $detectDeadProperties = true;
+    private bool $detectNeverReadProperties = true;
 
     private ?DeadCodeRule $rule = null;
 
@@ -127,6 +127,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 ),
                 new ClassHierarchy(),
                 $this->detectDeadMethods,
+                $this->detectNeverReadProperties,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
             );
@@ -149,7 +150,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->getMemberUsageProviders(),
                 $this->getMemberUsageExcluders(),
             ),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectDeadProperties),
+            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectNeverReadProperties),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
             new PropertyAccessCollector($this->getMemberUsageExcluders()),
@@ -488,7 +489,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadMethods = false;
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
-        $this->detectDeadProperties = false;
+        $this->detectNeverReadProperties = false;
 
         $ownIdentifiers = [
             DeadCodeRule::IDENTIFIER_METHOD,
@@ -512,6 +513,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
+            ['Property MemberTypes\Address::zip is never read', 38],
         ]);
     }
 
@@ -525,6 +527,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::zip is never read', 38],
         ]);
     }
 
@@ -537,6 +540,21 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadEnumCases = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::zip is never read', 38],
+        ]);
+    }
+
+    public function testPropertyReadDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectNeverReadProperties = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
         ]);
     }

@@ -159,7 +159,7 @@ services:
         arguments:
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
-            detectDeadProperties: %shipmonkDeadCode.detect.deadProperties%
+            detectDeadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector
@@ -176,6 +176,7 @@ services:
             - phpstan.diagnoseExtension
         arguments:
             detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
+            detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
     -
@@ -200,7 +201,8 @@ parameters:
             deadMethods: true
             deadConstants: true
             deadEnumCases: false
-            deadProperties: false
+            deadProperties:
+                neverRead: false
         usageProviders:
             apiPhpDoc:
                 enabled: true
@@ -252,7 +254,9 @@ parametersSchema:
             deadMethods: bool()
             deadConstants: bool()
             deadEnumCases: bool()
-            deadProperties: bool()
+            deadProperties: structure([
+                neverRead: bool()
+            ])
         ])
         usageProviders: structure([
             apiPhpDoc: structure([
