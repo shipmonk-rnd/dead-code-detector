@@ -225,14 +225,16 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             || $methodName === 'getDefaultProperties' // simplified, ideally should mark white only default properties
             || $methodName === 'getStaticProperties' // simplified, ideally should mark white only static properties
         ) {
-            $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null);
+            $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null, AccessType::READ);
+            $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null, AccessType::WRITE); // ReflectionProperty is not generic, so we cannot track setValue call
         }
 
         if (in_array($methodName, ['getProperty', 'getStaticPropertyValue'], true) && count($args) >= 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
-                $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, $constantString->getValue());
+                $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, $constantString->getValue(), AccessType::READ);
+                $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, $constantString->getValue(), AccessType::WRITE);
             }
         }
 
@@ -330,11 +332,15 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         );
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function createPropertyUsage(
         Node $node,
         Scope $scope,
         ?string $className,
-        ?string $propertyName
+        ?string $propertyName,
+        int $accessType
     ): ?ClassPropertyUsage
     {
         if ($className === null && $propertyName === null) {
@@ -348,7 +354,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
                 $propertyName,
                 true,
             ),
-            AccessType::READ,
+            $accessType,
         );
     }
 

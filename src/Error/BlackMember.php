@@ -116,7 +116,9 @@ final class BlackMember
             return DeadCodeRule::IDENTIFIER_METHOD;
 
         } elseif ($this->member instanceof ClassPropertyRef) {
-            return DeadCodeRule::IDENTIFIER_PROPERTY;
+            return $this->accessType === AccessType::READ
+                ? DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ
+                : DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_WRITTEN;
 
         } else {
             throw new LogicException('Unknown member type');

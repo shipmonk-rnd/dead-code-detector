@@ -495,7 +495,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             DeadCodeRule::IDENTIFIER_METHOD,
             DeadCodeRule::IDENTIFIER_CONSTANT,
             DeadCodeRule::IDENTIFIER_ENUM_CASE,
-            DeadCodeRule::IDENTIFIER_PROPERTY,
+            DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ,
         ];
         $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
 
