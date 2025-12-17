@@ -81,6 +81,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $detectDeadMethods;
 
+    private bool $detectNeverReadProperties;
+
     /**
      * typename => data
      *
@@ -138,6 +140,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         DebugUsagePrinter $debugUsagePrinter,
         ClassHierarchy $classHierarchy,
         bool $detectDeadMethods,
+        bool $detectNeverReadProperties,
         bool $reportTransitivelyDeadMethodAsSeparateError,
         BackwardCompatibilityChecker $checker
     )
@@ -145,6 +148,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $this->debugUsagePrinter = $debugUsagePrinter;
         $this->classHierarchy = $classHierarchy;
         $this->detectDeadMethods = $detectDeadMethods;
+        $this->detectNeverReadProperties = $detectNeverReadProperties;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
 
         $checker->check();
@@ -238,8 +242,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $methodRef = new ClassMethodRef($typeName, $methodName, false);
                 $methodKeys = $methodRef->toKeys(AccessType::READ);
 
-                foreach ($methodKeys as $methodKey) {
-                    $this->blackMembers[$methodKey] = new BlackMember($methodRef, AccessType::READ, $file, $methodData['line']);
+                if ($this->detectDeadMethods) {
+                    foreach ($methodKeys as $methodKey) {
+                        $this->blackMembers[$methodKey] = new BlackMember($methodRef, AccessType::READ, $file, $methodData['line']);
+                    }
                 }
             }
 
@@ -262,7 +268,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($properties as $propertyName => $propertyData) {
-                foreach ([AccessType::READ] as $accessType) {
+                $accessTypes = [];
+                if ($this->detectNeverReadProperties) {
+                    $accessTypes[] = AccessType::READ;
+                }
+                foreach ($accessTypes as $accessType) {
                     $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
                     $propertyKeys = $propertyRef->toKeys($accessType);
 
@@ -344,10 +354,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             if ($neverReportedReason !== null) {
                 $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason);
 
-                unset($this->blackMembers[$blackMemberKey]);
-            }
-
-            if (!$this->detectDeadMethods && $blackMember->getMember() instanceof ClassMethodRef) {
                 unset($this->blackMembers[$blackMemberKey]);
             }
         }
