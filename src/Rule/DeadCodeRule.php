@@ -239,7 +239,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $methodKeys = $methodRef->toKeys(AccessType::READ);
 
                 foreach ($methodKeys as $methodKey) {
-                    $this->blackMembers[$methodKey] = new BlackMember($methodRef, $file, $methodData['line']);
+                    $this->blackMembers[$methodKey] = new BlackMember($methodRef, AccessType::READ, $file, $methodData['line']);
                 }
             }
 
@@ -248,7 +248,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $constantKeys = $constantRef->toKeys(AccessType::READ);
 
                 foreach ($constantKeys as $constantKey) {
-                    $this->blackMembers[$constantKey] = new BlackMember($constantRef, $file, $constantData['line']);
+                    $this->blackMembers[$constantKey] = new BlackMember($constantRef, AccessType::READ, $file, $constantData['line']);
                 }
             }
 
@@ -257,16 +257,18 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $enumCaseKeys = $enumCaseRef->toKeys(AccessType::READ);
 
                 foreach ($enumCaseKeys as $enumCaseKey) {
-                    $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);
+                    $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, AccessType::READ, $file, $enumCaseData['line']);
                 }
             }
 
             foreach ($properties as $propertyName => $propertyData) {
-                $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
-                $propertyKeys = $propertyRef->toKeys(AccessType::READ);
+                foreach ([AccessType::READ] as $accessType) {
+                    $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
+                    $propertyKeys = $propertyRef->toKeys($accessType);
 
-                foreach ($propertyKeys as $propertyKey) {
-                    $this->blackMembers[$propertyKey] = new BlackMember($propertyRef, $file, $propertyData['line']);
+                    foreach ($propertyKeys as $propertyKey) {
+                        $this->blackMembers[$propertyKey] = new BlackMember($propertyRef, $accessType, $file, $propertyData['line']);
+                    }
                 }
             }
         }
@@ -805,7 +807,13 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $exclusionMessage = $representative->getExclusionMessage();
         $excludedUsages = $representative->getExcludedUsages();
 
-        $builder = RuleErrorBuilder::message("Unused {$humanMemberString}{$exclusionMessage}")
+        $mainErrorMessage = $this->buildMainErrorMessages(
+            $representative->getMember()->getMemberType(),
+            $representative->getAccessType(),
+            $humanMemberString,
+        );
+
+        $builder = RuleErrorBuilder::message("{$mainErrorMessage}{$exclusionMessage}")
             ->file($representative->getFile())
             ->line($representative->getLine())
             ->identifier($representative->getErrorIdentifier());
@@ -815,6 +823,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             'file' => $representative->getFile(),
             'line' => $representative->getLine(),
             'type' => $representative->getMember()->getMemberType(),
+            'access' => $representative->getAccessType(),
             'transitive' => false,
             'excludedUsages' => $excludedUsages,
         ];
@@ -831,6 +840,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 'file' => $transitivelyDeadMember->getFile(),
                 'line' => $transitivelyDeadMember->getLine(),
                 'type' => $transitivelyDeadMember->getMember()->getMemberType(),
+                'access' => $transitivelyDeadMember->getAccessType(),
                 'transitive' => true,
                 'excludedUsages' => $excludedUsages,
             ];
@@ -845,6 +855,27 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         return $builder->build();
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     * @param AccessType::* $accessType
+     */
+    private function buildMainErrorMessages(
+        int $memberType,
+        int $accessType,
+        string $memberHumanString
+    ): string
+    {
+        if ($memberType === MemberType::PROPERTY) {
+            if ($accessType === AccessType::READ) {
+                return "Property {$memberHumanString} is never read";
+            } else {
+                return "Property {$memberHumanString} is never written";
+            }
+        } else {
+            return "Unused {$memberHumanString}";
+        }
     }
 
     /**
