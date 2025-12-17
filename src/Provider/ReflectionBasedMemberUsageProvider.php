@@ -63,7 +63,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         return null; // Expected to be overridden by subclasses.
     }
 
-    protected function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?VirtualUsageData
+    protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
         return null; // Expected to be overridden by subclasses.
     }
@@ -158,10 +158,10 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 continue; // skip properties from ancestors
             }
 
-            $usage = $this->shouldMarkPropertyAsUsed($nativePropertyReflection);
+            $readUsage = $this->shouldMarkPropertyAsRead($nativePropertyReflection);
 
-            if ($usage !== null) {
-                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $usage);
+            if ($readUsage !== null) {
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $readUsage, AccessType::READ);
             }
         }
 
@@ -215,9 +215,13 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         );
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function createPropertyUsage(
         ReflectionProperty $propertyReflection,
-        VirtualUsageData $data
+        VirtualUsageData $data,
+        int $accessType
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
@@ -227,7 +231,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
                 $propertyReflection->getName(),
                 false,
             ),
-            AccessType::READ,
+            $accessType,
         );
     }
 
