@@ -46,19 +46,19 @@ final class ClassDefinitionCollector implements Collector
 
     private bool $detectDeadEnumCases;
 
-    private bool $detectDeadProperties;
+    private bool $detectNeverReadProperties;
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
         bool $detectDeadConstants,
         bool $detectDeadEnumCases,
-        bool $detectDeadProperties
+        bool $detectNeverReadProperties
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->detectDeadConstants = $detectDeadConstants;
         $this->detectDeadEnumCases = $detectDeadEnumCases;
-        $this->detectDeadProperties = $detectDeadProperties;
+        $this->detectNeverReadProperties = $detectNeverReadProperties;
     }
 
     public function getNodeType(): string
@@ -148,7 +148,7 @@ final class ClassDefinitionCollector implements Collector
             $cases = [];
         }
 
-        if (!$this->detectDeadProperties) {
+        if (!$this->detectNeverReadProperties) {
             $properties = [];
         }
 
