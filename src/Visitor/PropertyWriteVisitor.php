@@ -90,6 +90,10 @@ final class PropertyWriteVisitor extends NodeVisitorAbstract
     {
         if ($this->isFetch($expr)) { // $this->prop =
             $expr->setAttribute(self::IS_PROPERTY_WRITE, true);
+
+            if (!$this->hasUnusedResult()) {
+                $expr->setAttribute(self::IS_PROPERTY_WRITE_AND_READ, true);
+            }
         }
 
         if ($expr instanceof List_) { // [$this->first, $this->last] =
@@ -99,6 +103,10 @@ final class PropertyWriteVisitor extends NodeVisitorAbstract
                 }
                 if ($this->isFetch($item->value)) {
                     $item->value->setAttribute(self::IS_PROPERTY_WRITE, true);
+
+                    if (!$this->hasUnusedResult()) {
+                        $item->value->setAttribute(self::IS_PROPERTY_WRITE_AND_READ, true);
+                    }
                 }
             }
         }
@@ -106,6 +114,10 @@ final class PropertyWriteVisitor extends NodeVisitorAbstract
         while ($expr instanceof ArrayDimFetch) { // $this->array[] =
             if ($this->isFetch($expr->var)) {
                 $expr->var->setAttribute(self::IS_PROPERTY_WRITE, true);
+
+                if (!$this->hasUnusedResult()) {
+                    $expr->var->setAttribute(self::IS_PROPERTY_WRITE_AND_READ, true);
+                }
                 break;
             }
             $expr = $expr->var;
