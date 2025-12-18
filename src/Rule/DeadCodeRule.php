@@ -662,9 +662,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             $result[] = $calleeKey;
+            $visitedKeys[$calleeKey] = null;
 
-            foreach ($this->getTransitiveDeadCalls($calleeKey, array_merge($visitedKeys, [$calleeKey => null])) as $transitiveDead) {
+            foreach ($this->getTransitiveDeadCalls($calleeKey, $visitedKeys) as $transitiveDead) {
                 $result[] = $transitiveDead;
+                $visitedKeys[$transitiveDead] = null;
             }
         }
 
