@@ -345,9 +345,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             $this->debugUsagePrinter->recordUsage($collectedUsage, $alternativeMemberKeys);
         }
 
+        $visited = [];
         foreach ($whiteMembers as $whiteCalleeKey => $usages) {
-            $this->markTransitivesWhite([$whiteCalleeKey => $usages]);
+            $this->markTransitivesWhite([$whiteCalleeKey => $usages], $visited);
         }
+        unset($visited);
 
         foreach ($this->blackMembers as $blackMemberKey => $blackMember) {
             $neverReportedReason = $this->isNeverReportedAsDead($blackMember);
@@ -681,8 +683,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $stack callerKey => usages[]
+     * @param array<string, true> $visited
      */
-    private function markTransitivesWhite(array $stack): void
+    private function markTransitivesWhite(
+        array $stack,
+        array &$visited
+    ): void
     {
         $callerKey = array_key_last($stack);
         $callees = $this->usageGraph[$callerKey] ?? [];
@@ -693,12 +699,14 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             unset($this->blackMembers[$callerKey]);
         }
 
+        $visited[$callerKey] = true;
+
         foreach ($callees as $calleeKey => $usages) {
-            if (array_key_exists($calleeKey, $stack)) {
+            if (isset($visited[$calleeKey])) {
                 continue;
             }
 
-            $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]));
+            $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]), $visited);
         }
     }
 
