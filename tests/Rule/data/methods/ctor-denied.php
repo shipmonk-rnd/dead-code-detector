@@ -11,7 +11,7 @@ final class Utility
 
 class NotUtility
 {
-    private function __construct(private int $foo) // error: Unused CtorDenied\NotUtility::__construct
+    private function __construct(int $foo) // error: Unused CtorDenied\NotUtility::__construct
     {
 
     }

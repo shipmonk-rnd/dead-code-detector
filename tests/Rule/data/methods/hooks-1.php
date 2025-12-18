@@ -14,7 +14,7 @@ class State
 
 final class Test
 {
-    public State $state {
-        get => State::empty(); // until we implement dead property detection, hooks are considered always called, thus currently not part of the transitivity chain
+    public State $state { // error: Unused Hooks1\Test::state
+        get => State::empty(); // hooks are considered always called, thus currently not part of the transitivity chain
     }
 }

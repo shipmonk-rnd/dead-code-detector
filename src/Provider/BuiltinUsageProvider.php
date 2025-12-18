@@ -5,7 +5,10 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionMethod;
+use ReflectionProperty;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
+use function ucfirst;
 
 final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
 {
@@ -35,8 +38,17 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
         return $this->shouldMarkMemberAsUsed($constant);
     }
 
+    protected function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?VirtualUsageData
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        return $this->shouldMarkMemberAsUsed($property);
+    }
+
     /**
-     * @param ReflectionMethod|ReflectionClassConstant $member
+     * @param ReflectionMethod|ReflectionClassConstant|ReflectionProperty $member
      */
     private function shouldMarkMemberAsUsed(Reflector $member): ?VirtualUsageData
     {
@@ -66,7 +78,7 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionMethod|ReflectionClassConstant $member
+     * @param ReflectionMethod|ReflectionClassConstant|ReflectionProperty $member
      * @param ReflectionClass<object> $reflectionClass
      */
     private function isBuiltinMember(
@@ -82,15 +94,19 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
             return false;
         }
 
+        if ($member instanceof ReflectionProperty && !$reflectionClass->hasProperty($member->getName())) {
+            return false;
+        }
+
         return $reflectionClass->getExtensionName() !== false;
     }
 
     /**
-     * @param ReflectionMethod|ReflectionClassConstant $member
+     * @param ReflectionMethod|ReflectionClassConstant|ReflectionProperty $member
      */
     private function createUsageNote(Reflector $member): VirtualUsageData
     {
-        $memberString = $member instanceof ReflectionMethod ? 'Method' : 'Constant';
+        $memberString = ucfirst(ReflectionHelper::getMemberType($member));
         return VirtualUsageData::withNote("$memberString overrides builtin one, thus is assumed to be used by some PHP code.");
     }
 

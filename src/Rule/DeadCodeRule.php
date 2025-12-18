@@ -15,6 +15,7 @@ use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
+use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
@@ -27,6 +28,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use function array_key_exists;
@@ -52,6 +54,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';
     public const IDENTIFIER_CONSTANT = 'shipmonk.deadConstant';
     public const IDENTIFIER_ENUM_CASE = 'shipmonk.deadEnumCase';
+    public const IDENTIFIER_PROPERTY = 'shipmonk.deadProperty';
 
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,
@@ -86,6 +89,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      *      file: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
+     *      properties: array<string, array{line: int}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -166,14 +170,15 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         /** @var list<CollectedUsage> $knownCollectedUsages */
         $knownCollectedUsages = [];
 
-        $methodDeclarationData = $node->get(ClassDefinitionCollector::class);
+        $classDefinitionData = $node->get(ClassDefinitionCollector::class);
         $methodCallData = $node->get(MethodCallCollector::class);
         $constFetchData = $node->get(ConstantFetchCollector::class);
+        $propertyAccessData = $node->get(PropertyAccessCollector::class);
         $providedUsagesData = $node->get(ProvidedUsagesCollector::class);
 
         /** @var array<string, list<list<string>>> $memberUseData */
-        $memberUseData = array_merge_recursive($methodCallData, $providedUsagesData, $constFetchData);
-        unset($methodCallData, $providedUsagesData, $constFetchData);
+        $memberUseData = array_merge_recursive($methodCallData, $providedUsagesData, $constFetchData, $propertyAccessData);
+        unset($methodCallData, $providedUsagesData, $constFetchData, $propertyAccessData);
 
         foreach ($memberUseData as $file => $usesPerFile) {
             foreach ($usesPerFile as $useStrings) {
@@ -194,7 +199,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        foreach ($methodDeclarationData as $file => $data) {
+        foreach ($classDefinitionData as $file => $data) {
             foreach ($data as $typeData) {
                 $typeName = $typeData['name'];
                 $this->typeDefinitions[$typeName] = [
@@ -203,6 +208,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                     'file' => $file,
                     'cases' => $typeData['cases'],
                     'constants' => $typeData['constants'],
+                    'properties' => $typeData['properties'],
                     'methods' => $typeData['methods'],
                     'parents' => $typeData['parents'],
                     'traits' => $typeData['traits'],
@@ -211,18 +217,20 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        unset($methodDeclarationData);
+        unset($classDefinitionData);
 
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
             $constants = $typeDefinition['constants'];
             $cases = $typeDefinition['cases'];
+            $properties = $typeDefinition['properties'];
             $file = $typeDefinition['file'];
 
             $ancestorNames = $this->getAncestorNames($typeName);
 
             $this->fillTraitMethodUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeMethods($typeName));
             $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeConstants($typeName));
+            $this->fillTraitPropertyUsages($typeName, $this->getTraitUsages($typeName), $this->getTypeProperties($typeName));
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
@@ -251,6 +259,15 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                     $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, $file, $enumCaseData['line']);
                 }
             }
+
+            foreach ($properties as $propertyName => $propertyData) {
+                $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
+                $propertyKeys = $propertyRef->toKeys();
+
+                foreach ($propertyKeys as $propertyKey) {
+                    $this->blackMembers[$propertyKey] = new BlackMember($propertyRef, $file, $propertyData['line']);
+                }
+            }
         }
 
         foreach ($this->typeDefinitions as $typeName => $typeDef) {
@@ -260,6 +277,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                     array_keys($typeDef['constants']),
                     array_keys($typeDef['cases']),
                 ),
+                MemberType::PROPERTY => array_keys($typeDef['properties']),
             ];
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
@@ -427,6 +445,34 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($traitName), $overriddenConstants);
+        }
+    }
+
+    /**
+     * @param array<string, array{excluded?: list<string>, aliases?: array<string, string>}> $usedTraits
+     * @param list<string> $overriddenProperties
+     */
+    private function fillTraitPropertyUsages(
+        string $typeName,
+        array $usedTraits,
+        array $overriddenProperties
+    ): void
+    {
+        foreach ($usedTraits as $traitName => $traitInfo) {
+            $traitProperties = $this->typeDefinitions[$traitName]['properties'] ?? [];
+
+            $excludedProperties = $overriddenProperties;
+
+            foreach ($traitProperties as $traitConstant => $constantInfo) {
+                if (in_array($traitConstant, $excludedProperties, true)) {
+                    continue;
+                }
+
+                $overriddenProperties[] = $traitConstant;
+                $this->traitMembers[MemberType::PROPERTY][$typeName][$traitName][$traitConstant] = $traitConstant;
+            }
+
+            $this->fillTraitPropertyUsages($typeName, $this->getTraitUsages($traitName), $overriddenProperties);
         }
     }
 
@@ -820,6 +866,14 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
+     * @return list<string>
+     */
+    private function getTypeProperties(string $typeName): array
+    {
+        return array_keys($this->typeDefinitions[$typeName]['properties'] ?? []);
+    }
+
+    /**
      * @param ClassMemberRef<string, string> $memberRef
      */
     private function isExistingRef(
@@ -864,7 +918,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, ?string> $memberRef
-     * @return list<'methods'|'constants'|'cases'>
+     * @return list<'methods'|'constants'|'cases'|'properties'>
      */
     private function getTypeDefinitionKeysForMemberType(ClassMemberRef $memberRef): array
     {
@@ -878,6 +932,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             } else {
                 return ['constants', 'cases'];
             }
+        } elseif ($memberRef instanceof ClassPropertyRef) {
+            return ['properties'];
         }
 
         throw new LogicException('Invalid member type');

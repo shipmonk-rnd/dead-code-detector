@@ -3,10 +3,28 @@
 namespace ShipMonk\PHPStan\DeadCode\Reflection;
 
 use PHPStan\Reflection\ClassReflection;
+use ReflectionClassConstant;
 use ReflectionException;
+use ReflectionMethod;
+use ReflectionProperty;
 
 final class ReflectionHelper
 {
+
+    /**
+     * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
+     * @return 'constant'|'property'|'method'
+     */
+    public static function getMemberType(object $member): string
+    {
+        if ($member instanceof ReflectionClassConstant) {
+            return 'constant';
+        } elseif ($member instanceof ReflectionProperty) {
+            return 'property';
+        } else {
+            return 'method';
+        }
+    }
 
     public static function hasOwnMethod(
         ClassReflection $classReflection,

@@ -7,6 +7,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use function array_keys;
@@ -96,6 +97,9 @@ final class BlackMember
 
         } elseif ($this->member instanceof ClassMethodRef) {
             return DeadCodeRule::IDENTIFIER_METHOD;
+
+        } elseif ($this->member instanceof ClassPropertyRef) {
+            return DeadCodeRule::IDENTIFIER_PROPERTY;
 
         } else {
             throw new LogicException('Unknown member type');

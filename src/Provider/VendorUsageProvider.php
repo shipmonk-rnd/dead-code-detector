@@ -6,11 +6,14 @@ use Composer\Autoload\ClassLoader;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionMethod;
+use ReflectionProperty;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_keys;
 use function strlen;
 use function strpos;
 use function substr;
+use function ucfirst;
 
 final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
 {
@@ -46,13 +49,22 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         return $this->shouldMarkMemberAsUsed($constant);
     }
 
+    protected function shouldMarkPropertyAsUsed(ReflectionProperty $property): ?VirtualUsageData
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        return $this->shouldMarkMemberAsUsed($property);
+    }
+
     /**
-     * @param ReflectionMethod|ReflectionClassConstant $member
+     * @param ReflectionMethod|ReflectionClassConstant|ReflectionProperty $member
      */
     private function shouldMarkMemberAsUsed(Reflector $member): ?VirtualUsageData
     {
         $reflectionClass = $member->getDeclaringClass();
-        $memberString = $member instanceof ReflectionMethod ? 'Method' : 'Constant';
+        $memberString = ucfirst(ReflectionHelper::getMemberType($member));
         $usage = VirtualUsageData::withNote($memberString . ' overrides vendor one, thus is expected to be used by vendor code');
 
         do {
@@ -79,7 +91,7 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
     }
 
     /**
-     * @param ReflectionMethod|ReflectionClassConstant $member
+     * @param ReflectionMethod|ReflectionClassConstant|ReflectionProperty $member
      * @param ReflectionClass<object> $reflectionClass
      */
     private function isForeignMember(
@@ -92,6 +104,10 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         if ($member instanceof ReflectionClassConstant && !$reflectionClass->hasConstant($member->getName())) {
+            return false;
+        }
+
+        if ($member instanceof ReflectionProperty && !$reflectionClass->hasProperty($member->getName())) {
             return false;
         }
 

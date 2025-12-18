@@ -26,10 +26,7 @@ class ChildClass extends ParentToClone {
 
 class Coord
 {
-    public function __construct(
-        public int $x,
-        public int $y,
-    ) {}
+    public function __construct() {}
 
     public function __clone() {}
 }
@@ -37,6 +34,6 @@ class Coord
 clone new CloneClass1();
 clone new ChildClass();
 
-clone(new Coord(1, 2), [ // PHP 8.5 clone with
+clone(new Coord(), [ // PHP 8.5 clone with
     'y' => 1,
 ]);

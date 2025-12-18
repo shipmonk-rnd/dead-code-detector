@@ -18,6 +18,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_filter;
 use function array_key_first;
@@ -67,6 +69,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         $usedConstants = [];
         $usedMethods = [];
         $usedEnumCases = [];
+        $usedProperties = [];
 
         foreach ($methodNames as $methodName) {
             foreach ($callerType->getObjectClassReflections() as $reflection) {
@@ -94,6 +97,10 @@ final class ReflectionUsageProvider implements MemberUsageProvider
                             ...$usedEnumCases,
                             ...$this->extractEnumCasesUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
                         ];
+                        $usedProperties = [
+                            ...$usedProperties,
+                            ...$this->extractPropertiesUsedByReflection($genericClassName, $methodName, $node->getArgs(), $node, $scope),
+                        ];
                     }
                 }
             }
@@ -103,6 +110,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             ...$usedConstants,
             ...$usedMethods,
             ...$usedEnumCases,
+            ...$usedProperties,
         ], static fn (?ClassMemberUsage $usage): bool => $usage !== null));
     }
 
@@ -198,6 +206,39 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * @param array<Arg> $args
+     * @return list<ClassPropertyUsage|null>
+     */
+    private function extractPropertiesUsedByReflection(
+        ?string $genericClassName,
+        string $methodName,
+        array $args,
+        Node $node,
+        Scope $scope
+    ): array
+    {
+        $usedProperties = [];
+
+        if (
+            $methodName === 'getProperties'
+            || $methodName === 'getDefaultProperties' // simplified, ideally should mark white only default properties
+            || $methodName === 'getStaticProperties' // simplified, ideally should mark white only static properties
+        ) {
+            $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null);
+        }
+
+        if (in_array($methodName, ['getProperty', 'getStaticPropertyValue'], true) && count($args) >= 1) {
+            $firstArg = $args[array_key_first($args)];
+
+            foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
+                $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, $constantString->getValue());
+            }
+        }
+
+        return $usedProperties;
+    }
+
+    /**
      * @param NullsafeMethodCall|MethodCall|StaticCall|New_ $call
      * @return list<string>
      */
@@ -283,6 +324,27 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
+                true,
+            ),
+        );
+    }
+
+    private function createPropertyUsage(
+        Node $node,
+        Scope $scope,
+        ?string $className,
+        ?string $propertyName
+    ): ?ClassPropertyUsage
+    {
+        if ($className === null && $propertyName === null) {
+            return null;
+        }
+
+        return new ClassPropertyUsage(
+            UsageOrigin::createRegular($node, $scope),
+            new ClassPropertyRef(
+                $className,
+                $propertyName,
                 true,
             ),
         );

@@ -13,19 +13,19 @@ use Attribute;
 #[Attribute(Attribute::TARGET_METHOD)]
 class Given
 {
-    public function __construct(public string $pattern) {}
+    public function __construct() {}
 }
 
 #[Attribute(Attribute::TARGET_METHOD)]
 class When
 {
-    public function __construct(public string $pattern) {}
+    public function __construct() {}
 }
 
 #[Attribute(Attribute::TARGET_METHOD)]
 class Then
 {
-    public function __construct(public string $pattern) {}
+    public function __construct() {}
 }
 
 namespace Behat\Hook;
@@ -85,13 +85,9 @@ use Behat\Step\Then;
 use Behat\Step\When;
 use Behat\Transformation\Transform;
 
-class SomeService
-{
-}
-
 class FeatureContext implements Context
 {
-    public function __construct(private SomeService $service)
+    public function __construct()
     {
     }
 
@@ -205,7 +201,7 @@ class AnotherContext implements Context
 // Context using PHP 8 attributes
 class AttributeContext implements Context
 {
-    public function __construct(private SomeService $service)
+    public function __construct()
     {
     }
 
