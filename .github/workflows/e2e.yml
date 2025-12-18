@@ -29,6 +29,12 @@ jobs:
                     -
                         repo: shipmonk-rnd/input-mapper
                         php: 8.3
+                    -
+                        repo: shipmonk-rnd/composer-dependency-analyser
+                    -
+                        repo: shipmonk-rnd/coverage-guard
+                    -
+                        repo: ruudk/graphql-client-code-generator
 
             fail-fast: false
         steps:
