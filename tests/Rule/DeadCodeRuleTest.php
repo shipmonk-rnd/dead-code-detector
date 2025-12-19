@@ -127,6 +127,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 ),
                 new ClassHierarchy(),
                 $this->detectDeadMethods,
+                $this->detectDeadConstants,
+                $this->detectDeadEnumCases,
                 $this->detectNeverReadProperties,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
@@ -150,7 +152,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->getMemberUsageProviders(),
                 $this->getMemberUsageExcluders(),
             ),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectNeverReadProperties),
+            new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
             new PropertyAccessCollector($this->getMemberUsageExcluders()),
@@ -400,7 +402,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         Usage debugging information:
 
-        DebugMixed\Foo::any
+        DebugMixed\Foo::any calls
         |
         | Dead because:
         | all usages are excluded
@@ -410,6 +412,33 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         OUTPUT;
 
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
+    public function testDebugUsageWithDisabledAnalysis(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectDeadMethods = false;
+        $this->detectDeadConstants = false;
+        $this->detectDeadEnumCases = false;
+        $this->detectNeverReadProperties = false;
+
+        $this->debugMembers = [
+            'DebugAnalysisDisabled\X::property',
+            'DebugAnalysisDisabled\X::CONSTANT',
+            'DebugAnalysisDisabled\X::method',
+        ];
+        $this->analyzeFiles([__DIR__ . '/data/debug/analysis-disabled.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $expectedOutput = file_get_contents(__DIR__ . '/data/debug/analysis-disabled-expected.txt');
+        self::assertNotFalse($expectedOutput);
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
@@ -427,7 +456,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         Usage debugging information:
 
-        DebugTrait\User::foo
+        DebugTrait\User::foo calls
         |
         | Marked as alive at:
         | entry <href=( data/debug/trait-2.php at line 11 )>data/debug/trait-2.php:11</>
