@@ -156,10 +156,6 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
-        arguments:
-            detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
-            detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
-            detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector
@@ -176,6 +172,8 @@ services:
             - phpstan.diagnoseExtension
         arguments:
             detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
+            detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
+            detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
             detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 

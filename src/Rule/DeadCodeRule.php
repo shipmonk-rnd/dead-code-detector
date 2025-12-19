@@ -82,6 +82,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $detectDeadMethods;
 
+    private bool $detectDeadConstants;
+
+    private bool $detectDeadEnumCases;
+
     private bool $detectNeverReadProperties;
 
     /**
@@ -141,6 +145,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         DebugUsagePrinter $debugUsagePrinter,
         ClassHierarchy $classHierarchy,
         bool $detectDeadMethods,
+        bool $detectDeadConstants,
+        bool $detectDeadEnumCases,
         bool $detectNeverReadProperties,
         bool $reportTransitivelyDeadMethodAsSeparateError,
         BackwardCompatibilityChecker $checker
@@ -149,6 +155,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $this->debugUsagePrinter = $debugUsagePrinter;
         $this->classHierarchy = $classHierarchy;
         $this->detectDeadMethods = $detectDeadMethods;
+        $this->detectDeadConstants = $detectDeadConstants;
+        $this->detectDeadEnumCases = $detectDeadEnumCases;
         $this->detectNeverReadProperties = $detectNeverReadProperties;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
 
@@ -254,8 +262,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $constantRef = new ClassConstantRef($typeName, $constantName, false, TrinaryLogic::createNo());
                 $constantKeys = $constantRef->toKeys(AccessType::READ);
 
-                foreach ($constantKeys as $constantKey) {
-                    $this->blackMembers[$constantKey] = new BlackMember($constantRef, AccessType::READ, $file, $constantData['line']);
+                if ($this->detectDeadConstants) {
+                    foreach ($constantKeys as $constantKey) {
+                        $this->blackMembers[$constantKey] = new BlackMember($constantRef, AccessType::READ, $file, $constantData['line']);
+                    }
                 }
             }
 
@@ -263,8 +273,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $enumCaseRef = new ClassConstantRef($typeName, $enumCaseName, false, TrinaryLogic::createYes());
                 $enumCaseKeys = $enumCaseRef->toKeys(AccessType::READ);
 
-                foreach ($enumCaseKeys as $enumCaseKey) {
-                    $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, AccessType::READ, $file, $enumCaseData['line']);
+                if ($this->detectDeadEnumCases) {
+                    foreach ($enumCaseKeys as $enumCaseKey) {
+                        $this->blackMembers[$enumCaseKey] = new BlackMember($enumCaseRef, AccessType::READ, $file, $enumCaseData['line']);
+                    }
                 }
             }
 
@@ -283,6 +295,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 }
             }
         }
+
+        $this->debugUsagePrinter->markAnalysedMembers($this->blackMembers);
 
         foreach ($this->typeDefinitions as $typeName => $typeDef) {
             $memberNamesForMixedExpand = [
