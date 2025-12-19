@@ -1072,6 +1072,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new ApiPhpDocUsageProvider(
                 self::createReflectionProvider(),
                 $this->providersEnabled,
+                [__DIR__],
             ),
             new EnumUsageProvider(
                 $this->providersEnabled,
