@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -61,7 +62,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 continue;
             }
 
-            /** @var array<string, array{file: string, type: MemberType::*, excludedUsages: list<ClassMemberUsage>}> $metadata */
+            /** @var array<string, array{file: string, type: MemberType::*, access: AccessType::*, excludedUsages: list<ClassMemberUsage>}> $metadata */
             $metadata = $fileSpecificError->getMetadata();
 
             foreach ($metadata as $memberKey => $data) {
