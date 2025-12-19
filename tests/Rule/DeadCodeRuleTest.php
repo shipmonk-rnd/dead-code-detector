@@ -20,6 +20,7 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
@@ -30,6 +31,8 @@ use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
@@ -102,7 +105,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectDeadEnumCases = true;
 
-    private bool $detectDeadProperties = true;
+    private bool $detectNeverReadProperties = true;
 
     private ?DeadCodeRule $rule = null;
 
@@ -124,6 +127,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 ),
                 new ClassHierarchy(),
                 $this->detectDeadMethods,
+                $this->detectDeadConstants,
+                $this->detectDeadEnumCases,
+                $this->detectNeverReadProperties,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
             );
@@ -140,8 +146,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $reflectionProvider = self::createReflectionProvider();
 
         return [
-            new ProvidedUsagesCollector($reflectionProvider, $this->getMemberUsageProviders(), $this->getMemberUsageExcluders()),
-            new ClassDefinitionCollector($reflectionProvider, $this->detectDeadConstants, $this->detectDeadEnumCases, $this->detectDeadProperties),
+            new ProvidedUsagesCollector(
+                new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
+                $reflectionProvider,
+                $this->getMemberUsageProviders(),
+                $this->getMemberUsageExcluders(),
+            ),
+            new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($this->getMemberUsageExcluders()),
             new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
             new PropertyAccessCollector($this->getMemberUsageExcluders()),
@@ -391,7 +402,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         Usage debugging information:
 
-        DebugMixed\Foo::any
+        DebugMixed\Foo::any calls
         |
         | Dead because:
         | all usages are excluded
@@ -401,6 +412,33 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         OUTPUT;
 
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
+    public function testDebugUsageWithDisabledAnalysis(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectDeadMethods = false;
+        $this->detectDeadConstants = false;
+        $this->detectDeadEnumCases = false;
+        $this->detectNeverReadProperties = false;
+
+        $this->debugMembers = [
+            'DebugAnalysisDisabled\X::property',
+            'DebugAnalysisDisabled\X::CONSTANT',
+            'DebugAnalysisDisabled\X::method',
+        ];
+        $this->analyzeFiles([__DIR__ . '/data/debug/analysis-disabled.php']);
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $expectedOutput = file_get_contents(__DIR__ . '/data/debug/analysis-disabled-expected.txt');
+        self::assertNotFalse($expectedOutput);
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
@@ -418,7 +456,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         Usage debugging information:
 
-        DebugTrait\User::foo
+        DebugTrait\User::foo calls
         |
         | Marked as alive at:
         | entry <href=( data/debug/trait-2.php at line 11 )>data/debug/trait-2.php:11</>
@@ -480,13 +518,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadMethods = false;
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
-        $this->detectDeadProperties = false;
+        $this->detectNeverReadProperties = false;
 
         $ownIdentifiers = [
             DeadCodeRule::IDENTIFIER_METHOD,
             DeadCodeRule::IDENTIFIER_CONSTANT,
             DeadCodeRule::IDENTIFIER_ENUM_CASE,
-            DeadCodeRule::IDENTIFIER_PROPERTY,
+            DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ,
         ];
         $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
 
@@ -504,6 +542,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
+            ['Property MemberTypes\Address::zip is never read', 38],
         ]);
     }
 
@@ -517,6 +556,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::zip is never read', 38],
         ]);
     }
 
@@ -529,6 +569,21 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadEnumCases = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::zip is never read', 38],
+        ]);
+    }
+
+    public function testPropertyReadDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectNeverReadProperties = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
         ]);
     }
@@ -921,9 +976,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
         yield 'property-dynamic' => [__DIR__ . '/data/properties/dynamic.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
+        yield 'property-promoted-hook' => [__DIR__ . '/data/properties/promoted-hook.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-4' => [__DIR__ . '/data/properties/hooks-4.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-5' => [__DIR__ . '/data/properties/hooks-5.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-6' => [__DIR__ . '/data/properties/hooks-6.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-7' => [__DIR__ . '/data/properties/hooks-7.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-8' => [__DIR__ . '/data/properties/hooks-8.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-9' => [__DIR__ . '/data/properties/hooks-9.php', self::requiresPhp(8_00_00)];
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
         yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
@@ -1180,20 +1242,27 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $result = [];
         $errors = parent::gatherAnalyserErrors($files);
 
+        $ruleMock = (new ReflectionClass(DeadCodeRule::class))->newInstanceWithoutConstructor();
+        $buildMainErrorMessages = Closure::bind(
+            fn (int $type, int $access, string $member): string => $this->buildMainErrorMessages($type, $access, $member), // @phpstan-ignore argument.type, argument.type
+            $ruleMock,
+            DeadCodeRule::class,
+        );
+
         foreach ($errors as $error) {
             $result[] = $error;
 
-            /** @var array<string, array{file: string, line: int}> $metadata */
+            /** @var array<string, array{file: string, line: int, type: MemberType::*, access: AccessType::*}> $metadata */
             $metadata = $error->getMetadata();
 
-            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive]) {
+            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive, 'access' => $access, 'type' => $type]) {
                 if (!$transitive) {
                     continue;
                 }
 
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    "Unused $alsoDead",
+                    $buildMainErrorMessages($type, $access, $alsoDead),
                     $file,
                     $line,
                     true,
@@ -1273,6 +1342,17 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         Closure::bind(function (): void {
             $this->analyser = null;
         }, $this, OriginalRuleTestCase::class)();
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getAdditionalConfigFiles(): array
+    {
+        return array_merge(
+            parent::getAdditionalConfigFiles(),
+            [__DIR__ . '/data/visitors.neon'],
+        );
     }
 
 }

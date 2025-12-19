@@ -4,7 +4,7 @@ namespace DeadPropertyNullsafe;
 
 class TestClass {
     public string $name = 'test';
-    public string $dead = 'dead'; // error: Unused DeadPropertyNullsafe\TestClass::dead
+    public string $dead = 'dead'; // error: Property DeadPropertyNullsafe\TestClass::dead is never read
 }
 
 function test(?TestClass $test) {

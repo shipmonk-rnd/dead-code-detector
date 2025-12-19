@@ -4,18 +4,22 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticPropertyFetch;
+use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -53,35 +57,47 @@ final class PropertyAccessCollector implements Collector
         Scope $scope
     ): ?array
     {
-        if ($this->isInPropertyHook($scope)) {
-            return null;
+        if ($node instanceof PropertyFetch) {
+            foreach ($this->getAccessTypes($node) as $accessType) {
+                $this->registerInstancePropertyAccess($node, $scope, $accessType);
+            }
         }
 
-        if ($node instanceof PropertyFetch && !$scope->isInExpressionAssign($node)) {
-            $this->registerInstancePropertyAccess($node, $scope);
+        if ($node instanceof StaticPropertyFetch) {
+            foreach ($this->getAccessTypes($node) as $accessType) {
+                $this->registerStaticPropertyAccess($node, $scope, $accessType);
+            }
         }
 
-        if ($node instanceof StaticPropertyFetch && !$scope->isInExpressionAssign($node)) {
-            $this->registerStaticPropertyAccess($node, $scope);
+        if ($node instanceof New_) {
+            $this->registerPromotedPropertyWrite($node, $scope);
         }
 
         return $this->emitUsages($scope);
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function registerInstancePropertyAccess(
         PropertyFetch $node,
-        Scope $scope
+        Scope $scope,
+        int $accessType
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
         $callerType = $scope->getType($node->var);
 
         foreach ($propertyNames as $propertyName) {
+            if ($propertyName !== null && $this->isSelfReferenceInPropertyHook($scope, $propertyName)) {
+                continue; // read, nor write access calls other a hook when within a hook
+            }
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
                 $this->registerUsage(
                     new ClassPropertyUsage(
                         UsageOrigin::createRegular($node, $scope),
                         $propertyRef,
+                        $accessType,
                     ),
                     $node,
                     $scope,
@@ -90,9 +106,13 @@ final class PropertyAccessCollector implements Collector
         }
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function registerStaticPropertyAccess(
         StaticPropertyFetch $node,
-        Scope $scope
+        Scope $scope,
+        int $accessType
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
@@ -110,6 +130,7 @@ final class PropertyAccessCollector implements Collector
                     new ClassPropertyUsage(
                         UsageOrigin::createRegular($node, $scope),
                         $propertyRef,
+                        $accessType,
                     ),
                     $node,
                     $scope,
@@ -140,6 +161,52 @@ final class PropertyAccessCollector implements Collector
         }
 
         return [$fetch->name->toString()];
+    }
+
+    private function registerPromotedPropertyWrite(
+        New_ $new,
+        Scope $scope
+    ): void
+    {
+        if ($new->class instanceof Expr) {
+            $callerType = $scope->getType($new);
+            $possibleDescendantCall = null;
+
+        } elseif ($new->class instanceof Name) {
+            $callerType = $scope->resolveTypeByName($new->class);
+            $possibleDescendantCall = $new->class->toString() === 'static';
+
+        } else {
+            return;
+        }
+
+        $classReflections = $callerType->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+        foreach ($classReflections as $classReflection) {
+            $constructor = $classReflection->getNativeReflection()->getConstructor();
+            if ($constructor === null) {
+                continue;
+            }
+            $parameters = $constructor->getParameters(); // ideally, we should pick only those where arg was provided
+            foreach ($parameters as $parameter) {
+                if (!$parameter->isPromoted()) {
+                    continue;
+                }
+
+                $this->registerUsage(
+                    new ClassPropertyUsage(
+                        UsageOrigin::createRegular($new, $scope),
+                        new ClassPropertyRef(
+                            $classReflection->getName(),
+                            $parameter->getName(),
+                            $possibleDescendantCall ?? !$classReflection->isFinalByKeyword(),
+                        ),
+                        AccessType::WRITE,
+                    ),
+                    $new,
+                    $scope,
+                );
+            }
+        }
     }
 
     /**
@@ -192,14 +259,34 @@ final class PropertyAccessCollector implements Collector
         $this->usages[] = new CollectedUsage($usage, $excluderName);
     }
 
-    private function isInPropertyHook(Scope $scope): bool
+    /**
+     * @param PropertyFetch|StaticPropertyFetch $fetch
+     * @return iterable<AccessType::*>
+     */
+    private function getAccessTypes(Expr $fetch): iterable
+    {
+        if ($fetch->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE, false) === true) {
+            yield AccessType::WRITE;
+
+            if ($fetch->getAttribute(PropertyWriteVisitor::IS_PROPERTY_WRITE_AND_READ, false) === true) {
+                yield AccessType::READ;
+            }
+        } else {
+            yield AccessType::READ;
+        }
+    }
+
+    private function isSelfReferenceInPropertyHook(
+        Scope $scope,
+        string $propertyName
+    ): bool
     {
         $function = $scope->getFunction();
         if ($function === null) {
             return false;
         }
 
-        return $function->isMethodOrPropertyHook() && $function->isPropertyHook();
+        return $function->isMethodOrPropertyHook() && $function->getHookedPropertyName() === $propertyName;
     }
 
 }
