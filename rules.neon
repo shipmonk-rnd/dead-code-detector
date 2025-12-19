@@ -20,6 +20,7 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.apiPhpDoc.enabled%
+            analysedPaths: %analysedPaths%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider
