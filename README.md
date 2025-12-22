@@ -51,7 +51,7 @@ $ vendor/bin/phpstan
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
 - `!php const` references in `config` yamls
-- `defaultIndexMethod` in `#[AutowireLocator]` and `#[AutowireIterator]`
+- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]` and `#[AutowireIterator]`
 - Workflow event listener attributes: `#[AsAnnounceListener]`, ...
 - `#[AutoconfigureTag('doctrine.event_listener')]` attribute
 
