@@ -296,7 +296,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 if ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireLocator') {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['services']) || !isset($arguments['defaultIndexMethod'])) {
+                    if (!isset($arguments['services']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
                         continue;
                     }
 
@@ -306,45 +306,66 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                         $classNames = $arguments['services']->getConstantStrings();
                     }
 
-                    $defaultIndexMethod = $arguments['defaultIndexMethod']->getConstantStrings();
-
-                    if ($classNames === [] || !isset($defaultIndexMethod[0])) {
+                    if ($classNames === []) {
                         continue;
                     }
 
-                    foreach ($classNames as $className) {
-                        $usages[] = new ClassMethodUsage(
-                            $usageOrigin,
-                            new ClassMethodRef(
-                                $className->getValue(),
-                                $defaultIndexMethod[0]->getValue(),
-                                true,
-                            ),
-                        );
+                    foreach (['defaultIndexMethod', 'defaultPriorityMethod'] as $methodName) {
+                        if (!isset($arguments[$methodName])) {
+                            continue;
+                        }
+
+                        $method = $arguments[$methodName]->getConstantStrings();
+
+                        if (!isset($method[0])) {
+                            continue;
+                        }
+
+                        foreach ($classNames as $className) {
+                            $usages[] = new ClassMethodUsage(
+                                $usageOrigin,
+                                new ClassMethodRef(
+                                    $className->getValue(),
+                                    $method[0]->getValue(),
+                                    true,
+                                ),
+                            );
+                        }
                     }
                 } elseif ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator') {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['tag']) || !isset($arguments['defaultIndexMethod'])) {
+                    if (!isset($arguments['tag']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
                         continue;
                     }
 
                     $classNames = $arguments['tag']->getConstantStrings();
-                    $defaultIndexMethod = $arguments['defaultIndexMethod']->getConstantStrings();
 
-                    if ($classNames === [] || !isset($defaultIndexMethod[0])) {
+                    if ($classNames === []) {
                         continue;
                     }
 
-                    foreach ($classNames as $className) {
-                        $usages[] = new ClassMethodUsage(
-                            UsageOrigin::createRegular($node, $scope),
-                            new ClassMethodRef(
-                                $className->getValue(),
-                                $defaultIndexMethod[0]->getValue(),
-                                true,
-                            ),
-                        );
+                    foreach (['defaultIndexMethod', 'defaultPriorityMethod'] as $methodName) {
+                        if (!isset($arguments[$methodName])) {
+                            continue;
+                        }
+
+                        $method = $arguments[$methodName]->getConstantStrings();
+
+                        if (!isset($method[0])) {
+                            continue;
+                        }
+
+                        foreach ($classNames as $className) {
+                            $usages[] = new ClassMethodUsage(
+                                UsageOrigin::createRegular($node, $scope),
+                                new ClassMethodRef(
+                                    $className->getValue(),
+                                    $method[0]->getValue(),
+                                    true,
+                                ),
+                            );
+                        }
                     }
                 }
             }
