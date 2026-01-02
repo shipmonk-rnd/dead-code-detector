@@ -18,9 +18,9 @@ class SomeController2 {
 
     #[Route('/some', name: 'some')]
     public function getAction(
-        #[AutowireIterator(SomeInterface::class, defaultIndexMethod: 'someMethod')]
+        #[AutowireIterator(SomeInterface::class, defaultIndexMethod: 'someMethod', defaultPriorityMethod: 'priorityMethod')]
         $iterator,
-        #[AutowireLocator([SomeInterface::class, SomeFooInterface::class], defaultIndexMethod: 'someOther')]
+        #[AutowireLocator([SomeInterface::class, SomeFooInterface::class], defaultIndexMethod: 'someOther', defaultPriorityMethod: 'otherPriorityMethod')]
         $locator
     ): void {
     }
@@ -30,10 +30,13 @@ class SomeController2 {
 interface SomeInterface {
     public function someMethod(): string;
     public function someOther(): string;
+    public function priorityMethod(): int;
+    public function otherPriorityMethod(): int;
 }
 
 interface SomeFooInterface {
     public function someOther(): string;
+    public function otherPriorityMethod(): int;
 }
 
 class SomeThing implements SomeInterface, SomeFooInterface
@@ -46,6 +49,14 @@ class SomeThing implements SomeInterface, SomeFooInterface
     {
         return 'SomeThing';
     }
+    public function priorityMethod(): int
+    {
+        return 1;
+    }
+    public function otherPriorityMethod(): int
+    {
+        return 1;
+    }
 }
 
 class SomeThing2 implements SomeInterface, SomeFooInterface
@@ -57,6 +68,14 @@ class SomeThing2 implements SomeInterface, SomeFooInterface
     public function someOther(): string
     {
         return 'SomeThing2';
+    }
+    public function priorityMethod(): int
+    {
+        return 2;
+    }
+    public function otherPriorityMethod(): int
+    {
+        return 2;
     }
 }
 
