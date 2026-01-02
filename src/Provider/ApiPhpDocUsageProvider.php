@@ -18,13 +18,23 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private bool $enabled;
 
+    /**
+     * @var list<string> $analysedPaths
+     */
+    private array $analysedPaths;
+
+    /**
+     * @param list<string> $analysedPaths
+     */
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        bool $enabled
+        bool $enabled,
+        array $analysedPaths
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled;
+        $this->analysedPaths = $analysedPaths;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
@@ -88,6 +98,10 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     ): bool
     {
         if (!$this->hasOwnMember($reflection, $member)) {
+            return false;
+        }
+
+        if ($this->isOutsideAnalysedPaths($reflection)) {
             return false;
         }
 
@@ -167,6 +181,22 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     private function isApiPhpDoc(?string $phpDoc): bool
     {
         return $phpDoc !== null && strpos($phpDoc, '@api') !== false;
+    }
+
+    private function isOutsideAnalysedPaths(ClassReflection $reflection): bool
+    {
+        $fileName = $reflection->getFileName();
+        if ($fileName === null) {
+            return true;
+        }
+
+        foreach ($this->analysedPaths as $path) {
+            if (strpos($fileName, $path) === 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }
