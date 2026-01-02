@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use LogicException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -26,11 +28,11 @@ final class ClassMethodRef extends ClassMemberRef
         parent::__construct($className, $methodName, $possibleDescendant);
     }
 
-    /**
-     * @return list<string>
-     */
-    protected function getKeyPrefixes(): array
+    protected function getKeyPrefixes(int $accessType): array
     {
+        if ($accessType !== AccessType::READ) {
+            throw new LogicException('Method calls can only be read.');
+        }
         return ['m'];
     }
 

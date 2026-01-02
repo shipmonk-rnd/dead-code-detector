@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use LogicException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -70,9 +71,10 @@ abstract class ClassMemberRef
     }
 
     /**
+     * @param AccessType::* $accessType
      * @return list<string>
      */
-    public function toKeys(): array
+    public function toKeys(int $accessType): array
     {
         if ($this->className === null) {
             throw new LogicException('Cannot convert to keys without known class name.');
@@ -83,7 +85,7 @@ abstract class ClassMemberRef
         }
 
         $result = [];
-        foreach ($this->getKeyPrefixes() as $prefix) {
+        foreach ($this->getKeyPrefixes($accessType) as $prefix) {
             $result[] = "$prefix/$this->className::$this->memberName";
         }
         return $result;
@@ -124,9 +126,10 @@ abstract class ClassMemberRef
     abstract public function withKnownMember(string $memberName): self;
 
     /**
+     * @param AccessType::* $accessType
      * @return list<string>
      */
-    abstract protected function getKeyPrefixes(): array;
+    abstract protected function getKeyPrefixes(int $accessType): array;
 
     /**
      * @return MemberType::*

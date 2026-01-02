@@ -9,5 +9,6 @@ class Foo
 
 function test(Foo $foo): void
 {
+    $foo->prop = 'new value';
     echo $foo->prop;
 }

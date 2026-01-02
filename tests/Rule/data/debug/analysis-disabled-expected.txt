@@ -1,0 +1,33 @@
+
+Usage debugging information:
+
+DebugAnalysisDisabled\X::property reads
+|
+| Detection not enabled for this member type and access!
+|
+| Found 1 usage:
+|  • data/debug/analysis-disabled.php:15
+
+
+DebugAnalysisDisabled\X::property writes
+|
+| Detection not enabled for this member type and access!
+|
+| Found 1 usage:
+|  • data/debug/analysis-disabled.php:14
+
+
+DebugAnalysisDisabled\X::CONSTANT fetches
+|
+| Detection not enabled for this member type and access!
+|
+| Found 1 usage:
+|  • data/debug/analysis-disabled.php:16
+
+
+DebugAnalysisDisabled\X::method calls
+|
+| Detection not enabled for this member type and access!
+|
+| Found 1 usage:
+|  • data/debug/analysis-disabled.php:13

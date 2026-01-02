@@ -5,6 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use function get_class;
@@ -17,7 +19,24 @@ final class UsageOrigin
 
     private ?string $className;
 
-    private ?string $methodName;
+    /**
+     * Origin method or property name
+     */
+    private ?string $memberName;
+
+    /**
+     * Origins in method or property hook?
+     *
+     * @var MemberType::PROPERTY|MemberType::METHOD|null
+     */
+    private ?int $memberType;
+
+    /**
+     * Is it get hook or set hook?
+     *
+     * @var AccessType::*|null
+     */
+    private ?int $accessType;
 
     private ?string $fileName;
 
@@ -28,11 +47,16 @@ final class UsageOrigin
     private ?string $note;
 
     /**
+     * @param MemberType::PROPERTY|MemberType::METHOD|null $memberType
+     * @param AccessType::*|null $accessType
+     *
      * @internal Please use static constructors instead.
      */
     public function __construct(
         ?string $className,
-        ?string $methodName,
+        ?string $memberName,
+        ?int $memberType,
+        ?int $accessType,
         ?string $fileName,
         ?int $line,
         ?string $provider,
@@ -40,7 +64,9 @@ final class UsageOrigin
     )
     {
         $this->className = $className;
-        $this->methodName = $methodName;
+        $this->memberName = $memberName;
+        $this->memberType = $memberType;
+        $this->accessType = $accessType;
         $this->fileName = $fileName;
         $this->line = $line;
         $this->provider = $provider;
@@ -56,6 +82,8 @@ final class UsageOrigin
     ): self
     {
         return new self(
+            null,
+            null,
             null,
             null,
             null,
@@ -78,10 +106,12 @@ final class UsageOrigin
             : $scope->getFile();
 
         $function = $scope->getFunction();
-        $isRegularMethod = $function !== null && $function->isMethodOrPropertyHook() && !$function->isPropertyHook();
+        $isMethodOrHook = $function !== null && $function->isMethodOrPropertyHook();
 
-        if (!$scope->isInClass() || !$isRegularMethod) {
+        if (!$scope->isInClass() || !$isMethodOrHook) {
             return new self(
+                null,
+                null,
                 null,
                 null,
                 $file,
@@ -91,9 +121,13 @@ final class UsageOrigin
             );
         }
 
+        $hookedPropertyName = $function->getHookedPropertyName();
+
         return new self(
             $scope->getClassReflection()->getName(),
-            $function->getName(),
+            $hookedPropertyName ?? $function->getName(),
+            $function->isPropertyHook() ? MemberType::PROPERTY : MemberType::METHOD,
+            $function->isPropertyHook() && $function->getPropertyHookName() === 'set' ? AccessType::WRITE : AccessType::READ,
             $file,
             $node->getStartLine(),
             null,
@@ -106,9 +140,25 @@ final class UsageOrigin
         return $this->className;
     }
 
-    public function getMethodName(): ?string
+    public function getMemberName(): ?string
     {
-        return $this->methodName;
+        return $this->memberName;
+    }
+
+    /**
+     * @return MemberType::PROPERTY|MemberType::METHOD|null
+     */
+    public function getMemberType(): ?int
+    {
+        return $this->memberType;
+    }
+
+    /**
+     * @return AccessType::*|null
+     */
+    public function getAccessType(): ?int
+    {
+        return $this->accessType;
     }
 
     public function getFile(): ?string
@@ -131,23 +181,34 @@ final class UsageOrigin
         return $this->note;
     }
 
-    public function hasClassMethodRef(): bool
+    /**
+     * @phpstan-assert-if-true !null $this->getAccessType()
+     */
+    public function hasClassMemberRef(): bool
     {
-        return $this->className !== null && $this->methodName !== null;
+        return $this->className !== null && $this->memberName !== null;
     }
 
     /**
-     * @return ClassMethodRef<string, string>
+     * @return ClassMemberRef<string, string>
      */
-    public function toClassMethodRef(): ClassMethodRef
+    public function toClassMemberRef(): ClassMemberRef
     {
-        if ($this->className === null || $this->methodName === null) {
+        if ($this->className === null || $this->memberName === null) {
             throw new LogicException('Usage origin does not have class method ref');
+        }
+
+        if ($this->memberType === MemberType::PROPERTY) {
+            return new ClassPropertyRef(
+                $this->className,
+                $this->memberName,
+                false,
+            );
         }
 
         return new ClassMethodRef(
             $this->className,
-            $this->methodName,
+            $this->memberName,
             false,
         );
     }

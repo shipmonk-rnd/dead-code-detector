@@ -42,23 +42,11 @@ final class ClassDefinitionCollector implements Collector
 
     private ReflectionProvider $reflectionProvider;
 
-    private bool $detectDeadConstants;
-
-    private bool $detectDeadEnumCases;
-
-    private bool $detectDeadProperties;
-
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        bool $detectDeadConstants,
-        bool $detectDeadEnumCases,
-        bool $detectDeadProperties
+        ReflectionProvider $reflectionProvider
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->detectDeadConstants = $detectDeadConstants;
-        $this->detectDeadEnumCases = $detectDeadEnumCases;
-        $this->detectDeadProperties = $detectDeadProperties;
     }
 
     public function getNodeType(): string
@@ -138,18 +126,6 @@ final class ClassDefinitionCollector implements Collector
                     'line' => $prop->getStartLine(),
                 ];
             }
-        }
-
-        if (!$this->detectDeadConstants) {
-            $constants = [];
-        }
-
-        if (!$this->detectDeadEnumCases) {
-            $cases = [];
-        }
-
-        if (!$this->detectDeadProperties) {
-            $properties = [];
         }
 
         return [
