@@ -55,8 +55,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     public const IDENTIFIER_METHOD = 'shipmonk.deadMethod';
     public const IDENTIFIER_CONSTANT = 'shipmonk.deadConstant';
     public const IDENTIFIER_ENUM_CASE = 'shipmonk.deadEnumCase';
-    public const IDENTIFIER_PROPERTY_NEVER_READ = 'shipmonk.propertyNeverRead';
-    public const IDENTIFIER_PROPERTY_NEVER_WRITTEN = 'shipmonk.propertyNeverWritten';
+    public const IDENTIFIER_PROPERTY_NEVER_READ = 'shipmonk.deadProperty.neverRead';
+    public const IDENTIFIER_PROPERTY_NEVER_WRITTEN = 'shipmonk.deadProperty.neverWritten';
 
     private const UNSUPPORTED_MAGIC_METHODS = [
         '__invoke' => null,

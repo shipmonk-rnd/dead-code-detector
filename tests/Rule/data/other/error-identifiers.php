@@ -5,7 +5,7 @@ namespace ErrorIdentifiers;
 class Foo
 {
 
-    public int $count = 1; // @phpstan-ignore shipmonk.propertyNeverRead
+    public int $count = 1; // @phpstan-ignore shipmonk.deadProperty.neverRead
 
     public const BAR = 1; // @phpstan-ignore shipmonk.deadConstant
 
