@@ -5,7 +5,7 @@ namespace PropertyHooks4;
 class Person
 {
 
-    public string $usedInSetHook; // error: Property PropertyHooks4\Person::usedInSetHook is never read
+    public string $usedInSetHook; // error: Property PropertyHooks4\Person::$usedInSetHook is never read
     public string $usedInGetHook;
 
     public string $hooked {

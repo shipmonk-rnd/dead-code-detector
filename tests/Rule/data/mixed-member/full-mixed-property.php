@@ -4,7 +4,7 @@ namespace FullMixedProperty;
 
 class Foo
 {
-    public string $anyProperty; // error: Property FullMixedProperty\Foo::anyProperty is never read
+    public string $anyProperty; // error: Property FullMixedProperty\Foo::$anyProperty is never read
 }
 
 

@@ -4,8 +4,8 @@ namespace PropertyWriteArray;
 
 class Test
 {
-    public array $array; // error: Property PropertyWriteArray\Test::array is never read
-    public array $array2; // error: Property PropertyWriteArray\Test::array2 is never read
+    public array $array; // error: Property PropertyWriteArray\Test::$array is never read
+    public array $array2; // error: Property PropertyWriteArray\Test::$array2 is never read
     public array $array3;
 
 }

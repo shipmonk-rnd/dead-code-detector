@@ -13,8 +13,6 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 abstract class ClassMemberRef
 {
 
-    private const UNKNOWN_CLASS = '*';
-
     /**
      * @var C
      */
@@ -65,9 +63,11 @@ abstract class ClassMemberRef
 
     public function toHumanString(): string
     {
-        $classRef = $this->className ?? self::UNKNOWN_CLASS;
-        $memberRef = $this->memberName ?? self::UNKNOWN_CLASS;
-        return $classRef . '::' . $memberRef;
+        $classRef = $this->className ?? '*';
+        $memberRef = $this->memberName ?? '*';
+        $dollar = $this->memberName !== null && $this->getMemberType() === MemberType::PROPERTY ? '$' : '';
+
+        return $classRef . '::' . $dollar . $memberRef;
     }
 
     /**

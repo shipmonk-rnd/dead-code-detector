@@ -2,18 +2,18 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Formatter;
 
+use LogicException;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
-use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
-use function array_keys;
 use function count;
 
 final class RemoveDeadCodeFormatter implements ErrorFormatter
@@ -49,7 +49,6 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
             return 1;
         }
 
-        /** @var array<string, array<string, array<string, list<ClassMemberUsage>>>> $deadMembersByFiles file => [identifier => [key => excludedUsages[]]] */
         $deadMembersByFiles = [];
 
         foreach ($analysisResult->getFileSpecificErrors() as $fileSpecificError) {
@@ -58,51 +57,44 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_CONSTANT
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_ENUM_CASE
                 && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ
+                && $fileSpecificError->getIdentifier() !== DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_WRITTEN
             ) {
                 continue;
             }
 
-            /** @var array<string, array{file: string, type: MemberType::*, access: AccessType::*, excludedUsages: list<ClassMemberUsage>}> $metadata */
+            /** @var list<array{blackMember: BlackMember, excludedUsages: list<ClassMemberUsage>}> $metadata */
             $metadata = $fileSpecificError->getMetadata();
 
-            foreach ($metadata as $memberKey => $data) {
-                $file = $data['file'];
-                $type = $data['type'];
-                $deadMembersByFiles[$file][$type][$memberKey] = $data['excludedUsages'];
+            /** @var BlackMember $blackMember */
+            foreach ($metadata as ['blackMember' => $blackMember, 'excludedUsages' => $excludedUsages]) {
+                $className = $blackMember->getMember()->getClassName();
+                $memberName = $blackMember->getMember()->getMemberName();
+                $file = $blackMember->getFile();
+                $type = $blackMember->getMember()->getMemberType();
+
+                $deadMembersByFiles[$file][$className][$type][$memberName] = $excludedUsages;
             }
         }
 
         $membersCount = 0;
         $filesCount = count($deadMembersByFiles);
 
-        foreach ($deadMembersByFiles as $file => $deadMembersByType) {
-            /** @var array<string, list<ClassMemberUsage>> $deadConstants */
-            $deadConstants = $deadMembersByType[MemberType::CONSTANT] ?? [];
-            /** @var array<string, list<ClassMemberUsage>> $deadMethods */
-            $deadMethods = $deadMembersByType[MemberType::METHOD] ?? [];
-            /** @var array<string, list<ClassMemberUsage>> $deadProperties */
-            $deadProperties = $deadMembersByType[MemberType::PROPERTY] ?? [];
-
-            $membersCount += count($deadConstants) + count($deadMethods) + count($deadProperties);
-
-            $transformer = new RemoveDeadCodeTransformer(array_keys($deadMethods), array_keys($deadConstants), array_keys($deadProperties));
+        foreach ($deadMembersByFiles as $file => $deadMembersByClass) {
+            $transformer = new RemoveDeadCodeTransformer($deadMembersByClass);
             $oldCode = $this->fileSystem->read($file);
             $newCode = $transformer->transformCode($oldCode);
             $this->fileSystem->write($file, $newCode);
 
-            foreach ($deadConstants as $constant => $excludedUsages) {
-                $output->writeLineFormatted(" • Removed constant <fg=white>$constant</>");
-                $this->printExcludedUsages($output, $excludedUsages);
-            }
+            foreach ($deadMembersByClass as $className => $deadMembersByType) {
+                foreach ($deadMembersByType as $memberType => $deadMembers) {
+                    foreach ($deadMembers as $memberName => $excludedUsages) {
+                        $membersCount++;
+                        $memberString = $this->getMemberTypeString($memberType);
 
-            foreach ($deadMethods as $method => $excludedUsages) {
-                $output->writeLineFormatted(" • Removed method <fg=white>$method</>");
-                $this->printExcludedUsages($output, $excludedUsages);
-            }
-
-            foreach ($deadProperties as $property => $excludedUsages) {
-                $output->writeLineFormatted(" • Removed property <fg=white>$property</>");
-                $this->printExcludedUsages($output, $excludedUsages);
+                        $output->writeLineFormatted(" • Removed $memberString <fg=white>$className::$memberName</>");
+                        $this->printExcludedUsages($output, $excludedUsages);
+                    }
+                }
             }
         }
 
@@ -141,6 +133,22 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
         }
 
         return $this->outputEnhancer->getOriginReference($origin);
+    }
+
+    /**
+     * @param MemberType::* $memberType
+     */
+    private function getMemberTypeString(int $memberType): string
+    {
+        if ($memberType === MemberType::METHOD) {
+            return 'method';
+        } elseif ($memberType === MemberType::CONSTANT) {
+            return 'constant';
+        } elseif ($memberType === MemberType::PROPERTY) {
+            return 'property';
+        } else {
+            throw new LogicException("Unsupported member type: $memberType");
+        }
     }
 
 }

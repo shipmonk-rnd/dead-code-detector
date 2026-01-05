@@ -832,15 +832,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     {
         $representative = $blackMembersGroup[0];
 
-        $humanMemberString = $representative->getMember()->toHumanString();
         $exclusionMessage = $representative->getExclusionMessage();
         $excludedUsages = $representative->getExcludedUsages();
 
-        $mainErrorMessage = $this->buildMainErrorMessages(
-            $representative->getMember()->getMemberType(),
-            $representative->getAccessType(),
-            $humanMemberString,
-        );
+        $mainErrorMessage = $this->buildMainErrorMessages($representative);
 
         $builder = RuleErrorBuilder::message("{$mainErrorMessage}{$exclusionMessage}")
             ->file($representative->getFile())
@@ -848,11 +843,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             ->identifier($representative->getErrorIdentifier());
 
         $metadata = [];
-        $metadata[$humanMemberString] = [
-            'file' => $representative->getFile(),
-            'line' => $representative->getLine(),
-            'type' => $representative->getMember()->getMemberType(),
-            'access' => $representative->getAccessType(),
+        $metadata[] = [
+            'blackMember' => $representative,
             'transitive' => false,
             'excludedUsages' => $excludedUsages,
         ];
@@ -860,16 +852,13 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $tips = [];
 
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
-            $transitiveDeadMemberRef = $transitivelyDeadMember->getMember()->toHumanString();
+            $transitiveDeadMemberHumanString = $transitivelyDeadMember->getMember()->toHumanString();
             $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
             $excludedUsages = $transitivelyDeadMember->getExcludedUsages();
 
-            $tips[$transitiveDeadMemberRef] = "Thus $transitiveDeadMemberRef is transitively also unused{$exclusionMessage}";
-            $metadata[$transitiveDeadMemberRef] = [
-                'file' => $transitivelyDeadMember->getFile(),
-                'line' => $transitivelyDeadMember->getLine(),
-                'type' => $transitivelyDeadMember->getMember()->getMemberType(),
-                'access' => $transitivelyDeadMember->getAccessType(),
+            $tips[] = "Thus $transitiveDeadMemberHumanString is transitively also unused{$exclusionMessage}";
+            $metadata[] = [
+                'blackMember' => $transitivelyDeadMember,
                 'transitive' => true,
                 'excludedUsages' => $excludedUsages,
             ];
@@ -886,18 +875,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         return $builder->build();
     }
 
-    /**
-     * @param MemberType::* $memberType
-     * @param AccessType::* $accessType
-     */
-    private function buildMainErrorMessages(
-        int $memberType,
-        int $accessType,
-        string $memberHumanString
-    ): string
+    private function buildMainErrorMessages(BlackMember $blackMember): string
     {
-        if ($memberType === MemberType::PROPERTY) {
-            if ($accessType === AccessType::READ) {
+        $memberHumanString = $blackMember->getMember()->toHumanString();
+
+        if ($blackMember->getMember()->getMemberType() === MemberType::PROPERTY) {
+            if ($blackMember->getAccessType() === AccessType::READ) {
                 return "Property {$memberHumanString} is never read";
             } else {
                 return "Property {$memberHumanString} is never written";

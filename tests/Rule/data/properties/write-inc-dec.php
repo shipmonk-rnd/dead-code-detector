@@ -4,8 +4,8 @@ namespace PropertyWriteIncDec;
 
 class Test
 {
-    public static int $count0; // error: Property PropertyWriteIncDec\Test::count0 is never read
-    public static int $count1; // error: Property PropertyWriteIncDec\Test::count1 is never read
+    public static int $count0; // error: Property PropertyWriteIncDec\Test::$count0 is never read
+    public static int $count1; // error: Property PropertyWriteIncDec\Test::$count1 is never read
     public static int $count2;
     public static int $count3;
     public static int $count4;
@@ -13,7 +13,7 @@ class Test
     public static int $count6;
     public static int $count7;
     public static int $count8;
-    public static int $count9; // error: Property PropertyWriteIncDec\Test::count9 is never read
+    public static int $count9; // error: Property PropertyWriteIncDec\Test::$count9 is never read
 }
 
 function test() {

@@ -8,11 +8,11 @@ class Clazz {
     public string $prop1;
     public string $prop2;
     public string $prop3;
-    public string $prop4; // error: Property DeadPropertyMixed\Clazz::prop4 is never read
+    public string $prop4; // error: Property DeadPropertyMixed\Clazz::$prop4 is never read
     public string $prop5;
-    public string $prop6; // error: Property DeadPropertyMixed\Clazz::prop6 is never read
+    public string $prop6; // error: Property DeadPropertyMixed\Clazz::$prop6 is never read
 
-    public string $someProperty; // error: Property DeadPropertyMixed\Clazz::someProperty is never read
+    public string $someProperty; // error: Property DeadPropertyMixed\Clazz::$someProperty is never read
 
 }
 
@@ -26,7 +26,7 @@ class Implementor implements IFace {
     public string $prop2;
     public string $prop3;
     public string $prop4;
-    public string $prop5; // error: Property DeadPropertyMixed\Implementor::prop5 is never read
+    public string $prop5; // error: Property DeadPropertyMixed\Implementor::$prop5 is never read
     public string $prop6;
 
 }
