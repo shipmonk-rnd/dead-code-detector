@@ -12,6 +12,6 @@ class MyIterator implements \IteratorAggregate
 
 class MyException extends \Exception {
     protected $message;
-    public $dead; // error: Unused BuiltinProvider\MyException::dead
+    public $dead; // error: Property BuiltinProvider\MyException::$dead is never read
 
 }

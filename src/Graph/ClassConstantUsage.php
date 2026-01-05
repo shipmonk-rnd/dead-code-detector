@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use LogicException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -43,6 +44,11 @@ final class ClassConstantUsage extends ClassMemberUsage
     public function getMemberRef(): ClassConstantRef
     {
         return $this->fetch;
+    }
+
+    public function getAccessType(): int
+    {
+        return AccessType::READ;
     }
 
     public function concretizeMixedClassNameUsage(string $className): self
