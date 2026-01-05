@@ -6,7 +6,7 @@ trait TestTrait {
 
     public string $traitUsedProperty;
 
-    public string $traitUnusedProperty; // error: Property DeadPropertyTraits\TestTrait::traitUnusedProperty is never read
+    public string $traitUnusedProperty; // error: Property DeadPropertyTraits\TestTrait::$traitUnusedProperty is never read
 
     public function useTraitProperty(): void
     {
@@ -21,7 +21,7 @@ class TestClass {
 
     public string $classUsedProperty;
 
-    public string $classUnusedProperty; // error: Property DeadPropertyTraits\TestClass::classUnusedProperty is never read
+    public string $classUnusedProperty; // error: Property DeadPropertyTraits\TestClass::$classUnusedProperty is never read
 
     public function __construct()
     {

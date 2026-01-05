@@ -43,7 +43,7 @@ class Descendant extends Tester
 
     public function four() {} // error: Unused MixedMember2\Descendant::four
 
-    public string $fourProperty; // error: Property MixedMember2\Descendant::fourProperty is never read
+    public string $fourProperty; // error: Property MixedMember2\Descendant::$fourProperty is never read
 }
 
 function test(string $unknown)

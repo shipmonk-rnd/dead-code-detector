@@ -3,7 +3,7 @@
 namespace MixedMemberTraitProp7;
 
 trait HelloWorld {
-    public static int $hello = 1; // error: Property MixedMemberTraitProp7\HelloWorld::hello is never read
+    public static int $hello = 1; // error: Property MixedMemberTraitProp7\HelloWorld::$hello is never read
 }
 
 class TheWorldIsNotEnough {

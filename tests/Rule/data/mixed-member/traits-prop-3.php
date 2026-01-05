@@ -9,7 +9,7 @@ trait MyTrait1 {
 
 interface TraitInterface
 {
-    public int $used { get; } // error: Property MixedMemberTraitProp3\TraitInterface::used is never read
+    public int $used { get; } // error: Property MixedMemberTraitProp3\TraitInterface::$used is never read
 }
 
 class MyUser1 implements TraitInterface

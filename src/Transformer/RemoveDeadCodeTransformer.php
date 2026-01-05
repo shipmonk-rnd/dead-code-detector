@@ -24,14 +24,10 @@ final class RemoveDeadCodeTransformer
     private PhpPrinter $phpPrinter;
 
     /**
-     * @param list<string> $deadMethods
-     * @param list<string> $deadConstants
-     * @param list<string> $deadProperties
+     * @param array<string, array<int, array<string, mixed>>> $deadMembersByClass className => [type => [memberName => mixed]]
      */
     public function __construct(
-        array $deadMethods,
-        array $deadConstants,
-        array $deadProperties
+        array $deadMembersByClass
     )
     {
         $this->phpLexer = new Lexer();
@@ -41,7 +37,7 @@ final class RemoveDeadCodeTransformer
         $this->cloningTraverser->addVisitor(new CloningVisitor());
 
         $this->removingTraverser = new PhpTraverser();
-        $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMethods, $deadConstants, $deadProperties));
+        $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMembersByClass));
 
         $this->phpPrinter = new PhpPrinter();
     }

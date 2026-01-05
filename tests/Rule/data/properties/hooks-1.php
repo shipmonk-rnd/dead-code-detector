@@ -20,7 +20,7 @@ class Person
         }
     }
 
-    public string $city = 'default value' { // error: Property PropertyHooks1\Person::city is never read
+    public string $city = 'default value' { // error: Property PropertyHooks1\Person::$city is never read
         get => $this->city;
 
         set {

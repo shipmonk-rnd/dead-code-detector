@@ -35,7 +35,7 @@ class Address
     }
 
     public string $country;
-    public string $zip; // error: Property MemberTypes\Address::zip is never read
+    public string $zip; // error: Property MemberTypes\Address::$zip is never read
 }
 
 function test(): void {

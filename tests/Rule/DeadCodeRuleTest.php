@@ -31,8 +31,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
-use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
-use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
@@ -542,7 +541,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
-            ['Property MemberTypes\Address::zip is never read', 38],
+            ['Property MemberTypes\Address::$zip is never read', 38],
         ]);
     }
 
@@ -556,7 +555,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
-            ['Property MemberTypes\Address::zip is never read', 38],
+            ['Property MemberTypes\Address::$zip is never read', 38],
         ]);
     }
 
@@ -570,7 +569,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\Clazz::method', 10],
-            ['Property MemberTypes\Address::zip is never read', 38],
+            ['Property MemberTypes\Address::$zip is never read', 38],
         ]);
     }
 
@@ -754,16 +753,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::boo',
                     29,
-                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused\n" .
                     "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::bar is transitively also unused',
+                    "• Thus Grouping\Example::bar is transitively also unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
                 ],
                 [
                     'Unused Grouping\Example::foo',
                     23,
-                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused\n" .
+                    "• Thus Grouping\Example::bar is transitively also unused\n" .
                     "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::bar is transitively also unused',
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',
@@ -1245,7 +1244,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         $ruleMock = (new ReflectionClass(DeadCodeRule::class))->newInstanceWithoutConstructor();
         $buildMainErrorMessages = Closure::bind(
-            fn (int $type, int $access, string $member): string => $this->buildMainErrorMessages($type, $access, $member), // @phpstan-ignore argument.type, argument.type
+            fn (BlackMember $blackMember): string => $this->buildMainErrorMessages($blackMember),
             $ruleMock,
             DeadCodeRule::class,
         );
@@ -1253,19 +1252,20 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         foreach ($errors as $error) {
             $result[] = $error;
 
-            /** @var array<string, array{file: string, line: int, type: MemberType::*, access: AccessType::*}> $metadata */
             $metadata = $error->getMetadata();
 
-            foreach ($metadata as $alsoDead => ['file' => $file, 'line' => $line, 'transitive' => $transitive, 'access' => $access, 'type' => $type]) {
+            /** @var BlackMember $blackMember */
+            /** @var bool $transitive */
+            foreach ($metadata as ['blackMember' => $blackMember, 'transitive' => $transitive]) {
                 if (!$transitive) {
                     continue;
                 }
 
                 // @phpstan-ignore phpstanApi.constructor
                 $result[] = new Error(
-                    $buildMainErrorMessages($type, $access, $alsoDead),
-                    $file,
-                    $line,
+                    $buildMainErrorMessages($blackMember),
+                    $blackMember->getFile(),
+                    $blackMember->getLine(),
                     true,
                     null,
                     null,

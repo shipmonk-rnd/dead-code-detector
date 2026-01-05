@@ -4,8 +4,8 @@ namespace PropertyMultiWrite;
 
 class Person
 {
-    public string $first; // error: Property PropertyMultiWrite\Person::first is never read
-    public string $last; // error: Property PropertyMultiWrite\Person::last is never read
+    public string $first; // error: Property PropertyMultiWrite\Person::$first is never read
+    public string $last; // error: Property PropertyMultiWrite\Person::$last is never read
     public string $city;
     public string $zip;
     public string $country;
