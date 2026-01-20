@@ -45,6 +45,7 @@ $ vendor/bin/phpstan
 - `#[AsMessageHandler]` attribute
 - `#[AsController]` attribute
 - `#[AsCommand]` attribute
+- `#[Interact]` attribute
 - `#[Required]` attribute
 - `#[Route]` attributes
 - `#[Assert\Callback]` attributes

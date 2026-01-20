@@ -7,6 +7,7 @@ use ShipMonk\Logging\Logger;
 use ShipMonk\Logging\StaticLogger;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Interact;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -45,6 +46,9 @@ class CreateUserCommand extends Command {
         parent::__construct();
     }
 
+    #[Interact]
+    public function prompt() {
+    }
 }
 
 class FooBundle extends Bundle {

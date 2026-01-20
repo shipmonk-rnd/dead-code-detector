@@ -412,6 +412,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return 'Callback constraint method via #[Assert\Callback] attribute';
         }
 
+        if ($this->isMethodWithInteractAttribute($method)) {
+            return 'Interact method via #[Interact] attribute';
+        }
+
         if ($this->isProbablySymfonyListener($method)) {
             return 'Probable listener method';
         }
@@ -597,6 +601,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', $isInstanceOf)
             || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
+    }
+
+    private function isMethodWithInteractAttribute(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+
+        return $this->hasAttribute($method, 'Symfony\Component\Console\Attribute\Interact')
+            && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
     private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
