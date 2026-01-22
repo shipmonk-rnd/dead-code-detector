@@ -5,7 +5,8 @@ namespace DeadPropertyStatic;
 class TestClass {
 
     public static string $usedStaticProperty;
-    public static string $unusedStaticProperty; // error: Unused DeadPropertyStatic\TestClass::unusedStaticProperty
+    public static string $unusedStaticProperty; // error: Property DeadPropertyStatic\TestClass::$unusedStaticProperty is never read
+    public static string $someProperty;
 
     public static function initialize(): void
     {
@@ -20,7 +21,8 @@ class TestClass {
 }
 
 
-function test() {
+function test(object $object) {
     TestClass::initialize();
     TestClass::useStaticProperty();
+    $object::$someProperty;
 }

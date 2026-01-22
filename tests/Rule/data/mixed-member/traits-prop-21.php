@@ -3,7 +3,7 @@
 namespace MixedMemberTraitProp21;
 
 trait A {
-    public static int $test = 1; // error: Unused MixedMemberTraitProp21\A::test
+    public static int $test = 1; // error: Property MixedMemberTraitProp21\A::$test is never read
 }
 
 

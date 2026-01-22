@@ -4809,16 +4809,16 @@
         },
         {
             "name": "shipmonk/phpstan-dev",
-            "version": "0.1.1",
+            "version": "0.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shipmonk-rnd/phpstan-dev.git",
-                "reference": "ec564f68d893fa966f70afa8274d03fa8f0103df"
+                "reference": "d839bcc544d0e8795195d5b0a915eb277cb83a47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-dev/zipball/ec564f68d893fa966f70afa8274d03fa8f0103df",
-                "reference": "ec564f68d893fa966f70afa8274d03fa8f0103df",
+                "url": "https://api.github.com/repos/shipmonk-rnd/phpstan-dev/zipball/d839bcc544d0e8795195d5b0a915eb277cb83a47",
+                "reference": "d839bcc544d0e8795195d5b0a915eb277cb83a47",
                 "shasum": ""
             },
             "require": {
@@ -4826,16 +4826,15 @@
                 "phpstan/phpstan": "^2.1.8"
             },
             "require-dev": {
-                "editorconfig-checker/editorconfig-checker": "^10.6.0",
                 "ergebnis/composer-normalize": "^2.45.0",
                 "phpstan/phpstan-deprecation-rules": "^2.0.1",
                 "phpstan/phpstan-phpunit": "^2.0.4",
                 "phpstan/phpstan-strict-rules": "^2.0.3",
                 "phpunit/phpunit": "^9.6.22",
+                "shipmonk/coding-standard": "^0.2.0",
                 "shipmonk/composer-dependency-analyser": "^1.8.1",
                 "shipmonk/dead-code-detector": "^0.9.0",
-                "shipmonk/name-collision-detector": "^2.1.1",
-                "slevomat/coding-standard": "^8.16.0"
+                "shipmonk/name-collision-detector": "^2.1.1"
             },
             "suggest": {
                 "phpunit/phpunit": "^9.6.22 for running tests that use RuleTestCase"
@@ -4858,9 +4857,9 @@
             ],
             "support": {
                 "issues": "https://github.com/shipmonk-rnd/phpstan-dev/issues",
-                "source": "https://github.com/shipmonk-rnd/phpstan-dev/tree/0.1.1"
+                "source": "https://github.com/shipmonk-rnd/phpstan-dev/tree/0.1.4"
             },
-            "time": "2025-08-25T12:16:48+00:00"
+            "time": "2025-12-09T14:01:36+00:00"
         },
         {
             "name": "shipmonk/phpstan-rules",

@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -26,12 +27,12 @@ final class ClassPropertyRef extends ClassMemberRef
         parent::__construct($className, $propertyName, $possibleDescendant);
     }
 
-    /**
-     * @return list<string>
-     */
-    protected function getKeyPrefixes(): array
+    protected function getKeyPrefixes(int $accessType): array
     {
-        return ['p'];
+        if ($accessType === AccessType::WRITE) {
+            return ['pw'];
+        }
+        return ['pr'];
     }
 
     /**

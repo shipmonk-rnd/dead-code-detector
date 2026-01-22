@@ -26,4 +26,19 @@ enum MyEnum
     case EnumCaseUsed;
 }
 
-(new Clazz())->methodUsed();
+class Address
+{
+    public string $address {
+        get {
+            return $this->address . $this->country;
+        }
+    }
+
+    public string $country;
+    public string $zip; // error: Property MemberTypes\Address::$zip is never read
+}
+
+function test(): void {
+    (new Clazz())->methodUsed();
+    new Address()->address;
+}

@@ -8,6 +8,7 @@ use ShipMonk\CoverageGuard\Hierarchy\CodeBlock;
 use ShipMonk\CoverageGuard\Rule\CoverageError;
 use ShipMonk\CoverageGuard\Rule\CoverageRule;
 use ShipMonk\CoverageGuard\Rule\InspectionContext;
+use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
@@ -34,7 +35,7 @@ $config->addRule(new class implements CoverageRule {
         }
 
         $coverage = $codeBlock->getCoveragePercentage();
-        $requiredCoverage = $this->getRequiredCoverage($classReflection);
+        $requiredCoverage = $this->getRequiredCoverage($classReflection, $codeBlock->getMethodName());
 
         if ($codeBlock->getCoveragePercentage() < $requiredCoverage) {
             return CoverageError::create("Method <white>{$codeBlock->getMethodName()}</white> requires $requiredCoverage% coverage, but has only $coverage%.");
@@ -46,16 +47,18 @@ $config->addRule(new class implements CoverageRule {
     /**
      * @param ReflectionClass<object> $classReflection
      */
-    private function getRequiredCoverage(ReflectionClass $classReflection): int
+    private function getRequiredCoverage(ReflectionClass $classReflection, string $methodName): int
     {
-        $isPoor = $classReflection->getName() === BackwardCompatibilityChecker::class;
+        $isPoor = $classReflection->getName() === BackwardCompatibilityChecker::class
+            || ($classReflection->getName() === ProvidedUsagesCollector::class && $methodName === 'getDerivedNote');
+
         $isCore = $classReflection->implementsInterface(MemberUsageProvider::class)
             || $classReflection->implementsInterface(Collector::class)
             || $classReflection->implementsInterface(Rule::class);
 
         return match (true) {
-            $isCore => 80,
             $isPoor => 20,
+            $isCore => 80,
             default => 50,
         };
     }

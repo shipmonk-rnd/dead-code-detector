@@ -2,7 +2,9 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
+use LogicException;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 /**
@@ -31,8 +33,12 @@ final class ClassConstantRef extends ClassMemberRef
         $this->isEnumCase = $isEnumCase;
     }
 
-    protected function getKeyPrefixes(): array
+    protected function getKeyPrefixes(int $accessType): array
     {
+        if ($accessType !== AccessType::READ) {
+            throw new LogicException('Constants can only be read.');
+        }
+
         if ($this->isEnumCase->maybe()) {
             return ['c', 'e'];
         } elseif ($this->isEnumCase->yes()) {

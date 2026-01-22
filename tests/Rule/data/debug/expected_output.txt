@@ -6,7 +6,7 @@ Thus, any member named the same is considered used, no matter its declaring clas
 
 Usage debugging information:
 
-DateTime::format
+DateTime::format calls
 |
 | Not defined within analysed files!
 |
@@ -14,7 +14,7 @@ DateTime::format
 |  • data/debug/foreign.php:5
 
 
-DebugAlternative\Foo::foo
+DebugAlternative\Foo::foo calls
 |
 | Marked as alive at:
 | entry data/debug/alternative.php:13
@@ -24,7 +24,7 @@ DebugAlternative\Foo::foo
 |  • data/debug/alternative.php:13
 
 
-DebugCtor\Foo::__construct
+DebugCtor\Foo::__construct calls
 |
 | Dead because:
 | all usages originate in unused code
@@ -33,7 +33,7 @@ DebugCtor\Foo::__construct
 |  • data/debug/ctor.php:9
 
 
-DebugBuiltin\Iter::getIterator
+DebugBuiltin\Iter::getIterator calls
 |
 | Marked as alive at:
 | entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
@@ -43,7 +43,7 @@ DebugBuiltin\Iter::getIterator
 |  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider (Method overrides builtin one, thus is assumed to be used by some PHP code.)
 
 
-DebugEnum\Foo::Two
+DebugEnum\Foo::Two fetches
 |
 | Marked as alive at:
 | entry data/debug/enum.php:12
@@ -53,7 +53,7 @@ DebugEnum\Foo::Two
 |  • data/debug/enum.php:12
 
 
-DebugExclude\Foo::mixedExcluder1
+DebugExclude\Foo::mixedExcluder1 calls
 |
 | Dead because:
 | all usages are excluded
@@ -62,7 +62,7 @@ DebugExclude\Foo::mixedExcluder1
 |  • data/debug/exclude.php:15 - excluded by mixedPrefix excluder
 
 
-DebugExclude\Foo::mixedExcluder2
+DebugExclude\Foo::mixedExcluder2 calls
 |
 | Dead because:
 | all usages are excluded
@@ -71,12 +71,12 @@ DebugExclude\Foo::mixedExcluder2
 |  • data/debug/exclude.php:16 - excluded by mixedPrefix excluder
 
 
-DebugNever\Foo::__get
+DebugNever\Foo::__get calls
 |
 | Is never reported as dead: unsupported magic method
 
 
-DebugVirtual\FooTest::testFoo
+DebugVirtual\FooTest::testFoo calls
 |
 | Marked as alive at:
 | entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (Test method)
@@ -86,7 +86,7 @@ DebugVirtual\FooTest::testFoo
 |  • virtual usage from ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider (Test method)
 
 
-DebugGlobal\Foo::chain2
+DebugGlobal\Foo::chain2 calls
 |
 | Marked as alive at:
 | entry data/debug/global.php:20
@@ -97,7 +97,7 @@ DebugGlobal\Foo::chain2
 |  • data/debug/global.php:11
 
 
-DebugMixed\Foo::any
+DebugMixed\Foo::any calls
 |
 | Marked as alive at:
 | entry data/debug/mixed.php:13
@@ -107,7 +107,7 @@ DebugMixed\Foo::any
 |  • data/debug/mixed.php:13
 
 
-DebugMixedMember\Foo::method
+DebugMixedMember\Foo::method calls
 |
 | Marked as alive at:
 | entry data/debug/mixed-member.php:11
@@ -117,7 +117,7 @@ DebugMixedMember\Foo::method
 |  • data/debug/mixed-member.php:11
 
 
-DebugCycle\Foo::__construct
+DebugCycle\Foo::__construct calls
 |
 | Dead because:
 | all usages originate in unused code
@@ -126,7 +126,7 @@ DebugCycle\Foo::__construct
 |  • data/debug/cycle.php:17
 
 
-DebugRegular\Another::call
+DebugRegular\Another::call calls
 |
 | Marked as alive at:
 | entry virtual usage from ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider (Route method via #[Route] attribute)
@@ -138,7 +138,7 @@ DebugRegular\Another::call
 |  • data/debug/regular.php:13
 
 
-DebugUnsupported\Foo::notDead
+DebugUnsupported\Foo::notDead calls
 |
 | Marked as alive at:
 | entry DebugUnsupported\Foo::__destruct:8
@@ -148,16 +148,24 @@ DebugUnsupported\Foo::notDead
 |  • data/debug/unsupported.php:8
 
 
-DebugZero\Foo::__construct
+DebugZero\Foo::__construct calls
 |
 | No usages found
 
 
-DebugProperty\Foo::prop
+DebugProperty\Foo::prop reads
 |
 | Marked as alive at:
-| entry data/debug/property.php:12
+| entry data/debug/property.php:13
 |   reads DebugProperty\Foo::prop
+|
+| Found 1 usage:
+|  • data/debug/property.php:13
+
+
+DebugProperty\Foo::prop writes
+|
+| Detection not enabled for this member type and access!
 |
 | Found 1 usage:
 |  • data/debug/property.php:12

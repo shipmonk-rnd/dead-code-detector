@@ -7,7 +7,7 @@ trait SomeTrait {
 }
 
 class ParentClass {
-    public static int $foo = 1; // error: Unused MixedMemberTraitProp14\ParentClass::foo
+    public static int $foo = 1; // error: Property MixedMemberTraitProp14\ParentClass::$foo is never read
 }
 
 class User extends ParentClass {

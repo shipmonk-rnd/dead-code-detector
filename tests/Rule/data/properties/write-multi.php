@@ -4,14 +4,14 @@ namespace PropertyMultiWrite;
 
 class Person
 {
-    public string $first; // error: Unused PropertyMultiWrite\Person::first
-    public string $last; // error: Unused PropertyMultiWrite\Person::last
-
-    public function __construct(string $name) {
-        [$this->first, $this->last] = explode(' ', $name, 2);
-    }
+    public string $first; // error: Property PropertyMultiWrite\Person::$first is never read
+    public string $last; // error: Property PropertyMultiWrite\Person::$last is never read
+    public string $city;
+    public string $zip;
+    public string $country;
 }
 
-function test(): void {
-    new Person('John Doe');
+function test(Person $p) {
+    [$p->first, $p->last] = ['John', 'Doe'];
+    return [$p->city, $p->zip, $p->country] = ['Prague', '10300', 'CZ'];
 }

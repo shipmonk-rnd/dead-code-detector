@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Error;
 
 use LogicException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -22,6 +23,11 @@ final class BlackMember
      */
     private ClassMemberRef $member;
 
+    /**
+     * @var AccessType::*
+     */
+    private int $accessType;
+
     private string $file;
 
     private int $line;
@@ -33,9 +39,11 @@ final class BlackMember
 
     /**
      * @param ClassMemberRef<string, string> $member
+     * @param AccessType::* $accessType
      */
     public function __construct(
         ClassMemberRef $member,
+        int $accessType,
         string $file,
         int $line
     )
@@ -49,6 +57,7 @@ final class BlackMember
         }
 
         $this->member = $member;
+        $this->accessType = $accessType;
         $this->file = $file;
         $this->line = $line;
     }
@@ -59,6 +68,14 @@ final class BlackMember
     public function getMember(): ClassMemberRef
     {
         return $this->member;
+    }
+
+    /**
+     * @return AccessType::*
+     */
+    public function getAccessType(): int
+    {
+        return $this->accessType;
     }
 
     public function getFile(): string
@@ -99,7 +116,9 @@ final class BlackMember
             return DeadCodeRule::IDENTIFIER_METHOD;
 
         } elseif ($this->member instanceof ClassPropertyRef) {
-            return DeadCodeRule::IDENTIFIER_PROPERTY;
+            return $this->accessType === AccessType::READ
+                ? DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ
+                : DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_WRITTEN;
 
         } else {
             throw new LogicException('Unknown member type');

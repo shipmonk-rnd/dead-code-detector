@@ -156,10 +156,6 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector
         tags:
             - phpstan.collector
-        arguments:
-            detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
-            detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
-            detectDeadProperties: %shipmonkDeadCode.detect.deadProperties%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector
@@ -176,6 +172,9 @@ services:
             - phpstan.diagnoseExtension
         arguments:
             detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
+            detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
+            detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
+            detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
     -
@@ -183,6 +182,11 @@ services:
         arguments:
             servicesWithOldTag: tagged(shipmonk.deadCode.entrypointProvider)
             trackMixedAccessParameterValue: %shipmonkDeadCode.trackMixedAccess%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor
+        tags:
+            - phpstan.parser.richParserNodeVisitor
 
 parameters:
     parametersNotInvalidatingCache:
@@ -195,7 +199,8 @@ parameters:
             deadMethods: true
             deadConstants: true
             deadEnumCases: false
-            deadProperties: false
+            deadProperties:
+                neverRead: false
         usageProviders:
             apiPhpDoc:
                 enabled: true
@@ -247,7 +252,9 @@ parametersSchema:
             deadMethods: bool()
             deadConstants: bool()
             deadEnumCases: bool()
-            deadProperties: bool()
+            deadProperties: structure([
+                neverRead: bool()
+            ])
         ])
         usageProviders: structure([
             apiPhpDoc: structure([

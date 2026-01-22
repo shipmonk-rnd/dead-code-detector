@@ -7,9 +7,9 @@ namespace PropertyHooks1;
 class Person
 {
 
-    public string $first; // error: Unused PropertyHooks1\Person::first
+    public string $first;
 
-    public string $last; // error: Unused PropertyHooks1\Person::last
+    public string $last;
 
     public string $fullName {
         get {
@@ -20,7 +20,7 @@ class Person
         }
     }
 
-    public string $city = 'default value' { // error: Unused PropertyHooks1\Person::city
+    public string $city = 'default value' { // error: Property PropertyHooks1\Person::$city is never read
         get => $this->city;
 
         set {

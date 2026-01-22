@@ -7,6 +7,7 @@ use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -28,7 +29,6 @@ use function reset;
 use function sprintf;
 use function str_repeat;
 use function strpos;
-use function substr;
 
 final class DebugUsagePrinter
 {
@@ -42,7 +42,7 @@ final class DebugUsagePrinter
     /**
      * memberKey => usage info
      *
-     * @var array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
+     * @var array<string, array{typename: string, memberType: MemberType::*, accessType: AccessType::*, analysed?: bool, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
      */
     private array $debugMembers;
 
@@ -225,9 +225,16 @@ final class DebugUsagePrinter
         $output->writeLineFormatted("\n<fg=red>Usage debugging information:</>");
 
         foreach ($this->debugMembers as $memberKey => $debugMember) {
-            $typeName = $debugMember['typename'];
+            if (!isset($debugMember['analysed'])) {
+                throw new LogicException('Debug member should always have analysed flag set, markAnalysedMembers not called?');
+            }
 
-            $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</>", $this->prettyMemberKey($memberKey)));
+            $typeName = $debugMember['typename'];
+            $accessType = $debugMember['accessType'];
+            $memberType = $debugMember['memberType'];
+            $operationName = $this->getUsageWord($memberType, $accessType);
+
+            $output->writeLineFormatted(sprintf("\n<fg=cyan>%s</> %s", $this->prettyMemberKey($memberKey), $operationName));
 
             if (isset($debugMember['eliminationPath'])) {
                 $output->writeLineFormatted("|\n| <fg=green>Marked as alive at:</>");
@@ -239,7 +246,7 @@ final class DebugUsagePrinter
                         $output->writeLineFormatted(sprintf('| <fg=gray>entry</> <fg=white>%s</>', $entrypoint));
                     }
 
-                    $usage = $this->getUsageWord($fragmentUsages[0]->getMemberType());
+                    $usage = $this->getUsageWord($fragmentUsages[0]->getMemberType(), $fragmentUsages[0]->getAccessType());
                     $indent = str_repeat('  ', $depth) . "<fg=gray>$usage</> ";
 
                     $nextFragmentUsages = next($debugMember['eliminationPath']);
@@ -256,6 +263,8 @@ final class DebugUsagePrinter
                 }
             } elseif (!isset($analysedClasses[$typeName])) {
                 $output->writeLineFormatted("|\n| <fg=yellow>Not defined within analysed files!</>");
+            } elseif (!$debugMember['analysed']) {
+                $output->writeLineFormatted("|\n| <fg=yellow>Detection not enabled for this member type and access!</>");
 
             } elseif (isset($debugMember['usages'])) {
                 $output->writeLineFormatted("|\n| <fg=yellow>Dead because:</>");
@@ -297,12 +306,14 @@ final class DebugUsagePrinter
             strpos($memberKey, 'm/') === false
             && strpos($memberKey, 'c/') === false
             && strpos($memberKey, 'e/') === false
-            && strpos($memberKey, 'p/') === false
+            && strpos($memberKey, 'pr/') === false
+            && strpos($memberKey, 'pw/') === false
         ) {
             throw new LogicException("Invalid member key format: '$memberKey'");
         }
 
-        return substr($memberKey, 2);
+        [, $pretty] = explode('/', $memberKey, 2); // @phpstan-ignore offsetAccess.notFound (Ensured by exception above)
+        return $pretty;
     }
 
     /**
@@ -316,8 +327,9 @@ final class DebugUsagePrinter
         if ($alternativeKeys === []) {
             // this can happen for references outside analysed files
             $originalRef = $collectedUsage->getUsage()->getMemberRef();
+            $accessType = $collectedUsage->getUsage()->getAccessType();
             $memberKeys = $originalRef->hasKnownClass() && $originalRef->hasKnownMember()
-                    ? $originalRef->toKeys()
+                    ? $originalRef->toKeys($accessType)
                     : [];
         } else {
             $memberKeys = $alternativeKeys;
@@ -333,6 +345,16 @@ final class DebugUsagePrinter
     }
 
     /**
+     * @param array<string, BlackMember> $blackMembers
+     */
+    public function markAnalysedMembers(array $blackMembers): void
+    {
+        foreach ($this->debugMembers as $memberKey => $debugMember) {
+            $this->debugMembers[$memberKey]['analysed'] = isset($blackMembers[$memberKey]);
+        }
+    }
+
+    /**
      * @param array<string, non-empty-list<ClassMemberUsage>> $eliminationPath
      */
     public function markMemberAsWhite(
@@ -340,7 +362,7 @@ final class DebugUsagePrinter
         array $eliminationPath
     ): void
     {
-        $memberKeys = $blackMember->getMember()->toKeys();
+        $memberKeys = $blackMember->getMember()->toKeys($blackMember->getAccessType());
 
         foreach ($memberKeys as $memberKey) {
             if (!isset($this->debugMembers[$memberKey])) {
@@ -356,7 +378,7 @@ final class DebugUsagePrinter
         string $reason
     ): void
     {
-        $memberKeys = $blackMember->getMember()->toKeys();
+        $memberKeys = $blackMember->getMember()->toKeys($blackMember->getAccessType());
 
         foreach ($memberKeys as $memberKey) {
             if (!isset($this->debugMembers[$memberKey])) {
@@ -369,7 +391,7 @@ final class DebugUsagePrinter
 
     /**
      * @param list<string> $debugMembers
-     * @return array<string, array{typename: string, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
+     * @return array<string, array{typename: string, memberType: MemberType::*, accessType: AccessType::*, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
      */
     private function buildDebugMemberKeys(array $debugMembers): array
     {
@@ -391,28 +413,36 @@ final class DebugUsagePrinter
             $classReflection = $this->reflectionProvider->getClass($normalizedClass);
 
             if (ReflectionHelper::hasOwnMethod($classReflection, $memberName)) {
-                $keys = (new ClassMethodRef($normalizedClass, $memberName, false))->toKeys();
+                $accessTypes = [AccessType::READ];
+                $ref = (new ClassMethodRef($normalizedClass, $memberName, false));
 
             } elseif (ReflectionHelper::hasOwnConstant($classReflection, $memberName)) {
-                $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createNo()))->toKeys();
+                $accessTypes = [AccessType::READ];
+                $ref = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createNo()));
 
             } elseif (ReflectionHelper::hasOwnEnumCase($classReflection, $memberName)) {
-                $keys = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createYes()))->toKeys();
+                $accessTypes = [AccessType::READ];
+                $ref = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createYes()));
 
             } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
-                $keys = (new ClassPropertyRef($normalizedClass, $memberName, false))->toKeys();
+                $accessTypes = [AccessType::READ, AccessType::WRITE];
+                $ref = (new ClassPropertyRef($normalizedClass, $memberName, false));
 
             } else {
                 throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
             }
 
-            if (count($keys) !== 1) {
-                throw new LogicException('Found definition should always relate to single member, but got: ' . implode(', ', $keys));
+            foreach ($accessTypes as $accessType) {
+                $newKeys = $ref->toKeys($accessType);
+                if (count($newKeys) !== 1) {
+                    throw new LogicException('Found definition should always relate to single member, but got: ' . implode(', ', $newKeys));
+                }
+                $result[$newKeys[0]] = [
+                    'typename' => $normalizedClass,
+                    'memberType' => $ref->getMemberType(),
+                    'accessType' => $accessType,
+                ];
             }
-
-            $result[$keys[0]] = [
-                'typename' => $normalizedClass,
-            ];
         }
 
         return $result;
@@ -435,14 +465,17 @@ final class DebugUsagePrinter
     /**
      * @param MemberType::* $memberType
      */
-    private function getUsageWord(int $memberType): string
+    private function getUsageWord(
+        int $memberType,
+        int $accessType
+    ): string
     {
         if ($memberType === MemberType::METHOD) {
             return 'calls';
         } elseif ($memberType === MemberType::CONSTANT) {
             return 'fetches';
         } elseif ($memberType === MemberType::PROPERTY) {
-            return 'reads';
+            return $accessType === AccessType::READ ? 'reads' : 'writes';
         } else {
             throw new LogicException("Unsupported member type: $memberType");
         }
