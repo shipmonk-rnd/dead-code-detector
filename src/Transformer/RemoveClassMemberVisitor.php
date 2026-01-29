@@ -5,8 +5,6 @@ namespace ShipMonk\PHPStan\DeadCode\Transformer;
 use PhpParser\Node;
 use PhpParser\Node\Const_;
 use PhpParser\Node\Expr\Variable;
-use PhpParser\Node\Identifier;
-use PhpParser\Node\Name;
 use PhpParser\Node\Param;
 use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassLike;
@@ -16,7 +14,7 @@ use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Property;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
-use function array_fill_keys;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use function array_filter;
 use function is_string;
 use function ltrim;
@@ -29,34 +27,18 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
     private string $currentClass = '';
 
     /**
-     * @var array<string, true>
+     * @var array<string, array<int, array<string, mixed>>> className => [type => [memberName => mixed]]
      */
-    private array $deadMethods;
+    private array $deadMembers;
 
     /**
-     * @var array<string, true>
-     */
-    private array $deadConstants;
-
-    /**
-     * @var array<string, true>
-     */
-    private array $deadProperties;
-
-    /**
-     * @param list<string> $deadMethods
-     * @param list<string> $deadConstants
-     * @param list<string> $deadProperties
+     * @param array<string, array<int, array<string, mixed>>> $deadMembers className => [type => [memberName => mixed]]
      */
     public function __construct(
-        array $deadMethods,
-        array $deadConstants,
-        array $deadProperties
+        array $deadMembers
     )
     {
-        $this->deadMethods = array_fill_keys($deadMethods, true);
-        $this->deadConstants = array_fill_keys($deadConstants, true);
-        $this->deadProperties = array_fill_keys($deadProperties, true);
+        $this->deadMembers = $deadMembers;
     }
 
     public function enterNode(Node $node): ?Node
@@ -74,9 +56,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
     public function leaveNode(Node $node): ?int
     {
         if ($node instanceof ClassMethod) {
-            $methodKey = $this->getNamespacedName($node->name);
-
-            if (isset($this->deadMethods[$methodKey])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::METHOD][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
 
@@ -92,9 +72,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
                     return true;
                 }
 
-                $propertyKey = ltrim($this->currentNamespace . '\\' . $this->currentClass, '\\') . '::' . $paramName;
-
-                return !isset($this->deadProperties[$propertyKey]);
+                return !isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY][$paramName]);
             });
         }
 
@@ -102,9 +80,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $allDead = true;
 
             foreach ($node->consts as $const) {
-                $constKey = $this->getNamespacedName($const->name);
-
-                if (!isset($this->deadConstants[$constKey])) {
+                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$const->name->name])) {
                     $allDead = false;
                     break;
                 }
@@ -116,17 +92,13 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
         }
 
         if ($node instanceof Const_) {
-            $constKey = $this->getNamespacedName($node->name);
-
-            if (isset($this->deadConstants[$constKey])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
 
         if ($node instanceof EnumCase) {
-            $enumCaseKey = $this->getNamespacedName($node->name);
-
-            if (isset($this->deadConstants[$enumCaseKey])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
@@ -135,9 +107,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $allDead = true;
 
             foreach ($node->props as $prop) {
-                $propertyKey = $this->getNamespacedName($prop->name);
-
-                if (!isset($this->deadProperties[$propertyKey])) {
+                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY][$prop->name->name])) {
                     $allDead = false;
                     break;
                 }
@@ -151,12 +121,9 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
         return null;
     }
 
-    /**
-     * @param Name|Identifier $name
-     */
-    private function getNamespacedName(Node $name): string
+    private function getCurrentClass(): string
     {
-        return ltrim($this->currentNamespace . '\\' . $this->currentClass, '\\') . '::' . $name->name;
+        return ltrim($this->currentNamespace . '\\' . $this->currentClass, '\\');
     }
 
 }

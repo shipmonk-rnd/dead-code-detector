@@ -5,14 +5,14 @@ namespace DeadPropertyMixed2;
 
 class Clazz {
 
-    public string $prop1; // error: Unused DeadPropertyMixed2\Clazz::prop1 (all usages excluded by usageOverMixed excluder)
-    public string $prop2; // error: Unused DeadPropertyMixed2\Clazz::prop2 (all usages excluded by usageOverMixed excluder)
-    public string $prop3; // error: Unused DeadPropertyMixed2\Clazz::prop3 (all usages excluded by usageOverMixed excluder)
-    public string $prop4; // error: Unused DeadPropertyMixed2\Clazz::prop4
+    public string $prop1; // error: Property DeadPropertyMixed2\Clazz::$prop1 is never read (all usages excluded by usageOverMixed excluder)
+    public string $prop2; // error: Property DeadPropertyMixed2\Clazz::$prop2 is never read (all usages excluded by usageOverMixed excluder)
+    public string $prop3; // error: Property DeadPropertyMixed2\Clazz::$prop3 is never read (all usages excluded by usageOverMixed excluder)
+    public string $prop4; // error: Property DeadPropertyMixed2\Clazz::$prop4 is never read
     public string $prop5;
-    public string $prop6; // error: Unused DeadPropertyMixed2\Clazz::prop6
+    public string $prop6; // error: Property DeadPropertyMixed2\Clazz::$prop6 is never read
 
-    public string $someProperty; // error: Unused DeadPropertyMixed2\Clazz::someProperty
+    public string $someProperty; // error: Property DeadPropertyMixed2\Clazz::$someProperty is never read
 
 }
 
@@ -22,11 +22,11 @@ interface IFace {
 
 class Implementor implements IFace {
 
-    public string $prop1; // error: Unused DeadPropertyMixed2\Implementor::prop1 (all usages excluded by usageOverMixed excluder)
-    public string $prop2; // error: Unused DeadPropertyMixed2\Implementor::prop2 (all usages excluded by usageOverMixed excluder)
-    public string $prop3; // error: Unused DeadPropertyMixed2\Implementor::prop3 (all usages excluded by usageOverMixed excluder)
+    public string $prop1; // error: Property DeadPropertyMixed2\Implementor::$prop1 is never read (all usages excluded by usageOverMixed excluder)
+    public string $prop2; // error: Property DeadPropertyMixed2\Implementor::$prop2 is never read (all usages excluded by usageOverMixed excluder)
+    public string $prop3; // error: Property DeadPropertyMixed2\Implementor::$prop3 is never read (all usages excluded by usageOverMixed excluder)
     public string $prop4;
-    public string $prop5; // error: Unused DeadPropertyMixed2\Implementor::prop5
+    public string $prop5; // error: Property DeadPropertyMixed2\Implementor::$prop5 is never read
     public string $prop6;
 
 }

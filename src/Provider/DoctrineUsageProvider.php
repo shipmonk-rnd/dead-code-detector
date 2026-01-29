@@ -14,6 +14,7 @@ use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -355,6 +356,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                 $propertyReflection->getName(),
                 false,
             ),
+            AccessType::READ,
         );
     }
 

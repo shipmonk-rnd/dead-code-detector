@@ -15,7 +15,7 @@ class ParentClass {
 }
 
 class ChildClass extends ParentClass {
-    public static string $one = 'child'; // error: Unused DeadPropertyOverridden1\ChildClass::one
+    public static string $one = 'child'; // error: Property DeadPropertyOverridden1\ChildClass::$one is never read
     public static string $two = 'child';
 }
 

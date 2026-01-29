@@ -4,9 +4,11 @@ namespace PropertyWriteCoalesce;
 
 class Coalesce
 {
-    public $prop; // error: Unused PropertyWriteCoalesce\Coalesce::prop
+    public $prop1; // error: Property PropertyWriteCoalesce\Coalesce::$prop1 is never read
+    public $prop2;
 }
 
-function test(Coalesce $c): void {
-    $c->prop ??= 1;
+function test(Coalesce $c) {
+    $c->prop1 ??= 1;
+    return $c->prop2 ??= 2;
 }
