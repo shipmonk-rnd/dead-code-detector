@@ -4,7 +4,7 @@ namespace MixedMemberTraitProp3;
 
 trait MyTrait1 {
 
-    public int $used = 1; // error: Property MixedMemberTraitProp3\MyTrait1::$used is never written
+    public int $used = 1;
 }
 
 interface TraitInterface

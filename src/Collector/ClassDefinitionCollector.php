@@ -30,7 +30,7 @@ use function is_string;
  *       name: string,
  *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
- *       properties: array<string, array{line: int}>,
+ *       properties: array<string, array{line: int, default: bool}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -61,7 +61,7 @@ final class ClassDefinitionCollector implements Collector
      *      name: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int}>,
+     *      properties: array<string, array{line: int, default: bool}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -100,6 +100,7 @@ final class ClassDefinitionCollector implements Collector
                     if ($param->isPromoted() && $param->var instanceof Variable && is_string($param->var->name)) {
                         $properties[$param->var->name] = [
                             'line' => $param->var->getStartLine(),
+                            'default' => $param->default !== null,
                         ];
                     }
                 }
@@ -124,6 +125,7 @@ final class ClassDefinitionCollector implements Collector
             foreach ($property->props as $prop) {
                 $properties[$prop->name->toString()] = [
                     'line' => $prop->getStartLine(),
+                    'default' => $prop->default !== null,
                 ];
             }
         }

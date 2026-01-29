@@ -3,11 +3,11 @@
 namespace MixedMemberTraitProp14;
 
 trait SomeTrait {
-    public static int $foo = 1; // error: Property MixedMemberTraitProp14\SomeTrait::$foo is never written
+    public static int $foo = 1;
 }
 
 class ParentClass {
-    public static int $foo = 1; // error: Property MixedMemberTraitProp14\ParentClass::$foo is never read // error: Property MixedMemberTraitProp14\ParentClass::$foo is never written
+    public static int $foo = 1; // error: Property MixedMemberTraitProp14\ParentClass::$foo is never read
 }
 
 class User extends ParentClass {

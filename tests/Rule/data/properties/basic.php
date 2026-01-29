@@ -7,13 +7,13 @@ class TestClass {
     public string $usedPublicProperty;
     public string $usedPublicPropertyByChild; // error: Property DeadPropertyBasic\TestClass::$usedPublicPropertyByChild is never written
     public string $unusedPublicProperty; // error: Property DeadPropertyBasic\TestClass::$unusedPublicProperty is never read
-    public string $readNotWritten = 'default'; // error: Property DeadPropertyBasic\TestClass::$readNotWritten is never written
+    public string $readNotWrittenButDefault = 'default';
 
     public function __construct()
     {
         $this->usedPublicProperty = 'used';
         $this->unusedPublicProperty = 'assigned but unused';
-        echo $this->readNotWritten;
+        echo $this->readNotWrittenButDefault;
     }
 
     public function useProperty(): void

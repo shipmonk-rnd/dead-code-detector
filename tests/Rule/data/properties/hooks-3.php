@@ -9,7 +9,7 @@ interface Named {
 class User implements Named {
 
     public function __construct( // error: Unused PropertyHooks3\User::__construct
-        public string $name = 'default' // error: Property PropertyHooks3\User::$name is never written
+        public string $name = 'default'
     ) {}
 }
 

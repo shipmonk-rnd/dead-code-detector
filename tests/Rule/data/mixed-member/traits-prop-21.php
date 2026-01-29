@@ -3,13 +3,13 @@
 namespace MixedMemberTraitProp21;
 
 trait A {
-    public static int $test = 1; // error: Property MixedMemberTraitProp21\A::$test is never read // error: Property MixedMemberTraitProp21\A::$test is never written
+    public static int $test = 1; // error: Property MixedMemberTraitProp21\A::$test is never read
 }
 
 
 trait B {
     use A;
-    public static int $test = 1; // error: Property MixedMemberTraitProp21\B::$test is never written
+    public static int $test = 1;
 }
 
 class Tester {

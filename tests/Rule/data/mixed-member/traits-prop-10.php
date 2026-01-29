@@ -3,7 +3,7 @@
 namespace MixedMemberTraitProp10;
 
 trait StaticExample {
-    public static int $do = 1; // error: Property MixedMemberTraitProp10\StaticExample::$do is never written
+    public static int $do = 1;
 }
 
 class Example {

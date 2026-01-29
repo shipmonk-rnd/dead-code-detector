@@ -19,7 +19,7 @@ final class TemplateSimpleModel
 
 final class TemplateNestedData
 {
-    public int $nestedProperty = 1; // error: Property TwigTemplate\TemplateNestedData::$nestedProperty is never written
+    public int $nestedProperty = 1;
 
     public function getValue(): string { return 'nested'; }
 

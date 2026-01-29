@@ -18,7 +18,7 @@ class Foo
     ]
     public
     int
-        $foo // error: Property ReportLines\Foo::$foo is never read // error: Property ReportLines\Foo::$foo is never written
+        $foo // error: Property ReportLines\Foo::$foo is never read
         =
         1
     ;
