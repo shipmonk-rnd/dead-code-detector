@@ -21,8 +21,12 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Type;
 use PHPStan\Type\UnionType;
 use ReflectionException;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function count;
@@ -275,7 +279,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMemberUsage>
      */
     private function getUsagesFromTemplateReturn(
         Return_ $node,
@@ -308,7 +312,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMemberUsage>
      */
     private function getUsagesFromRenderCall(
         MethodCall $node,
@@ -427,7 +431,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     /**
      * @param non-empty-string $context
      * @param array<string, true> $visited
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMemberUsage>
      */
     private function traverseClassNameRecursively(
         string $className,
@@ -457,7 +461,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     /**
      * @param array<string, true> $visited
      * @param non-empty-string $context
-     * @return list<ClassMethodUsage>
+     * @return list<ClassMemberUsage>
      */
     private function getPublicMembersUsages(
         ClassReflection $classReflection,
@@ -511,6 +515,8 @@ final class TwigUsageProvider implements MemberUsageProvider
                 continue;
             }
 
+            $usages[] = $this->createPropertyUsage($className, $property->getName(), $context);
+
             $propertyReflection = $classReflection->getNativeProperty($property->getName());
             $newContext = "{$context} -> {$shortClassName}::\${$property->getName()}";
 
@@ -544,6 +550,22 @@ final class TwigUsageProvider implements MemberUsageProvider
         );
     }
 
+    /**
+     * @param non-empty-string $context
+     */
+    private function createPropertyUsage(
+        string $className,
+        string $propertyName,
+        string $context
+    ): ClassPropertyUsage
+    {
+        return new ClassPropertyUsage(
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
+            new ClassPropertyRef($className, $propertyName, false),
+            AccessType::READ,
+        );
+    }
+
     private function shouldSkipMethod(string $methodName): bool
     {
         return strpos($methodName, '__') === 0;
@@ -551,10 +573,6 @@ final class TwigUsageProvider implements MemberUsageProvider
 
     private function shouldSkipClass(ClassReflection $classReflection): bool
     {
-        if ($classReflection->isInternal()) {
-            return true;
-        }
-
         $fileName = $classReflection->getFileName();
         if ($fileName === null) {
             return true;

@@ -17,6 +17,8 @@ final class TemplateSimpleModel
 
 final class TemplateNestedData
 {
+    public int $nestedProperty = 1;
+
     public function getValue(): string { return 'nested'; }
     public function getDeep(): TemplateDeepData { return new TemplateDeepData(); }
 }
