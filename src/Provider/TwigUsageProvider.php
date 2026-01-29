@@ -319,30 +319,13 @@ final class TwigUsageProvider implements MemberUsageProvider
         Scope $scope
     ): array
     {
-        if (!$scope->isInClass()) {
-            return [];
-        }
-
-        if (!$scope->getClassReflection()->is('Symfony\Bundle\FrameworkBundle\Controller\AbstractController')) {
-            return [];
-        }
-
         if (!$node->name instanceof Identifier) {
             return [];
         }
 
         $methodName = $node->name->toString();
+        $parametersArgIndex = $this->getParametersArgIndex($node, $scope, $methodName);
 
-        // Check if it's one of the Twig rendering methods
-        $twigRenderMethods = [
-            'render' => 1,
-            'renderView' => 1,
-            'renderBlock' => 2,
-            'renderBlockView' => 2,
-            'stream' => 1,
-        ];
-
-        $parametersArgIndex = $twigRenderMethods[$methodName] ?? null;
         if ($parametersArgIndex === null) {
             return [];
         }
@@ -370,6 +353,60 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    private function getParametersArgIndex(
+        MethodCall $node,
+        Scope $scope,
+        string $methodName
+    ): ?int
+    {
+        $callerType = $scope->getType($node->var);
+
+        if (!$callerType->isObject()->yes()) {
+            return null;
+        }
+
+        foreach ($callerType->getObjectClassNames() as $className) {
+            if (!$this->reflectionProvider->hasClass($className)) {
+                continue;
+            }
+
+            $classReflection = $this->reflectionProvider->getClass($className);
+
+            if ($classReflection->is('Twig\Environment')) {
+                if ($methodName === 'render' || $methodName === 'display') {
+                    return 1;
+                }
+            }
+
+            if ($classReflection->is('Twig\TemplateWrapper')) {
+                $wrapperMethods = [
+                    'render' => 0,
+                    'display' => 0,
+                    'stream' => 0,
+                    'streamBlock' => 1,
+                    'renderBlock' => 1,
+                    'displayBlock' => 1,
+                ];
+
+                return $wrapperMethods[$methodName] ?? null;
+            }
+
+            if ($classReflection->is('Symfony\Bundle\FrameworkBundle\Controller\AbstractController')) {
+                $controllerMethods = [
+                    'render' => 1,
+                    'renderView' => 1,
+                    'renderBlock' => 2,
+                    'renderBlockView' => 2,
+                    'stream' => 1,
+                ];
+
+                return $controllerMethods[$methodName] ?? null;
+            }
+        }
+
+        return null;
     }
 
     /**
