@@ -22,7 +22,11 @@ final class TemplateNestedData
     public int $nestedProperty = 1;
 
     public function getValue(): string { return 'nested'; }
-    public function getDeep(): TemplateDeepData { return new TemplateDeepData(); }
+
+    /**
+     * @return TemplateDeepData[]
+     */
+    public function getDeep(): array { return [new TemplateDeepData()]; }
 }
 
 final class TemplateDeepData

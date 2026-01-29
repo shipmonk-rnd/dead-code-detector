@@ -18,7 +18,6 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
-use PHPStan\Type\Type;
 use PHPStan\Type\UnionType;
 use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -294,8 +293,7 @@ final class TwigUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        $returnType = $scope->getType($node->expr);
-        $referencedClassNames = $this->extractObjectTypes($returnType);
+        $referencedClassNames = $scope->getType($node->expr)->getReferencedClasses();
 
         $usages = [];
         $visited = [];
@@ -337,9 +335,7 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         $parametersArg = $args[$parametersArgIndex];
-        $parametersType = $scope->getType($parametersArg->value);
-
-        $objectTypes = $this->extractObjectTypes($parametersType);
+        $objectTypes = $scope->getType($parametersArg->value)->getReferencedClasses();
 
         $usages = [];
         $visited = [];
@@ -458,14 +454,6 @@ final class TwigUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<string>
-     */
-    private function extractObjectTypes(Type $returnType): array
-    {
-        return $returnType->getReferencedClasses();
-    }
-
-    /**
      * @param non-empty-string $context
      * @param array<string, true> $visited
      * @return list<ClassMemberUsage>
@@ -533,7 +521,7 @@ final class TwigUsageProvider implements MemberUsageProvider
             foreach ($variants as $variant) {
                 $returnType = $variant->getReturnType();
 
-                foreach ($returnType->getObjectClassNames() as $returnClassName) {
+                foreach ($returnType->getReferencedClasses() as $returnClassName) {
                     $usages = [
                         ...$usages,
                         ...$this->traverseClassNameRecursively(
@@ -557,7 +545,7 @@ final class TwigUsageProvider implements MemberUsageProvider
             $propertyReflection = $classReflection->getNativeProperty($property->getName());
             $newContext = "{$context} -> {$shortClassName}::\${$property->getName()}";
 
-            foreach ($propertyReflection->getReadableType()->getObjectClassNames() as $propertyClassName) {
+            foreach ($propertyReflection->getReadableType()->getReferencedClasses() as $propertyClassName) {
                 $usages = [
                     ...$usages,
                     ...$this->traverseClassNameRecursively(
