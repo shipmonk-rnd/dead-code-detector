@@ -54,6 +54,6 @@ class MyRuleDirect implements RuleFromVendor
 }
 
 class MyTest extends TestCase {
-    protected $backupGlobals; // error: Property Default\MyTest::$backupGlobals is never written
+    protected $backupGlobals;
     protected $dead; // error: Property Default\MyTest::$dead is never read // error: Property Default\MyTest::$dead is never written
 }

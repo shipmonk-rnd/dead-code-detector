@@ -17,7 +17,7 @@ class MyEntity
 {
 
     #[\Doctrine\ORM\Mapping\Column(type: Types::STRING, enumType: InvoiceStatus::class)]
-    private InvoiceStatus $status; // error: Property Doctrine\MyEntity::$status is never written
+    private InvoiceStatus $status;
 
     private string $notMapped; // error: Property Doctrine\MyEntity::$notMapped is never read // error: Property Doctrine\MyEntity::$notMapped is never written
 

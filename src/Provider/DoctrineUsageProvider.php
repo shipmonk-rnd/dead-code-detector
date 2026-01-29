@@ -88,7 +88,8 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             $propertyUsageNote = $this->shouldMarkPropertyAsUsed($nativePropertyReflection);
 
             if ($propertyUsageNote !== null) {
-                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $propertyUsageNote);
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $propertyUsageNote, AccessType::READ);
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $propertyUsageNote, AccessType::WRITE);
             }
         }
 
@@ -344,9 +345,13 @@ final class DoctrineUsageProvider implements MemberUsageProvider
         );
     }
 
+    /**
+     * @param AccessType::* $accessType
+     */
     private function createPropertyUsage(
         ReflectionProperty $propertyReflection,
-        string $note
+        string $note,
+        int $accessType
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
@@ -356,7 +361,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                 $propertyReflection->getName(),
                 false,
             ),
-            AccessType::READ,
+            $accessType,
         );
     }
 
