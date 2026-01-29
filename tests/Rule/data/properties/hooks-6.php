@@ -5,9 +5,9 @@ namespace PropertyHooks6;
 class Example
 {
     private int $readCounter = 0;
-    private int $writeCounter = 0; // error: Property PropertyHooks6\Example::$writeCounter is never read
+    private int $writeCounter = 0; // error: Property PropertyHooks6\Example::$writeCounter is never read // error: Property PropertyHooks6\Example::$writeCounter is never written
 
-    public string $foo = 'default value' {
+    public string $foo = 'default value' { // error: Property PropertyHooks6\Example::$foo is never written
         get {
             $this->readCounter += 1;
             $this->foo = $this->foo . ' ' . $this->readCounter;

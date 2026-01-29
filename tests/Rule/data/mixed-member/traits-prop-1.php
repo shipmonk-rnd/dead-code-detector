@@ -4,8 +4,8 @@ namespace MixedMemberTraitProp1;
 
 trait Trait1 {
 
-    public int $used = 1;
-    public int $unused = 2;
+    public int $used = 1; // error: Property MixedMemberTraitProp1\Trait1::$used is never written
+    public int $unused = 2; // error: Property MixedMemberTraitProp1\Trait1::$unused is never written
 }
 
 class User1

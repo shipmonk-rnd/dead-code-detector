@@ -5,7 +5,7 @@ namespace PropertyHooks9;
 class Example
 {
 
-    public string $foo {
+    public string $foo { // error: Property PropertyHooks9\Example::$foo is never written
         get {
             $this->bar = 'value';
             return $this->foo;

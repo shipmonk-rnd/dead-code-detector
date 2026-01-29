@@ -3,13 +3,13 @@
 namespace PropertyHooks3;
 
 interface Named {
-    public string $name { get; } // error: Property PropertyHooks3\Named::$name is never read
+    public string $name { get; } // error: Property PropertyHooks3\Named::$name is never read // error: Property PropertyHooks3\Named::$name is never written
 }
 
 class User implements Named {
 
     public function __construct( // error: Unused PropertyHooks3\User::__construct
-        public string $name = 'default'
+        public string $name = 'default' // error: Property PropertyHooks3\User::$name is never written
     ) {}
 }
 

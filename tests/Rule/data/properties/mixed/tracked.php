@@ -5,14 +5,14 @@ namespace DeadPropertyMixed;
 
 class Clazz {
 
-    public string $prop1;
-    public string $prop2;
-    public string $prop3;
-    public string $prop4; // error: Property DeadPropertyMixed\Clazz::$prop4 is never read
-    public string $prop5;
-    public string $prop6; // error: Property DeadPropertyMixed\Clazz::$prop6 is never read
+    public string $prop1; // error: Property DeadPropertyMixed\Clazz::$prop1 is never written
+    public string $prop2; // error: Property DeadPropertyMixed\Clazz::$prop2 is never written
+    public string $prop3; // error: Property DeadPropertyMixed\Clazz::$prop3 is never written
+    public string $prop4; // error: Property DeadPropertyMixed\Clazz::$prop4 is never read // error: Property DeadPropertyMixed\Clazz::$prop4 is never written
+    public string $prop5; // error: Property DeadPropertyMixed\Clazz::$prop5 is never written
+    public string $prop6; // error: Property DeadPropertyMixed\Clazz::$prop6 is never read // error: Property DeadPropertyMixed\Clazz::$prop6 is never written
 
-    public string $someProperty; // error: Property DeadPropertyMixed\Clazz::$someProperty is never read
+    public string $someProperty; // error: Property DeadPropertyMixed\Clazz::$someProperty is never read // error: Property DeadPropertyMixed\Clazz::$someProperty is never written
 
 }
 
@@ -22,12 +22,12 @@ interface IFace {
 
 class Implementor implements IFace {
 
-    public string $prop1;
-    public string $prop2;
-    public string $prop3;
-    public string $prop4;
-    public string $prop5; // error: Property DeadPropertyMixed\Implementor::$prop5 is never read
-    public string $prop6;
+    public string $prop1; // error: Property DeadPropertyMixed\Implementor::$prop1 is never written
+    public string $prop2; // error: Property DeadPropertyMixed\Implementor::$prop2 is never written
+    public string $prop3; // error: Property DeadPropertyMixed\Implementor::$prop3 is never written
+    public string $prop4; // error: Property DeadPropertyMixed\Implementor::$prop4 is never written
+    public string $prop5; // error: Property DeadPropertyMixed\Implementor::$prop5 is never read // error: Property DeadPropertyMixed\Implementor::$prop5 is never written
+    public string $prop6; // error: Property DeadPropertyMixed\Implementor::$prop6 is never written
 
 }
 

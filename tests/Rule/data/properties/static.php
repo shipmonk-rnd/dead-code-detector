@@ -6,7 +6,7 @@ class TestClass {
 
     public static string $usedStaticProperty;
     public static string $unusedStaticProperty; // error: Property DeadPropertyStatic\TestClass::$unusedStaticProperty is never read
-    public static string $someProperty;
+    public static string $someProperty; // error: Property DeadPropertyStatic\TestClass::$someProperty is never written
 
     public static function initialize(): void
     {

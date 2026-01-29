@@ -7,11 +7,11 @@ namespace PropertyHooks1;
 class Person
 {
 
-    public string $first;
+    public string $first; // error: Property PropertyHooks1\Person::$first is never written
 
-    public string $last;
+    public string $last; // error: Property PropertyHooks1\Person::$last is never written
 
-    public string $fullName {
+    public string $fullName { // error: Property PropertyHooks1\Person::$fullName is never written
         get {
             return "$this->first $this->last";
         }
@@ -20,7 +20,7 @@ class Person
         }
     }
 
-    public string $city = 'default value' { // error: Property PropertyHooks1\Person::$city is never read
+    public string $city = 'default value' { // error: Property PropertyHooks1\Person::$city is never read // error: Property PropertyHooks1\Person::$city is never written
         get => $this->city;
 
         set {

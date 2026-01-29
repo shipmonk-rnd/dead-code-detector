@@ -176,6 +176,7 @@ services:
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
             detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
+            detectNeverWrittenProperties: %shipmonkDeadCode.detect.deadProperties.neverWritten%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
 
     -
@@ -202,6 +203,7 @@ parameters:
             deadEnumCases: false
             deadProperties:
                 neverRead: false
+                neverWritten: false
         usageProviders:
             apiPhpDoc:
                 enabled: true
@@ -255,6 +257,7 @@ parametersSchema:
             deadEnumCases: bool()
             deadProperties: structure([
                 neverRead: bool()
+                neverWritten: bool()
             ])
         ])
         usageProviders: structure([

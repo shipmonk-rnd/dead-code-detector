@@ -4,7 +4,7 @@ namespace PropertyHooks7;
 
 class Example
 {
-    private int $readCounter = 0; // error: Property PropertyHooks7\Example::$readCounter is never read
+    private int $readCounter = 0; // error: Property PropertyHooks7\Example::$readCounter is never written // error: Property PropertyHooks7\Example::$readCounter is never read
     private int $writeCounter = 0; // error: Property PropertyHooks7\Example::$writeCounter is never read
 
     public string $foo = 'default value' { // error: Property PropertyHooks7\Example::$foo is never read

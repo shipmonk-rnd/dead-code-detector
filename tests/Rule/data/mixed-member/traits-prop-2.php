@@ -4,12 +4,12 @@ namespace MixedMemberTraitProp2;
 
 trait MyTrait1 {
 
-    public int $used = 1;
+    public int $used = 1; // error: Property MixedMemberTraitProp2\MyTrait1::$used is never written
 }
 
 interface TraitInterface
 {
-    public int $used { get; }
+    public int $used { get; } // error: Property MixedMemberTraitProp2\TraitInterface::$used is never written
 }
 
 class MyUser1 implements TraitInterface

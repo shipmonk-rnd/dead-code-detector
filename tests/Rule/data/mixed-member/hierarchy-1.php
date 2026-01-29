@@ -8,7 +8,7 @@ trait TheTrait
 
     public function minus() {}
 
-    public string $minusProperty;
+    public string $minusProperty; // error: Property MixedMember1\TheTrait::$minusProperty is never written
 }
 
 interface TheInterface {
@@ -22,7 +22,7 @@ class ParentClass
     const ONE = 1;
     public function one() {}
 
-    public string $oneProperty;
+    public string $oneProperty; // error: Property MixedMember1\ParentClass::$oneProperty is never written
 }
 
 class Tester extends ParentClass implements TheInterface
@@ -33,8 +33,8 @@ class Tester extends ParentClass implements TheInterface
     public function two() {}
     public function three() {}
 
-    public string $twoProperty;
-    public string $threeProperty;
+    public string $twoProperty; // error: Property MixedMember1\Tester::$twoProperty is never written
+    public string $threeProperty; // error: Property MixedMember1\Tester::$threeProperty is never written
 }
 
 class Descendant extends Tester
@@ -43,7 +43,7 @@ class Descendant extends Tester
 
     public function four() {}
 
-    public string $fourProperty;
+    public string $fourProperty; // error: Property MixedMember1\Descendant::$fourProperty is never written
 }
 
 function test(Tester $tester, string $unknown)

@@ -106,6 +106,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectNeverReadProperties = true;
 
+    private bool $detectNeverWrittenProperties = true;
+
     private ?DeadCodeRule $rule = null;
 
     private ?string $editorUrl = null;
@@ -129,6 +131,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->detectDeadConstants,
                 $this->detectDeadEnumCases,
                 $this->detectNeverReadProperties,
+                $this->detectNeverWrittenProperties,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
             );
@@ -424,6 +427,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
         $this->detectNeverReadProperties = false;
+        $this->detectNeverWrittenProperties = false;
 
         $this->debugMembers = [
             'DebugAnalysisDisabled\X::property',
@@ -542,6 +546,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -556,6 +563,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -570,6 +580,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\Clazz::method', 10],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -584,6 +597,24 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
+        ]);
+    }
+
+    public function testPropertyWriteDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectNeverWrittenProperties = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
+            ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::$zip is never read', 38],
         ]);
     }
 

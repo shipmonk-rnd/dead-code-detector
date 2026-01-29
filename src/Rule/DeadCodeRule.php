@@ -88,6 +88,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $detectNeverReadProperties;
 
+    private bool $detectNeverWrittenProperties;
+
     /**
      * typename => data
      *
@@ -148,6 +150,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         bool $detectDeadConstants,
         bool $detectDeadEnumCases,
         bool $detectNeverReadProperties,
+        bool $detectNeverWrittenProperties,
         bool $reportTransitivelyDeadMethodAsSeparateError,
         BackwardCompatibilityChecker $checker
     )
@@ -158,6 +161,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $this->detectDeadConstants = $detectDeadConstants;
         $this->detectDeadEnumCases = $detectDeadEnumCases;
         $this->detectNeverReadProperties = $detectNeverReadProperties;
+        $this->detectNeverWrittenProperties = $detectNeverWrittenProperties;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
 
         $checker->check();
@@ -284,6 +288,9 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $accessTypes = [];
                 if ($this->detectNeverReadProperties) {
                     $accessTypes[] = AccessType::READ;
+                }
+                if ($this->detectNeverWrittenProperties) {
+                    $accessTypes[] = AccessType::WRITE;
                 }
                 foreach ($accessTypes as $accessType) {
                     $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
