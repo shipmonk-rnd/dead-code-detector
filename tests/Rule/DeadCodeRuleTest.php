@@ -12,6 +12,7 @@ use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
+use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\File\SimpleRelativePathHelper;
@@ -36,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
+use ShipMonk\PHPStan\DeadCode\Formatter\FilterOutUnmatchedInlineIgnoresFormatter;
 use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
@@ -735,6 +737,53 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $expectedOutputFile = $this->getAutoremoveOutputFilePath($file);
         self::assertFileExists($expectedOutputFile);
         self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput), "Output does not match expected: $expectedOutputFile");
+    }
+
+    public function testFilterOutUnmatchedInlineIgnores(): void
+    {
+        $file = __DIR__ . '/data/partial-analysis/inline-ignore.php';
+
+        $originalArgv = $_SERVER['argv'] ?? [];
+
+        try {
+            // simulate partial analysis (file path in argv)
+            $_SERVER['argv'] = ['phpstan', 'analyse', $file];
+
+            $analyserErrors = $this->gatherAnalyserErrors([$file]);
+            $receivedErrors = null;
+
+            $wrappedFormatter = $this->createMock(ErrorFormatter::class);
+            $wrappedFormatter->expects(self::once())
+                ->method('formatErrors')
+                ->willReturnCallback(static function (AnalysisResult $result) use (&$receivedErrors): int {
+                    $receivedErrors = $result->getFileSpecificErrors();
+                    return 0;
+                });
+
+            $container = $this->createMock(Container::class);
+            $container->expects(self::once())
+                ->method('getService')
+                ->with('errorFormatter.table')
+                ->willReturn($wrappedFormatter);
+
+            $output = $this->createOutput();
+
+            $formatter = new FilterOutUnmatchedInlineIgnoresFormatter(
+                $container,
+                'table',
+                [DeadCodeRule::IDENTIFIER_METHOD],
+            );
+
+            $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
+
+            self::assertNotNull($receivedErrors);
+            self::assertCount(2, $receivedErrors);
+            self::assertSame('No error with identifier invalid.ignore is reported on line 5.', $receivedErrors[0]->getMessage());
+            self::assertSame('Unused Filtering\Example::FOO2', $receivedErrors[1]->getMessage());
+
+        } finally {
+            $_SERVER['argv'] = $originalArgv;
+        }
     }
 
     /**

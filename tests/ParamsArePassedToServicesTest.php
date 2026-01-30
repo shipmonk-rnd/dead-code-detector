@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode;
 
 use PHPStan\Testing\PHPStanTestCase;
 use function array_merge;
+use function array_values;
 use function file_get_contents;
 use function is_array;
 use function strpos;
@@ -56,13 +57,29 @@ final class ParamsArePassedToServicesTest extends PHPStanTestCase
             $newPathSegment = $currentPath === '' ? (string) $key : $currentPath . '.' . $key;
 
             if (is_array($value)) {
-                $resultPaths = array_merge($resultPaths, $this->getArrayPaths($value, $newPathSegment));
+                if ($this->isList($value)) {
+                    // Non-empty lists are passed as a whole, add path without recursing
+                    // Empty lists are ignored (no useful value to pass)
+                    if ($value !== []) {
+                        $resultPaths[] = $newPathSegment;
+                    }
+                } else {
+                    $resultPaths = array_merge($resultPaths, $this->getArrayPaths($value, $newPathSegment));
+                }
             } else {
                 $resultPaths[] = $newPathSegment;
             }
         }
 
         return $resultPaths;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    private function isList(array $array): bool
+    {
+        return array_values($array) === $array;
     }
 
 }
