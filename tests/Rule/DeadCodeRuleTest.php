@@ -24,6 +24,7 @@ use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
@@ -1195,6 +1196,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
                 {
                     return strpos($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
+
+                protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
+                {
+                    return strpos($property->getDeclaringClass()->getName(), 'CustomProvider\PropertyWrites') === 0
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }

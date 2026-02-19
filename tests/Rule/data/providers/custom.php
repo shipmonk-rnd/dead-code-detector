@@ -48,6 +48,13 @@ enum MethodsInEnum: string {
     public function method(): void {}
 }
 
+class PropertyWrites
+{
+    public string $writtenByProvider; // error: Property CustomProvider\PropertyWrites::$writtenByProvider is never read
+
+    public function method(): void {} // error: Unused CustomProvider\PropertyWrites::method
+}
+
 class NotPartOfCustomProvider {
     public static function method(): void {}
 }
