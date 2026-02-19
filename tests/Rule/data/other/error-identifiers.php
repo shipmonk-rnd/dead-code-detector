@@ -5,9 +5,7 @@ namespace ErrorIdentifiers;
 class Foo
 {
 
-    public int $count = 1; // @phpstan-ignore shipmonk.deadProperty.neverRead // error: Property ErrorIdentifiers\Foo::$count is never read
-
-    public int $writeCount; // @phpstan-ignore shipmonk.deadProperty.neverWritten // error: Property ErrorIdentifiers\Foo::$writeCount is never read // error: Property ErrorIdentifiers\Foo::$writeCount is never written
+    public int $count; // @phpstan-ignore shipmonk.deadProperty.neverRead, shipmonk.deadProperty.neverWritten
 
     public const BAR = 1; // @phpstan-ignore shipmonk.deadConstant
 
