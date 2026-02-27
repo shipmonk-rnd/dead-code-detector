@@ -6,6 +6,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\PropertyFetch;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
@@ -20,6 +21,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
+use function in_array;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -71,6 +73,10 @@ final class PropertyAccessCollector implements Collector
 
         if ($node instanceof New_) {
             $this->registerPromotedPropertyWrite($node, $scope);
+        }
+
+        if ($node instanceof StaticCall) {
+            $this->registerPromotedPropertyWriteViaConstructorCall($node, $scope);
         }
 
         return $this->emitUsages($scope);
@@ -203,6 +209,66 @@ final class PropertyAccessCollector implements Collector
                         AccessType::WRITE,
                     ),
                     $new,
+                    $scope,
+                );
+            }
+        }
+    }
+
+    private function registerPromotedPropertyWriteViaConstructorCall(
+        StaticCall $staticCall,
+        Scope $scope
+    ): void
+    {
+        if ($staticCall->name instanceof Expr) {
+            $methodNames = [];
+
+            foreach ($scope->getType($staticCall->name)->getConstantStrings() as $constantString) {
+                $methodNames[] = $constantString->getValue();
+            }
+        } else {
+            $methodNames = [$staticCall->name->toString()];
+        }
+
+        if (!in_array('__construct', $methodNames, true)) {
+            return;
+        }
+
+        if ($staticCall->class instanceof Expr) {
+            $callerType = $scope->getType($staticCall->class);
+            $possibleDescendantCall = null;
+        } else {
+            $callerType = $scope->resolveTypeByName($staticCall->class);
+            $possibleDescendantCall = $staticCall->class->toString() === 'static';
+        }
+
+        $classReflections = $callerType->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
+
+        foreach ($classReflections as $classReflection) {
+            $constructor = $classReflection->getNativeReflection()->getConstructor();
+
+            if ($constructor === null) {
+                continue;
+            }
+
+            $parameters = $constructor->getParameters();
+
+            foreach ($parameters as $parameter) {
+                if (!$parameter->isPromoted()) {
+                    continue;
+                }
+
+                $this->registerUsage(
+                    new ClassPropertyUsage(
+                        UsageOrigin::createRegular($staticCall, $scope),
+                        new ClassPropertyRef(
+                            $classReflection->getName(),
+                            $parameter->getName(),
+                            $possibleDescendantCall ?? !$classReflection->isFinalByKeyword(),
+                        ),
+                        AccessType::WRITE,
+                    ),
+                    $staticCall,
                     $scope,
                 );
             }
