@@ -4,13 +4,11 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;
-use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\PropertyFetch;
-use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
-use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\Node\InClassMethodNode;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
@@ -21,7 +19,6 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
-use function in_array;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -71,12 +68,8 @@ final class PropertyAccessCollector implements Collector
             }
         }
 
-        if ($node instanceof New_) {
-            $this->registerPromotedPropertyWrite($node, $scope);
-        }
-
-        if ($node instanceof StaticCall) {
-            $this->registerPromotedPropertyWriteViaConstructorCall($node, $scope);
+        if ($node instanceof InClassMethodNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            $this->registerPromotedPropertyWrites($node, $scope);
         }
 
         return $this->emitUsages($scope);
@@ -169,112 +162,6 @@ final class PropertyAccessCollector implements Collector
         return [$fetch->name->toString()];
     }
 
-    private function registerPromotedPropertyWrite(
-        New_ $new,
-        Scope $scope
-    ): void
-    {
-        if ($new->class instanceof Expr) {
-            $callerType = $scope->getType($new);
-            $possibleDescendantCall = null;
-
-        } elseif ($new->class instanceof Name) {
-            $callerType = $scope->resolveTypeByName($new->class);
-            $possibleDescendantCall = $new->class->toString() === 'static';
-
-        } else {
-            return;
-        }
-
-        $classReflections = $callerType->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
-        foreach ($classReflections as $classReflection) {
-            $constructor = $classReflection->getNativeReflection()->getConstructor();
-            if ($constructor === null) {
-                continue;
-            }
-            $parameters = $constructor->getParameters(); // ideally, we should pick only those where arg was provided
-            foreach ($parameters as $parameter) {
-                if (!$parameter->isPromoted()) {
-                    continue;
-                }
-
-                $this->registerUsage(
-                    new ClassPropertyUsage(
-                        UsageOrigin::createRegular($new, $scope),
-                        new ClassPropertyRef(
-                            $classReflection->getName(),
-                            $parameter->getName(),
-                            $possibleDescendantCall ?? !$classReflection->isFinalByKeyword(),
-                        ),
-                        AccessType::WRITE,
-                    ),
-                    $new,
-                    $scope,
-                );
-            }
-        }
-    }
-
-    private function registerPromotedPropertyWriteViaConstructorCall(
-        StaticCall $staticCall,
-        Scope $scope
-    ): void
-    {
-        if ($staticCall->name instanceof Expr) {
-            $methodNames = [];
-
-            foreach ($scope->getType($staticCall->name)->getConstantStrings() as $constantString) {
-                $methodNames[] = $constantString->getValue();
-            }
-        } else {
-            $methodNames = [$staticCall->name->toString()];
-        }
-
-        if (!in_array('__construct', $methodNames, true)) {
-            return;
-        }
-
-        if ($staticCall->class instanceof Expr) {
-            $callerType = $scope->getType($staticCall->class);
-            $possibleDescendantCall = null;
-        } else {
-            $callerType = $scope->resolveTypeByName($staticCall->class);
-            $possibleDescendantCall = $staticCall->class->toString() === 'static';
-        }
-
-        $classReflections = $callerType->getObjectTypeOrClassStringObjectType()->getObjectClassReflections();
-
-        foreach ($classReflections as $classReflection) {
-            $constructor = $classReflection->getNativeReflection()->getConstructor();
-
-            if ($constructor === null) {
-                continue;
-            }
-
-            $parameters = $constructor->getParameters();
-
-            foreach ($parameters as $parameter) {
-                if (!$parameter->isPromoted()) {
-                    continue;
-                }
-
-                $this->registerUsage(
-                    new ClassPropertyUsage(
-                        UsageOrigin::createRegular($staticCall, $scope),
-                        new ClassPropertyRef(
-                            $classReflection->getName(),
-                            $parameter->getName(),
-                            $possibleDescendantCall ?? !$classReflection->isFinalByKeyword(),
-                        ),
-                        AccessType::WRITE,
-                    ),
-                    $staticCall,
-                    $scope,
-                );
-            }
-        }
-    }
-
     /**
      * @return list<ClassPropertyRef<string|null, string|null>>
      */
@@ -353,6 +240,48 @@ final class PropertyAccessCollector implements Collector
         }
 
         return $function->isMethodOrPropertyHook() && $function->getHookedPropertyName() === $propertyName;
+    }
+
+    private function registerPromotedPropertyWrites(
+        InClassMethodNode $node,
+        Scope $scope
+    ): void
+    {
+        if ($node->getMethodReflection()->getName() !== '__construct') {
+            return;
+        }
+
+        $classReflection = $scope->getClassReflection();
+
+        if ($classReflection === null) {
+            return;
+        }
+
+        $constructor = $classReflection->getNativeReflection()->getConstructor();
+
+        if ($constructor === null) {
+            return;
+        }
+
+        foreach ($constructor->getParameters() as $parameter) {
+            if (!$parameter->isPromoted()) {
+                continue;
+            }
+
+            $this->registerUsage(
+                new ClassPropertyUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    new ClassPropertyRef(
+                        $classReflection->getName(),
+                        $parameter->getName(),
+                        false,
+                    ),
+                    AccessType::WRITE,
+                ),
+                $node,
+                $scope,
+            );
+        }
     }
 
 }

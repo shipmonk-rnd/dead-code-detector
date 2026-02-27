@@ -150,7 +150,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         return [
             new ProvidedUsagesCollector(
-                new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
                 $reflectionProvider,
                 $this->getMemberUsageProviders(),
                 $this->getMemberUsageExcluders(),
