@@ -15,15 +15,12 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
-use PHPStan\Type\ObjectType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function count;
 use function in_array;
-use function is_array;
-use function is_string;
 use function lcfirst;
 use function str_replace;
 use function strpos;
@@ -33,12 +30,6 @@ use function ucwords;
 
 final class LaravelUsageProvider implements MemberUsageProvider
 {
-
-    private const OBSERVER_EVENT_METHODS = [
-        'creating', 'created', 'updating', 'updated', 'saving', 'saved',
-        'deleting', 'deleted', 'restoring', 'restored', 'replicating',
-        'retrieved', 'forceDeleting', 'forceDeleted', 'trashed',
-    ];
 
     private ReflectionProvider $reflectionProvider;
 
@@ -66,7 +57,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [...$usages, ...$this->getMethodUsagesFromReflection($node)];
-            $usages = [...$usages, ...$this->getObserverUsagesFromModelAttribute($node)];
         }
 
         if ($node instanceof StaticCall) {
@@ -137,14 +127,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
             if ($className === 'Illuminate\Support\Facades\Gate' || $className === 'Illuminate\Auth\Access\Gate') {
                 $usages = [...$usages, ...$this->getUsagesFromGateCall($node, $scope)];
             }
-        }
-
-        if (
-            $node->name instanceof Identifier
-            && $node->name->name === 'observe'
-            && (new ObjectType('Illuminate\Database\Eloquent\Model'))->isSuperTypeOf($callerType)->yes()
-        ) {
-            $usages = [...$usages, ...$this->getUsagesFromObserveCall($node, $scope)];
         }
 
         return $usages;
@@ -523,89 +505,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<ClassMethodUsage>
-     */
-    private function getUsagesFromObserveCall(
-        StaticCall $node,
-        Scope $scope
-    ): array
-    {
-        $arg = $node->getArgs()[0] ?? null;
-
-        if ($arg === null) {
-            return [];
-        }
-
-        $argType = $scope->getType($arg->value);
-        $observerClassNames = [];
-
-        foreach ($argType->getConstantStrings() as $stringType) {
-            $observerClassNames[] = $stringType->getValue();
-        }
-
-        foreach ($argType->getConstantArrays() as $arrayType) {
-            foreach ($arrayType->getValueTypes() as $valueType) {
-                foreach ($valueType->getConstantStrings() as $stringType) {
-                    $observerClassNames[] = $stringType->getValue();
-                }
-            }
-        }
-
-        $usages = [];
-
-        foreach ($observerClassNames as $observerClassName) {
-            foreach ([...self::OBSERVER_EVENT_METHODS, '__construct'] as $method) {
-                $usages[] = new ClassMethodUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassMethodRef($observerClassName, $method, false),
-                );
-            }
-        }
-
-        return $usages;
-    }
-
-    /**
-     * @return list<ClassMethodUsage>
-     */
-    private function getObserverUsagesFromModelAttribute(InClassNode $node): array
-    {
-        $classReflection = $node->getClassReflection();
-
-        if (!(new ObjectType('Illuminate\Database\Eloquent\Model'))->isSuperTypeOf(new ObjectType($classReflection->getName()))->yes()) {
-            return [];
-        }
-
-        $nativeReflection = $classReflection->getNativeReflection();
-        $attributes = $nativeReflection->getAttributes('Illuminate\Database\Eloquent\Attributes\ObservedBy');
-
-        $usages = [];
-
-        foreach ($attributes as $attribute) {
-            $args = $attribute->getArguments();
-
-            foreach ($args as $arg) {
-                $classNames = is_array($arg) ? $arg : [$arg];
-
-                foreach ($classNames as $className) {
-                    if (!is_string($className)) {
-                        continue;
-                    }
-
-                    foreach ([...self::OBSERVER_EVENT_METHODS, '__construct'] as $method) {
-                        $usages[] = new ClassMethodUsage(
-                            UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Laravel observer via #[ObservedBy]')),
-                            new ClassMethodRef($className, $method, false),
-                        );
-                    }
-                }
-            }
-        }
-
-        return $usages;
-    }
-
-    /**
      * Extracts [class, method] pairs from a callable array argument like [Controller::class, 'method'].
      *
      * @return list<array{string, string}>
@@ -681,56 +580,18 @@ final class LaravelUsageProvider implements MemberUsageProvider
         ClassReflection $classReflection
     ): ?string
     {
-        return $this->isEloquentModelMethod($method, $classReflection)
-            ?? $this->isCommandMethod($method, $classReflection)
+        return $this->isCommandMethod($method, $classReflection)
             ?? $this->isJobMethod($method, $classReflection)
             ?? $this->isServiceProviderMethod($method, $classReflection)
             ?? $this->isMiddlewareMethod($method, $classReflection)
             ?? $this->isNotificationMethod($method, $classReflection)
             ?? $this->isFormRequestMethod($method, $classReflection)
-            ?? $this->isFactoryMethod($method, $classReflection)
-            ?? $this->isSeederMethod($method, $classReflection)
-            ?? $this->isMigrationMethod($method, $classReflection)
             ?? $this->isPolicyMethod($method, $classReflection)
             ?? $this->isMailableMethod($method, $classReflection)
             ?? $this->isBroadcastEventMethod($method, $classReflection)
             ?? $this->isJsonResourceMethod($method, $classReflection)
             ?? $this->isValidationRuleMethod($method, $classReflection)
             ?? $this->isNotifiableMethod($method, $classReflection);
-    }
-
-    private function isEloquentModelMethod(
-        ReflectionMethod $method,
-        ClassReflection $classReflection
-    ): ?string
-    {
-        if (!$classReflection->is('Illuminate\Database\Eloquent\Model')) {
-            return null;
-        }
-
-        $methodName = $method->getName();
-
-        if ($method->isConstructor()) {
-            return 'Laravel Eloquent model constructor';
-        }
-
-        if (in_array($methodName, ['boot', 'booted', 'casts', 'newFactory'], true)) {
-            return 'Laravel Eloquent lifecycle/framework method';
-        }
-
-        if (strpos($methodName, 'scope') === 0 && $methodName !== 'scope') {
-            return 'Laravel Eloquent query scope';
-        }
-
-        if ($this->methodReturnsType($method, 'Illuminate\Database\Eloquent\Relations')) {
-            return 'Laravel Eloquent relationship';
-        }
-
-        if ($this->methodReturnsExactType($method, 'Illuminate\Database\Eloquent\Casts\Attribute')) {
-            return 'Laravel Eloquent attribute accessor';
-        }
-
-        return null;
     }
 
     private function isCommandMethod(
@@ -867,54 +728,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
         return null;
     }
 
-    private function isFactoryMethod(
-        ReflectionMethod $method,
-        ClassReflection $classReflection
-    ): ?string
-    {
-        if (!$classReflection->is('Illuminate\Database\Eloquent\Factories\Factory')) {
-            return null;
-        }
-
-        if (in_array($method->getName(), ['definition', 'configure'], true)) {
-            return 'Laravel factory method';
-        }
-
-        return null;
-    }
-
-    private function isSeederMethod(
-        ReflectionMethod $method,
-        ClassReflection $classReflection
-    ): ?string
-    {
-        if (!$classReflection->is('Illuminate\Database\Seeder')) {
-            return null;
-        }
-
-        if ($method->getName() === 'run') {
-            return 'Laravel seeder method';
-        }
-
-        return null;
-    }
-
-    private function isMigrationMethod(
-        ReflectionMethod $method,
-        ClassReflection $classReflection
-    ): ?string
-    {
-        if (!$classReflection->is('Illuminate\Database\Migrations\Migration')) {
-            return null;
-        }
-
-        if (in_array($method->getName(), ['up', 'down'], true)) {
-            return 'Laravel migration method';
-        }
-
-        return null;
-    }
-
     private function isPolicyMethod(
         ReflectionMethod $method,
         ClassReflection $classReflection
@@ -1031,40 +844,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         return null;
-    }
-
-    /**
-     * Checks if the method return type starts with the given prefix (for namespace matching).
-     */
-    private function methodReturnsType(
-        ReflectionMethod $method,
-        string $typePrefix
-    ): bool
-    {
-        $returnType = $method->getReturnType();
-
-        if (!$returnType instanceof ReflectionNamedType) {
-            return false;
-        }
-
-        return strpos($returnType->getName(), $typePrefix) === 0;
-    }
-
-    /**
-     * Checks if the method return type exactly matches the given type.
-     */
-    private function methodReturnsExactType(
-        ReflectionMethod $method,
-        string $type
-    ): bool
-    {
-        $returnType = $method->getReturnType();
-
-        if (!$returnType instanceof ReflectionNamedType) {
-            return false;
-        }
-
-        return $returnType->getName() === $type;
     }
 
     private function createUsage(
