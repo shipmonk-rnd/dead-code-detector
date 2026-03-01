@@ -6,8 +6,11 @@
 
 namespace Illuminate\Routing;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 abstract class Controller
 {
+    use AuthorizesRequests;
 }
 
 namespace Illuminate\Database\Eloquent;
@@ -154,6 +157,14 @@ interface Rule
 {
 }
 
+namespace Illuminate\Foundation\Auth\Access;
+
+trait AuthorizesRequests
+{
+    /** @param mixed ...$arguments */
+    public function authorize(string $ability, ...$arguments): void {}
+}
+
 namespace Illuminate\Support\Facades;
 
 class Route
@@ -191,6 +202,13 @@ class Schedule
     public static function job(string $job): void {}
 }
 
+class Gate
+{
+    /** @param mixed $callback */
+    public static function define(string $ability, $callback): void {}
+    public static function policy(string $model, string $policy): void {}
+}
+
 // =====================
 // Test Classes
 // =====================
@@ -220,6 +238,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
@@ -742,6 +761,16 @@ class PostPolicy
     }
 }
 
+// --- Policy with custom abilities (detected via authorize() and Gate::policy()) ---
+
+class Song extends Model
+{
+}
+
+class Album extends Model
+{
+}
+
 // --- Mailables ---
 
 class WelcomeEmail extends Mailable
@@ -999,4 +1028,102 @@ function registerObservers(): void
 {
     User::observe(UserObserver::class);
     User::observe([AuditObserver::class]);
+}
+
+function registerPolicies(): void
+{
+    Gate::policy(Album::class, \Laravel\Policies\AlbumPolicy::class);
+    Gate::define('manage-songs', [\Laravel\Policies\SongPolicy::class, 'access']);
+    Gate::define('check-license', \Laravel\Policies\LicenseChecker::class);
+    Route::get('/songs/{song}', [SongController::class, 'show']);
+    Route::get('/songs/{song}/download', [SongController::class, 'download']);
+    Route::post('/songs/upload', [SongController::class, 'upload']);
+}
+
+// --- Controller using authorize() ---
+
+class SongController extends Controller
+{
+    public function show(Song $song): void
+    {
+        $this->authorize('access', $song);
+        $this->authorize('edit', $song);
+    }
+
+    public function download(Song $song): void
+    {
+        $this->authorize('force-download', $song);
+    }
+
+    public function upload(): void
+    {
+        $this->authorize('access', Album::class);
+        $this->authorize('view', new User()); // User has no policy in Laravel\Policies namespace
+    }
+}
+
+// =====================
+// Policy Classes (in sub-namespace for convention-based resolution)
+// =====================
+
+namespace Laravel\Policies;
+
+class SongPolicy
+{
+    public function access(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function edit(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function forceDownload(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function unusedAbility(object $user): bool // error: Unused Laravel\Policies\SongPolicy::unusedAbility
+    {
+        return true;
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\Policies\SongPolicy::helperMethod
+    {
+    }
+}
+
+class AlbumPolicy
+{
+    public function access(object $user): bool
+    {
+        return true;
+    }
+
+    public function browse(object $user): bool
+    {
+        return true;
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\Policies\AlbumPolicy::helperMethod
+    {
+    }
+}
+
+class LicenseChecker
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(object $user): bool
+    {
+        return true;
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\Policies\LicenseChecker::helperMethod
+    {
+    }
 }

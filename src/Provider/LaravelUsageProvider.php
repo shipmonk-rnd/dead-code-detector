@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use Composer\InstalledVersions;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
@@ -13,6 +14,7 @@ use PHPStan\BetterReflection\Reflection\Adapter\ReflectionNamedType;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\ObjectType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
@@ -22,9 +24,12 @@ use function count;
 use function in_array;
 use function is_array;
 use function is_string;
+use function lcfirst;
+use function str_replace;
 use function strpos;
 use function strrpos;
 use function substr;
+use function ucwords;
 
 final class LaravelUsageProvider implements MemberUsageProvider
 {
@@ -35,10 +40,16 @@ final class LaravelUsageProvider implements MemberUsageProvider
         'retrieved', 'forceDeleting', 'forceDeleted', 'trashed',
     ];
 
+    private ReflectionProvider $reflectionProvider;
+
     private bool $enabled;
 
-    public function __construct(?bool $enabled)
+    public function __construct(
+        ReflectionProvider $reflectionProvider,
+        ?bool $enabled
+    )
     {
+        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('laravel/framework');
     }
 
@@ -60,6 +71,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if ($node instanceof StaticCall) {
             $usages = [...$usages, ...$this->getUsagesFromStaticCall($node, $scope)];
+        }
+
+        if ($node instanceof MethodCall) {
+            $usages = [...$usages, ...$this->getUsagesFromMethodCall($node, $scope)];
         }
 
         return $usages;
@@ -117,6 +132,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
             if ($className === 'Illuminate\Support\Facades\Schedule' || $className === 'Illuminate\Console\Scheduling\Schedule') {
                 $usages = [...$usages, ...$this->getUsagesFromScheduleCall($node, $scope)];
+            }
+
+            if ($className === 'Illuminate\Support\Facades\Gate' || $className === 'Illuminate\Auth\Access\Gate') {
+                $usages = [...$usages, ...$this->getUsagesFromGateCall($node, $scope)];
             }
         }
 
@@ -284,6 +303,223 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromGateCall(
+        StaticCall $node,
+        Scope $scope
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        $methodName = $node->name->name;
+        $usages = [];
+
+        if ($methodName === 'define') {
+            foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
+                foreach ([$method, '__construct'] as $usedMethod) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $usedMethod, false),
+                    );
+                }
+            }
+
+            foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
+                foreach (['__invoke', '__construct'] as $method) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $method, false),
+                    );
+                }
+            }
+        }
+
+        if ($methodName === 'policy') {
+            foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $policyClassName) {
+                $usages = [...$usages, ...$this->markAllPublicPolicyMethods($policyClassName, UsageOrigin::createRegular($node, $scope))];
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromMethodCall(
+        MethodCall $node,
+        Scope $scope
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        if ($node->name->name !== 'authorize') {
+            return [];
+        }
+
+        $callerType = $scope->getType($node->var);
+
+        $hasAuthorize = false;
+
+        foreach ($callerType->getObjectClassNames() as $callerClassName) {
+            if ($this->reflectionProvider->hasClass($callerClassName)) {
+                $callerReflection = $this->reflectionProvider->getClass($callerClassName);
+
+                if ($callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
+                    $hasAuthorize = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$hasAuthorize) {
+            return [];
+        }
+
+        return $this->getUsagesFromAuthorizeCall($node, $scope);
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromAuthorizeCall(
+        MethodCall $node,
+        Scope $scope
+    ): array
+    {
+        $args = $node->getArgs();
+        $abilityArg = $args[0] ?? null;
+        $modelArg = $args[1] ?? null;
+
+        if ($abilityArg === null) {
+            return [];
+        }
+
+        $abilityType = $scope->getType($abilityArg->value);
+        $abilityNames = [];
+
+        foreach ($abilityType->getConstantStrings() as $stringType) {
+            $abilityNames[] = $this->kebabToCamelCase($stringType->getValue());
+        }
+
+        if ($abilityNames === []) {
+            return [];
+        }
+
+        $policyClassNames = [];
+
+        if ($modelArg !== null) {
+            $modelType = $scope->getType($modelArg->value);
+
+            foreach ($modelType->getObjectClassNames() as $modelClassName) {
+                $policyClassName = $this->resolvePolicyClassName($modelClassName);
+
+                if ($policyClassName !== null) {
+                    $policyClassNames[] = $policyClassName;
+                }
+            }
+
+            foreach ($modelType->getConstantStrings() as $modelStringType) {
+                $policyClassName = $this->resolvePolicyClassName($modelStringType->getValue());
+
+                if ($policyClassName !== null) {
+                    $policyClassNames[] = $policyClassName;
+                }
+            }
+        }
+
+        $usages = [];
+
+        foreach ($policyClassNames as $policyClassName) {
+            foreach ($abilityNames as $abilityName) {
+                $usages[] = new ClassMethodUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    new ClassMethodRef($policyClassName, $abilityName, false),
+                );
+            }
+        }
+
+        return $usages;
+    }
+
+    private function resolvePolicyClassName(string $modelClassName): ?string
+    {
+        $lastSeparator = strrpos($modelClassName, '\\');
+
+        if ($lastSeparator === false) {
+            return null;
+        }
+
+        $namespace = substr($modelClassName, 0, $lastSeparator);
+        $shortName = substr($modelClassName, $lastSeparator + 1);
+
+        $firstSeparator = strpos($namespace, '\\');
+        $rootNamespace = $firstSeparator !== false
+            ? substr($namespace, 0, $firstSeparator)
+            : $namespace;
+
+        $policyClassName = $rootNamespace . '\\Policies\\' . $shortName . 'Policy';
+
+        if ($this->reflectionProvider->hasClass($policyClassName)) {
+            return $policyClassName;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function markAllPublicPolicyMethods(
+        string $policyClassName,
+        UsageOrigin $origin
+    ): array
+    {
+        if (!$this->reflectionProvider->hasClass($policyClassName)) {
+            return [];
+        }
+
+        $classReflection = $this->reflectionProvider->getClass($policyClassName);
+        $nativeReflection = $classReflection->getNativeReflection();
+        $usages = [];
+
+        foreach ($nativeReflection->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
+                continue;
+            }
+
+            if ($method->isPublic()) {
+                $usages[] = new ClassMethodUsage(
+                    $origin,
+                    new ClassMethodRef($policyClassName, $method->getName(), false),
+                );
+            }
+        }
+
+        return $usages;
+    }
+
+    private function kebabToCamelCase(string $string): string
+    {
+        if (strpos($string, '-') === false) {
+            return $string;
+        }
+
+        return lcfirst(
+            str_replace(
+                '-',
+                '',
+                ucwords($string, '-'),
+            ),
+        );
     }
 
     /**
