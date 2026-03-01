@@ -16,10 +16,12 @@ use PHPStan\Analyser\Scope;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function count;
 use function in_array;
-use function str_ends_with;
-use function str_starts_with;
+use function strlen;
+use function strpos;
 use function strtolower;
+use function substr;
 
 final class LaravelUsageProvider implements MemberUsageProvider
 {
@@ -97,8 +99,15 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $action = $actionArg->value;
 
         // String syntax: 'App\Http\Controllers\HomeController@index'
-        if ($action instanceof String_ && str_contains($action->value, '@')) {
-            [$controllerClass, $controllerMethod] = explode('@', $action->value, 2);
+        if ($action instanceof String_) {
+            $atPos = strpos($action->value, '@');
+
+            if ($atPos === false) {
+                return [];
+            }
+
+            $controllerClass = substr($action->value, 0, $atPos);
+            $controllerMethod = substr($action->value, $atPos + 1);
 
             return [
                 new ClassMethodUsage(
@@ -204,9 +213,11 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         $name = $node->name->toString();
+        $attributeSuffix = 'Attribute';
+        $suffixLength = strlen($attributeSuffix);
 
-        $isAccessor = str_starts_with($name, 'get') && str_ends_with($name, 'Attribute');
-        $isMutator = str_starts_with($name, 'set') && str_ends_with($name, 'Attribute');
+        $isAccessor = strpos($name, 'get') === 0 && substr($name, -$suffixLength) === $attributeSuffix;
+        $isMutator = strpos($name, 'set') === 0 && substr($name, -$suffixLength) === $attributeSuffix;
 
         if (!$isAccessor && !$isMutator) {
             return [];
