@@ -86,6 +86,12 @@ $ vendor/bin/phpstan
 #### PHPStan:
 - constructor calls for DIC services (rules, extensions, ...)
 
+#### Laravel:
+- controller methods registered via `Route::get/post/...('/path', [Controller::class, 'method'])` or `'Controller@method'` string syntax
+- `handle()` method in classes extending `Illuminate\Console\Command` (Artisan commands)
+- `register()` and `boot()` methods in classes extending `Illuminate\Support\ServiceProvider`
+- `get*Attribute()` and `set*Attribute()` methods in classes extending `Illuminate\Database\Eloquent\Model` (accessors and mutators)
+
 #### Nette:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
