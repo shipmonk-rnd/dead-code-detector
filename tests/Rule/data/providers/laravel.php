@@ -155,6 +155,93 @@ class OrderEventSubscriber
     }
 }
 
+// --- Auto-discovered Event Listeners (reflection-based) ---
+
+class OrderShippedEvent
+{
+}
+
+class AutoDiscoveredListener
+{
+    public function __construct()
+    {
+    }
+
+    public function handle(OrderCreatedEvent $event): void
+    {
+    }
+
+    public function unusedMethod(): void // error: Unused Laravel\AutoDiscoveredListener::unusedMethod
+    {
+    }
+}
+
+class MultiHandlerListener
+{
+    public function __construct()
+    {
+    }
+
+    public function handleOrderCreated(OrderCreatedEvent $event): void
+    {
+    }
+
+    public function handleOrderShipped(OrderShippedEvent $event): void
+    {
+    }
+
+    public function unusedMethod(): void // error: Unused Laravel\MultiHandlerListener::unusedMethod
+    {
+    }
+}
+
+class InvokableListener
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(OrderCreatedEvent $event): void
+    {
+    }
+}
+
+// Auto-discovered with union type parameter
+
+class UnionTypeListener
+{
+    public function handle(OrderCreatedEvent|OrderShippedEvent $event): void
+    {
+    }
+}
+
+// Not auto-discovered: private handle method
+
+class NotListenerPrivateHandle
+{
+    private function handle(OrderCreatedEvent $event): void // error: Unused Laravel\NotListenerPrivateHandle::handle
+    {
+    }
+}
+
+// Not auto-discovered: no params (handle without type-hinted event)
+
+class NotListenerNoParams
+{
+    public function handle(): void // error: Unused Laravel\NotListenerNoParams::handle
+    {
+    }
+}
+
+// Not auto-discovered: first param is built-in type
+
+class NotListenerBuiltinParam
+{
+    public function handle(string $eventId): void // error: Unused Laravel\NotListenerBuiltinParam::handle
+    {
+    }
+}
+
 // --- Scheduled Jobs (AST-based via Schedule:: calls) ---
 
 class CleanupJob

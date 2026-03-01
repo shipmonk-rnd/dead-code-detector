@@ -656,7 +656,8 @@ final class LaravelUsageProvider implements MemberUsageProvider
             ?? $this->isMailableMethod($method, $classReflection)
             ?? $this->isBroadcastEventMethod($method, $classReflection)
             ?? $this->isJsonResourceMethod($method, $classReflection)
-            ?? $this->isNotifiableMethod($method, $classReflection);
+            ?? $this->isNotifiableMethod($method, $classReflection)
+            ?? $this->isEventListenerMethod($method, $classReflection);
     }
 
     private function isCommandMethod(
@@ -893,6 +894,70 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         return null;
+    }
+
+    private function isEventListenerMethod(
+        ReflectionMethod $method,
+        ClassReflection $classReflection
+    ): ?string
+    {
+        $methodName = $method->getName();
+
+        if ($method->isPublic() && (strpos($methodName, 'handle') === 0 || $methodName === '__invoke')) {
+            if ($this->firstParamHasClassType($methodName, $classReflection)) {
+                return 'Laravel auto-discovered event listener method';
+            }
+
+            return null;
+        }
+
+        if ($method->isConstructor() && $this->hasAutoDiscoveredListenerMethod($classReflection)) {
+            return 'Laravel auto-discovered event listener method';
+        }
+
+        return null;
+    }
+
+    private function hasAutoDiscoveredListenerMethod(ClassReflection $classReflection): bool
+    {
+        foreach ($classReflection->getNativeReflection()->getMethods() as $classMethod) {
+            if (!$classMethod->isPublic()) {
+                continue;
+            }
+
+            $name = $classMethod->getName();
+
+            if (strpos($name, 'handle') !== 0 && $name !== '__invoke') {
+                continue;
+            }
+
+            if ($this->firstParamHasClassType($name, $classReflection)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @see \Illuminate\Support\Reflector::getParameterClassNames()
+     */
+    private function firstParamHasClassType(
+        string $methodName,
+        ClassReflection $classReflection
+    ): bool
+    {
+        foreach ($classReflection->getNativeMethod($methodName)->getVariants() as $variant) {
+            $params = $variant->getParameters();
+
+            if ($params === []) {
+                return false;
+            }
+
+            return $params[0]->getType()->getObjectClassNames() !== [];
+        }
+
+        return false;
     }
 
     private function createUsage(
