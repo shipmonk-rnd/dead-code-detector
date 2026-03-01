@@ -160,6 +160,16 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 }
             }
 
+            // String syntax: Route::get('/path', 'Controller@method')
+            foreach ($this->extractControllerAtMethodFromArg($node, $scope, 1) as [$className, $method]) {
+                foreach ([$method, '__construct'] as $usedMethod) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $usedMethod, false),
+                    );
+                }
+            }
+
             // Invokable controllers: Route::get('/path', Controller::class)
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
                 foreach (['__invoke', '__construct'] as $method) {
@@ -173,6 +183,16 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if ($methodName === 'match') {
             foreach ($this->extractCallablesFromArg($node, $scope, 2) as [$className, $method]) {
+                foreach ([$method, '__construct'] as $usedMethod) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $usedMethod, false),
+                    );
+                }
+            }
+
+            // String syntax: Route::match(['GET'], '/path', 'Controller@method')
+            foreach ($this->extractControllerAtMethodFromArg($node, $scope, 2) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
@@ -585,6 +605,40 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         return $classNames;
+    }
+
+    /**
+     * Extracts [class, method] pairs from a 'Controller@method' string argument.
+     *
+     * @return list<array{string, string}>
+     */
+    private function extractControllerAtMethodFromArg(
+        StaticCall $node,
+        Scope $scope,
+        int $argIndex
+    ): array
+    {
+        $arg = $node->getArgs()[$argIndex] ?? null;
+
+        if ($arg === null) {
+            return [];
+        }
+
+        $argType = $scope->getType($arg->value);
+        $callables = [];
+
+        foreach ($argType->getConstantStrings() as $stringType) {
+            $value = $stringType->getValue();
+            $atPos = strpos($value, '@');
+
+            if ($atPos !== false) {
+                $className = substr($value, 0, $atPos);
+                $methodName = substr($value, $atPos + 1);
+                $callables[] = [$className, $methodName];
+            }
+        }
+
+        return $callables;
     }
 
     private function shouldMarkAsUsed(

@@ -100,6 +100,25 @@ class MatchInvokableController extends Controller
     }
 }
 
+class StringRouteController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function index(): void
+    {
+    }
+
+    public function store(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\StringRouteController::unusedAction
+    {
+    }
+}
+
 // --- Event Listeners ---
 
 class OrderCreatedEvent
@@ -607,6 +626,11 @@ function registerRoutes(): void
     Route::get('/invokable', InvokableController::class);
     Route::resource('posts', PostController::class);
     Route::apiResource('comments', CommentController::class);
+
+    // String syntax: 'Controller@method'
+    Route::get('/string-route', 'Laravel\StringRouteController@index');
+    Route::post('/string-route', 'Laravel\StringRouteController@store');
+    Route::match(['GET'], '/string-match', 'Laravel\StringRouteController@index');
 }
 
 function registerEvents(): void
