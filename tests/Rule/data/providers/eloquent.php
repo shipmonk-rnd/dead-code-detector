@@ -146,6 +146,26 @@ class ObservedPost extends Model
 {
 }
 
+#[ObservedBy([CommentObserver::class])]
+class ObservedComment extends Model
+{
+}
+
+class CommentObserver
+{
+    public function __construct()
+    {
+    }
+
+    public function updating(object $comment): void
+    {
+    }
+
+    public function helperMethod(): void // error: Unused Eloquent\CommentObserver::helperMethod
+    {
+    }
+}
+
 class PostObserver
 {
     public function __construct()
