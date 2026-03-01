@@ -19,7 +19,10 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
+use function array_slice;
 use function count;
+use function explode;
+use function implode;
 use function in_array;
 use function lcfirst;
 use function str_replace;
@@ -402,19 +405,11 @@ final class LaravelUsageProvider implements MemberUsageProvider
             $modelType = $scope->getType($modelArg->value);
 
             foreach ($modelType->getObjectClassNames() as $modelClassName) {
-                $policyClassName = $this->resolvePolicyClassName($modelClassName);
-
-                if ($policyClassName !== null) {
-                    $policyClassNames[] = $policyClassName;
-                }
+                $policyClassNames = [...$policyClassNames, ...$this->resolvePolicyClassNames($modelClassName)];
             }
 
             foreach ($modelType->getConstantStrings() as $modelStringType) {
-                $policyClassName = $this->resolvePolicyClassName($modelStringType->getValue());
-
-                if ($policyClassName !== null) {
-                    $policyClassNames[] = $policyClassName;
-                }
+                $policyClassNames = [...$policyClassNames, ...$this->resolvePolicyClassNames($modelStringType->getValue())];
             }
         }
 
@@ -432,29 +427,46 @@ final class LaravelUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    private function resolvePolicyClassName(string $modelClassName): ?string
+    /**
+     * @return list<string>
+     *
+     * @see \Illuminate\Auth\Access\Gate::guessPolicyName()
+     */
+    private function resolvePolicyClassNames(string $modelClassName): array
     {
         $lastSeparator = strrpos($modelClassName, '\\');
 
         if ($lastSeparator === false) {
-            return null;
+            return [];
         }
 
-        $namespace = substr($modelClassName, 0, $lastSeparator);
-        $shortName = substr($modelClassName, $lastSeparator + 1);
+        $classDirname = substr($modelClassName, 0, $lastSeparator);
+        $classBasename = substr($modelClassName, $lastSeparator + 1);
+        $policyBasename = $classBasename . 'Policy';
 
-        $firstSeparator = strpos($namespace, '\\');
-        $rootNamespace = $firstSeparator !== false
-            ? substr($namespace, 0, $firstSeparator)
-            : $namespace;
+        $segments = explode('\\', $classDirname);
+        $segmentCount = count($segments);
 
-        $policyClassName = $rootNamespace . '\\Policies\\' . $shortName . 'Policy';
+        $candidates = [];
 
-        if ($this->reflectionProvider->hasClass($policyClassName)) {
-            return $policyClassName;
+        if (strpos($classDirname, '\\Models\\') !== false) {
+            $candidates[] = str_replace('\\Models\\', '\\Models\\Policies\\', $classDirname) . '\\' . $policyBasename;
+            $candidates[] = str_replace('\\Models\\', '\\Policies\\', $classDirname) . '\\' . $policyBasename;
         }
 
-        return null;
+        for ($i = $segmentCount; $i >= 1; $i--) {
+            $candidates[] = implode('\\', array_slice($segments, 0, $i)) . '\\Policies\\' . $policyBasename;
+        }
+
+        $result = [];
+
+        foreach ($candidates as $candidate) {
+            if ($this->reflectionProvider->hasClass($candidate)) {
+                $result[] = $candidate;
+            }
+        }
+
+        return $result;
     }
 
     /**
