@@ -85,6 +85,21 @@ class InvokableController extends Controller
     }
 }
 
+class MatchInvokableController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\MatchInvokableController::unusedAction
+    {
+    }
+}
+
 // --- Event Listeners ---
 
 class OrderCreatedEvent
@@ -220,6 +235,16 @@ class SendEmailJob implements ShouldQueue
     public function backoff(): array
     {
         return [];
+    }
+
+    public function uniqueVia(): object
+    {
+        return new \stdClass();
+    }
+
+    public function displayName(): string
+    {
+        return '';
     }
 
     private function notAJobMethod(): void // error: Unused Laravel\SendEmailJob::notAJobMethod
@@ -393,6 +418,14 @@ class StoreUserRequest extends FormRequest
     }
 
     protected function passedValidation(): void
+    {
+    }
+
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void
+    {
+    }
+
+    protected function failedAuthorization(): void
     {
     }
 
@@ -570,6 +603,7 @@ function registerRoutes(): void
     Route::delete('/users/{id}', [UserController::class, 'index']);
     Route::any('/any', [UserController::class, 'show']);
     Route::match(['GET', 'POST'], '/match', [UserController::class, 'index']);
+    Route::match(['GET'], '/match-invokable', MatchInvokableController::class);
     Route::get('/invokable', InvokableController::class);
     Route::resource('posts', PostController::class);
     Route::apiResource('comments', CommentController::class);
