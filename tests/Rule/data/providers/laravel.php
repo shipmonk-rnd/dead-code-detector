@@ -16,6 +16,9 @@ abstract class Model
 {
     /** @param array<string, mixed> $attributes */
     public function __construct(array $attributes = []) {}
+
+    /** @param class-string|list<class-string> $classes */
+    public static function observe(string|array $classes): void {}
 }
 
 namespace Illuminate\Database\Eloquent\Relations;
@@ -106,6 +109,23 @@ class Seeder
 {
 }
 
+namespace Illuminate\Database\Migrations;
+
+abstract class Migration
+{
+}
+
+namespace Illuminate\Database\Eloquent\Attributes;
+
+use Attribute;
+
+#[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
+class ObservedBy
+{
+    /** @param class-string|list<class-string> $classes */
+    public function __construct(string|array $classes) {}
+}
+
 namespace Illuminate\Mail;
 
 class Mailable
@@ -182,12 +202,14 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Validation\Rule as ValidationRuleOld;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Seeder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Http\FormRequest;
@@ -849,6 +871,101 @@ class OldValidationRule implements ValidationRuleOld
     }
 }
 
+// --- Migrations ---
+
+class CreateUsersTable extends Migration
+{
+    public function up(): void
+    {
+    }
+
+    public function down(): void
+    {
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\CreateUsersTable::helperMethod
+    {
+    }
+}
+
+// --- Observers ---
+
+class UserObserver
+{
+    public function __construct()
+    {
+    }
+
+    public function creating(object $user): void
+    {
+    }
+
+    public function updated(object $user): void
+    {
+    }
+
+    public function helperMethod(): void // error: Unused Laravel\UserObserver::helperMethod
+    {
+    }
+}
+
+#[ObservedBy(PostObserver::class)]
+class ObservedPost extends Model
+{
+}
+
+class PostObserver
+{
+    public function __construct()
+    {
+    }
+
+    public function saving(object $post): void
+    {
+    }
+
+    public function deleted(object $post): void
+    {
+    }
+
+    public function helperMethod(): void // error: Unused Laravel\PostObserver::helperMethod
+    {
+    }
+}
+
+class AuditObserver
+{
+    public function __construct()
+    {
+    }
+
+    public function created(object $model): void
+    {
+    }
+
+    public function helperMethod(): void // error: Unused Laravel\AuditObserver::helperMethod
+    {
+    }
+}
+
+// --- Middleware with constructor ---
+
+class ThrottleMiddleware
+{
+    public function __construct()
+    {
+    }
+
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        return $next($request);
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\ThrottleMiddleware::helperMethod
+    {
+    }
+}
+
 // =====================
 // Route/Event/Schedule Registrations (AST-based detection)
 // =====================
@@ -876,4 +993,10 @@ function registerEvents(): void
 function registerSchedule(): void
 {
     Schedule::job(CleanupJob::class);
+}
+
+function registerObservers(): void
+{
+    User::observe(UserObserver::class);
+    User::observe([AuditObserver::class]);
 }
