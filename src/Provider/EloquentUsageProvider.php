@@ -20,7 +20,9 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function in_array;
 use function is_array;
 use function is_string;
+use function strlen;
 use function strpos;
+use function substr;
 
 final class EloquentUsageProvider implements MemberUsageProvider
 {
@@ -225,7 +227,28 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return 'Eloquent attribute accessor';
         }
 
+        if ($this->isLegacyAccessorOrMutator($methodName)) {
+            return 'Eloquent legacy accessor/mutator';
+        }
+
         return null;
+    }
+
+    /**
+     * Legacy get{Name}Attribute() / set{Name}Attribute() convention (pre-Laravel 9).
+     * Still supported in Laravel 10+ alongside the modern Attribute return-type approach.
+     */
+    private function isLegacyAccessorOrMutator(string $methodName): bool
+    {
+        $length = strlen($methodName);
+
+        // Minimum: get + X + Attribute = 13 chars, same for set
+        if ($length <= 12 || substr($methodName, -9) !== 'Attribute') {
+            return false;
+        }
+
+        return strpos($methodName, 'get') === 0
+            || strpos($methodName, 'set') === 0;
     }
 
     private function isFactoryMethod(

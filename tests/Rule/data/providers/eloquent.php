@@ -65,6 +65,22 @@ class User extends Model
         return new Attribute();
     }
 
+    // Legacy accessors/mutators (pre-Laravel 9, still supported)
+    public function getLastNameAttribute(): string
+    {
+        return '';
+    }
+
+    public function setLastNameAttribute(string $value): void
+    {
+    }
+
+    // These should NOT be detected as legacy accessors/mutators
+    public function getSomethingElse(): string // error: Unused Eloquent\User::getSomethingElse
+    {
+        return '';
+    }
+
     private function notAFrameworkMethod(): void // error: Unused Eloquent\User::notAFrameworkMethod
     {
     }
