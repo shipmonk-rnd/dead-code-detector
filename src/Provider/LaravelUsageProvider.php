@@ -26,8 +26,6 @@ use function substr;
 final class LaravelUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
-
     private const SERVICE_PROVIDER_METHODS = ['register', 'boot'];
 
     private const ROUTE_HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'any', 'match'];
@@ -37,6 +35,8 @@ final class LaravelUsageProvider implements MemberUsageProvider
         'Illuminate\\Support\\Facades\\Route',
     ];
 
+    private bool $enabled;
+
     public function __construct(?bool $enabled)
     {
         $this->enabled = $enabled ?? $this->isLaravelInstalled();
@@ -45,7 +45,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
     /**
      * @return list<ClassMethodUsage>
      */
-    public function getUsages(Node $node, Scope $scope): array
+    public function getUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$this->enabled) {
             return [];
@@ -63,12 +66,15 @@ final class LaravelUsageProvider implements MemberUsageProvider
      * Detects controller methods registered via Route::get/post/etc.
      *
      * Supports two syntaxes:
-     * - Array:  Route::get('/path', [HomeController::class, 'index'])
+     * - Array: Route::get('/path', [HomeController::class, 'index'])
      * - String: Route::get('/path', 'HomeController@index')
      *
      * @return list<ClassMethodUsage>
      */
-    private function getRouteUsages(Node $node, Scope $scope): array
+    private function getRouteUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$node instanceof StaticCall) {
             return [];
@@ -149,7 +155,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
      *
      * @return list<ClassMethodUsage>
      */
-    private function getArtisanCommandUsages(Node $node, Scope $scope): array
+    private function getArtisanCommandUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$node instanceof ClassMethod || $node->name->toString() !== 'handle') {
             return [];
@@ -174,7 +183,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
      *
      * @return list<ClassMethodUsage>
      */
-    private function getServiceProviderUsages(Node $node, Scope $scope): array
+    private function getServiceProviderUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$node instanceof ClassMethod
             || !in_array($node->name->toString(), self::SERVICE_PROVIDER_METHODS, true)
@@ -206,7 +218,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
      *
      * @return list<ClassMethodUsage>
      */
-    private function getEloquentAccessorMutatorUsages(Node $node, Scope $scope): array
+    private function getEloquentAccessorMutatorUsages(
+        Node $node,
+        Scope $scope
+    ): array
     {
         if (!$node instanceof ClassMethod) {
             return [];
