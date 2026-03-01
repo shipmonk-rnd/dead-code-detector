@@ -1,218 +1,5 @@
 <?php declare(strict_types = 1);
 
-// =====================
-// Laravel Stubs
-// =====================
-
-namespace Illuminate\Routing;
-
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-
-abstract class Controller
-{
-    use AuthorizesRequests;
-}
-
-namespace Illuminate\Database\Eloquent;
-
-abstract class Model
-{
-    /** @param array<string, mixed> $attributes */
-    public function __construct(array $attributes = []) {}
-
-    /** @param class-string|list<class-string> $classes */
-    public static function observe(string|array $classes): void {}
-}
-
-namespace Illuminate\Database\Eloquent\Relations;
-
-abstract class Relation
-{
-}
-
-class HasMany extends Relation
-{
-}
-
-class BelongsTo extends Relation
-{
-}
-
-class BelongsToMany extends Relation
-{
-}
-
-namespace Illuminate\Database\Eloquent\Casts;
-
-class Attribute
-{
-}
-
-namespace Illuminate\Database\Eloquent\Factories;
-
-abstract class Factory
-{
-}
-
-namespace Illuminate\Console;
-
-class Command
-{
-}
-
-namespace Illuminate\Contracts\Queue;
-
-interface ShouldQueue
-{
-}
-
-namespace Illuminate\Foundation\Bus;
-
-trait Dispatchable
-{
-}
-
-namespace Illuminate\Support;
-
-abstract class ServiceProvider
-{
-    public function __construct($app) {}
-}
-
-namespace Illuminate\Http;
-
-class Request
-{
-}
-
-namespace Illuminate\Notifications;
-
-class Notification
-{
-}
-
-trait RoutesNotifications
-{
-}
-
-trait Notifiable
-{
-    use RoutesNotifications;
-}
-
-namespace Illuminate\Foundation\Http;
-
-class FormRequest
-{
-}
-
-namespace Illuminate\Database;
-
-class Seeder
-{
-}
-
-namespace Illuminate\Database\Migrations;
-
-abstract class Migration
-{
-}
-
-namespace Illuminate\Database\Eloquent\Attributes;
-
-use Attribute;
-
-#[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
-class ObservedBy
-{
-    /** @param class-string|list<class-string> $classes */
-    public function __construct(string|array $classes) {}
-}
-
-namespace Illuminate\Mail;
-
-class Mailable
-{
-}
-
-namespace Illuminate\Contracts\Broadcasting;
-
-interface ShouldBroadcast
-{
-}
-
-namespace Illuminate\Http\Resources\Json;
-
-class JsonResource
-{
-}
-
-namespace Illuminate\Contracts\Validation;
-
-interface ValidationRule
-{
-}
-
-interface Rule
-{
-}
-
-namespace Illuminate\Foundation\Auth\Access;
-
-trait AuthorizesRequests
-{
-    /** @param mixed ...$arguments */
-    public function authorize(string $ability, ...$arguments): void {}
-}
-
-namespace Illuminate\Support\Facades;
-
-class Route
-{
-    /** @param mixed $action */
-    public static function get(string $uri, $action): void {}
-    /** @param mixed $action */
-    public static function post(string $uri, $action): void {}
-    /** @param mixed $action */
-    public static function put(string $uri, $action): void {}
-    /** @param mixed $action */
-    public static function patch(string $uri, $action): void {}
-    /** @param mixed $action */
-    public static function delete(string $uri, $action): void {}
-    /** @param mixed $action */
-    public static function any(string $uri, $action): void {}
-    /**
-     * @param list<string> $methods
-     * @param mixed $action
-     */
-    public static function match(array $methods, string $uri, $action): void {}
-    public static function resource(string $name, string $controller): void {}
-    public static function apiResource(string $name, string $controller): void {}
-}
-
-class Event
-{
-    /** @param mixed $event */
-    public static function listen($event, string $listener): void {}
-    public static function subscribe(string $subscriber): void {}
-}
-
-class Schedule
-{
-    public static function job(string $job): void {}
-}
-
-class Gate
-{
-    /** @param mixed $callback */
-    public static function define(string $ability, $callback): void {}
-    public static function policy(string $model, string $policy): void {}
-}
-
-// =====================
-// Test Classes
-// =====================
-
 namespace Laravel;
 
 use Illuminate\Console\Command;
@@ -241,6 +28,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\ServiceProvider;
 
 // --- Controllers (AST-based via Route:: calls) ---
@@ -393,17 +181,17 @@ class User extends Model
 
     public function posts(): HasMany
     {
-        return new HasMany();
+        throw new \RuntimeException('stub');
     }
 
     public function company(): BelongsTo
     {
-        return new BelongsTo();
+        throw new \RuntimeException('stub');
     }
 
     public function roles(): BelongsToMany
     {
-        return new BelongsToMany();
+        throw new \RuntimeException('stub');
     }
 
     protected function firstName(): Attribute
@@ -853,10 +641,9 @@ class UserResource extends JsonResource
         return [];
     }
 
-    /** @return array<string, mixed> */
-    public function additional(object $request): array
+    public function additional(array $data): static
     {
-        return [];
+        return $this;
     }
 
     /** @return array<string, mixed> */
@@ -885,7 +672,7 @@ class UppercaseRule implements ValidationRule
 
 class OldValidationRule implements ValidationRuleOld
 {
-    public function passes(string $attribute, mixed $value): bool
+    public function passes($attribute, $value): bool
     {
         return true;
     }
@@ -1044,6 +831,8 @@ function registerPolicies(): void
 
 class SongController extends Controller
 {
+    use AuthorizesRequests;
+
     public function show(Song $song): void
     {
         $this->authorize('access', $song);
