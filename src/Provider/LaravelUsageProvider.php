@@ -590,7 +590,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
             ?? $this->isMailableMethod($method, $classReflection)
             ?? $this->isBroadcastEventMethod($method, $classReflection)
             ?? $this->isJsonResourceMethod($method, $classReflection)
-            ?? $this->isValidationRuleMethod($method, $classReflection)
             ?? $this->isNotifiableMethod($method, $classReflection);
     }
 
@@ -779,7 +778,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        $broadcastMethods = ['broadcastOn', 'broadcastWith', 'broadcastAs', 'broadcastWhen'];
+        $broadcastMethods = ['broadcastWith', 'broadcastAs', 'broadcastWhen'];
 
         if (in_array($method->getName(), $broadcastMethods, true)) {
             return 'Laravel broadcast event method';
@@ -797,31 +796,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        $resourceMethods = ['toArray', 'with', 'additional', 'paginationInformation'];
+        $resourceMethods = ['paginationInformation'];
 
         if (in_array($method->getName(), $resourceMethods, true)) {
             return 'Laravel JSON resource method';
-        }
-
-        return null;
-    }
-
-    private function isValidationRuleMethod(
-        ReflectionMethod $method,
-        ClassReflection $classReflection
-    ): ?string
-    {
-        if (
-            !$classReflection->is('Illuminate\Contracts\Validation\ValidationRule')
-            && !$classReflection->is('Illuminate\Contracts\Validation\Rule')
-        ) {
-            return null;
-        }
-
-        $ruleMethods = ['validate', 'passes', 'message'];
-
-        if (in_array($method->getName(), $ruleMethods, true)) {
-            return 'Laravel validation rule method';
         }
 
         return null;
