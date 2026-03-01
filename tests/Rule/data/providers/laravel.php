@@ -401,55 +401,6 @@ class StoreUserRequest extends FormRequest
     }
 }
 
-// --- Policies ---
-
-class PostPolicy
-{
-    public function before(object $user): ?bool
-    {
-        return null;
-    }
-
-    public function viewAny(object $user): bool
-    {
-        return true;
-    }
-
-    public function view(object $user, object $post): bool
-    {
-        return true;
-    }
-
-    public function create(object $user): bool
-    {
-        return true;
-    }
-
-    public function update(object $user, object $post): bool
-    {
-        return true;
-    }
-
-    public function delete(object $user, object $post): bool
-    {
-        return true;
-    }
-
-    public function restore(object $user, object $post): bool
-    {
-        return true;
-    }
-
-    public function forceDelete(object $user, object $post): bool
-    {
-        return true;
-    }
-
-    private function helperMethod(): void // error: Unused Laravel\PostPolicy::helperMethod
-    {
-    }
-}
-
 // --- Policy with custom abilities (detected via authorize() and Gate::policy()) ---
 
 class Song extends Model
@@ -674,6 +625,53 @@ class SongController extends Controller
 // =====================
 
 namespace Laravel\Policies;
+
+class PostPolicy
+{
+    public function before(object $user): ?bool
+    {
+        return null;
+    }
+
+    public function viewAny(object $user): bool
+    {
+        return true;
+    }
+
+    public function view(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function create(object $user): bool
+    {
+        return true;
+    }
+
+    public function update(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function delete(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function restore(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\Policies\PostPolicy::helperMethod
+    {
+    }
+}
 
 class SongPolicy
 {
