@@ -733,6 +733,11 @@ final class LaravelUsageProvider implements MemberUsageProvider
     ): ?string
     {
         $className = $classReflection->getName();
+
+        if (strpos($className, '\\Policies\\') === false) {
+            return null;
+        }
+
         $lastSeparator = strrpos($className, '\\');
         $shortName = $lastSeparator !== false ? substr($className, $lastSeparator + 1) : $className;
 
