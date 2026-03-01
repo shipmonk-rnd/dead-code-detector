@@ -87,10 +87,11 @@ $ vendor/bin/phpstan
 - constructor calls for DIC services (rules, extensions, ...)
 
 #### Laravel:
-- controller methods registered via `Route::get/post/...('/path', [Controller::class, 'method'])` or `'Controller@method'` string syntax
-- `handle()` method in classes extending `Illuminate\Console\Command` (Artisan commands)
-- `register()` and `boot()` methods in classes extending `Illuminate\Support\ServiceProvider`
-- `get*Attribute()` and `set*Attribute()` methods in classes extending `Illuminate\Database\Eloquent\Model` (accessors and mutators)
+Prevents false positives for methods called by Laravel's framework internals that cannot be statically detected:
+- **Route-registered controllers**: methods listed in `Route::get('/path', [Controller::class, 'method'])` or `'Controller@method'` string syntax
+- **Artisan commands**: `handle()` in classes extending `Illuminate\Console\Command` (called by the CLI kernel)
+- **Service providers**: `register()` and `boot()` in classes extending `Illuminate\Support\ServiceProvider` (called by the application bootstrap)
+- **Eloquent accessors & mutators**: `get*Attribute()` / `set*Attribute()` in classes extending `Illuminate\Database\Eloquent\Model` (invoked via magic property access)
 
 #### Nette:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
