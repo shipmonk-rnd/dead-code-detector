@@ -85,6 +85,15 @@ class Notification
 {
 }
 
+trait RoutesNotifications
+{
+}
+
+trait Notifiable
+{
+    use RoutesNotifications;
+}
+
 namespace Illuminate\Foundation\Http;
 
 class FormRequest
@@ -94,12 +103,6 @@ class FormRequest
 namespace Illuminate\Database;
 
 class Seeder
-{
-}
-
-namespace Illuminate\Auth\Access;
-
-trait HandlesAuthorization
 {
 }
 
@@ -174,7 +177,6 @@ class Schedule
 
 namespace Laravel;
 
-use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -192,6 +194,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Mail\Mailable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
@@ -203,6 +206,10 @@ use Illuminate\Support\ServiceProvider;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+    }
+
     public function index(): void
     {
     }
@@ -240,6 +247,21 @@ class CommentController extends Controller
     public function destroy(): void {}
     public function create(): void {} // error: Unused Laravel\CommentController::create
     public function edit(): void {} // error: Unused Laravel\CommentController::edit
+}
+
+class InvokableController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\InvokableController::unusedAction
+    {
+    }
 }
 
 // --- Event Listeners ---
@@ -349,6 +371,26 @@ class User extends Model
     }
 
     private function notAFrameworkMethod(): void // error: Unused Laravel\User::notAFrameworkMethod
+    {
+    }
+}
+
+// Model with notification routing (routeNotificationFor* belongs on the notifiable model, not Notification)
+class NotifiableUser extends Model
+{
+    use Notifiable;
+
+    public function routeNotificationForSlack(): string
+    {
+        return '';
+    }
+
+    public function routeNotificationForMail(): string
+    {
+        return '';
+    }
+
+    private function notAFrameworkMethod(): void // error: Unused Laravel\NotifiableUser::notAFrameworkMethod
     {
     }
 }
@@ -633,8 +675,6 @@ class DatabaseSeeder extends Seeder
 
 class PostPolicy
 {
-    use HandlesAuthorization;
-
     public function before(object $user): ?bool
     {
         return null;
@@ -822,6 +862,7 @@ function registerRoutes(): void
     Route::delete('/users/{id}', [UserController::class, 'index']);
     Route::any('/any', [UserController::class, 'show']);
     Route::match(['GET', 'POST'], '/match', [UserController::class, 'index']);
+    Route::get('/invokable', InvokableController::class);
     Route::resource('posts', PostController::class);
     Route::apiResource('comments', CommentController::class);
 }

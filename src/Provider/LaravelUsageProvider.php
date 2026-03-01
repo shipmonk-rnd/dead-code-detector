@@ -20,6 +20,8 @@ use function array_map;
 use function count;
 use function in_array;
 use function strpos;
+use function strrpos;
+use function substr;
 
 final class LaravelUsageProvider implements MemberUsageProvider
 {
@@ -128,24 +130,48 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if (in_array($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any'], true)) {
             foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
-                $usages[] = new ClassMethodUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassMethodRef($className, $method, false),
-                );
+                foreach ([$method, '__construct'] as $usedMethod) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $usedMethod, false),
+                    );
+                }
+            }
+
+            // Invokable controllers: Route::get('/path', Controller::class)
+            foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
+                foreach (['__invoke', '__construct'] as $method) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $method, false),
+                    );
+                }
             }
         }
 
         if ($methodName === 'match') {
             foreach ($this->extractCallablesFromArg($node, $scope, 2) as [$className, $method]) {
-                $usages[] = new ClassMethodUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassMethodRef($className, $method, false),
-                );
+                foreach ([$method, '__construct'] as $usedMethod) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $usedMethod, false),
+                    );
+                }
+            }
+
+            // Invokable controllers: Route::match(['GET'], '/path', Controller::class)
+            foreach ($this->extractClassNamesFromArg($node, $scope, 2) as $className) {
+                foreach (['__invoke', '__construct'] as $method) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createRegular($node, $scope),
+                        new ClassMethodRef($className, $method, false),
+                    );
+                }
             }
         }
 
         if ($methodName === 'resource') {
-            $resourceMethods = ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
+            $resourceMethods = ['__construct', 'index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
 
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
                 foreach ($resourceMethods as $method) {
@@ -158,7 +184,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         if ($methodName === 'apiResource') {
-            $apiResourceMethods = ['index', 'store', 'show', 'update', 'destroy'];
+            $apiResourceMethods = ['__construct', 'index', 'store', 'show', 'update', 'destroy'];
 
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
                 foreach ($apiResourceMethods as $method) {
@@ -331,7 +357,8 @@ final class LaravelUsageProvider implements MemberUsageProvider
             ?? $this->isMailableMethod($method, $classReflection)
             ?? $this->isBroadcastEventMethod($method, $classReflection)
             ?? $this->isJsonResourceMethod($method, $classReflection)
-            ?? $this->isValidationRuleMethod($method, $classReflection);
+            ?? $this->isValidationRuleMethod($method, $classReflection)
+            ?? $this->isNotifiableMethod($method, $classReflection);
     }
 
     private function isEloquentModelMethod(
@@ -478,10 +505,6 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return 'Laravel notification method';
         }
 
-        if (strpos($methodName, 'routeNotificationFor') === 0) {
-            return 'Laravel notification routing method';
-        }
-
         return null;
     }
 
@@ -543,7 +566,11 @@ final class LaravelUsageProvider implements MemberUsageProvider
         ClassReflection $classReflection
     ): ?string
     {
-        if (!$classReflection->hasTraitUse('Illuminate\Auth\Access\HandlesAuthorization')) {
+        $className = $classReflection->getName();
+        $lastSeparator = strrpos($className, '\\');
+        $shortName = $lastSeparator !== false ? substr($className, $lastSeparator + 1) : $className;
+
+        if (substr($shortName, -6) !== 'Policy') {
             return null;
         }
 
@@ -628,6 +655,25 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if (in_array($method->getName(), $ruleMethods, true)) {
             return 'Laravel validation rule method';
+        }
+
+        return null;
+    }
+
+    private function isNotifiableMethod(
+        ReflectionMethod $method,
+        ClassReflection $classReflection
+    ): ?string
+    {
+        if (
+            !$classReflection->hasTraitUse('Illuminate\Notifications\Notifiable')
+            && !$classReflection->hasTraitUse('Illuminate\Notifications\RoutesNotifications')
+        ) {
+            return null;
+        }
+
+        if (strpos($method->getName(), 'routeNotificationFor') === 0) {
+            return 'Laravel notification routing method';
         }
 
         return null;
