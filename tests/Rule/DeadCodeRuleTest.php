@@ -1119,6 +1119,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->createPhpStanContainerMock(),
             ),
             new LaravelUsageProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
             ),
             new NetteUsageProvider(
