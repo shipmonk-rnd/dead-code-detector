@@ -43,6 +43,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
@@ -930,6 +931,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php', self::requiresPhp(8_00_00)];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
+        yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php', self::requiresPhp(8_01_00)];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php', self::requiresPhp(8_01_00)];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
@@ -1117,6 +1119,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new PhpStanUsageProvider(
                 $this->providersEnabled,
                 $this->createPhpStanContainerMock(),
+            ),
+            new EloquentUsageProvider(
+                $this->providersEnabled,
             ),
             new LaravelUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
