@@ -9,8 +9,8 @@ use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\MissingServiceException;
-use function str_contains;
-use function str_ends_with;
+use function strpos;
+use function substr;
 
 /**
  * This formatter solves the following issue https://github.com/phpstan/phpstan/issues/12328
@@ -94,7 +94,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
     private function isDeadCodeIdentifier(string $message): bool
     {
         foreach ($this->identifiers as $identifier) {
-            if (str_contains($message, $identifier)) {
+            if (strpos($message, $identifier) !== false) {
                 return true;
             }
         }
@@ -106,7 +106,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
         /** @var array<string> $argv */
         $argv = $_SERVER['argv'] ?? [];
         foreach ($argv as $arg) {
-            if (str_ends_with($arg, '.php')) {
+            if (substr($arg, -4) === '.php') {
                 return true;
             }
         }
