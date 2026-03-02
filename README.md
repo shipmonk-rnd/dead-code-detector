@@ -393,18 +393,6 @@ Enum cases and properties are disabled by default as those are often used in API
 But libraries should be able to enable those easily.
 
 
-## Comparison with tomasvotruba/unused-public
-- You can see [detailed comparison PR](https://github.com/shipmonk-rnd/dead-code-detector/pull/53)
-- Basically, their analysis is less precise and less flexible. Mainly:
-  - It cannot detect dead constructors
-  - It does not properly detect calls within inheritance hierarchy
-  - It does not offer any custom adjustments of used methods
-  - It has almost no built-in library extensions
-  - It ignores trait methods
-  - Is lacks many minor features like class-string calls, dynamic method calls, array callbacks, nullsafe call chains etc
-  - It cannot detect dead cycles nor transitively dead methods
-  - It has no built-in dead code removal
-
 ## Limitations:
 - Methods of anonymous classes are never reported as dead ([PHPStan limitation](https://github.com/phpstan/phpstan/issues/8410))
 - Abstract trait methods are never reported as dead
