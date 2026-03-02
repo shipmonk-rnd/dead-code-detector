@@ -3,7 +3,7 @@
 namespace PropertyHooks2;
 
 interface Named {
-    public string $name { get; } // error: Property PropertyHooks2\Named::$name is never written
+    public string $name { get; }
 }
 
 class User implements Named {

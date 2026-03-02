@@ -99,7 +99,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      *      file: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int, default: bool}>,
+     *      properties: array<string, array{line: int, default: bool, setHook: bool}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -289,7 +289,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 if ($this->detectNeverReadProperties) {
                     $accessTypes[] = AccessType::READ;
                 }
-                if ($this->detectNeverWrittenProperties && !$propertyData['default']) { // consider properties with default values as written
+                if (
+                    $this->detectNeverWrittenProperties
+                    && !$propertyData['default'] // consider properties with default values as written
+                    && !($typeDefinition['kind'] === ClassLikeKind::INTERFACE && !$propertyData['setHook']) // interfaces without set hook cannot be written to
+                ) {
                     $accessTypes[] = AccessType::WRITE;
                 }
                 foreach ($accessTypes as $accessType) {

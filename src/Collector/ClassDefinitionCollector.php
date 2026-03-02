@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\PropertyHook;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\Enum_;
@@ -30,7 +31,7 @@ use function is_string;
  *       name: string,
  *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
- *       properties: array<string, array{line: int, default: bool}>,
+ *       properties: array<string, array{line: int, default: bool, setHook: bool}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -61,7 +62,7 @@ final class ClassDefinitionCollector implements Collector
      *      name: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int, default: bool}>,
+     *      properties: array<string, array{line: int, default: bool, setHook: bool}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -101,6 +102,7 @@ final class ClassDefinitionCollector implements Collector
                         $properties[$param->var->name] = [
                             'line' => $param->var->getStartLine(),
                             'default' => $param->default !== null,
+                            'setHook' => $this->hasSetHook($param->hooks),
                         ];
                     }
                 }
@@ -126,6 +128,7 @@ final class ClassDefinitionCollector implements Collector
                 $properties[$prop->name->toString()] = [
                     'line' => $prop->getStartLine(),
                     'default' => $prop->default !== null,
+                    'setHook' => $this->hasSetHook($property->hooks),
                 ];
             }
         }
@@ -239,6 +242,20 @@ final class ClassDefinitionCollector implements Collector
         }
 
         return $result;
+    }
+
+    /**
+     * @param PropertyHook[] $hooks
+     */
+    private function hasSetHook(array $hooks): bool
+    {
+        foreach ($hooks as $hook) {
+            if ($hook->name->toLowerString() === 'set') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

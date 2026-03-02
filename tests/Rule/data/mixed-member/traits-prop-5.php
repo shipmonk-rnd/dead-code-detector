@@ -10,7 +10,7 @@ trait MyTrait1 {
 
 interface TraitInterface
 {
-    public int $used { get; } // error: Property MixedMemberTraitProp5\TraitInterface::$used is never written
+    public int $used { get; }
 }
 
 class MyUser1 implements TraitInterface
