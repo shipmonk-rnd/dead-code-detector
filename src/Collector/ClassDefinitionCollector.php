@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\PropertyHook;
 use PhpParser\Node\Stmt\Class_;
@@ -14,12 +15,14 @@ use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
+use PhpParser\NodeTraverser;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Enum\ClassLikeKind;
 use ShipMonk\PHPStan\DeadCode\Enum\Visibility;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
 use function array_fill_keys;
 use function array_map;
 use function count;
@@ -31,7 +34,7 @@ use function is_string;
  *       name: string,
  *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
- *       properties: array<string, array{line: int, default: bool, setHook: bool}>,
+ *       properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -62,7 +65,7 @@ final class ClassDefinitionCollector implements Collector
      *      name: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int, default: bool, setHook: bool}>,
+     *      properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -102,6 +105,7 @@ final class ClassDefinitionCollector implements Collector
                         $properties[$param->var->name] = [
                             'line' => $param->var->getStartLine(),
                             'default' => $param->default !== null,
+                            'virtual' => $this->isVirtualProperty($param->var->name, $param->hooks),
                             'setHook' => $this->hasSetHook($param->hooks),
                         ];
                     }
@@ -125,9 +129,11 @@ final class ClassDefinitionCollector implements Collector
 
         foreach ($node->getProperties() as $property) {
             foreach ($property->props as $prop) {
-                $properties[$prop->name->toString()] = [
+                $propertyName = $prop->name->toString();
+                $properties[$propertyName] = [
                     'line' => $prop->getStartLine(),
                     'default' => $prop->default !== null,
+                    'virtual' => $this->isVirtualProperty($propertyName, $property->hooks),
                     'setHook' => $this->hasSetHook($property->hooks),
                 ];
             }
@@ -242,6 +248,50 @@ final class ClassDefinitionCollector implements Collector
         }
 
         return $result;
+    }
+
+    /**
+     * @param PropertyHook[] $hooks
+     */
+    private function isVirtualProperty(
+        string $propertyName,
+        array $hooks
+    ): bool
+    {
+        if ($hooks === []) {
+            return false;
+        }
+
+        foreach ($hooks as $hook) {
+            if ($hook->body === null) {
+                continue; // abstract hook cannot reference backing value
+            }
+
+            $body = $hook->body instanceof Expr ? [$hook->body] : $hook->body;
+
+            if ($this->isBackedProperty($body, $propertyName)) {
+                return false; // hook references backing value, property is backed
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param Node[] $nodes
+     */
+    private function isBackedProperty(
+        array $nodes,
+        string $propertyName
+    ): bool
+    {
+        $visitor = new PropertyHookBackingValueVisitor($propertyName);
+
+        $traverser = new NodeTraverser();
+        $traverser->addVisitor($visitor);
+        $traverser->traverse($nodes);
+
+        return $visitor->isBackedProperty();
     }
 
     /**

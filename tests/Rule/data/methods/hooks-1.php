@@ -12,11 +12,11 @@ class State
 
 final class Test
 {
-    public State $prop1 { // error: Property Hooks1\Test::$prop1 is never written
+    public State $prop1 {
         get => State::call1();
     }
 
-    public State $prop2 { // error: Property Hooks1\Test::$prop2 is never read // error: Property Hooks1\Test::$prop2 is never written
+    public State $prop2 { // error: Property Hooks1\Test::$prop2 is never read
         get => State::call2();
     }
 }
