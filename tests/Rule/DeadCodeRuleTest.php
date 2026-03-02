@@ -784,16 +784,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::boo',
                     29,
-                    "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    "• Thus Grouping\Example::bag is transitively unused\n" .
+                    "• Thus Grouping\Example::bar is transitively unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::foo',
                     23,
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    "• Thus Grouping\Example::bar is transitively unused\n" .
+                    "• Thus Grouping\Example::bag is transitively unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',
@@ -802,7 +802,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::recur1',
                     54,
-                    'Thus Grouping\Example::recur2 is transitively also unused',
+                    'Thus Grouping\Example::recur2 is transitively unused',
                 ],
             ],
         ];
@@ -823,7 +823,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingClosure\ClosureUser::__construct',
                     12,
-                    'Thus GroupingClosure\Incriminated::baz is transitively also unused',
+                    'Thus GroupingClosure\Incriminated::baz is transitively unused',
                 ],
             ],
         ];
@@ -834,7 +834,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingRepeated\User::__construct',
                     12,
-                    'Thus GroupingRepeated\Incriminated::baz is transitively also unused',
+                    'Thus GroupingRepeated\Incriminated::baz is transitively unused',
                 ],
             ],
         ];
@@ -845,7 +845,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingOrder\ClassOne::one',
                     7,
-                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
+                    'Thus GroupingOrder\ClassTwo::two is transitively unused',
                 ],
             ],
         ];
@@ -856,7 +856,19 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingOrder\ClassOne::one', // ensure deterministic representative is chosen (even when ClassTwo was analysed first)
                     7,
-                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
+                    'Thus GroupingOrder\ClassTwo::two is transitively unused',
+                ],
+            ],
+        ];
+
+        yield 'property' => [
+            __DIR__ . '/data/grouping/property.php',
+            [
+                [
+                    'Unused GroupingProperty\Writer::__construct',
+                    7,
+                    "• Thus GroupingProperty\Writer::\$data is transitively never written\n" .
+                    '• Thus GroupingProperty\Writer::$data is transitively never read',
                 ],
             ],
         ];

@@ -859,11 +859,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $tips = [];
 
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
-            $transitiveDeadMemberHumanString = $transitivelyDeadMember->getMember()->toHumanString();
             $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
             $excludedUsages = $transitivelyDeadMember->getExcludedUsages();
 
-            $tips[] = "Thus $transitiveDeadMemberHumanString is transitively also unused{$exclusionMessage}";
+            $tips[] = $this->buildTransitiveErrorMessages($transitivelyDeadMember) . $exclusionMessage;
             $metadata[] = [
                 'blackMember' => $transitivelyDeadMember,
                 'transitive' => true,
@@ -894,6 +893,21 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         } else {
             return "Unused {$memberHumanString}";
+        }
+    }
+
+    private function buildTransitiveErrorMessages(BlackMember $blackMember): string
+    {
+        $memberHumanString = $blackMember->getMember()->toHumanString();
+
+        if ($blackMember->getMember()->getMemberType() === MemberType::PROPERTY) {
+            if ($blackMember->getAccessType() === AccessType::READ) {
+                return "Thus {$memberHumanString} is transitively never read";
+            } else {
+                return "Thus {$memberHumanString} is transitively never written";
+            }
+        } else {
+            return "Thus {$memberHumanString} is transitively unused";
         }
     }
 
