@@ -1037,6 +1037,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
         yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
+        yield 'property-attribute' => [__DIR__ . '/data/properties/attribute.php'];
         yield 'property-write-array' => [__DIR__ . '/data/properties/write-array.php'];
         yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
         yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
