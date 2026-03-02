@@ -45,14 +45,14 @@ use function preg_match_all;
 use function reset;
 use function simplexml_load_string;
 use function sprintf;
-use function strpos;
+use function str_starts_with;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
-    private ?string $configDir;
+    private readonly ?string $configDir;
 
     /**
      * class => [method => true]
@@ -71,7 +71,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     public function __construct(
         Container $container,
         ?bool $enabled,
-        ?string $configDir
+        ?string $configDir,
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
@@ -89,7 +89,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -156,7 +156,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 new ClassMethodRef(
                     $repositoryClass,
                     $repositoryMethod,
-                    false,
+                    possibleDescendant: false,
                 ),
             );
             return [$usage];
@@ -170,7 +170,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     private function getUsagesOfEventSubscriber(
         Return_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($node->expr === null) {
@@ -208,7 +208,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                         new ClassMethodRef(
                             $className,
                             $subscriberMethodString->getValue(),
-                            true,
+                            possibleDescendant: true,
                         ),
                     );
                 }
@@ -221,7 +221,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             new ClassMethodRef(
                                 $className,
                                 $subscriberMethodString->getValue(),
-                                true,
+                                possibleDescendant: true,
                             ),
                         );
                     }
@@ -236,7 +236,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                                 new ClassMethodRef(
                                     $className,
                                     $subscriberMethodString->getValue(),
-                                    true,
+                                    possibleDescendant: true,
                                 ),
                             );
                         }
@@ -285,7 +285,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     private function getMethodUsagesFromAttributeReflection(
         InClassMethodNode $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usages = [];
@@ -327,7 +327,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                                 new ClassMethodRef(
                                     $className->getValue(),
                                     $method[0]->getValue(),
-                                    true,
+                                    possibleDescendant: true,
                                 ),
                             );
                         }
@@ -362,7 +362,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                                 new ClassMethodRef(
                                     $className->getValue(),
                                     $method[0]->getValue(),
-                                    true,
+                                    possibleDescendant: true,
                                 ),
                             );
                         }
@@ -651,7 +651,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     private function hasAttribute(
         Reflector $classOrMethod,
         string $attributeClass,
-        int $flags = 0
+        int $flags = 0,
     ): bool
     {
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
@@ -669,7 +669,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     private function isSymfonyInstalled(): bool
     {
         foreach (InstalledVersions::getInstalledPackages() as $package) {
-            if (strpos($package, 'symfony/') === 0) {
+            if (str_starts_with($package, 'symfony/')) {
                 return true;
             }
         }
@@ -679,7 +679,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function createUsage(
         ExtendedMethodReflection $methodReflection,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -687,7 +687,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
         );
     }
@@ -695,7 +695,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     private function autodetectConfigDir(): ?string
     {
         $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
-            return strpos($vendorDir, 'phar://') === false;
+            return !str_starts_with($vendorDir, 'phar://');
         });
 
         if (count($vendorDirs) !== 1) {
@@ -773,8 +773,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $constantName,
-                    false,
-                    TrinaryLogic::createNo(),
+                    possibleDescendant: false,
+                    isEnumCase: TrinaryLogic::createNo(),
                 ),
             );
         }

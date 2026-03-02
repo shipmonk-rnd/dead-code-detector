@@ -2,11 +2,11 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Enum;
 
-interface NeverReportedReason
+enum NeverReportedReason: string
 {
 
-    public const ABSTRACT_TRAIT_METHOD = 'abstract trait method';
-    public const PRIVATE_CONSTRUCTOR_NO_PARAMS = 'private constructor without params';
-    public const UNSUPPORTED_MAGIC_METHOD = 'unsupported magic method';
+    case ABSTRACT_TRAIT_METHOD = 'abstract trait method';
+    case PRIVATE_CONSTRUCTOR_NO_PARAMS = 'private constructor without params';
+    case UNSUPPORTED_MAGIC_METHOD = 'unsupported magic method';
 
 }

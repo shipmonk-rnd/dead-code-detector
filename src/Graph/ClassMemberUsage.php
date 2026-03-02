@@ -12,14 +12,12 @@ abstract class ClassMemberUsage
 {
 
     /**
-     * Origin method of the usage, "where it was called from"
-     * This is required for proper transitive dead code detection.
+     * @param UsageOrigin $origin Origin method of the usage, "where it was called from". Required for proper transitive dead code detection.
      */
-    private UsageOrigin $origin;
-
-    public function __construct(UsageOrigin $origin)
+    public function __construct(
+        private readonly UsageOrigin $origin,
+    )
     {
-        $this->origin = $origin;
     }
 
     public function getOrigin(): UsageOrigin
@@ -27,20 +25,14 @@ abstract class ClassMemberUsage
         return $this->origin;
     }
 
-    /**
-     * @return MemberType::*
-     */
-    abstract public function getMemberType(): int;
+    abstract public function getMemberType(): MemberType;
 
     /**
      * @return ClassMemberRef<string|null, string|null>
      */
     abstract public function getMemberRef(): ClassMemberRef;
 
-    /**
-     * @return AccessType::*
-     */
-    abstract public function getAccessType(): int;
+    abstract public function getAccessType(): AccessType;
 
     /**
      * If false, causes member to be marked as white, but stops graph propagation.

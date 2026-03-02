@@ -16,7 +16,7 @@ final class SerializationTest extends TestCase
     public function testSerialization(
         string $filePath,
         CollectedUsage $expected,
-        string $serialized
+        string $serialized,
     ): void
     {
         self::assertSame($serialized, $expected->serialize($filePath));
@@ -32,8 +32,8 @@ final class SerializationTest extends TestCase
             '/app/index.php',
             new CollectedUsage(
                 new ClassConstantUsage(
-                    new UsageOrigin('Clazz', 'method', MemberType::METHOD, AccessType::READ, '/app/index.php', 7, null, null),
-                    new ClassConstantRef(null, 'CONSTANT', true, TrinaryLogic::createNo()),
+                    new UsageOrigin(className: 'Clazz', memberName: 'method', memberType: MemberType::METHOD, accessType: AccessType::READ, fileName: '/app/index.php', line: 7, provider: null, note: null),
+                    new ClassConstantRef(null, 'CONSTANT', possibleDescendant: true, isEnumCase: TrinaryLogic::createNo()),
                 ),
                 'excluder',
             ),
@@ -44,8 +44,8 @@ final class SerializationTest extends TestCase
             '/app/different.php',
             new CollectedUsage(
                 new ClassConstantUsage(
-                    new UsageOrigin('Clazz', 'method', MemberType::METHOD, AccessType::READ, '/app/index.php', 7, null, null),
-                    new ClassConstantRef(null, 'CONSTANT', true, TrinaryLogic::createMaybe()),
+                    new UsageOrigin(className: 'Clazz', memberName: 'method', memberType: MemberType::METHOD, accessType: AccessType::READ, fileName: '/app/index.php', line: 7, provider: null, note: null),
+                    new ClassConstantRef(null, 'CONSTANT', possibleDescendant: true, isEnumCase: TrinaryLogic::createMaybe()),
                 ),
                 'excluder',
             ),

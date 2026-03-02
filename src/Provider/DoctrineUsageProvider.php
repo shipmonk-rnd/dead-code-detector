@@ -23,12 +23,12 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function strpos;
+use function str_starts_with;
 
 final class DoctrineUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(?bool $enabled)
     {
@@ -37,7 +37,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -68,7 +68,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromReflection(
         InClassNode $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $classReflection = $node->getClassReflection();
@@ -113,7 +113,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
      */
     private function getUsagesOfEventSubscriber(
         Return_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($node->expr === null) {
@@ -149,7 +149,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                         new ClassMethodRef(
                             $className,
                             $subscriberMethodString->getValue(),
-                            true,
+                            possibleDescendant: true,
                         ),
                     );
                 }
@@ -198,7 +198,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
         foreach ($attributes as $attribute) {
             $attributeName = $attribute->getName();
 
-            if (strpos($attributeName, 'Doctrine\ORM\Mapping\\') === 0) {
+            if (str_starts_with($attributeName, 'Doctrine\ORM\Mapping\\')) {
                 return 'Doctrine ORM mapped property';
             }
         }
@@ -240,7 +240,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function hasAttribute(
         ReflectionMethod $method,
-        string $attributeClass
+        string $attributeClass,
     ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
@@ -248,7 +248,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function isPartOfAsEntityListener(
         ReflectionClass $class,
-        string $methodName
+        string $methodName,
     ): bool
     {
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
@@ -264,7 +264,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function isPartOfAsDoctrineListener(
         ReflectionClass $class,
-        string $methodName
+        string $methodName,
     ): bool
     {
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener') as $attribute) {
@@ -282,7 +282,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function isPartOfAutoconfigureTagDoctrineListener(
         ReflectionClass $class,
-        string $methodName
+        string $methodName,
     ): bool
     {
         foreach ($class->getAttributes('Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag') as $attribute) {
@@ -313,7 +313,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function isEntityRepositoryConstructor(
         ReflectionClass $class,
-        ReflectionMethod $method
+        ReflectionMethod $method,
     ): bool
     {
         if (!$method->isConstructor()) {
@@ -332,7 +332,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     private function createMethodUsage(
         ExtendedMethodReflection $methodReflection,
-        string $note
+        string $note,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -340,18 +340,15 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
         );
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function createPropertyUsage(
         ReflectionProperty $propertyReflection,
         string $note,
-        int $accessType
+        AccessType $accessType,
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
@@ -359,7 +356,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             new ClassPropertyRef(
                 $propertyReflection->getDeclaringClass()->getName(),
                 $propertyReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
             $accessType,
         );
@@ -370,7 +367,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
      */
     private function getUsagesOfEnumColumn(
         string $className,
-        ExtendedPropertyReflection $property
+        ExtendedPropertyReflection $property,
     ): array
     {
         $usages = [];
@@ -390,10 +387,10 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                     $usages[] = new ClassConstantUsage(
                         UsageOrigin::createVirtual($this, VirtualUsageData::withNote("Used in enumType of #[Column] of $className::$propertyName")),
                         new ClassConstantRef(
-                            $constantString->getValue(),
-                            null,
-                            false,
-                            TrinaryLogic::createYes(),
+                            className: $constantString->getValue(),
+                            constantName: null,
+                            possibleDescendant: false,
+                            isEnumCase: TrinaryLogic::createYes(),
                         ),
                     );
                 }

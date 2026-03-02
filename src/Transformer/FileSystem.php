@@ -22,7 +22,7 @@ class FileSystem // phpcs:ignore SlevomatCodingStandard.Classes.RequireAbstractO
 
     public function write(
         string $path,
-        string $content
+        string $content,
     ): void
     {
         $success = file_put_contents($path, $content);

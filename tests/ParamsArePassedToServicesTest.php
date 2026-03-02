@@ -7,7 +7,7 @@ use function array_merge;
 use function array_values;
 use function file_get_contents;
 use function is_array;
-use function strpos;
+use function str_contains;
 
 final class ParamsArePassedToServicesTest extends PHPStanTestCase
 {
@@ -36,7 +36,7 @@ final class ParamsArePassedToServicesTest extends PHPStanTestCase
 
         foreach ($paths as $path) {
             self::assertTrue(
-                strpos($neonContents, "%$path%") !== false,
+                str_contains($neonContents, "%$path%"),
                 'Usage of parameter %' . $path . '% not found in rules.neon. It should probably be passed to some service.',
             );
         }
@@ -48,7 +48,7 @@ final class ParamsArePassedToServicesTest extends PHPStanTestCase
      */
     private function getArrayPaths(
         array $input,
-        string $currentPath = ''
+        string $currentPath = '',
     ): array
     {
         $resultPaths = [];

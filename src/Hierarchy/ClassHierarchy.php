@@ -16,7 +16,7 @@ final class ClassHierarchy
 
     public function registerClassPair(
         string $ancestorName,
-        string $descendantName
+        string $descendantName,
     ): void
     {
         $this->classDescendants[$ancestorName][$descendantName] = true;

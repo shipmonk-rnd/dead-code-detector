@@ -44,7 +44,7 @@ use function array_values;
 use function in_array;
 use function ksort;
 use function serialize;
-use function strpos;
+use function str_starts_with;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -76,25 +76,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         '__debugInfo' => null,
     ];
 
-    private DebugUsagePrinter $debugUsagePrinter;
-
-    private ClassHierarchy $classHierarchy;
-
-    private bool $detectDeadMethods;
-
-    private bool $detectDeadConstants;
-
-    private bool $detectDeadEnumCases;
-
-    private bool $detectNeverReadProperties;
-
-    private bool $detectNeverWrittenProperties;
-
     /**
      * typename => data
      *
      * @var array<string, array{
-     *      kind: string,
+     *      kind: value-of<ClassLikeKind>,
      *      name: string,
      *      file: string,
      *      cases: array<string, array{line: int}>,
@@ -111,7 +97,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * type => [trait user => [trait => [aliased_member_name => original_member_name]]]
      *
-     * @var array<MemberType::*, array<string, array<string, array<string, string>>>>
+     * @var array<value-of<MemberType>, array<string, array<string, array<string, string>>>>
      */
     private array $traitMembers = [];
 
@@ -119,8 +105,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      * @var array<string, list<string>>
      */
     private array $memberAlternativesCache = [];
-
-    private bool $reportTransitivelyDeadAsSeparateError;
 
     /**
      * memberKey => DeadMember
@@ -132,7 +116,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     /**
      * memberType => [memberName => CollectedUsage[]]
      *
-     * @var array<MemberType::*, array<string, non-empty-list<CollectedUsage>>>
+     * @var array<value-of<MemberType>, array<string, non-empty-list<CollectedUsage>>>
      */
     private array $mixedClassNameUsages = [];
 
@@ -144,26 +128,17 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private array $usageGraph = [];
 
     public function __construct(
-        DebugUsagePrinter $debugUsagePrinter,
-        ClassHierarchy $classHierarchy,
-        bool $detectDeadMethods,
-        bool $detectDeadConstants,
-        bool $detectDeadEnumCases,
-        bool $detectNeverReadProperties,
-        bool $detectNeverWrittenProperties,
-        bool $reportTransitivelyDeadMethodAsSeparateError,
-        BackwardCompatibilityChecker $checker
+        private readonly DebugUsagePrinter $debugUsagePrinter,
+        private readonly ClassHierarchy $classHierarchy,
+        private readonly bool $detectDeadMethods,
+        private readonly bool $detectDeadConstants,
+        private readonly bool $detectDeadEnumCases,
+        private readonly bool $detectNeverReadProperties,
+        private readonly bool $detectNeverWrittenProperties,
+        private readonly bool $reportTransitivelyDeadMethodAsSeparateError,
+        BackwardCompatibilityChecker $checker,
     )
     {
-        $this->debugUsagePrinter = $debugUsagePrinter;
-        $this->classHierarchy = $classHierarchy;
-        $this->detectDeadMethods = $detectDeadMethods;
-        $this->detectDeadConstants = $detectDeadConstants;
-        $this->detectDeadEnumCases = $detectDeadEnumCases;
-        $this->detectNeverReadProperties = $detectNeverReadProperties;
-        $this->detectNeverWrittenProperties = $detectNeverWrittenProperties;
-        $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
-
         $checker->check();
     }
 
@@ -178,7 +153,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($node->isOnlyFilesAnalysis()) {
@@ -208,7 +183,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
                     if ($className === null) {
                         $memberNameString = $memberName ?? DebugUsagePrinter::ANY_MEMBER;
-                        $this->mixedClassNameUsages[$memberUsage->getMemberType()][$memberNameString][] = $collectedUsage;
+                        $this->mixedClassNameUsages[$memberUsage->getMemberType()->value][$memberNameString][] = $collectedUsage;
                         continue;
                     }
 
@@ -252,7 +227,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             $this->fillClassHierarchy($typeName, $ancestorNames);
 
             foreach ($methods as $methodName => $methodData) {
-                $methodRef = new ClassMethodRef($typeName, $methodName, false);
+                $methodRef = new ClassMethodRef($typeName, $methodName, possibleDescendant: false);
                 $methodKeys = $methodRef->toKeys(AccessType::READ);
 
                 if ($this->detectDeadMethods) {
@@ -263,7 +238,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($constants as $constantName => $constantData) {
-                $constantRef = new ClassConstantRef($typeName, $constantName, false, TrinaryLogic::createNo());
+                $constantRef = new ClassConstantRef($typeName, $constantName, possibleDescendant: false, isEnumCase: TrinaryLogic::createNo());
                 $constantKeys = $constantRef->toKeys(AccessType::READ);
 
                 if ($this->detectDeadConstants) {
@@ -274,7 +249,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($cases as $enumCaseName => $enumCaseData) {
-                $enumCaseRef = new ClassConstantRef($typeName, $enumCaseName, false, TrinaryLogic::createYes());
+                $enumCaseRef = new ClassConstantRef($typeName, $enumCaseName, possibleDescendant: false, isEnumCase: TrinaryLogic::createYes());
                 $enumCaseKeys = $enumCaseRef->toKeys(AccessType::READ);
 
                 if ($this->detectDeadEnumCases) {
@@ -297,7 +272,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                     $accessTypes[] = AccessType::WRITE;
                 }
                 foreach ($accessTypes as $accessType) {
-                    $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
+                    $propertyRef = new ClassPropertyRef($typeName, $propertyName, possibleDescendant: false);
                     $propertyKeys = $propertyRef->toKeys($accessType);
 
                     foreach ($propertyKeys as $propertyKey) {
@@ -311,12 +286,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($this->typeDefinitions as $typeName => $typeDef) {
             $memberNamesForMixedExpand = [
-                MemberType::METHOD => array_keys($typeDef['methods']),
-                MemberType::CONSTANT => array_merge(
+                MemberType::METHOD->value => array_keys($typeDef['methods']),
+                MemberType::CONSTANT->value => array_merge(
                     array_keys($typeDef['constants']),
                     array_keys($typeDef['cases']),
                 ),
-                MemberType::PROPERTY => array_keys($typeDef['properties']),
+                MemberType::PROPERTY->value => array_keys($typeDef['properties']),
             ];
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
@@ -380,7 +355,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             $neverReportedReason = $this->isNeverReportedAsDead($blackMember);
 
             if ($neverReportedReason !== null) {
-                $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason);
+                $this->debugUsagePrinter->markMemberAsNeverReported($blackMember, $neverReportedReason->value);
 
                 unset($this->blackMembers[$blackMemberKey]);
             }
@@ -402,7 +377,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             $this->debugUsagePrinter->recordUsage($excludedMemberUsage, $alternativeExcludedMemberKeys);
         }
 
-        if ($this->reportTransitivelyDeadAsSeparateError) {
+        if ($this->reportTransitivelyDeadMethodAsSeparateError) {
             $errorGroups = array_map(static fn (BlackMember $member): array => [$member], $this->blackMembers);
         } else {
             $errorGroups = $this->groupDeadMembers();
@@ -424,7 +399,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private function fillTraitMethodUsages(
         string $typeName,
         array $usedTraits,
-        array $overriddenMethods
+        array $overriddenMethods,
     ): void
     {
         foreach ($usedTraits as $traitName => $adaptations) {
@@ -444,7 +419,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
                 // both method names need to work
                 if ($aliasMethodName !== null) {
-                    $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$aliasMethodName] = $traitMethod;
+                    $this->traitMembers[MemberType::METHOD->value][$typeName][$traitName][$aliasMethodName] = $traitMethod;
                 }
 
                 if (in_array($traitMethod, $excludedMethods, true)) {
@@ -452,7 +427,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 }
 
                 $overriddenMethods[] = $traitMethod;
-                $this->traitMembers[MemberType::METHOD][$typeName][$traitName][$traitMethod] = $traitMethod;
+                $this->traitMembers[MemberType::METHOD->value][$typeName][$traitName][$traitMethod] = $traitMethod;
             }
 
             $this->fillTraitMethodUsages($typeName, $this->getTraitUsages($traitName), $overriddenMethods);
@@ -466,7 +441,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private function fillTraitConstantUsages(
         string $typeName,
         array $usedTraits,
-        array $overriddenConstants
+        array $overriddenConstants,
     ): void
     {
         foreach ($usedTraits as $traitName => $traitInfo) {
@@ -480,7 +455,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 }
 
                 $overriddenConstants[] = $traitConstant;
-                $this->traitMembers[MemberType::CONSTANT][$typeName][$traitName][$traitConstant] = $traitConstant;
+                $this->traitMembers[MemberType::CONSTANT->value][$typeName][$traitName][$traitConstant] = $traitConstant;
             }
 
             $this->fillTraitConstantUsages($typeName, $this->getTraitUsages($traitName), $overriddenConstants);
@@ -494,7 +469,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private function fillTraitPropertyUsages(
         string $typeName,
         array $usedTraits,
-        array $overriddenProperties
+        array $overriddenProperties,
     ): void
     {
         foreach ($usedTraits as $traitName => $traitInfo) {
@@ -508,7 +483,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 }
 
                 $overriddenProperties[] = $traitConstant;
-                $this->traitMembers[MemberType::PROPERTY][$typeName][$traitName][$traitConstant] = $traitConstant;
+                $this->traitMembers[MemberType::PROPERTY->value][$typeName][$traitName][$traitConstant] = $traitConstant;
             }
 
             $this->fillTraitPropertyUsages($typeName, $this->getTraitUsages($traitName), $overriddenProperties);
@@ -520,7 +495,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function fillClassHierarchy(
         string $typeName,
-        array $ancestorNames
+        array $ancestorNames,
     ): void
     {
         foreach ($ancestorNames as $ancestorName) {
@@ -531,17 +506,16 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private function isAnonymousClass(?string $className): bool
     {
         // https://github.com/phpstan/phpstan/issues/8410 workaround, ideally this should not be ignored
-        return $className !== null && strpos($className, 'AnonymousClass') === 0;
+        return $className !== null && str_starts_with($className, 'AnonymousClass');
     }
 
     /**
      * @param ClassMemberRef<?string, ?string> $member
-     * @param AccessType::* $accessType
      * @return list<string>
      */
     private function getAlternativeMemberKeys(
         ClassMemberRef $member,
-        int $accessType
+        AccessType $accessType,
     ): array
     {
         if (!$member->hasKnownClass()) {
@@ -584,13 +558,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, string> $memberRef
-     * @param AccessType::* $accessType
      * @return list<string>
      */
     private function findDefinerKeys(
         ClassMemberRef $memberRef,
-        int $accessType,
-        bool $includeParentLookup = true
+        AccessType $accessType,
+        bool $includeParentLookup = true,
     ): array
     {
         if ($this->isExistingRef($memberRef)) {
@@ -609,7 +582,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             // search for definition in parents (and its traits)
             foreach ($parentNames as $parentName) {
-                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), $accessType, false);
+                $found = $this->findDefinerKeys($memberRef->withKnownClass($parentName), $accessType, includeParentLookup: false);
 
                 if ($found !== []) {
                     return $found;
@@ -622,15 +595,14 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, ?string> $memberRef
-     * @param AccessType::* $accessType
      * @param array<string, true> $foundMemberNames Reference needed to ensure first parent takes the usage
      * @return list<string>
      */
     private function getPossibleDefinerKeys(
         ClassMemberRef $memberRef,
-        int $accessType,
+        AccessType $accessType,
         bool $includeParentLookup = true,
-        array &$foundMemberNames = []
+        array &$foundMemberNames = [],
     ): array
     {
         /** @var list<string> $result */
@@ -652,7 +624,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         // search for definition in traits
-        foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
+        foreach ($this->traitMembers[$memberType->value][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
                 if (isset($foundMemberNames[$aliasedMemberName])) {
                     continue;
@@ -683,19 +655,18 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param ClassMemberRef<string, string> $memberRef
-     * @param AccessType::* $accessType
      * @return list<string>
      */
     private function getDeclaringTraitKeys(
         ClassMemberRef $memberRef,
-        int $accessType
+        AccessType $accessType,
     ): array
     {
         $memberType = $memberRef->getMemberType();
         $className = $memberRef->getClassName();
         $memberName = $memberRef->getMemberName();
 
-        foreach ($this->traitMembers[$memberType][$className] ?? [] as $traitName => $traitMemberNames) {
+        foreach ($this->traitMembers[$memberType->value][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
                 if ($memberName === $aliasedMemberName) {
                     return $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys($accessType);
@@ -713,7 +684,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private function markReachableAsWhite(
         array $stack,
         array &$visited,
-        bool $transitiveWalk
+        bool $transitiveWalk,
     ): void
     {
         $callerKey = array_key_last($stack);
@@ -754,7 +725,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function getTransitiveDeadCalls(
         string $callerKey,
-        array $visitedKeys = []
+        array $visitedKeys = [],
     ): array
     {
         $visitedKeys = $visitedKeys === [] ? [$callerKey => null] : $visitedKeys;
@@ -971,7 +942,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      * @param ClassMemberRef<string, string> $memberRef
      */
     private function isExistingRef(
-        ClassMemberRef $memberRef
+        ClassMemberRef $memberRef,
     ): bool
     {
         $typeName = $memberRef->getClassName();
@@ -992,7 +963,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      * @return list<string>
      */
     private function getMemberNames(
-        ClassMemberRef $memberRef
+        ClassMemberRef $memberRef,
     ): array
     {
         $typeName = $memberRef->getClassName();
@@ -1048,10 +1019,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             || (array_key_exists((string) $memberUsage->getOrigin()->getMemberName(), self::UNSUPPORTED_MAGIC_METHODS));
     }
 
-    /**
-     * @return NeverReportedReason::*|null
-     */
-    private function isNeverReportedAsDead(BlackMember $blackMember): ?string
+    private function isNeverReportedAsDead(BlackMember $blackMember): ?NeverReportedReason
     {
         if (!$blackMember->getMember() instanceof ClassMethodRef) {
             return null;
@@ -1065,7 +1033,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $abstract = $this->typeDefinitions[$typeName]['methods'][$memberName]['abstract'] ?? false;
         $visibility = $this->typeDefinitions[$typeName]['methods'][$memberName]['visibility'] ?? 0;
 
-        if ($kind === ClassLikeKind::TRAIT && $abstract) {
+        if ($kind === ClassLikeKind::TRAIT->value && $abstract) {
             // abstract methods in traits make sense (not dead) only when called within the trait itself, but that is hard to detect for now, so lets ignore them completely
             // the difference from interface methods (or abstract methods) is that those methods can be called over the interface, but you cannot call method over trait
             return NeverReportedReason::ABSTRACT_TRAIT_METHOD;

@@ -27,16 +27,15 @@ use function is_string;
 final class EnumUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
-
-    public function __construct(bool $enabled)
+    public function __construct(
+        private readonly bool $enabled,
+    )
     {
-        $this->enabled = $enabled;
     }
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($this->enabled === false) {
@@ -56,7 +55,7 @@ final class EnumUsageProvider implements MemberUsageProvider
      */
     private function getTryFromUsages(
         CallLike $methodCall,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $methodNames = $this->getMethodNames($methodCall, $scope);
@@ -89,13 +88,13 @@ final class EnumUsageProvider implements MemberUsageProvider
                 $valueToCaseMapping = $this->getValueToEnumCaseMapping($classReflection->getNativeReflection());
                 $triedValues = $firstArgType->getConstantScalarValues() === []
                     ? [null]
-                    : array_filter($firstArgType->getConstantScalarValues(), static fn ($value): bool => is_string($value) || is_int($value));
+                    : array_filter($firstArgType->getConstantScalarValues(), static fn (bool|float|int|string|null $value): bool => is_string($value) || is_int($value));
 
                 foreach ($triedValues as $value) {
                     $enumCase = $value === null ? null : $valueToCaseMapping[$value] ?? null;
                     $result[] = new ClassConstantUsage(
                         UsageOrigin::createRegular($methodCall, $scope),
-                        new ClassConstantRef($classReflection->getName(), $enumCase, false, TrinaryLogic::createYes()),
+                        new ClassConstantRef($classReflection->getName(), $enumCase, possibleDescendant: false, isEnumCase: TrinaryLogic::createYes()),
                     );
                 }
             }
@@ -110,7 +109,7 @@ final class EnumUsageProvider implements MemberUsageProvider
      */
     private function getMethodNames(
         CallLike $call,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($call->name instanceof Expr) {
@@ -134,7 +133,7 @@ final class EnumUsageProvider implements MemberUsageProvider
     private function getArgType(
         CallLike $call,
         Scope $scope,
-        int $position
+        int $position,
     ): Type
     {
         $args = $call->getArgs();

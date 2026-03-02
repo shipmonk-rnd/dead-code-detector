@@ -77,11 +77,11 @@ use function iterator_to_array;
 use function ob_end_clean;
 use function ob_start;
 use function preg_replace;
+use function str_contains;
 use function str_replace;
-use function strpos;
+use function str_starts_with;
 use const E_ALL;
 use const E_DEPRECATED;
-use const PHP_VERSION_ID;
 
 /**
  * @extends ShipMonkRuleTestCase<DeadCodeRule>
@@ -137,7 +137,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->detectNeverReadProperties,
                 $this->detectNeverWrittenProperties,
                 !$this->emitErrorsInGroups,
-                new BackwardCompatibilityChecker([], null),
+                new BackwardCompatibilityChecker([], trackMixedAccessParameterValue: null),
             );
         }
 
@@ -171,7 +171,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testDead(
         $files,
-        bool $requirementsMet = true
+        bool $requirementsMet = true,
     ): void
     {
         $this->emitErrorsInGroups = false;
@@ -185,7 +185,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testDeadWithGroups(
         $files,
-        bool $requirementsMet = true
+        bool $requirementsMet = true,
     ): void
     {
         $this->doTestDead($files, $requirementsMet);
@@ -242,7 +242,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     private function doTestDead(
         $files,
-        bool $requirementsMet
+        bool $requirementsMet,
     ): void
     {
         if (!$requirementsMet) {
@@ -337,10 +337,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testDebugUsage(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->debugMembers = [
             'DateTime::format',
             'DebugAlternative\Foo::foo',
@@ -422,10 +418,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testDebugUsageWithDisabledAnalysis(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectDeadMethods = false;
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
@@ -482,7 +474,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testDebugUsageInvalidArgs(
         string $member,
-        string $error
+        string $error,
     ): void
     {
         $this->expectException(LogicException::class);
@@ -514,7 +506,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testDetectionCanBeDisabled(
         $files,
-        bool $requirementsMet = true
+        bool $requirementsMet = true,
     ): void
     {
         if (!$requirementsMet) {
@@ -532,7 +524,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             DeadCodeRule::IDENTIFIER_ENUM_CASE,
             DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ,
         ];
-        $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, true);
+        $filterOwnErrors = static fn (Error $error): bool => in_array($error->getIdentifier(), $ownIdentifiers, strict: true);
 
         $filesArray = is_array($files) ? $files : [$files];
         self::assertCount(0, array_filter($this->gatherAnalyserErrors($filesArray), $filterOwnErrors));
@@ -540,10 +532,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testMethodDetectionCanBeDisabled(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectDeadMethods = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
@@ -557,10 +545,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testConstantDetectionCanBeDisabled(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectDeadConstants = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
@@ -574,10 +558,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testEnumCaseDetectionCanBeDisabled(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectDeadEnumCases = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
@@ -591,10 +571,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testPropertyReadDetectionCanBeDisabled(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectNeverReadProperties = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
@@ -608,10 +584,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testPropertyWriteDetectionCanBeDisabled(): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1+');
-        }
-
         $this->detectNeverWrittenProperties = false;
         $this->analyse([__DIR__ . '/data/other/member-types.php'], [
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
@@ -628,7 +600,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testProvidersCanBeDisabled(
         $files,
-        bool $requirementsMet
+        bool $requirementsMet,
     ): void
     {
         if (!$requirementsMet) {
@@ -659,7 +631,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     public static function provideProviders(): Generator
     {
         foreach (self::provideFiles() as $name => $args) {
-            if (strpos($name, 'provider') !== false) {
+            if (str_contains($name, 'provider')) {
                 yield $name => [
                     $args[0],
                     $args[1] ?? true,
@@ -696,10 +668,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testAutoRemove(string $file): void
     {
-        if (PHP_VERSION_ID < 8_01_00) {
-            self::markTestSkipped('Requires PHP 8.1 to test enum case removal');
-        }
-
         $writtenOutput = '';
 
         $output = $this->createOutput();
@@ -811,7 +779,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testGrouping(
         $files,
-        array $expectedErrors
+        array $expectedErrors,
     ): void
     {
         $this->unwrapGroupedErrors = false;
@@ -931,7 +899,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         // methods
         yield 'method-anonym' => [__DIR__ . '/data/methods/anonym.php'];
-        yield 'method-enum' => [__DIR__ . '/data/methods/enum.php', self::requiresPhp(8_01_00)];
+        yield 'method-enum' => [__DIR__ . '/data/methods/enum.php'];
         yield 'method-callables' => [__DIR__ . '/data/methods/callables.php'];
         yield 'method-code' => [__DIR__ . '/data/methods/basic.php'];
         yield 'method-ctor' => [__DIR__ . '/data/methods/ctor.php'];
@@ -948,8 +916,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-new-in-initializers' => [__DIR__ . '/data/methods/new-in-initializers.php'];
         yield 'method-first-class-callable' => [__DIR__ . '/data/methods/first-class-callable.php'];
         yield 'method-hierarchy-in-vendor' => [__DIR__ . '/data/methods/hierarchy-in-vendor.php'];
-        yield 'method-hooks-1' => [__DIR__ . '/data/methods/hooks-1.php', self::requiresPhp(8_00_00)];
-        yield 'method-pipe-operator' => [__DIR__ . '/data/methods/pipe-operator.php', self::requiresPhp(8_00_00)];
+        yield 'method-hooks-1' => [__DIR__ . '/data/methods/hooks-1.php'];
+        yield 'method-pipe-operator' => [__DIR__ . '/data/methods/pipe-operator.php'];
         yield 'method-overwriting-1' => [__DIR__ . '/data/methods/overwriting-methods-1.php'];
         yield 'method-overwriting-2' => [__DIR__ . '/data/methods/overwriting-methods-2.php'];
         yield 'method-overwriting-3' => [__DIR__ . '/data/methods/overwriting-methods-3.php'];
@@ -1007,26 +975,26 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-unknown-class' => [__DIR__ . '/data/methods/unknown-class.php'];
 
         // providers
-        yield 'provider-custom' => [__DIR__ . '/data/providers/custom.php', self::requiresPhp(8_01_00)];
+        yield 'provider-custom' => [__DIR__ . '/data/providers/custom.php'];
         yield 'provider-vendor' => [__DIR__ . '/data/providers/vendor.php'];
-        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php', self::requiresPhp(8_01_00)];
-        yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php', self::requiresPhp(8_01_00)];
+        yield 'provider-reflection' => [__DIR__ . '/data/providers/reflection.php'];
+        yield 'provider-reflection-enums' => [__DIR__ . '/data/providers/reflection-enums.php'];
         yield 'provider-reflection-no-t' => [__DIR__ . '/data/providers/reflection-no-generics.php'];
-        yield 'provider-reflection-properties' => [__DIR__ . '/data/providers/reflection-properties.php', self::requiresPhp(8_01_00)];
-        yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php', self::requiresPhp(8_00_00)];
-        yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPhp(8_00_00) && self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
-        yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php', self::requiresPhp(8_00_00)];
-        yield 'provider-twig-template' => [__DIR__ . '/data/providers/twig-template.php', self::requiresPhp(8_00_00)];
-        yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php', self::requiresPhp(8_00_00)];
-        yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php', self::requiresPhp(8_00_00)];
-        yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php', self::requiresPhp(8_00_00)];
-        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
+        yield 'provider-reflection-properties' => [__DIR__ . '/data/providers/reflection-properties.php'];
+        yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php'];
+        yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
+        yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php'];
+        yield 'provider-twig-template' => [__DIR__ . '/data/providers/twig-template.php'];
+        yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php'];
+        yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php'];
+        yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
+        yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
-        yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
-        yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
-        yield 'provider-enum-hooks' => [__DIR__ . '/data/providers/enum-hooks.php', self::requiresPhp(8_01_00)];
+        yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
+        yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php'];
+        yield 'provider-enum-hooks' => [__DIR__ . '/data/providers/enum-hooks.php'];
         yield 'provider-builtin' => [__DIR__ . '/data/providers/builtin.php'];
         yield 'provider-stream-wrapper' => [__DIR__ . '/data/providers/stream-wrapper.php'];
 
@@ -1062,8 +1030,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'const-traits-23' => [__DIR__ . '/data/constants/traits-23.php'];
 
         // enums
-        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php', self::requiresPhp(8_01_00)];
-        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php', self::requiresPhp(8_01_00)];
+        yield 'enum-basic' => [__DIR__ . '/data/enums/basic.php'];
+        yield 'enum-mixed' => [__DIR__ . '/data/enums/mixed.php'];
 
         // properties
         yield 'property-basic' => [__DIR__ . '/data/properties/basic.php'];
@@ -1071,22 +1039,22 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
         yield 'property-dynamic' => [__DIR__ . '/data/properties/dynamic.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
-        yield 'property-promoted-hook' => [__DIR__ . '/data/properties/promoted-hook.php', self::requiresPhp(8_00_00)];
-        yield 'property-promoted-parent' => [__DIR__ . '/data/properties/promoted-parent.php', self::requiresPhp(8_00_00)];
-        yield 'property-promoted-parent-2' => [__DIR__ . '/data/properties/promoted-parent-2.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-4' => [__DIR__ . '/data/properties/hooks-4.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-5' => [__DIR__ . '/data/properties/hooks-5.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-6' => [__DIR__ . '/data/properties/hooks-6.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-7' => [__DIR__ . '/data/properties/hooks-7.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-8' => [__DIR__ . '/data/properties/hooks-8.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-9' => [__DIR__ . '/data/properties/hooks-9.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-10' => [__DIR__ . '/data/properties/hooks-10.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-11' => [__DIR__ . '/data/properties/hooks-11.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-12' => [__DIR__ . '/data/properties/hooks-12.php', self::requiresPhp(8_00_00)];
-        yield 'property-hooks-13' => [__DIR__ . '/data/properties/hooks-13.php', self::requiresPhp(8_00_00)];
+        yield 'property-promoted-hook' => [__DIR__ . '/data/properties/promoted-hook.php'];
+        yield 'property-promoted-parent' => [__DIR__ . '/data/properties/promoted-parent.php'];
+        yield 'property-promoted-parent-2' => [__DIR__ . '/data/properties/promoted-parent-2.php'];
+        yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php'];
+        yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php'];
+        yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php'];
+        yield 'property-hooks-4' => [__DIR__ . '/data/properties/hooks-4.php'];
+        yield 'property-hooks-5' => [__DIR__ . '/data/properties/hooks-5.php'];
+        yield 'property-hooks-6' => [__DIR__ . '/data/properties/hooks-6.php'];
+        yield 'property-hooks-7' => [__DIR__ . '/data/properties/hooks-7.php'];
+        yield 'property-hooks-8' => [__DIR__ . '/data/properties/hooks-8.php'];
+        yield 'property-hooks-9' => [__DIR__ . '/data/properties/hooks-9.php'];
+        yield 'property-hooks-10' => [__DIR__ . '/data/properties/hooks-10.php'];
+        yield 'property-hooks-11' => [__DIR__ . '/data/properties/hooks-11.php'];
+        yield 'property-hooks-12' => [__DIR__ . '/data/properties/hooks-12.php'];
+        yield 'property-hooks-13' => [__DIR__ . '/data/properties/hooks-13.php'];
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
         yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
@@ -1098,7 +1066,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-mixed' => [__DIR__ . '/data/properties/mixed/tracked.php'];
 
         // mixed member
-        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php', self::requiresPhp(8_01_00)];
+        yield 'mixed-member-enum' => [__DIR__ . '/data/mixed-member/enum.php'];
         yield 'mixed-member-full-method' => [__DIR__ . '/data/mixed-member/full-mixed-method.php'];
         yield 'mixed-member-full-const' => [__DIR__ . '/data/mixed-member/full-mixed-const.php'];
         yield 'mixed-member-full-prop' => [__DIR__ . '/data/mixed-member/full-mixed-property.php'];
@@ -1147,9 +1115,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'mixed-member-const-traits-14' => [__DIR__ . '/data/mixed-member/traits-const-14.php'];
         yield 'mixed-member-const-traits-21' => [__DIR__ . '/data/mixed-member/traits-const-21.php'];
         yield 'mixed-member-prop-traits-1' => [__DIR__ . '/data/mixed-member/traits-prop-1.php'];
-        yield 'mixed-member-prop-traits-2' => [__DIR__ . '/data/mixed-member/traits-prop-2.php', self::requiresPhp(8_00_00)];
-        yield 'mixed-member-prop-traits-3' => [__DIR__ . '/data/mixed-member/traits-prop-3.php', self::requiresPhp(8_00_00)];
-        yield 'mixed-member-prop-traits-5' => [__DIR__ . '/data/mixed-member/traits-prop-5.php', self::requiresPhp(8_00_00)];
+        yield 'mixed-member-prop-traits-2' => [__DIR__ . '/data/mixed-member/traits-prop-2.php'];
+        yield 'mixed-member-prop-traits-3' => [__DIR__ . '/data/mixed-member/traits-prop-3.php'];
+        yield 'mixed-member-prop-traits-5' => [__DIR__ . '/data/mixed-member/traits-prop-5.php'];
         yield 'mixed-member-prop-traits-7' => [__DIR__ . '/data/mixed-member/traits-prop-7.php'];
         yield 'mixed-member-prop-traits-9' => [__DIR__ . '/data/mixed-member/traits-prop-9.php'];
         yield 'mixed-member-prop-traits-10' => [__DIR__ . '/data/mixed-member/traits-prop-10.php'];
@@ -1157,9 +1125,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'mixed-member-prop-traits-21' => [__DIR__ . '/data/mixed-member/traits-prop-21.php'];
 
         // other
-        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php', self::requiresPhp(8_01_00)];
-        yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php', self::requiresPhp(8_01_00)];
-        yield 'member-types' => [__DIR__ . '/data/other/member-types.php', self::requiresPhp(8_01_00)];
+        yield 'report-lines' => [__DIR__ . '/data/other/report-lines.php'];
+        yield 'identifiers' => [__DIR__ . '/data/other/error-identifiers.php'];
+        yield 'member-types' => [__DIR__ . '/data/other/member-types.php'];
     }
 
     /**
@@ -1253,28 +1221,28 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
                 public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
                 {
-                    return strpos($method->getDeclaringClass()->getName(), 'CustomProvider\Methods') === 0
+                    return str_starts_with($method->getDeclaringClass()->getName(), 'CustomProvider\Methods')
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }
 
                 protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
                 {
-                    return strpos($constant->getDeclaringClass()->getName(), 'CustomProvider\Constants') === 0
+                    return str_starts_with($constant->getDeclaringClass()->getName(), 'CustomProvider\Constants')
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }
 
                 protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
                 {
-                    return strpos($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases') === 0
+                    return str_starts_with($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases')
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }
 
                 protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
                 {
-                    return strpos($property->getDeclaringClass()->getName(), 'CustomProvider\PropertyWrites') === 0
+                    return str_starts_with($property->getDeclaringClass()->getName(), 'CustomProvider\PropertyWrites')
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }
@@ -1307,18 +1275,18 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 public function shouldExclude(
                     ClassMemberUsage $usage,
                     Node $node,
-                    Scope $scope
+                    Scope $scope,
                 ): bool
                 {
                     $memberName = $usage->getMemberRef()->getMemberName();
-                    return $memberName !== null && strpos($memberName, 'mixed') === 0;
+                    return $memberName !== null && str_starts_with($memberName, 'mixed');
                 }
 
             },
         ];
 
         if (!$this->trackMixedAccess) {
-            $excluders[] = new MixedUsageExcluder(true);
+            $excluders[] = new MixedUsageExcluder(enabled: true);
         }
 
         return $excluders;
@@ -1406,14 +1374,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         return $mock;
     }
 
-    private static function requiresPhp(int $lowestPhpVersion): bool
-    {
-        return PHP_VERSION_ID >= $lowestPhpVersion;
-    }
-
     private static function requiresPackage(
         string $package,
-        string $constraint
+        string $constraint,
     ): bool
     {
         return InstalledVersions::satisfies(new VersionParser(), $package, $constraint);
