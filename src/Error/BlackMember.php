@@ -19,33 +19,18 @@ final class BlackMember
 {
 
     /**
-     * @var ClassMemberRef<string, string>
-     */
-    private ClassMemberRef $member;
-
-    /**
-     * @var AccessType::*
-     */
-    private int $accessType;
-
-    private string $file;
-
-    private int $line;
-
-    /**
      * @var array<string, list<ClassMemberUsage>>
      */
     private array $excludedUsages = [];
 
     /**
      * @param ClassMemberRef<string, string> $member
-     * @param AccessType::* $accessType
      */
     public function __construct(
-        ClassMemberRef $member,
-        int $accessType,
-        string $file,
-        int $line
+        private readonly ClassMemberRef $member,
+        private readonly AccessType $accessType,
+        private readonly string $file,
+        private readonly int $line,
     )
     {
         if ($member->isPossibleDescendant()) {
@@ -55,11 +40,6 @@ final class BlackMember
         if ($member instanceof ClassConstantRef && $member->isEnumCase()->maybe()) {
             throw new LogicException('Black member cannot be unresolved, it references definition, not usage');
         }
-
-        $this->member = $member;
-        $this->accessType = $accessType;
-        $this->file = $file;
-        $this->line = $line;
     }
 
     /**
@@ -70,10 +50,7 @@ final class BlackMember
         return $this->member;
     }
 
-    /**
-     * @return AccessType::*
-     */
-    public function getAccessType(): int
+    public function getAccessType(): AccessType
     {
         return $this->accessType;
     }

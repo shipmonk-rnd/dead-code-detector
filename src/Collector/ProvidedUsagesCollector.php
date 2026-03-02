@@ -11,7 +11,6 @@ use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
-use function get_class;
 use function sprintf;
 
 /**
@@ -22,31 +21,16 @@ final class ProvidedUsagesCollector implements Collector
 
     use BufferedUsageCollector;
 
-    private ReflectionProvider $reflectionProvider;
-
-    /**
-     * @var list<MemberUsageProvider>
-     */
-    private array $memberUsageProviders;
-
-    /**
-     * @var list<MemberUsageExcluder>
-     */
-    private array $memberUsageExcluders;
-
     /**
      * @param list<MemberUsageProvider> $memberUsageProviders
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        array $memberUsageProviders,
-        array $memberUsageExcluders
+        private readonly ReflectionProvider $reflectionProvider,
+        private readonly array $memberUsageProviders,
+        private readonly array $memberUsageExcluders,
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
-        $this->memberUsageProviders = $memberUsageProviders;
-        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -59,7 +43,7 @@ final class ProvidedUsagesCollector implements Collector
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         foreach ($this->memberUsageProviders as $memberUsageProvider) {
@@ -80,7 +64,7 @@ final class ProvidedUsagesCollector implements Collector
         ClassMemberUsage $usage,
         MemberUsageProvider $provider,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $origin = $usage->getOrigin();
@@ -90,8 +74,8 @@ final class ProvidedUsagesCollector implements Collector
         $context = sprintf(
             "It emitted usage of %s by %s for node '%s' in '%s' on line %s",
             $usage->getMemberRef()->toHumanString(),
-            get_class($provider),
-            get_class($node),
+            $provider::class,
+            $node::class,
             $scope->getFile(),
             $node->getStartLine(),
         );
@@ -110,7 +94,7 @@ final class ProvidedUsagesCollector implements Collector
     private function resolveExclusion(
         ClassMemberUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): CollectedUsage
     {
         $excluderName = null;

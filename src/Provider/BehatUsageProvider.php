@@ -10,12 +10,12 @@ use PHPStan\Node\InClassNode;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function strpos;
+use function str_contains;
 
 final class BehatUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(?bool $enabled)
     {
@@ -24,7 +24,7 @@ final class BehatUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -83,19 +83,19 @@ final class BehatUsageProvider implements MemberUsageProvider
 
     private function hasAnnotation(
         ReflectionMethod $method,
-        string $string
+        string $string,
     ): bool
     {
         if ($method->getDocComment() === false) {
             return false;
         }
 
-        return strpos($method->getDocComment(), $string) !== false;
+        return str_contains($method->getDocComment(), $string);
     }
 
     private function hasAttribute(
         ReflectionMethod $method,
-        string $attributeClass
+        string $attributeClass,
     ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
@@ -104,7 +104,7 @@ final class BehatUsageProvider implements MemberUsageProvider
     private function createUsage(
         string $className,
         string $methodName,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -112,7 +112,7 @@ final class BehatUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                false,
+                possibleDescendant: false,
             ),
         );
     }

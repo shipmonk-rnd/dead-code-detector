@@ -2,11 +2,11 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Enum;
 
-interface MemberType
+enum MemberType: int
 {
 
-    public const METHOD = 1;
-    public const CONSTANT = 2;
-    public const PROPERTY = 3;
+    case METHOD = 1;
+    case CONSTANT = 2;
+    case PROPERTY = 3;
 
 }

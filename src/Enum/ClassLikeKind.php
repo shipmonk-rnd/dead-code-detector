@@ -2,12 +2,12 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Enum;
 
-interface ClassLikeKind
+enum ClassLikeKind: string
 {
 
-    public const TRAIT = 'trait';
-    public const INTERFACE = 'interface';
-    public const CLASSS = 'class';
-    public const ENUM = 'enum';
+    case TRAIT = 'trait';
+    case INTERFACE = 'interface';
+    case CLASSS = 'class';
+    case ENUM = 'enum';
 
 }

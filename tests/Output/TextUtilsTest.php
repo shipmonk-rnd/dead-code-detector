@@ -13,7 +13,7 @@ final class TextUtilsTest extends TestCase
     public function testPluralize(
         int $count,
         string $singular,
-        string $expected
+        string $expected,
     ): void
     {
         self::assertSame($expected, TextUtils::pluralize($count, $singular));

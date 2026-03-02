@@ -8,17 +8,11 @@ use ReflectionMethod;
 final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    private bool $enabled;
-
-    private Container $container;
-
     public function __construct(
-        bool $enabled,
-        Container $container
+        private readonly bool $enabled,
+        private readonly Container $container,
     )
     {
-        $this->enabled = $enabled;
-        $this->container = $container;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData

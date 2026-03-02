@@ -21,13 +21,13 @@ final class ClassPropertyRef extends ClassMemberRef
     public function __construct(
         ?string $className,
         ?string $propertyName,
-        bool $possibleDescendant
+        bool $possibleDescendant,
     )
     {
         parent::__construct($className, $propertyName, $possibleDescendant);
     }
 
-    protected function getKeyPrefixes(int $accessType): array
+    protected function getKeyPrefixes(AccessType $accessType): array
     {
         if ($accessType === AccessType::WRITE) {
             return ['pw'];
@@ -35,17 +35,14 @@ final class ClassPropertyRef extends ClassMemberRef
         return ['pr'];
     }
 
-    /**
-     * @return MemberType::PROPERTY
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::PROPERTY;
     }
 
     public function withKnownNames(
         string $className,
-        string $memberName
+        string $memberName,
     ): self
     {
         return new self(

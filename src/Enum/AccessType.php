@@ -2,10 +2,10 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Enum;
 
-interface AccessType
+enum AccessType: int
 {
 
-    public const READ = 1;
-    public const WRITE = 2;
+    case READ = 1;
+    case WRITE = 2;
 
 }

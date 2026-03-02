@@ -21,20 +21,21 @@ use function json_last_error;
 use function preg_match;
 use function realpath;
 use function reset;
-use function strpos;
+use function str_contains;
+use function str_starts_with;
 use const JSON_ERROR_NONE;
 
 final class TestsUsageExcluder implements MemberUsageExcluder
 {
 
-    private ReflectionProvider $reflectionProvider;
+    private readonly ReflectionProvider $reflectionProvider;
+
+    private readonly bool $enabled;
 
     /**
      * @var list<string>
      */
-    private array $devPaths = [];
-
-    private bool $enabled;
+    private readonly array $devPaths;
 
     /**
      * @param list<string>|null $devPaths
@@ -42,16 +43,20 @@ final class TestsUsageExcluder implements MemberUsageExcluder
     public function __construct(
         ReflectionProvider $reflectionProvider,
         bool $enabled,
-        ?array $devPaths
+        ?array $devPaths,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled;
 
         if ($devPaths !== null) {
+            $resolvedPaths = [];
+
             foreach ($devPaths as $devPath) {
-                $this->devPaths[] = $this->realpath($devPath);
+                $resolvedPaths[] = $this->realpath($devPath);
             }
+
+            $this->devPaths = $resolvedPaths;
         } else {
             $this->devPaths = $this->autodetectComposerDevPaths();
         }
@@ -65,7 +70,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
     public function shouldExclude(
         ClassMemberUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): bool
     {
         if (!$this->enabled) {
@@ -83,7 +88,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
         }
 
         foreach ($this->devPaths as $devPath) {
-            if (strpos($filePath, $devPath) === 0) {
+            if (str_starts_with($filePath, $devPath)) {
                 return true;
             }
         }
@@ -116,7 +121,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
     private function autodetectComposerDevPaths(): array
     {
         $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
-            return strpos($vendorDir, 'phar://') === false;
+            return !str_starts_with($vendorDir, 'phar://');
         });
 
         if (count($vendorDirs) !== 1) {
@@ -159,7 +164,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
             return [];
         }
 
-        $composerJsonData = json_decode($composerJsonRawData, true);
+        $composerJsonData = json_decode($composerJsonRawData, associative: true);
 
         $jsonError = json_last_error();
 
@@ -176,7 +181,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
      */
     private function extractAutoloadPaths(
         string $basePath,
-        array $autoload
+        array $autoload,
     ): array
     {
         $result = [];
@@ -195,7 +200,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
                     $absolutePath = $basePath . '/' . $path;
                 }
 
-                if (strpos($path, '*') !== false) { // https://getcomposer.org/doc/04-schema.md#classmap
+                if (str_contains($path, '*')) { // https://getcomposer.org/doc/04-schema.md#classmap
                     $globPaths = glob($absolutePath);
 
                     if ($globPaths === false) {
@@ -218,7 +223,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
 
     private function realpath(string $path): string
     {
-        if (strpos($path, 'phar://') === 0) {
+        if (str_starts_with($path, 'phar://')) {
             return $path;
         }
 

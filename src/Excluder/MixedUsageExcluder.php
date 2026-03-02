@@ -9,11 +9,10 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 final class MixedUsageExcluder implements MemberUsageExcluder
 {
 
-    private bool $enabled;
-
-    public function __construct(bool $enabled)
+    public function __construct(
+        private readonly bool $enabled,
+    )
     {
-        $this->enabled = $enabled;
     }
 
     public function getIdentifier(): string
@@ -24,7 +23,7 @@ final class MixedUsageExcluder implements MemberUsageExcluder
     public function shouldExclude(
         ClassMemberUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): bool
     {
         if (!$this->enabled) {

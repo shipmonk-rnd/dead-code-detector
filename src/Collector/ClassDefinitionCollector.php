@@ -30,7 +30,7 @@ use function is_string;
 
 /**
  * @implements Collector<ClassLike, array{
- *       kind: string,
+ *       kind: value-of<ClassLikeKind>,
  *       name: string,
  *       cases: array<string, array{line: int}>,
  *       constants: array<string, array{line: int}>,
@@ -44,13 +44,10 @@ use function is_string;
 final class ClassDefinitionCollector implements Collector
 {
 
-    private ReflectionProvider $reflectionProvider;
-
     public function __construct(
-        ReflectionProvider $reflectionProvider
+        private readonly ReflectionProvider $reflectionProvider,
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
     }
 
     public function getNodeType(): string
@@ -61,7 +58,7 @@ final class ClassDefinitionCollector implements Collector
     /**
      * @param ClassLike $node
      * @return array{
-     *      kind: string,
+     *      kind: value-of<ClassLikeKind>,
      *      name: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
@@ -74,7 +71,7 @@ final class ClassDefinitionCollector implements Collector
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         if ($node->namespacedName === null) {
@@ -209,22 +206,23 @@ final class ClassDefinitionCollector implements Collector
         return $traits;
     }
 
+    /** @return value-of<ClassLikeKind> */
     private function getKind(ClassLike $node): string
     {
         if ($node instanceof Class_) {
-            return ClassLikeKind::CLASSS;
+            return ClassLikeKind::CLASSS->value;
         }
 
         if ($node instanceof Interface_) {
-            return ClassLikeKind::INTERFACE;
+            return ClassLikeKind::INTERFACE->value;
         }
 
         if ($node instanceof Trait_) {
-            return ClassLikeKind::TRAIT;
+            return ClassLikeKind::TRAIT->value;
         }
 
         if ($node instanceof Enum_) {
-            return ClassLikeKind::ENUM;
+            return ClassLikeKind::ENUM->value;
         }
 
         throw new LogicException('Unknown class-like node');
@@ -255,7 +253,7 @@ final class ClassDefinitionCollector implements Collector
      */
     private function isVirtualProperty(
         string $propertyName,
-        array $hooks
+        array $hooks,
     ): bool
     {
         if ($hooks === []) {
@@ -282,7 +280,7 @@ final class ClassDefinitionCollector implements Collector
      */
     private function isBackedProperty(
         array $nodes,
-        string $propertyName
+        string $propertyName,
     ): bool
     {
         $visitor = new PropertyHookBackingValueVisitor($propertyName);

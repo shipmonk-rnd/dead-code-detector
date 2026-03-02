@@ -16,31 +16,32 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_merge;
 use function is_string;
-use function strpos;
+use function str_contains;
+use function str_starts_with;
 
 final class PhpUnitUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
-    private PhpDocParser $phpDocParser;
+    private readonly PhpDocParser $phpDocParser;
 
-    private Lexer $lexer;
+    private readonly Lexer $lexer;
 
     public function __construct(
         ?bool $enabled,
         PhpDocParser $phpDocParser,
-        Lexer $lexer
+        Lexer $lexer,
     )
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpunit/phpunit');
-        $this->lexer = $lexer;
         $this->phpDocParser = $phpDocParser;
+        $this->lexer = $lexer;
     }
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -83,7 +84,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
 
     private function isTestCaseMethod(ReflectionMethod $method): bool
     {
-        return strpos($method->getName(), 'test') === 0
+        return str_starts_with($method->getName(), 'test')
             || $this->hasAnnotation($method, '@test')
             || $this->hasAnnotation($method, '@after')
             || $this->hasAnnotation($method, '@afterClass')
@@ -106,7 +107,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
      */
     private function getDataProvidersFromAnnotations($rawPhpDoc): array
     {
-        if ($rawPhpDoc === false || strpos($rawPhpDoc, '@dataProvider') === false) {
+        if ($rawPhpDoc === false || !str_contains($rawPhpDoc, '@dataProvider')) {
             return [];
         }
 
@@ -161,7 +162,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
 
     private function hasAttribute(
         ReflectionMethod $method,
-        string $attributeClass
+        string $attributeClass,
     ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
@@ -169,20 +170,20 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
 
     private function hasAnnotation(
         ReflectionMethod $method,
-        string $string
+        string $string,
     ): bool
     {
         if ($method->getDocComment() === false) {
             return false;
         }
 
-        return strpos($method->getDocComment(), $string) !== false;
+        return str_contains($method->getDocComment(), $string);
     }
 
     private function createUsage(
         string $className,
         string $methodName,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -190,7 +191,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                false,
+                possibleDescendant: false,
             ),
         );
     }

@@ -9,25 +9,26 @@ use PhpParser\NodeVisitor\CloningVisitor;
 use PhpParser\Parser;
 use PhpParser\Parser\Php8;
 use PhpParser\PrettyPrinter\Standard as PhpPrinter;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 
 final class RemoveDeadCodeTransformer
 {
 
-    private Lexer $phpLexer;
+    private readonly Lexer $phpLexer;
 
-    private Parser $phpParser;
+    private readonly Parser $phpParser;
 
-    private PhpTraverser $cloningTraverser;
+    private readonly PhpTraverser $cloningTraverser;
 
-    private PhpTraverser $removingTraverser;
+    private readonly PhpTraverser $removingTraverser;
 
-    private PhpPrinter $phpPrinter;
+    private readonly PhpPrinter $phpPrinter;
 
     /**
-     * @param array<string, array<int, array<string, mixed>>> $deadMembersByClass className => [type => [memberName => mixed]]
+     * @param array<string, array<value-of<MemberType>, array<string, mixed>>> $deadMembersByClass className => [type => [memberName => mixed]]
      */
     public function __construct(
-        array $deadMembersByClass
+        array $deadMembersByClass,
     )
     {
         $this->phpLexer = new Lexer();
