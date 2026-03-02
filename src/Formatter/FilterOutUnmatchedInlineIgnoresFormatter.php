@@ -53,18 +53,8 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
             return $this->originalFormatter->formatErrors($analysisResult, $output);
         }
 
-        $modifiedAnalysisResult = new AnalysisResult( // @phpstan-ignore phpstanApi.constructor
+        $modifiedAnalysisResult = $analysisResult->withFileSpecificErrors(
             $this->filterErrors($analysisResult->getFileSpecificErrors()),
-            $analysisResult->getNotFileSpecificErrors(),
-            $analysisResult->getInternalErrorObjects(),
-            $analysisResult->getWarnings(),
-            $analysisResult->getCollectedData(),
-            $analysisResult->isDefaultLevelUsed(),
-            $analysisResult->getProjectConfigFile(),
-            $analysisResult->isResultCacheSaved(),
-            $analysisResult->getPeakMemoryUsageBytes(),
-            $analysisResult->isResultCacheUsed(),
-            $analysisResult->getChangedProjectExtensionFilesOutsideOfAnalysedPaths(),
         );
 
         return $this->originalFormatter->formatErrors($modifiedAnalysisResult, $output);
