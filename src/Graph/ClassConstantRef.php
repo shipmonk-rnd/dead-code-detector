@@ -15,7 +15,7 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 final class ClassConstantRef extends ClassMemberRef
 {
 
-    private TrinaryLogic $isEnumCase;
+    private readonly TrinaryLogic $isEnumCase;
 
     /**
      * @param C $className
@@ -25,15 +25,14 @@ final class ClassConstantRef extends ClassMemberRef
         ?string $className,
         ?string $constantName,
         bool $possibleDescendant,
-        TrinaryLogic $isEnumCase
+        TrinaryLogic $isEnumCase,
     )
     {
         parent::__construct($className, $constantName, $possibleDescendant);
-
         $this->isEnumCase = $isEnumCase;
     }
 
-    protected function getKeyPrefixes(int $accessType): array
+    protected function getKeyPrefixes(AccessType $accessType): array
     {
         if ($accessType !== AccessType::READ) {
             throw new LogicException('Constants can only be read.');
@@ -48,10 +47,7 @@ final class ClassConstantRef extends ClassMemberRef
         }
     }
 
-    /**
-     * @return MemberType::CONSTANT
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::CONSTANT;
     }
@@ -63,7 +59,7 @@ final class ClassConstantRef extends ClassMemberRef
 
     public function withKnownNames(
         string $className,
-        string $memberName
+        string $memberName,
     ): self
     {
         return new self(

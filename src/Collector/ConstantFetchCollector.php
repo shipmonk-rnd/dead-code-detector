@@ -24,7 +24,7 @@ use function array_map;
 use function count;
 use function current;
 use function explode;
-use function strpos;
+use function str_contains;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -34,23 +34,14 @@ final class ConstantFetchCollector implements Collector
 
     use BufferedUsageCollector;
 
-    private ReflectionProvider $reflectionProvider;
-
-    /**
-     * @var list<MemberUsageExcluder>
-     */
-    private array $memberUsageExcluders;
-
     /**
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        array $memberUsageExcluders
+        private readonly ReflectionProvider $reflectionProvider,
+        private readonly array $memberUsageExcluders,
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
-        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -63,7 +54,7 @@ final class ConstantFetchCollector implements Collector
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         if ($node instanceof ClassConstFetch) {
@@ -79,7 +70,7 @@ final class ConstantFetchCollector implements Collector
 
     private function registerFunctionCall(
         FuncCall $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         if (count($node->args) !== 1) {
@@ -104,7 +95,7 @@ final class ConstantFetchCollector implements Collector
             $argumentType = $scope->getType($firstArg->value);
 
             foreach ($argumentType->getConstantStrings() as $constantString) {
-                if (strpos($constantString->getValue(), '::') === false) {
+                if (!str_contains($constantString->getValue(), '::')) {
                     continue;
                 }
 
@@ -122,7 +113,7 @@ final class ConstantFetchCollector implements Collector
                 $this->registerUsage(
                     new ClassConstantUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassConstantRef($className, $constantName, true, TrinaryLogic::createMaybe()),
+                        new ClassConstantRef($className, $constantName, possibleDescendant: true, isEnumCase: TrinaryLogic::createMaybe()),
                     ),
                     $node,
                     $scope,
@@ -133,7 +124,7 @@ final class ConstantFetchCollector implements Collector
 
     private function registerFetch(
         ClassConstFetch $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         if ($node->class instanceof Expr) {
@@ -165,7 +156,7 @@ final class ConstantFetchCollector implements Collector
      */
     private function getConstantNames(
         ClassConstFetch $fetch,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($fetch->name instanceof Expr) {
@@ -189,7 +180,7 @@ final class ConstantFetchCollector implements Collector
     private function getDeclaringTypesWithConstant(
         Type $type,
         ?string $constantName,
-        ?bool $isPossibleDescendant
+        ?bool $isPossibleDescendant,
     ): array
     {
         $typeNormalized = TypeUtils::toBenevolentUnion($type) // extract possible fetches even from Class|int
@@ -210,7 +201,7 @@ final class ConstantFetchCollector implements Collector
         }
 
         if ($result === []) { // call over unknown type
-            $result[] = new ClassConstantRef(null, $constantName, true, $isEnumCaseFetch);
+            $result[] = new ClassConstantRef(null, $constantName, possibleDescendant: true, isEnumCase: $isEnumCaseFetch);
         }
 
         return $result;
@@ -219,7 +210,7 @@ final class ConstantFetchCollector implements Collector
     private function registerUsage(
         ClassConstantUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $excluderName = null;

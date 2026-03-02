@@ -11,7 +11,7 @@
 
     <exclude-pattern>tests/*/data/*</exclude-pattern>
 
-    <config name="php_version" value="70400"/>
+    <config name="php_version" value="80100"/>
     <config name="installed_paths" value="vendor/slevomat/coding-standard,vendor/shipmonk/coding-standard"/>
 
     <rule ref="ShipMonkCodingStandard">
@@ -19,9 +19,4 @@
     </rule>
 
     <rule ref="SlevomatCodingStandard.Classes.RequireAbstractOrFinal"/>
-    <rule ref="SlevomatCodingStandard.Functions.DisallowTrailingCommaInDeclaration">
-        <properties>
-            <property name="onlySingleLine" value="false"/>
-        </properties>
-    </rule>
 </ruleset>

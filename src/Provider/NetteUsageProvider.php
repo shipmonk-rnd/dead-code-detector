@@ -13,7 +13,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use ReflectionMethod;
 use function lcfirst;
 use function preg_match_all;
-use function strpos;
+use function str_starts_with;
 use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
@@ -21,9 +21,9 @@ use const PREG_SET_ORDER;
 final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    private ReflectionProvider $reflectionProvider;
+    private readonly ReflectionProvider $reflectionProvider;
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     /**
      * @var array<string, array<string, true>>
@@ -32,7 +32,7 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        ?bool $enabled
+        ?bool $enabled,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
@@ -55,38 +55,38 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private function isNetteMagic(
         ClassReflection $reflection,
-        string $methodName
+        string $methodName,
     ): ?VirtualUsageData
     {
         if (
             $reflection->is(SignalReceiver::class)
-            && strpos($methodName, 'handle') === 0
+            && str_starts_with($methodName, 'handle')
         ) {
             return VirtualUsageData::withNote('Signal handler method');
         }
 
         if (
             $reflection->is(Container::class)
-            && strpos($methodName, 'createComponent') === 0
+            && str_starts_with($methodName, 'createComponent')
         ) {
             return VirtualUsageData::withNote('Component factory method');
         }
 
         if (
             $reflection->is(Control::class)
-            && strpos($methodName, 'render') === 0
+            && str_starts_with($methodName, 'render')
         ) {
             return VirtualUsageData::withNote('Render method');
         }
 
         if (
-            $reflection->is(Presenter::class) && strpos($methodName, 'action') === 0
+            $reflection->is(Presenter::class) && str_starts_with($methodName, 'action')
         ) {
             return VirtualUsageData::withNote('Presenter action method');
         }
 
         if (
-            $reflection->is(Presenter::class) && strpos($methodName, 'inject') === 0
+            $reflection->is(Presenter::class) && str_starts_with($methodName, 'inject')
         ) {
             return VirtualUsageData::withNote('Presenter inject method');
         }
@@ -94,11 +94,11 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         if (
             $reflection->hasTraitUse(SmartObject::class)
         ) {
-            if (strpos($methodName, 'is') === 0) {
+            if (str_starts_with($methodName, 'is')) {
                 /** @var string $name cannot be false */
                 $name = substr($methodName, 2);
 
-            } elseif (strpos($methodName, 'get') === 0 || strpos($methodName, 'set') === 0) {
+            } elseif (str_starts_with($methodName, 'get') || str_starts_with($methodName, 'set')) {
                 /** @var string $name cannot be false */
                 $name = substr($methodName, 3);
 

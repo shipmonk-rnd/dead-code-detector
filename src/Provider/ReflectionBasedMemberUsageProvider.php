@@ -31,7 +31,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
      */
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -179,7 +179,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
 
     private function createConstantUsage(
         ReflectionClassConstant $constantReflection,
-        VirtualUsageData $data
+        VirtualUsageData $data,
     ): ClassConstantUsage
     {
         return new ClassConstantUsage(
@@ -187,15 +187,15 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             new ClassConstantRef(
                 $constantReflection->getDeclaringClass()->getName(),
                 $constantReflection->getName(),
-                false,
-                TrinaryLogic::createNo(),
+                possibleDescendant: false,
+                isEnumCase: TrinaryLogic::createNo(),
             ),
         );
     }
 
     private function createMethodUsage(
         ReflectionMethod $methodReflection,
-        VirtualUsageData $data
+        VirtualUsageData $data,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -203,14 +203,14 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
         );
     }
 
     private function createEnumCaseUsage(
         ReflectionEnumUnitCase $enumCaseReflection,
-        VirtualUsageData $usage
+        VirtualUsageData $usage,
     ): ClassConstantUsage
     {
         return new ClassConstantUsage(
@@ -218,19 +218,16 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             new ClassConstantRef(
                 $enumCaseReflection->getDeclaringClass()->getName(),
                 $enumCaseReflection->getName(),
-                false,
-                TrinaryLogic::createYes(),
+                possibleDescendant: false,
+                isEnumCase: TrinaryLogic::createYes(),
             ),
         );
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function createPropertyUsage(
         ReflectionProperty $propertyReflection,
         VirtualUsageData $data,
-        int $accessType
+        AccessType $accessType,
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
@@ -238,7 +235,7 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             new ClassPropertyRef(
                 $propertyReflection->getDeclaringClass()->getName(),
                 $propertyReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
             $accessType,
         );

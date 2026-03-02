@@ -15,7 +15,7 @@ final class ClassConstantUsage extends ClassMemberUsage
     /**
      * @var ClassConstantRef<string|null, string|null>
      */
-    private ClassConstantRef $fetch;
+    private readonly ClassConstantRef $fetch;
 
     /**
      * @param UsageOrigin $origin The method where the fetch occurs
@@ -23,17 +23,14 @@ final class ClassConstantUsage extends ClassMemberUsage
      */
     public function __construct(
         UsageOrigin $origin,
-        ClassConstantRef $fetch
+        ClassConstantRef $fetch,
     )
     {
         parent::__construct($origin);
         $this->fetch = $fetch;
     }
 
-    /**
-     * @return MemberType::CONSTANT
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::CONSTANT;
     }
@@ -46,7 +43,7 @@ final class ClassConstantUsage extends ClassMemberUsage
         return $this->fetch;
     }
 
-    public function getAccessType(): int
+    public function getAccessType(): AccessType
     {
         return AccessType::READ;
     }

@@ -15,22 +15,18 @@ final class ClassPropertyUsage extends ClassMemberUsage
     /**
      * @var ClassPropertyRef<string|null, string|null>
      */
-    private ClassPropertyRef $access;
+    private readonly ClassPropertyRef $access;
 
-    /**
-     * @var AccessType::*
-     */
-    private int $accessType;
+    private readonly AccessType $accessType;
 
     /**
      * @param UsageOrigin $origin The method where the read occurs
      * @param ClassPropertyRef<string|null, string|null> $access The property being read
-     * @param AccessType::* $accessType
      */
     public function __construct(
         UsageOrigin $origin,
         ClassPropertyRef $access,
-        int $accessType
+        AccessType $accessType,
     )
     {
         parent::__construct($origin);
@@ -38,10 +34,7 @@ final class ClassPropertyUsage extends ClassMemberUsage
         $this->accessType = $accessType;
     }
 
-    /**
-     * @return MemberType::PROPERTY
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::PROPERTY;
     }
@@ -54,7 +47,7 @@ final class ClassPropertyUsage extends ClassMemberUsage
         return $this->access;
     }
 
-    public function getAccessType(): int
+    public function getAccessType(): AccessType
     {
         return $this->accessType;
     }

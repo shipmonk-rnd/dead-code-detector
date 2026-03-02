@@ -9,7 +9,6 @@ use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
-use function get_class;
 
 /**
  * @immutable
@@ -17,60 +16,24 @@ use function get_class;
 final class UsageOrigin
 {
 
-    private ?string $className;
-
     /**
-     * Origin method or property name
-     */
-    private ?string $memberName;
-
-    /**
-     * Origins in method or property hook?
-     *
-     * @var MemberType::PROPERTY|MemberType::METHOD|null
-     */
-    private ?int $memberType;
-
-    /**
-     * Is it get hook or set hook?
-     *
-     * @var AccessType::*|null
-     */
-    private ?int $accessType;
-
-    private ?string $fileName;
-
-    private ?int $line;
-
-    private ?string $provider;
-
-    private ?string $note;
-
-    /**
-     * @param MemberType::PROPERTY|MemberType::METHOD|null $memberType
-     * @param AccessType::*|null $accessType
+     * @param ?string $memberName Origin method or property name
+     * @param ?MemberType $memberType Origins in method or property hook?
+     * @param ?AccessType $accessType Is it get hook or set hook?
      *
      * @internal Please use static constructors instead.
      */
     public function __construct(
-        ?string $className,
-        ?string $memberName,
-        ?int $memberType,
-        ?int $accessType,
-        ?string $fileName,
-        ?int $line,
-        ?string $provider,
-        ?string $note
+        private readonly ?string $className,
+        private readonly ?string $memberName,
+        private readonly ?MemberType $memberType,
+        private readonly ?AccessType $accessType,
+        private readonly ?string $fileName,
+        private readonly ?int $line,
+        private readonly ?string $provider,
+        private readonly ?string $note,
     )
     {
-        $this->className = $className;
-        $this->memberName = $memberName;
-        $this->memberType = $memberType;
-        $this->accessType = $accessType;
-        $this->fileName = $fileName;
-        $this->line = $line;
-        $this->provider = $provider;
-        $this->note = $note;
     }
 
     /**
@@ -78,18 +41,18 @@ final class UsageOrigin
      */
     public static function createVirtual(
         MemberUsageProvider $provider,
-        VirtualUsageData $data
+        VirtualUsageData $data,
     ): self
     {
         return new self(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            get_class($provider),
-            $data->getNote(),
+            className: null,
+            memberName: null,
+            memberType: null,
+            accessType: null,
+            fileName: null,
+            line: null,
+            provider: $provider::class,
+            note: $data->getNote(),
         );
     }
 
@@ -98,7 +61,7 @@ final class UsageOrigin
      */
     public static function createRegular(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): self
     {
         $file = $scope->isInTrait()
@@ -110,14 +73,14 @@ final class UsageOrigin
 
         if (!$scope->isInClass() || !$isMethodOrHook) {
             return new self(
-                null,
-                null,
-                null,
-                null,
-                $file,
-                $node->getStartLine(),
-                null,
-                null,
+                className: null,
+                memberName: null,
+                memberType: null,
+                accessType: null,
+                fileName: $file,
+                line: $node->getStartLine(),
+                provider: null,
+                note: null,
             );
         }
 
@@ -145,18 +108,12 @@ final class UsageOrigin
         return $this->memberName;
     }
 
-    /**
-     * @return MemberType::PROPERTY|MemberType::METHOD|null
-     */
-    public function getMemberType(): ?int
+    public function getMemberType(): ?MemberType
     {
         return $this->memberType;
     }
 
-    /**
-     * @return AccessType::*|null
-     */
-    public function getAccessType(): ?int
+    public function getAccessType(): ?AccessType
     {
         return $this->accessType;
     }
@@ -202,14 +159,14 @@ final class UsageOrigin
             return new ClassPropertyRef(
                 $this->className,
                 $this->memberName,
-                false,
+                possibleDescendant: false,
             );
         }
 
         return new ClassMethodRef(
             $this->className,
             $this->memberName,
-            false,
+            possibleDescendant: false,
         );
     }
 

@@ -15,7 +15,7 @@ final class ClassMethodUsage extends ClassMemberUsage
     /**
      * @var ClassMethodRef<string|null, string|null>
      */
-    private ClassMethodRef $callee;
+    private readonly ClassMethodRef $callee;
 
     /**
      * @param UsageOrigin $origin The method where the call occurs
@@ -23,18 +23,14 @@ final class ClassMethodUsage extends ClassMemberUsage
      */
     public function __construct(
         UsageOrigin $origin,
-        ClassMethodRef $callee
+        ClassMethodRef $callee,
     )
     {
         parent::__construct($origin);
-
         $this->callee = $callee;
     }
 
-    /**
-     * @return MemberType::METHOD
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::METHOD;
     }
@@ -47,7 +43,7 @@ final class ClassMethodUsage extends ClassMemberUsage
         return $this->callee;
     }
 
-    public function getAccessType(): int
+    public function getAccessType(): AccessType
     {
         return AccessType::READ;
     }

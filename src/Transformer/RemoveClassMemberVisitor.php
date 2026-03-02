@@ -27,18 +27,12 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
     private string $currentClass = '';
 
     /**
-     * @var array<string, array<int, array<string, mixed>>> className => [type => [memberName => mixed]]
-     */
-    private array $deadMembers;
-
-    /**
-     * @param array<string, array<int, array<string, mixed>>> $deadMembers className => [type => [memberName => mixed]]
+     * @param array<string, array<value-of<MemberType>, array<string, mixed>>> $deadMembers className => [type => [memberName => mixed]]
      */
     public function __construct(
-        array $deadMembers
+        private readonly array $deadMembers,
     )
     {
-        $this->deadMembers = $deadMembers;
     }
 
     public function enterNode(Node $node): ?Node
@@ -56,7 +50,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
     public function leaveNode(Node $node): ?int
     {
         if ($node instanceof ClassMethod) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::METHOD][$node->name->name])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::METHOD->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
 
@@ -72,7 +66,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
                     return true;
                 }
 
-                return !isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY][$paramName]);
+                return !isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY->value][$paramName]);
             });
         }
 
@@ -80,7 +74,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $allDead = true;
 
             foreach ($node->consts as $const) {
-                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$const->name->name])) {
+                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$const->name->name])) {
                     $allDead = false;
                     break;
                 }
@@ -92,13 +86,13 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
         }
 
         if ($node instanceof Const_) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$node->name->name])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
 
         if ($node instanceof EnumCase) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT][$node->name->name])) {
+            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
@@ -107,7 +101,7 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
             $allDead = true;
 
             foreach ($node->props as $prop) {
-                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY][$prop->name->name])) {
+                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY->value][$prop->name->name])) {
                     $allDead = false;
                     break;
                 }

@@ -23,23 +23,24 @@ use function is_array;
 use function is_string;
 use function preg_match;
 use function sprintf;
-use function strpos;
-use function substr;
+use function str_contains;
+use function str_ends_with;
+use function str_starts_with;
 use function trim;
 
 final class PhpBenchUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
-    private PhpDocParser $phpDocParser;
+    private readonly PhpDocParser $phpDocParser;
 
-    private Lexer $lexer;
+    private readonly Lexer $lexer;
 
     public function __construct(
         ?bool $enabled,
         PhpDocParser $phpDocParser,
-        Lexer $lexer
+        Lexer $lexer,
     )
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpbench/phpbench');
@@ -49,7 +50,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -59,7 +60,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         $classReflection = $node->getClassReflection();
         $className = $classReflection->getName();
 
-        if (substr($className, -5) !== 'Bench') {
+        if (!str_ends_with($className, 'Bench')) {
             return [];
         }
 
@@ -108,7 +109,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
 
     private function isBenchmarkMethod(ReflectionMethod $method): bool
     {
-        return strpos($method->getName(), 'bench') === 0;
+        return str_starts_with($method->getName(), 'bench');
     }
 
     /**
@@ -116,7 +117,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
      */
     private function getMethodNamesFromAttribute(
         ReflectionMethod $method,
-        string $attributeClass
+        string $attributeClass,
     ): array
     {
         $result = [];
@@ -189,10 +190,10 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
      */
     private function getMethodNamesFromAnnotation(
         $rawPhpDoc,
-        string $annotationName
+        string $annotationName,
     ): array
     {
-        if ($rawPhpDoc === false || strpos($rawPhpDoc, $annotationName) === false) {
+        if ($rawPhpDoc === false || !str_contains($rawPhpDoc, $annotationName)) {
             return [];
         }
 
@@ -214,7 +215,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             $value = trim($value, '"\'');
 
             // If it's a single method name, add it directly
-            if (strpos($value, ',') === false && strpos($value, '{') === false) {
+            if (!str_contains($value, ',') && !str_contains($value, '{')) {
                 $result[] = $value;
                 continue;
             }
@@ -263,7 +264,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
     private function createUsage(
         string $className,
         string $methodName,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -271,7 +272,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                false,
+                possibleDescendant: false,
             ),
         );
     }

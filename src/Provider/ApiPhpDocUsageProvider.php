@@ -9,32 +9,21 @@ use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
-use function strpos;
+use function str_contains;
+use function str_starts_with;
 
 final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 {
-
-    private ReflectionProvider $reflectionProvider;
-
-    private bool $enabled;
-
-    /**
-     * @var list<string> $analysedPaths
-     */
-    private array $analysedPaths;
 
     /**
      * @param list<string> $analysedPaths
      */
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        bool $enabled,
-        array $analysedPaths
+        private readonly ReflectionProvider $reflectionProvider,
+        private readonly bool $enabled,
+        private readonly array $analysedPaths,
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
-        $this->enabled = $enabled;
-        $this->analysedPaths = $analysedPaths;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
@@ -99,7 +88,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     private function isApiMember(
         ClassReflection $reflection,
-        object $member
+        object $member,
     ): bool
     {
         if (!$this->hasOwnMember($reflection, $member)) {
@@ -150,7 +139,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     private function hasOwnMember(
         ClassReflection $reflection,
-        object $member
+        object $member,
     ): bool
     {
         if ($member instanceof ReflectionEnumUnitCase) {
@@ -185,7 +174,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private function isApiPhpDoc(?string $phpDoc): bool
     {
-        return $phpDoc !== null && strpos($phpDoc, '@api') !== false;
+        return $phpDoc !== null && str_contains($phpDoc, '@api');
     }
 
     private function isOutsideAnalysedPaths(ClassReflection $reflection): bool
@@ -196,7 +185,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         foreach ($this->analysedPaths as $path) {
-            if (strpos($fileName, $path) === 0) {
+            if (str_starts_with($fileName, $path)) {
                 return false;
             }
         }

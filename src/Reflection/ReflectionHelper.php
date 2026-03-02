@@ -28,7 +28,7 @@ final class ReflectionHelper
 
     public static function hasOwnMethod(
         ClassReflection $classReflection,
-        string $methodName
+        string $methodName,
     ): bool
     {
         if (!$classReflection->hasMethod($methodName)) {
@@ -44,7 +44,7 @@ final class ReflectionHelper
 
     public static function hasOwnConstant(
         ClassReflection $classReflection,
-        string $constantName
+        string $constantName,
     ): bool
     {
         $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
@@ -58,7 +58,7 @@ final class ReflectionHelper
 
     public static function hasOwnEnumCase(
         ClassReflection $classReflection,
-        string $constantName
+        string $constantName,
     ): bool
     {
         $constantReflection = $classReflection->getNativeReflection()->getReflectionConstant($constantName);
@@ -72,7 +72,7 @@ final class ReflectionHelper
 
     public static function hasOwnProperty(
         ClassReflection $classReflection,
-        string $propertyName
+        string $propertyName,
     ): bool
     {
         if (!$classReflection->hasProperty($propertyName)) {
