@@ -19,7 +19,7 @@ class MyEntity
     #[\Doctrine\ORM\Mapping\Column(type: Types::STRING, enumType: InvoiceStatus::class)]
     private InvoiceStatus $status;
 
-    private string $notMapped; // error: Property Doctrine\MyEntity::$notMapped is never read
+    private string $notMapped; // error: Property Doctrine\MyEntity::$notMapped is never read // error: Property Doctrine\MyEntity::$notMapped is never written
 
     #[\Doctrine\ORM\Mapping\PreUpdate]
     public function onUpdate(PreUpdateEventArgs $args): void {}

@@ -68,6 +68,11 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
         return null; // Expected to be overridden by subclasses.
     }
 
+    protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
+    {
+        return null; // Expected to be overridden by subclasses.
+    }
+
     /**
      * @return list<ClassMethodUsage>
      */
@@ -159,9 +164,13 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
             }
 
             $readUsage = $this->shouldMarkPropertyAsRead($nativePropertyReflection);
+            $writeUsage = $this->shouldMarkPropertyAsWritten($nativePropertyReflection);
 
             if ($readUsage !== null) {
                 $usages[] = $this->createPropertyUsage($nativePropertyReflection, $readUsage, AccessType::READ);
+            }
+            if ($writeUsage !== null) {
+                $usages[] = $this->createPropertyUsage($nativePropertyReflection, $writeUsage, AccessType::WRITE);
             }
         }
 

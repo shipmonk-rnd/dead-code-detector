@@ -165,7 +165,9 @@ DebugProperty\Foo::prop reads
 
 DebugProperty\Foo::prop writes
 |
-| Detection not enabled for this member type and access!
+| Marked as alive at:
+| entry data/debug/property.php:12
+|   writes DebugProperty\Foo::prop
 |
 | Found 1 usage:
 |  • data/debug/property.php:12

@@ -5,15 +5,15 @@ namespace DeadPropertyBasic;
 class TestClass {
 
     public string $usedPublicProperty;
-    public string $usedPublicPropertyByChild;
+    public string $usedPublicPropertyByChild; // error: Property DeadPropertyBasic\TestClass::$usedPublicPropertyByChild is never written
     public string $unusedPublicProperty; // error: Property DeadPropertyBasic\TestClass::$unusedPublicProperty is never read
-    public string $readNotWritten = 'default';
+    public string $readNotWrittenButDefault = 'default';
 
     public function __construct()
     {
         $this->usedPublicProperty = 'used';
         $this->unusedPublicProperty = 'assigned but unused';
-        echo $this->readNotWritten;
+        echo $this->readNotWrittenButDefault;
     }
 
     public function useProperty(): void
@@ -24,7 +24,7 @@ class TestClass {
 
 class ChildClass extends TestClass {
 
-    public string $childUsedProperty;
+    public string $childUsedProperty; // error: Property DeadPropertyBasic\ChildClass::$childUsedProperty is never written
 
     public function useChildProperty(): void
     {

@@ -44,7 +44,7 @@ class Foo
         ]
         public
         int
-        $promoted // error: Property ReportLines\Foo::$promoted is never read
+        $promoted // error: Property ReportLines\Foo::$promoted is never read // error: Property ReportLines\Foo::$promoted is never written
         ,
     )
     {

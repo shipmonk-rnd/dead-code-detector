@@ -28,14 +28,14 @@ enum MyEnum
 
 class Address
 {
-    public string $address {
+    public string $address { // error: Property MemberTypes\Address::$address is never written
         get {
             return $this->address . $this->country;
         }
     }
 
-    public string $country;
-    public string $zip; // error: Property MemberTypes\Address::$zip is never read
+    public string $country; // error: Property MemberTypes\Address::$country is never written
+    public string $zip; // error: Property MemberTypes\Address::$zip is never read // error: Property MemberTypes\Address::$zip is never written
 }
 
 function test(): void {

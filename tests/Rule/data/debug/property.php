@@ -4,7 +4,7 @@ namespace DebugProperty;
 
 class Foo
 {
-    public string $prop = 'value';
+    public string $prop;
 }
 
 function test(Foo $foo): void

@@ -4,9 +4,9 @@ namespace DeadPropertyDynamic;
 
 class TestClass {
 
-    public string $foo;
-    public string $bar;
-    public string $bag; // error: Property DeadPropertyDynamic\TestClass::$bag is never read
+    public string $foo; // error: Property DeadPropertyDynamic\TestClass::$foo is never written
+    public string $bar; // error: Property DeadPropertyDynamic\TestClass::$bar is never written
+    public string $bag; // error: Property DeadPropertyDynamic\TestClass::$bag is never read // error: Property DeadPropertyDynamic\TestClass::$bag is never written
 }
 
 /**

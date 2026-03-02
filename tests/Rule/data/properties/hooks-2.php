@@ -8,7 +8,7 @@ interface Named {
 
 class User implements Named {
     public function __construct( // error: Unused PropertyHooks2\User::__construct
-        public string $name
+        public string $name // error: Property PropertyHooks2\User::$name is never written
     ) {}
 }
 

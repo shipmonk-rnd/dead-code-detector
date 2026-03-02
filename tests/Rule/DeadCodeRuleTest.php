@@ -24,6 +24,7 @@ use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
@@ -106,6 +107,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $detectNeverReadProperties = true;
 
+    private bool $detectNeverWrittenProperties = true;
+
     private ?DeadCodeRule $rule = null;
 
     private ?string $editorUrl = null;
@@ -129,6 +132,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->detectDeadConstants,
                 $this->detectDeadEnumCases,
                 $this->detectNeverReadProperties,
+                $this->detectNeverWrittenProperties,
                 !$this->emitErrorsInGroups,
                 new BackwardCompatibilityChecker([], null),
             );
@@ -146,7 +150,6 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         return [
             new ProvidedUsagesCollector(
-                new SimpleRelativePathHelper(__DIR__), // @phpstan-ignore phpstanApi.constructor
                 $reflectionProvider,
                 $this->getMemberUsageProviders(),
                 $this->getMemberUsageExcluders(),
@@ -424,6 +427,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->detectDeadConstants = false;
         $this->detectDeadEnumCases = false;
         $this->detectNeverReadProperties = false;
+        $this->detectNeverWrittenProperties = false;
 
         $this->debugMembers = [
             'DebugAnalysisDisabled\X::property',
@@ -542,6 +546,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -556,6 +563,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -570,6 +580,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\Clazz::method', 10],
             ['Property MemberTypes\Address::$zip is never read', 38],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
         ]);
     }
 
@@ -584,6 +597,24 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ['Unused MemberTypes\Clazz::CONSTANT', 7],
             ['Unused MemberTypes\MyEnum::EnumCase', 25],
             ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::$address is never written', 31],
+            ['Property MemberTypes\Address::$country is never written', 37],
+            ['Property MemberTypes\Address::$zip is never written', 38],
+        ]);
+    }
+
+    public function testPropertyWriteDetectionCanBeDisabled(): void
+    {
+        if (PHP_VERSION_ID < 8_01_00) {
+            self::markTestSkipped('Requires PHP 8.1+');
+        }
+
+        $this->detectNeverWrittenProperties = false;
+        $this->analyse([__DIR__ . '/data/other/member-types.php'], [
+            ['Unused MemberTypes\Clazz::CONSTANT', 7],
+            ['Unused MemberTypes\MyEnum::EnumCase', 25],
+            ['Unused MemberTypes\Clazz::method', 10],
+            ['Property MemberTypes\Address::$zip is never read', 38],
         ]);
     }
 
@@ -753,16 +784,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::boo',
                     29,
-                    "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    "• Thus Grouping\Example::bag is transitively unused\n" .
+                    "• Thus Grouping\Example::bar is transitively unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::foo',
                     23,
-                    "• Thus Grouping\Example::bar is transitively also unused\n" .
-                    "• Thus Grouping\Example::bag is transitively also unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively also unused',
+                    "• Thus Grouping\Example::bar is transitively unused\n" .
+                    "• Thus Grouping\Example::bag is transitively unused\n" .
+                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',
@@ -771,7 +802,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::recur1',
                     54,
-                    'Thus Grouping\Example::recur2 is transitively also unused',
+                    'Thus Grouping\Example::recur2 is transitively unused',
                 ],
             ],
         ];
@@ -792,7 +823,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingClosure\ClosureUser::__construct',
                     12,
-                    'Thus GroupingClosure\Incriminated::baz is transitively also unused',
+                    'Thus GroupingClosure\Incriminated::baz is transitively unused',
                 ],
             ],
         ];
@@ -803,7 +834,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingRepeated\User::__construct',
                     12,
-                    'Thus GroupingRepeated\Incriminated::baz is transitively also unused',
+                    'Thus GroupingRepeated\Incriminated::baz is transitively unused',
                 ],
             ],
         ];
@@ -814,7 +845,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingOrder\ClassOne::one',
                     7,
-                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
+                    'Thus GroupingOrder\ClassTwo::two is transitively unused',
                 ],
             ],
         ];
@@ -825,7 +856,19 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingOrder\ClassOne::one', // ensure deterministic representative is chosen (even when ClassTwo was analysed first)
                     7,
-                    'Thus GroupingOrder\ClassTwo::two is transitively also unused',
+                    'Thus GroupingOrder\ClassTwo::two is transitively unused',
+                ],
+            ],
+        ];
+
+        yield 'property' => [
+            __DIR__ . '/data/grouping/property.php',
+            [
+                [
+                    'Unused GroupingProperty\Writer::__construct',
+                    7,
+                    "• Thus GroupingProperty\Writer::\$data is transitively never written\n" .
+                    '• Thus GroupingProperty\Writer::$data is transitively never read',
                 ],
             ],
         ];
@@ -977,6 +1020,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-dynamic' => [__DIR__ . '/data/properties/dynamic.php'];
         yield 'property-promoted' => [__DIR__ . '/data/properties/promoted.php'];
         yield 'property-promoted-hook' => [__DIR__ . '/data/properties/promoted-hook.php', self::requiresPhp(8_00_00)];
+        yield 'property-promoted-parent' => [__DIR__ . '/data/properties/promoted-parent.php', self::requiresPhp(8_00_00)];
+        yield 'property-promoted-parent-2' => [__DIR__ . '/data/properties/promoted-parent-2.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-1' => [__DIR__ . '/data/properties/hooks-1.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-2' => [__DIR__ . '/data/properties/hooks-2.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-3' => [__DIR__ . '/data/properties/hooks-3.php', self::requiresPhp(8_00_00)];
@@ -986,9 +1031,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-hooks-7' => [__DIR__ . '/data/properties/hooks-7.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-8' => [__DIR__ . '/data/properties/hooks-8.php', self::requiresPhp(8_00_00)];
         yield 'property-hooks-9' => [__DIR__ . '/data/properties/hooks-9.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-10' => [__DIR__ . '/data/properties/hooks-10.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-11' => [__DIR__ . '/data/properties/hooks-11.php', self::requiresPhp(8_00_00)];
+        yield 'property-hooks-12' => [__DIR__ . '/data/properties/hooks-12.php', self::requiresPhp(8_00_00)];
         yield 'property-overridden-1' => [__DIR__ . '/data/properties/overridden-1.php'];
         yield 'property-overridden-2' => [__DIR__ . '/data/properties/overridden-2.php'];
         yield 'property-nullsafe' => [__DIR__ . '/data/properties/nullsafe.php'];
+        yield 'property-attribute' => [__DIR__ . '/data/properties/attribute.php'];
         yield 'property-write-array' => [__DIR__ . '/data/properties/write-array.php'];
         yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
         yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
@@ -1163,6 +1212,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
                 {
                     return strpos($enumCase->getDeclaringClass()->getName(), 'CustomProvider\EnumCases') === 0
+                        ? VirtualUsageData::withNote('test')
+                        : null;
+                }
+
+                protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
+                {
+                    return strpos($property->getDeclaringClass()->getName(), 'CustomProvider\PropertyWrites') === 0
                         ? VirtualUsageData::withNote('test')
                         : null;
                 }

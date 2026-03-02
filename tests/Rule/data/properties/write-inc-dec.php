@@ -13,7 +13,7 @@ class Test
     public static int $count6;
     public static int $count7;
     public static int $count8;
-    public static int $count9; // error: Property PropertyWriteIncDec\Test::$count9 is never read
+    public static int $count9; // error: Property PropertyWriteIncDec\Test::$count9 is never read // error: Property PropertyWriteIncDec\Test::$count9 is never written
 }
 
 function test() {

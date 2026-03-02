@@ -385,13 +385,12 @@ parameters:
             deadConstants: true
             deadProperties:
                 neverRead: false # opt-in
+                neverWritten: false # opt-in
             deadEnumCases: false # opt-in
 ```
 
 Enum cases and properties are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
 But libraries should be able to enable those easily.
-
-Properties are considered dead if they are never read.
 
 
 ## Comparison with tomasvotruba/unused-public

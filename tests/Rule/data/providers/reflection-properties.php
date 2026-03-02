@@ -5,13 +5,13 @@ namespace ReflectionProperties;
 class Holder1
 {
     public string $used;
-    public string $notUsed; // error: Property ReflectionProperties\Holder1::$notUsed is never read
+    public string $notUsed; // error: Property ReflectionProperties\Holder1::$notUsed is never read // error: Property ReflectionProperties\Holder1::$notUsed is never written
 }
 
 class Holder2
 {
     public string $property1;
-    public string $property2; // error: Property ReflectionProperties\Holder2::$property2 is never read
+    public string $property2; // error: Property ReflectionProperties\Holder2::$property2 is never read // error: Property ReflectionProperties\Holder2::$property2 is never written
     public string $property3;
 }
 
@@ -24,7 +24,7 @@ class Holder3
 
 class Holder4
 {
-    public string $unused; // error: Property ReflectionProperties\Holder4::$unused is never read
+    public string $unused; // error: Property ReflectionProperties\Holder4::$unused is never read // error: Property ReflectionProperties\Holder4::$unused is never written
 }
 
 class Holder5
@@ -39,7 +39,7 @@ class Holder6 extends HolderParent
 }
 
 class TransitiveHolder {
-    public string $transitivelyDead; // error: Property ReflectionProperties\TransitiveHolder::$transitivelyDead is never read
+    public string $transitivelyDead; // error: Property ReflectionProperties\TransitiveHolder::$transitivelyDead is never read // error: Property ReflectionProperties\TransitiveHolder::$transitivelyDead is never written
 
     public function test() // error: Unused ReflectionProperties\TransitiveHolder::test
     {

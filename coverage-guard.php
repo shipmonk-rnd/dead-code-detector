@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 use PHPStan\Collectors\Collector;
 use PHPStan\Rules\Rule;
@@ -8,10 +8,8 @@ use ShipMonk\CoverageGuard\Hierarchy\CodeBlock;
 use ShipMonk\CoverageGuard\Rule\CoverageError;
 use ShipMonk\CoverageGuard\Rule\CoverageRule;
 use ShipMonk\CoverageGuard\Rule\InspectionContext;
-use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
-use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 
 $config = new Config();
 $config->addRule(new class implements CoverageRule {
@@ -47,10 +45,12 @@ $config->addRule(new class implements CoverageRule {
     /**
      * @param ReflectionClass<object> $classReflection
      */
-    private function getRequiredCoverage(ReflectionClass $classReflection, string $methodName): int
+    private function getRequiredCoverage(
+        ReflectionClass $classReflection,
+        string $methodName
+    ): int
     {
-        $isPoor = $classReflection->getName() === BackwardCompatibilityChecker::class
-            || ($classReflection->getName() === ProvidedUsagesCollector::class && $methodName === 'getDerivedNote');
+        $isPoor = $classReflection->getName() === BackwardCompatibilityChecker::class;
 
         $isCore = $classReflection->implementsInterface(MemberUsageProvider::class)
             || $classReflection->implementsInterface(Collector::class)

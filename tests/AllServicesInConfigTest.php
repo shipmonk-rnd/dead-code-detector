@@ -20,6 +20,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
 use function array_merge;
 use function class_exists;
 use function count;
@@ -61,6 +62,7 @@ final class AllServicesInConfigTest extends PHPStanTestCase
             BlackMember::class,
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
+            PropertyHookBackingValueVisitor::class,
         ];
 
         /** @var DirectoryIterator $file */

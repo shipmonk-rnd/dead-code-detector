@@ -88,6 +88,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     private bool $detectNeverReadProperties;
 
+    private bool $detectNeverWrittenProperties;
+
     /**
      * typename => data
      *
@@ -97,7 +99,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      *      file: string,
      *      cases: array<string, array{line: int}>,
      *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int}>,
+     *      properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -148,6 +150,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         bool $detectDeadConstants,
         bool $detectDeadEnumCases,
         bool $detectNeverReadProperties,
+        bool $detectNeverWrittenProperties,
         bool $reportTransitivelyDeadMethodAsSeparateError,
         BackwardCompatibilityChecker $checker
     )
@@ -158,6 +161,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $this->detectDeadConstants = $detectDeadConstants;
         $this->detectDeadEnumCases = $detectDeadEnumCases;
         $this->detectNeverReadProperties = $detectNeverReadProperties;
+        $this->detectNeverWrittenProperties = $detectNeverWrittenProperties;
         $this->reportTransitivelyDeadAsSeparateError = $reportTransitivelyDeadMethodAsSeparateError;
 
         $checker->check();
@@ -284,6 +288,13 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 $accessTypes = [];
                 if ($this->detectNeverReadProperties) {
                     $accessTypes[] = AccessType::READ;
+                }
+                if (
+                    $this->detectNeverWrittenProperties
+                    && !$propertyData['default'] // consider properties with default values as written
+                    && !($propertyData['virtual'] && !$propertyData['setHook']) // virtual properties without set hook cannot be written to
+                ) {
+                    $accessTypes[] = AccessType::WRITE;
                 }
                 foreach ($accessTypes as $accessType) {
                     $propertyRef = new ClassPropertyRef($typeName, $propertyName, false);
@@ -852,11 +863,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $tips = [];
 
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
-            $transitiveDeadMemberHumanString = $transitivelyDeadMember->getMember()->toHumanString();
             $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
             $excludedUsages = $transitivelyDeadMember->getExcludedUsages();
 
-            $tips[] = "Thus $transitiveDeadMemberHumanString is transitively also unused{$exclusionMessage}";
+            $tips[] = $this->buildTransitiveErrorMessages($transitivelyDeadMember) . $exclusionMessage;
             $metadata[] = [
                 'blackMember' => $transitivelyDeadMember,
                 'transitive' => true,
@@ -887,6 +897,21 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         } else {
             return "Unused {$memberHumanString}";
+        }
+    }
+
+    private function buildTransitiveErrorMessages(BlackMember $blackMember): string
+    {
+        $memberHumanString = $blackMember->getMember()->toHumanString();
+
+        if ($blackMember->getMember()->getMemberType() === MemberType::PROPERTY) {
+            if ($blackMember->getAccessType() === AccessType::READ) {
+                return "Thus {$memberHumanString} is transitively never read";
+            } else {
+                return "Thus {$memberHumanString} is transitively never written";
+            }
+        } else {
+            return "Thus {$memberHumanString} is transitively unused";
         }
     }
 
