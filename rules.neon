@@ -2,6 +2,12 @@ services:
     errorFormatter.removeDeadCode:
         class: ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter
 
+    errorFormatter.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis:
+        class: ShipMonk\PHPStan\DeadCode\Formatter\FilterOutUnmatchedInlineIgnoresFormatter
+        arguments:
+            wrappedFormatter: %shipmonkDeadCode.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis.wrappedErrorFormatter%
+            identifiers: %shipmonkDeadCode.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis.identifiers%
+
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
@@ -242,6 +248,14 @@ parameters:
                 enabled: false
         debug:
             usagesOf: []
+        filterOutUnmatchedInlineIgnoresDuringPartialAnalysis:
+            wrappedErrorFormatter: table
+            identifiers:
+                - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_METHOD
+                - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_CONSTANT
+                - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_ENUM_CASE
+                - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ
+                - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_WRITTEN
 
 expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
@@ -316,5 +330,9 @@ parametersSchema:
         ])
         debug: structure([
             usagesOf: listOf(string())
+        ])
+        filterOutUnmatchedInlineIgnoresDuringPartialAnalysis: structure([
+            wrappedErrorFormatter: string()
+            identifiers: listOf(string())
         ])
     ])
