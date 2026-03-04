@@ -1026,6 +1026,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
+        yield 'provider-enum-hooks' => [__DIR__ . '/data/providers/enum-hooks.php', self::requiresPhp(8_01_00)];
         yield 'provider-builtin' => [__DIR__ . '/data/providers/builtin.php'];
         yield 'provider-stream-wrapper' => [__DIR__ . '/data/providers/stream-wrapper.php'];
 
