@@ -115,6 +115,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.netteTester.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -238,6 +245,8 @@ parameters:
                 enabled: null
             nette:
                 enabled: null
+            netteTester:
+                enabled: null
             streamWrapper:
                 enabled: true
         usageExcluders:
@@ -313,6 +322,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             nette: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            netteTester: structure([
                 enabled: schema(bool(), nullable())
             ])
             streamWrapper: structure([
