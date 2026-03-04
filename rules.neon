@@ -213,10 +213,10 @@ parameters:
         detect:
             deadMethods: true
             deadConstants: true
-            deadEnumCases: false
+            deadEnumCases: true
             deadProperties:
-                neverRead: false
-                neverWritten: false
+                neverRead: true
+                neverWritten: true
         usageProviders:
             apiPhpDoc:
                 enabled: true
