@@ -944,6 +944,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-abstract-2' => [__DIR__ . '/data/methods/abstract-2.php'];
         yield 'method-clone' => [__DIR__ . '/data/methods/clone.php'];
         yield 'method-magic' => [__DIR__ . '/data/methods/magic.php'];
+        yield 'method-invoke' => [__DIR__ . '/data/methods/invoke.php'];
         yield 'method-mixed' => [__DIR__ . '/data/methods/mixed/tracked.php'];
         yield 'method-new-in-initializers' => [__DIR__ . '/data/methods/new-in-initializers.php'];
         yield 'method-first-class-callable' => [__DIR__ . '/data/methods/first-class-callable.php'];
