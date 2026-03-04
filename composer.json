@@ -17,6 +17,7 @@
     },
     "require-dev": {
         "composer-runtime-api": "^2.0",
+        "behat/behat": "^3.14",
         "composer/semver": "^3.4",
         "doctrine/orm": "^2.19 || ^3.0",
         "editorconfig-checker/editorconfig-checker": "^10.6.0",
