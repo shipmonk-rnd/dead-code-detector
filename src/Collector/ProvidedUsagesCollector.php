@@ -107,7 +107,7 @@ final class ProvidedUsagesCollector implements Collector
                     throw new LogicException("Method '{$originMember}' does not exist in class '$originClass'. $context");
                 }
 
-                if ($origin->getMemberType() === MemberType::PROPERTY && !$this->reflectionProvider->getClass($originClass)->hasInstanceProperty($originMember)) {
+                if ($origin->getMemberType() === MemberType::PROPERTY && !$this->reflectionProvider->getClass($originClass)->hasNativeProperty($originMember)) {
                     throw new LogicException("Property '{$originMember}' does not exist in class '$originClass'. $context");
                 }
             }
