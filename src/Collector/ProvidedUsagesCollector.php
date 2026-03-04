@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
@@ -85,7 +86,7 @@ final class ProvidedUsagesCollector implements Collector
     {
         $origin = $usage->getOrigin();
         $originClass = $origin->getClassName();
-        $originMethod = $origin->getMemberName();
+        $originMember = $origin->getMemberName();
 
         $context = sprintf(
             "It emitted usage of %s by %s for node '%s' in '%s' on line %s",
@@ -101,8 +102,14 @@ final class ProvidedUsagesCollector implements Collector
                 throw new LogicException("Class '{$originClass}' does not exist. $context");
             }
 
-            if ($originMethod !== null && !$this->reflectionProvider->getClass($originClass)->hasMethod($originMethod)) {
-                throw new LogicException("Method '{$originMethod}' does not exist in class '$originClass'. $context");
+            if ($originMember !== null) {
+                if ($origin->getMemberType() === MemberType::METHOD && !$this->reflectionProvider->getClass($originClass)->hasMethod($originMember)) {
+                    throw new LogicException("Method '{$originMember}' does not exist in class '$originClass'. $context");
+                }
+
+                if ($origin->getMemberType() === MemberType::PROPERTY && !$this->reflectionProvider->getClass($originClass)->hasNativeProperty($originMember)) {
+                    throw new LogicException("Property '{$originMember}' does not exist in class '$originClass'. $context");
+                }
             }
         }
     }
