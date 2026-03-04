@@ -35,6 +35,21 @@ $ vendor/bin/phpstan
 > [!NOTE]
 > Make sure you analyse whole codebase (e.g. both `src` and `tests`) so that all usages are found.
 
+## Detected class members:
+All dead class member types are detected by default, you can disable some if needed:
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        detect:
+            deadMethods: true
+            deadConstants: true
+            deadEnumCases: true
+            deadProperties:
+                neverRead: true
+                neverWritten: true
+```
+
 ## Supported libraries:
 
 #### Symfony:
@@ -155,6 +170,10 @@ With such setup, members used only in tests will be reported with corresponding 
 ```
 Unused AddressValidator::isValidPostalCode (all usages excluded by tests excluder)
 ```
+
+> [!TIP]
+> **We recommend enabling this excluder for all projects.**
+
 
 ## Customization:
 - If your application does some magic calls unknown to this library, you can implement your own usage provider.
@@ -375,25 +394,7 @@ Found 2 usages over unknown type:
 $methods = $reflection->getMethods(); // all Foo methods are used here
 ```
 
-- All that applies even to constant fetches (e.g. `Foo::{$unknown}`)
-
-## Detected class members:
-Default configuration is:
-
-```neon
-parameters:
-    shipmonkDeadCode:
-        detect:
-            deadMethods: true
-            deadConstants: true
-            deadProperties:
-                neverRead: false # opt-in
-                neverWritten: false # opt-in
-            deadEnumCases: false # opt-in
-```
-
-Enum cases and properties are disabled by default as those are often used in API input objects (using custom deserialization, which typically require custom usage provider).
-But libraries should be able to enable those easily.
+- All that applies even to constants and properties.
 
 
 ## Limitations:
@@ -442,7 +443,7 @@ class IgnoreDeadInterfaceUsageProvider extends ReflectionBasedMemberUsageProvide
 ```
 
 ## Debugging:
-- If you want to see how dead code detector evaluated usages of certain method, you do the following:
+- If you want to see how dead code detector evaluated usages of certain member, you do the following:
 
 ```neon
 parameters:
