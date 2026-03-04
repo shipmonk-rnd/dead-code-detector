@@ -48,6 +48,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
@@ -1022,6 +1023,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php', self::requiresPhp(8_01_00)];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
+        yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php', self::requiresPhp(8_01_00)];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php', self::requiresPhp(8_01_00)];
         yield 'provider-builtin' => [__DIR__ . '/data/providers/builtin.php'];
@@ -1213,6 +1215,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new PhpStanUsageProvider(
                 $this->providersEnabled,
                 $this->createPhpStanContainerMock(),
+            ),
+            new NetteTesterUsageProvider(
+                $this->providersEnabled,
             ),
             new NetteUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
