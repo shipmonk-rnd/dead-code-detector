@@ -1,77 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace Behat\Behat\Context;
-
-interface Context
-{
-}
-
-namespace Behat\Step;
-
-use Attribute;
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class Given
-{
-    public function __construct() {}
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class When
-{
-    public function __construct() {}
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class Then
-{
-    public function __construct() {}
-}
-
-namespace Behat\Hook;
-
-use Attribute;
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class BeforeScenario
-{
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class AfterScenario
-{
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class BeforeStep
-{
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class AfterStep
-{
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class BeforeFeature
-{
-}
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class AfterFeature
-{
-}
-
-namespace Behat\Transformation;
-
-use Attribute;
-
-#[Attribute(Attribute::TARGET_METHOD)]
-class Transform
-{
-}
-
-namespace Behat;
+namespace BehatProvider;
 
 use Behat\Behat\Context\Context;
 use Behat\Hook\AfterFeature;
@@ -176,7 +105,7 @@ class FeatureContext implements Context
         return (int) $count;
     }
 
-    public function helperMethodNotUsed(): void // error: Unused Behat\FeatureContext::helperMethodNotUsed
+    public function helperMethodNotUsed(): void // error: Unused BehatProvider\FeatureContext::helperMethodNotUsed
     {
     }
 }
@@ -256,7 +185,7 @@ class AttributeContext implements Context
         return (int) $value;
     }
 
-    public function anotherHelperNotUsed(): void // error: Unused Behat\AttributeContext::anotherHelperNotUsed
+    public function anotherHelperNotUsed(): void // error: Unused BehatProvider\AttributeContext::anotherHelperNotUsed
     {
     }
 }
