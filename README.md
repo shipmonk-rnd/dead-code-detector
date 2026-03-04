@@ -90,6 +90,9 @@ $ vendor/bin/phpstan
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
 
+#### Nette Tester:
+- `test*` methods, `setUp`/`tearDown`, `@dataProvider` methods in `Tester\TestCase` subclasses
+
 #### Twig:
 - View objects passed as parameters to twig templates (including transitively referenced ones)
   - Passed to `$controller->render('my.twig', ['param' => $viewModel])`,
