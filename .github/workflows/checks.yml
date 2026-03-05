@@ -107,4 +107,4 @@ jobs:
                     composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
             -
                 name: Run tests
-                run: vendor/bin/phpunit --no-coverage tests
+                run: vendor/bin/phpunit --no-coverage
