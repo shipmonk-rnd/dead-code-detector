@@ -43,6 +43,11 @@ abstract class ClassMemberUsage
     abstract public function getAccessType(): int;
 
     /**
+     * If false, causes member to be marked as white, but stops graph propagation.
+     */
+    abstract public function isPropagating(): bool;
+
+    /**
      * @return static
      */
     abstract public function concretizeMixedClassNameUsage(string $className): self;

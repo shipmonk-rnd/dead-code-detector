@@ -22,20 +22,25 @@ final class ClassPropertyUsage extends ClassMemberUsage
      */
     private int $accessType;
 
+    private bool $callsHook;
+
     /**
      * @param UsageOrigin $origin The method where the read occurs
      * @param ClassPropertyRef<string|null, string|null> $access The property being read
      * @param AccessType::* $accessType
+     * @param bool $callsHook Only self-referencing property access inside a hook does not call property hook
      */
     public function __construct(
         UsageOrigin $origin,
         ClassPropertyRef $access,
-        int $accessType
+        int $accessType,
+        bool $callsHook = true
     )
     {
         parent::__construct($origin);
         $this->access = $access;
         $this->accessType = $accessType;
+        $this->callsHook = $callsHook;
     }
 
     /**
@@ -74,6 +79,11 @@ final class ClassPropertyUsage extends ClassMemberUsage
             ),
             $this->accessType,
         );
+    }
+
+    public function isPropagating(): bool
+    {
+        return $this->callsHook;
     }
 
 }

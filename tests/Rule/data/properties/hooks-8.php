@@ -5,7 +5,7 @@ namespace PropertyHooks8;
 class Example
 {
 
-    public string $foo { // error: Property PropertyHooks8\Example::$foo is never written
+    public string $foo {
         get {
             return $this->foo = 'value'; // self-referencing set hook is not called
         }

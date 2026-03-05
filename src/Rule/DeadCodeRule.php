@@ -372,7 +372,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         $visited = [];
         foreach ($whiteMembers as $whiteCalleeKey => $usages) {
-            $this->markTransitivesWhite([$whiteCalleeKey => $usages], $visited);
+            $this->markReachableAsWhite([$whiteCalleeKey => $usages], $visited, true);
         }
         unset($visited);
 
@@ -710,9 +710,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $stack callerKey => usages[]
      * @param array<string, true> $visited
      */
-    private function markTransitivesWhite(
+    private function markReachableAsWhite(
         array $stack,
-        array &$visited
+        array &$visited,
+        bool $transitiveWalk
     ): void
     {
         $callerKey = array_key_last($stack);
@@ -726,13 +727,26 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         $visited[$callerKey] = true;
 
+        if (!$transitiveWalk) {
+            return;
+        }
+
         foreach ($callees as $calleeKey => $usages) {
             if (isset($visited[$calleeKey])) {
                 continue;
             }
 
-            $this->markTransitivesWhite(array_merge($stack, [$calleeKey => $usages]), $visited);
+            $isPropagating = !$this->isNonTransitiveEdge($usages);
+            $this->markReachableAsWhite(array_merge($stack, [$calleeKey => $usages]), $visited, $isPropagating);
         }
+    }
+
+    /**
+     * @param non-empty-list<ClassMemberUsage> $usages
+     */
+    private function isNonTransitiveEdge(array $usages): bool
+    {
+        return !$usages[0]->isPropagating();
     }
 
     /**
@@ -755,6 +769,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             if (!isset($this->blackMembers[$calleeKey])) {
+                continue;
+            }
+
+            if ($this->isNonTransitiveEdge($calleeInfo)) {
                 continue;
             }
 
@@ -788,7 +806,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($callees as $callee => $calleeInfo) {
-                if (array_key_exists($callee, $this->blackMembers)) {
+                if (array_key_exists($callee, $this->blackMembers) && !$this->isNonTransitiveEdge($calleeInfo)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
             }

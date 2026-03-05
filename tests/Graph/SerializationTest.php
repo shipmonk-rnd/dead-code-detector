@@ -37,7 +37,7 @@ final class SerializationTest extends TestCase
                 ),
                 'excluder',
             ),
-            '{"e":"excluder","t":2,"a":1,"o":{"c":"Clazz","m":"method","a":1,"t":1,"f":"_","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":-1}}',
+            '{"e":"excluder","t":2,"a":1,"p":true,"o":{"c":"Clazz","m":"method","a":1,"t":1,"f":"_","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":-1}}',
         ];
 
         yield 'path differs' => [
@@ -49,7 +49,7 @@ final class SerializationTest extends TestCase
                 ),
                 'excluder',
             ),
-            '{"e":"excluder","t":2,"a":1,"o":{"c":"Clazz","m":"method","a":1,"t":1,"f":"\/app\/index.php","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":0}}',
+            '{"e":"excluder","t":2,"a":1,"p":true,"o":{"c":"Clazz","m":"method","a":1,"t":1,"f":"\/app\/index.php","l":7,"p":null,"n":null},"m":{"c":null,"m":"CONSTANT","d":true,"e":0}}',
         ];
     }
 

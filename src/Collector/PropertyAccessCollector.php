@@ -88,15 +88,15 @@ final class PropertyAccessCollector implements Collector
         $callerType = $scope->getType($node->var);
 
         foreach ($propertyNames as $propertyName) {
-            if ($propertyName !== null && $this->isSelfReferenceInPropertyHook($scope, $propertyName)) {
-                continue; // read, nor write access calls other a hook when within a hook
-            }
+            $callsHook = !$this->isSelfReferenceInPropertyHook($scope, $propertyName);
+
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
                 $this->registerUsage(
                     new ClassPropertyUsage(
                         UsageOrigin::createRegular($node, $scope),
                         $propertyRef,
                         $accessType,
+                        $callsHook,
                     ),
                     $node,
                     $scope,
@@ -231,9 +231,13 @@ final class PropertyAccessCollector implements Collector
 
     private function isSelfReferenceInPropertyHook(
         Scope $scope,
-        string $propertyName
+        ?string $propertyName
     ): bool
     {
+        if ($propertyName === null) {
+            return false;
+        }
+
         $function = $scope->getFunction();
         if ($function === null) {
             return false;
