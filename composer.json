@@ -98,7 +98,7 @@
         "check:cs": "phpcs",
         "check:dependencies": "composer-dependency-analyser",
         "check:ec": "ec src tests",
-        "check:tests": "phpunit tests",
+        "check:tests": "phpunit",
         "check:types": "phpstan analyse -vv --ansi",
         "fix:cs": "phpcbf"
     }
