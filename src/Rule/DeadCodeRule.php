@@ -43,7 +43,6 @@ use function array_unique;
 use function array_values;
 use function in_array;
 use function ksort;
-use function serialize;
 use function strpos;
 
 /**
@@ -114,11 +113,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      * @var array<MemberType::*, array<string, array<string, array<string, string>>>>
      */
     private array $traitMembers = [];
-
-    /**
-     * @var array<string, list<string>>
-     */
-    private array $memberAlternativesCache = [];
 
     private bool $reportTransitivelyDeadAsSeparateError;
 
@@ -548,12 +542,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $cacheKey = serialize([$member, $accessType]);
-
-        if (isset($this->memberAlternativesCache[$cacheKey])) {
-            return $this->memberAlternativesCache[$cacheKey];
-        }
-
         $descendantsToCheck = $member->isPossibleDescendant() ? $this->classHierarchy->getClassDescendants($member->getClassName()) : [];
         $meAndDescendants = [
             $member->getClassName(),
@@ -575,11 +563,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        $result = array_values(array_unique($result));
-
-        $this->memberAlternativesCache[$cacheKey] = $result;
-
-        return $result;
+        return array_values(array_unique($result));
     }
 
     /**
