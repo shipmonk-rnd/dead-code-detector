@@ -736,17 +736,16 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            $isPropagating = !$this->isNonTransitiveEdge($usages);
-            $this->markReachableAsWhite(array_merge($stack, [$calleeKey => $usages]), $visited, $isPropagating);
+            $this->markReachableAsWhite(array_merge($stack, [$calleeKey => $usages]), $visited, $this->shouldPropagate($usages));
         }
     }
 
     /**
      * @param non-empty-list<ClassMemberUsage> $usages
      */
-    private function isNonTransitiveEdge(array $usages): bool
+    private function shouldPropagate(array $usages): bool
     {
-        return !$usages[0]->isPropagating();
+        return $usages[0]->isPropagating();
     }
 
     /**
@@ -772,7 +771,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 continue;
             }
 
-            if ($this->isNonTransitiveEdge($calleeInfo)) {
+            if (!$this->shouldPropagate($calleeInfo)) {
                 continue;
             }
 
@@ -806,7 +805,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
 
             foreach ($callees as $callee => $calleeInfo) {
-                if (array_key_exists($callee, $this->blackMembers) && !$this->isNonTransitiveEdge($calleeInfo)) {
+                if (array_key_exists($callee, $this->blackMembers) && $this->shouldPropagate($calleeInfo)) {
                     $deadMethodsWithCaller[$callee] = true;
                 }
             }
