@@ -1,0 +1,5 @@
+ • Changed VisibilityFixFinalConst\FixFinalConst::FINAL_TO_PRIVATE to private
+ • Changed VisibilityFixFinalConst\FixFinalConst::FINAL_PROTECTED_TO_PRIVATE to private
+ • Changed VisibilityFixFinalConst\FixFinalConstParent::FINAL_TO_PROTECTED to protected
+
+Changed visibility of 3 members in 1 file.

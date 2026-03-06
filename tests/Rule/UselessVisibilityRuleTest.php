@@ -126,7 +126,9 @@ final class UselessVisibilityRuleTest extends ShipMonkRuleTestCase
         yield 'visibility-parent-visibility-floor' => [__DIR__ . '/data/visibility/parent-visibility-floor.php'];
         yield 'visibility-property-access-types' => [__DIR__ . '/data/visibility/property-access-types.php'];
         yield 'visibility-trait-constants-properties' => [__DIR__ . '/data/visibility/trait-constants-properties.php'];
+        yield 'visibility-trait-property-parent-conflict' => [__DIR__ . '/data/visibility/trait-property-parent-conflict.php'];
         yield 'visibility-fix-basic' => [__DIR__ . '/data/visibility/fix-basic.php'];
+        yield 'visibility-fix-final-const' => [__DIR__ . '/data/visibility/fix-final-const.php'];
     }
 
     public function testUselessMethodVisibilityDetectionCanBeDisabled(): void
@@ -156,6 +158,50 @@ final class UselessVisibilityRuleTest extends ShipMonkRuleTestCase
     public function testAutoChangeVisibility(): void
     {
         $file = __DIR__ . '/data/visibility/fix-basic.php';
+
+        $writtenOutput = '';
+
+        $output = $this->createMock(Output::class);
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
+        $fileSystem = $this->createMock(FileSystem::class);
+        $fileSystem->expects(self::once())
+            ->method('read')
+            ->willReturnCallback(
+                static function (string $file): string {
+                    self::assertFileExists($file);
+                    return file_get_contents($file); // @phpstan-ignore return.type
+                },
+            );
+        $fileSystem->expects(self::once())
+            ->method('write')
+            ->willReturnCallback(
+                static function (string $file, string $content): void {
+                    $expectedFile = str_replace('.php', '.transformed.php', $file);
+                    self::assertFileExists($expectedFile);
+
+                    $expectedNewCode = file_get_contents($expectedFile);
+                    self::assertSame($expectedNewCode, $content);
+                },
+            );
+
+        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+
+        $formatter = new ChangeVisibilityFormatter($fileSystem);
+        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
+
+        $expectedOutputFile = str_replace('.php', '.output.txt', $file);
+        self::assertFileExists($expectedOutputFile);
+        self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput), "Output does not match expected: $expectedOutputFile");
+    }
+
+    public function testAutoChangeVisibilityFinalConst(): void
+    {
+        $file = __DIR__ . '/data/visibility/fix-final-const.php';
 
         $writtenOutput = '';
 
