@@ -31,7 +31,7 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if (!$this->enabled) {
             return null;

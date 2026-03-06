@@ -39,7 +39,7 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->enabled = $enabled ?? $this->isNetteInstalled();
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if (!$this->enabled) {
             return null;

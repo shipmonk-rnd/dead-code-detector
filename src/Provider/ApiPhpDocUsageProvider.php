@@ -37,22 +37,22 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->analysedPaths = $analysedPaths;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         return $this->enabled ? $this->shouldMarkMemberAsUsed($method) : null;
     }
 
-    public function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
+    protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
         return $this->enabled ? $this->shouldMarkMemberAsUsed($constant) : null;
     }
 
-    public function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
+    protected function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
     {
         return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
     }
 
-    public function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
+    protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
         return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
     }
@@ -65,7 +65,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
-    public function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
+    private function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
         $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
         $memberType = ReflectionHelper::getMemberType($member);

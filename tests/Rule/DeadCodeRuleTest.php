@@ -42,6 +42,7 @@ use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
+use ShipMonk\PHPStan\DeadCode\Processor\CollectedDataProcessor;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
@@ -62,25 +63,19 @@ use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
 use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStanDev\RuleTestCase as ShipMonkRuleTestCase;
-use Throwable;
 use Traversable;
 use function array_filter;
 use function array_map;
 use function array_merge;
 use function count;
-use function error_reporting;
 use function file_get_contents;
 use function implode;
 use function in_array;
 use function is_array;
 use function iterator_to_array;
-use function ob_end_clean;
-use function ob_start;
 use function preg_replace;
 use function str_replace;
 use function strpos;
-use const E_ALL;
-use const E_DEPRECATED;
 use const PHP_VERSION_ID;
 
 /**
@@ -88,6 +83,8 @@ use const PHP_VERSION_ID;
  */
 final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 {
+
+    use NoFatalErrorTestTrait;
 
     /**
      * @var list<string>
@@ -125,12 +122,12 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
+                new CollectedDataProcessor(new ClassHierarchy()),
                 new DebugUsagePrinter(
                     $container,
                     $this->createOutputEnhancer(),
                     self::createReflectionProvider(),
                 ),
-                new ClassHierarchy(),
                 $this->detectDeadMethods,
                 $this->detectDeadConstants,
                 $this->detectDeadEnumCases,
@@ -199,42 +196,11 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     public function testNoFatalError(): void
     {
-        // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
-        $previousErrorReporting = error_reporting(E_ALL & ~E_DEPRECATED);
-
-        try {
-            $required = [];
-
-            $fileProviders = array_merge(
-                iterator_to_array(self::provideFiles(), false),
-                iterator_to_array(self::provideGroupingFiles(), false),
-                iterator_to_array(self::provideAutoRemoveFiles(), false),
-            );
-
-            foreach ($fileProviders as $args) {
-                $files = is_array($args[0]) ? $args[0] : [$args[0]];
-
-                foreach ($files as $file) {
-                    if (isset($required[$file])) {
-                        continue;
-                    }
-
-                    try {
-                        ob_start();
-                        require $file;
-                        ob_end_clean();
-                    } catch (Throwable $e) {
-                        self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
-                    }
-
-                    $required[$file] = true;
-                }
-            }
-
-            $this->expectNotToPerformAssertions();
-        } finally {
-            error_reporting($previousErrorReporting);
-        }
+        $this->doTestNoFatalError(array_merge(
+            iterator_to_array(self::provideFiles(), false),
+            iterator_to_array(self::provideGroupingFiles(), false),
+            iterator_to_array(self::provideAutoRemoveFiles(), false),
+        ));
     }
 
     /**

@@ -17,7 +17,7 @@ abstract class ClassMemberUsage
      */
     private UsageOrigin $origin;
 
-    public function __construct(UsageOrigin $origin)
+    protected function __construct(UsageOrigin $origin)
     {
         $this->origin = $origin;
     }

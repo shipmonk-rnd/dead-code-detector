@@ -165,7 +165,7 @@ final class CollectedUsage
         return 0;
     }
 
-    public static function deserializeTrinary(int $value): TrinaryLogic
+    private static function deserializeTrinary(int $value): TrinaryLogic
     {
         if ($value === -1) {
             return TrinaryLogic::createNo();

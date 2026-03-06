@@ -29,7 +29,7 @@ abstract class ClassMemberRef
      * @param C $className Null if member is accessed over unknown type, e.g. unknown caller like $unknown->method()
      * @param M $memberName Null if member name is unknown, e.g. unknown method like $class->$unknown()
      */
-    public function __construct(
+    protected function __construct(
         ?string $className,
         ?string $memberName,
         bool $possibleDescendant

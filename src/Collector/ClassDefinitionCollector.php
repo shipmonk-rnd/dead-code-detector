@@ -33,8 +33,8 @@ use function is_string;
  *       kind: string,
  *       name: string,
  *       cases: array<string, array{line: int}>,
- *       constants: array<string, array{line: int}>,
- *       properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool}>,
+ *       constants: array<string, array{line: int, visibility: int-mask-of<Visibility::*>}>,
+ *       properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool, visibility: int-mask-of<Visibility::*>}>,
  *       methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
  *       parents: array<string, null>,
  *       traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -64,8 +64,8 @@ final class ClassDefinitionCollector implements Collector
      *      kind: string,
      *      name: string,
      *      cases: array<string, array{line: int}>,
-     *      constants: array<string, array{line: int}>,
-     *      properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool}>,
+     *      constants: array<string, array{line: int, visibility: int-mask-of<Visibility::*>}>,
+     *      properties: array<string, array{line: int, default: bool, virtual: bool, setHook: bool, visibility: int-mask-of<Visibility::*>}>,
      *      methods: array<string, array{line: int, params: int, abstract: bool, visibility: int-mask-of<Visibility::*>}>,
      *      parents: array<string, null>,
      *      traits: array<string, array{excluded?: list<string>, aliases?: array<string, string>}>,
@@ -107,6 +107,7 @@ final class ClassDefinitionCollector implements Collector
                             'default' => $param->default !== null,
                             'virtual' => $this->isVirtualProperty($param->var->name, $param->hooks),
                             'setHook' => $this->hasSetHook($param->hooks),
+                            'visibility' => $param->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
                         ];
                     }
                 }
@@ -117,6 +118,7 @@ final class ClassDefinitionCollector implements Collector
             foreach ($constant->consts as $const) {
                 $constants[$const->name->toString()] = [
                     'line' => $const->getStartLine(),
+                    'visibility' => $constant->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
                 ];
             }
         }
@@ -135,6 +137,7 @@ final class ClassDefinitionCollector implements Collector
                     'default' => $prop->default !== null,
                     'virtual' => $this->isVirtualProperty($propertyName, $property->hooks),
                     'setHook' => $this->hasSetHook($property->hooks),
+                    'visibility' => $property->flags & (Visibility::PUBLIC | Visibility::PROTECTED | Visibility::PRIVATE),
                 ];
             }
         }

@@ -21,7 +21,7 @@ final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->container = $container;
     }
 
-    public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
         if (!$this->enabled) {
             return null;

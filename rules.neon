@@ -180,6 +180,9 @@ services:
             memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Processor\CollectedDataProcessor
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule
         tags:
             - phpstan.rules.rule
@@ -191,6 +194,15 @@ services:
             detectNeverReadProperties: %shipmonkDeadCode.detect.deadProperties.neverRead%
             detectNeverWrittenProperties: %shipmonkDeadCode.detect.deadProperties.neverWritten%
             reportTransitivelyDeadMethodAsSeparateError: %shipmonkDeadCode.reportTransitivelyDeadMethodAsSeparateError%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Rule\UselessVisibilityRule
+        tags:
+            - phpstan.rules.rule
+        arguments:
+            detectUselessMethodVisibility: %shipmonkDeadCode.detect.uselessVisibility.methods%
+            detectUselessPropertyVisibility: %shipmonkDeadCode.detect.uselessVisibility.properties%
+            detectUselessConstantVisibility: %shipmonkDeadCode.detect.uselessVisibility.constants%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker
@@ -217,6 +229,10 @@ parameters:
             deadProperties:
                 neverRead: true
                 neverWritten: true
+            uselessVisibility:
+                methods: true
+                constants: true
+                properties: true
         usageProviders:
             apiPhpDoc:
                 enabled: true
@@ -265,6 +281,9 @@ parameters:
                 - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_ENUM_CASE
                 - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_READ
                 - ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule::IDENTIFIER_PROPERTY_NEVER_WRITTEN
+                - ShipMonk\PHPStan\DeadCode\Rule\UselessVisibilityRule::IDENTIFIER_USELESS_METHOD_VISIBILITY
+                - ShipMonk\PHPStan\DeadCode\Rule\UselessVisibilityRule::IDENTIFIER_USELESS_PROPERTY_VISIBILITY
+                - ShipMonk\PHPStan\DeadCode\Rule\UselessVisibilityRule::IDENTIFIER_USELESS_CONSTANT_VISIBILITY
 
 expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
@@ -281,6 +300,11 @@ parametersSchema:
             deadProperties: structure([
                 neverRead: bool()
                 neverWritten: bool()
+            ])
+            uselessVisibility: structure([
+                methods: bool()
+                constants: bool()
+                properties: bool()
             ])
         ])
         usageProviders: structure([
