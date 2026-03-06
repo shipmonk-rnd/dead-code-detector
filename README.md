@@ -420,6 +420,32 @@ parameters:
 - Those are never reported as dead as those are often used to deny class instantiation
   - This applies only to constructors without any parameters
 
+#### Serialization:
+- Properties/enum cases read only through serialization (e.g. public properties serialized to JSON response) may be reported as `neverRead`
+- Custom serialization/deserialization logic needs to be handled via [custom usage providers](#customization)
+  - For example, if your API output objects implement a common interface, use simple:
+
+```php
+use ReflectionProperty;
+use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
+use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
+
+class ApiOutputPropertyUsageProvider extends ReflectionBasedMemberUsageProvider
+{
+    protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
+    {
+        if ($property->getDeclaringClass()->implementsInterface(ApiOutput::class)) {
+            return VirtualUsageData::withNote('Used upon JSON serialization');
+        }
+
+        return null;
+    }
+}
+```
+
+  - If you can detect such usages only by e.g. `Controller` return value, use AST-based provider
+    - You can inspire by [Twig Provider](src/Provider/TwigUsageProvider.php#L283) which does a very similar thing
+
 #### Interface methods:
 - If you never call interface method over the interface, but only over its implementors, it gets reported as dead
 - But you may want to keep the interface method to force some unification across implementors
