@@ -70,6 +70,7 @@ final class CollectedUsage
             'e' => $this->excludedBy,
             't' => $this->usage->getMemberType(),
             'a' => $this->usage->getAccessType(),
+            'p' => $this->usage->isPropagating(),
             'o' => [
                     'c' => $origin->getClassName(),
                     'm' => $origin->getMemberName(),
@@ -101,7 +102,7 @@ final class CollectedUsage
     ): self
     {
         try {
-            /** @var array{e: string|null, t: MemberType::*, a: AccessType::*, o: array{c: string|null, m: string|null, a: AccessType::*, t: MemberType::PROPERTY|MemberType::METHOD|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
+            /** @var array{e: string|null, t: MemberType::*, a: AccessType::*, p: bool, o: array{c: string|null, m: string|null, a: AccessType::*, t: MemberType::PROPERTY|MemberType::METHOD|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
             $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
@@ -119,6 +120,7 @@ final class CollectedUsage
             $result['o']['n'],
         );
         $accessType = $result['a'];
+        $callsHook = $result['p'];
         $exclusionReason = $result['e'];
 
         if ($memberType === MemberType::CONSTANT) {
@@ -141,6 +143,7 @@ final class CollectedUsage
                 $origin,
                 new ClassPropertyRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
                 $accessType,
+                $callsHook,
             );
         } else {
             throw new LogicException('Unknown member type: ' . $memberType);

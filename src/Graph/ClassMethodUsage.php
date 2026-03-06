@@ -68,4 +68,9 @@ final class ClassMethodUsage extends ClassMemberUsage
         );
     }
 
+    public function isPropagating(): bool
+    {
+        return true;
+    }
+
 }
