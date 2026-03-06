@@ -35,6 +35,11 @@ $ vendor/bin/phpstan
 > [!NOTE]
 > Make sure you analyse whole codebase (e.g. both `src` and `tests`) so that all usages are found.
 
+## Slides:
+Check out the recording and slides from TechMeetup Conference (2025) about this package:
+- 🎬 [Recording on YouTube](https://youtu.be/-cf1RbsCwnY?si=lXHI-HXbSowT_skv)
+- 📋 [Presentation on Google Slides](https://docs.google.com/presentation/d/1wyi-zWKC80jk-z8QqNXsZ1mK4HpxPa5J6kO69UFC-rI/edit?usp=sharing)
+
 ## Detected class members:
 All dead class member types are detected by default, you can disable some if needed:
 
