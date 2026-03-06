@@ -18,6 +18,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
+use ShipMonk\PHPStan\DeadCode\Transformer\ChangeVisibilityTransformer;
+use ShipMonk\PHPStan\DeadCode\Transformer\ChangeVisibilityVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveClassMemberVisitor;
 use ShipMonk\PHPStan\DeadCode\Transformer\RemoveDeadCodeTransformer;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
@@ -62,6 +64,8 @@ final class AllServicesInConfigTest extends PHPStanTestCase
             BlackMember::class,
             RemoveDeadCodeTransformer::class,
             RemoveClassMemberVisitor::class,
+            ChangeVisibilityTransformer::class,
+            ChangeVisibilityVisitor::class,
             PropertyHookBackingValueVisitor::class,
         ];
 

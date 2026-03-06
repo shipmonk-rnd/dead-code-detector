@@ -2,6 +2,9 @@ services:
     errorFormatter.removeDeadCode:
         class: ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter
 
+    errorFormatter.changeVisibility:
+        class: ShipMonk\PHPStan\DeadCode\Formatter\ChangeVisibilityFormatter
+
     errorFormatter.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis:
         class: ShipMonk\PHPStan\DeadCode\Formatter\FilterOutUnmatchedInlineIgnoresFormatter
         arguments:

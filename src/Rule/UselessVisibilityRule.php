@@ -619,6 +619,12 @@ final class UselessVisibilityRule implements Rule
             ->file($file)
             ->line($line)
             ->identifier($identifier)
+            ->metadata([
+                'className' => $typeName,
+                'memberName' => $memberName,
+                'memberType' => $memberType,
+                'newVisibility' => $requiredVisibility,
+            ])
             ->build();
     }
 

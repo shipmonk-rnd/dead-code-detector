@@ -2,15 +2,19 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Rule;
 
+use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Collectors\Collector;
+use PHPStan\Command\AnalysisResult;
+use PHPStan\Command\Output;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
+use ShipMonk\PHPStan\DeadCode\Formatter\ChangeVisibilityFormatter;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Processor\CollectedDataProcessor;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
@@ -19,12 +23,16 @@ use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStanDev\RuleTestCase as ShipMonkRuleTestCase;
 use Traversable;
 use function array_filter;
 use function array_merge;
+use function file_get_contents;
 use function is_array;
 use function iterator_to_array;
+use function preg_replace;
+use function str_replace;
 use const PHP_VERSION_ID;
 
 /**
@@ -118,6 +126,7 @@ final class UselessVisibilityRuleTest extends ShipMonkRuleTestCase
         yield 'visibility-parent-visibility-floor' => [__DIR__ . '/data/visibility/parent-visibility-floor.php'];
         yield 'visibility-property-access-types' => [__DIR__ . '/data/visibility/property-access-types.php'];
         yield 'visibility-trait-constants-properties' => [__DIR__ . '/data/visibility/trait-constants-properties.php'];
+        yield 'visibility-fix-basic' => [__DIR__ . '/data/visibility/fix-basic.php'];
     }
 
     public function testUselessMethodVisibilityDetectionCanBeDisabled(): void
@@ -142,6 +151,50 @@ final class UselessVisibilityRuleTest extends ShipMonkRuleTestCase
 
         $filterOwnErrors = static fn (Error $error): bool => $error->getIdentifier() === UselessVisibilityRule::IDENTIFIER_USELESS_CONSTANT_VISIBILITY;
         self::assertCount(0, array_filter($this->gatherAnalyserErrors([__DIR__ . '/data/visibility/constants.php']), $filterOwnErrors));
+    }
+
+    public function testAutoChangeVisibility(): void
+    {
+        $file = __DIR__ . '/data/visibility/fix-basic.php';
+
+        $writtenOutput = '';
+
+        $output = $this->createMock(Output::class);
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
+        $fileSystem = $this->createMock(FileSystem::class);
+        $fileSystem->expects(self::once())
+            ->method('read')
+            ->willReturnCallback(
+                static function (string $file): string {
+                    self::assertFileExists($file);
+                    return file_get_contents($file); // @phpstan-ignore return.type
+                },
+            );
+        $fileSystem->expects(self::once())
+            ->method('write')
+            ->willReturnCallback(
+                static function (string $file, string $content): void {
+                    $expectedFile = str_replace('.php', '.transformed.php', $file);
+                    self::assertFileExists($expectedFile);
+
+                    $expectedNewCode = file_get_contents($expectedFile);
+                    self::assertSame($expectedNewCode, $content);
+                },
+            );
+
+        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+
+        $formatter = new ChangeVisibilityFormatter($fileSystem);
+        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
+
+        $expectedOutputFile = str_replace('.php', '.output.txt', $file);
+        self::assertFileExists($expectedOutputFile);
+        self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput), "Output does not match expected: $expectedOutputFile");
     }
 
     /**
@@ -178,6 +231,29 @@ final class UselessVisibilityRuleTest extends ShipMonkRuleTestCase
     private function getMemberUsageExcluders(): array
     {
         return [];
+    }
+
+    /**
+     * @param list<Error> $errors
+     */
+    private function createAnalysisResult(array $errors): AnalysisResult
+    {
+        return new AnalysisResult($errors, [], [], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor
+    }
+
+    private function trimFgColors(string $output): string
+    {
+        $replaced = preg_replace(
+            '/<fg=[a-z]+>(.*?)<\/>/',
+            '$1',
+            $output,
+        );
+
+        if ($replaced === null) {
+            throw new LogicException('Failed to trim colors');
+        }
+
+        return $replaced;
     }
 
     private static function requiresPhp(int $lowestPhpVersion): bool

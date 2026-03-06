@@ -1,0 +1,10 @@
+ • Changed VisibilityFixBasic\FixClass::PUBLIC_CONST to private
+ • Changed VisibilityFixBasic\FixClass::PROTECTED_CONST to private
+ • Changed VisibilityFixBasic\FixClass::publicProp to private
+ • Changed VisibilityFixBasic\FixClass::protectedProp to private
+ • Changed VisibilityFixBasic\FixClass::publicMethod to private
+ • Changed VisibilityFixBasic\FixClass::protectedMethod to private
+ • Changed VisibilityFixBasic\FixParentChild::parentMethod to protected
+ • Changed VisibilityFixBasic\FixPromoted::promotedProp to private
+
+Changed visibility of 8 members in 1 file.
