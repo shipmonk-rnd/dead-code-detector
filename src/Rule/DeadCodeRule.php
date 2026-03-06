@@ -59,7 +59,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     public const IDENTIFIER_PROPERTY_NEVER_WRITTEN = 'shipmonk.deadProperty.neverWritten';
 
     private const UNSUPPORTED_MAGIC_METHODS = [
-        '__invoke' => null,
         '__toString' => null,
         '__destruct' => null,
         '__call' => null,

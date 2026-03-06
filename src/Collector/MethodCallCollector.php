@@ -19,7 +19,6 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\TrinaryLogic;
-use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
@@ -28,7 +27,6 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function array_map;
 use function count;
 use function current;
 
@@ -242,25 +240,21 @@ final class MethodCallCollector implements Collector
         Scope $scope
     ): void
     {
+        if (!$node->name instanceof Name) {
+            $this->registerInvokeCall($node, $scope);
+            return;
+        }
+
         $args = $node->getArgs();
+
         if (count($args) === 0) {
             return;
         }
 
         $firstArg = current($args);
+        $functionName = $node->name->toString();
 
-        if ($node->name instanceof Name) {
-            $functionNames = [$node->name->toString()];
-        } else {
-            $nameType = $scope->getType($node->name);
-            $functionNames = array_map(static fn (ConstantStringType $string): string => $string->getValue(), $nameType->getConstantStrings());
-        }
-
-        foreach ($functionNames as $functionName) {
-            if ($functionName !== 'clone') {
-                continue;
-            }
-
+        if ($functionName === 'clone') {
             $callerType = $scope->getType($firstArg->value);
 
             foreach ($this->getDeclaringTypesWithMethod('__clone', $callerType, TrinaryLogic::createNo()) as $methodRef) {
@@ -273,6 +267,50 @@ final class MethodCallCollector implements Collector
                     $scope,
                 );
             }
+        }
+
+        if ($functionName !== 'call_user_func' && $functionName !== 'call_user_func_array') {
+            return;
+        }
+
+        $callerType = $scope->getType($firstArg->value);
+
+        if ($callerType->isObject()->no()) {
+            return;
+        }
+
+        foreach ($this->getDeclaringTypesWithMethod('__invoke', $callerType, TrinaryLogic::createNo()) as $methodRef) {
+            $this->registerUsage(
+                new ClassMethodUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    $methodRef,
+                ),
+                $node,
+                $scope,
+            );
+        }
+    }
+
+    private function registerInvokeCall(
+        FuncCall $node,
+        Scope $scope
+    ): void
+    {
+        $callerType = $scope->getType($node->name); // @phpstan-ignore argument.type
+
+        if ($callerType->isObject()->no()) {
+            return;
+        }
+
+        foreach ($this->getDeclaringTypesWithMethod('__invoke', $callerType, TrinaryLogic::createNo()) as $methodRef) {
+            $this->registerUsage(
+                new ClassMethodUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    $methodRef,
+                ),
+                $node,
+                $scope,
+            );
         }
     }
 
