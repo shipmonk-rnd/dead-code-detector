@@ -89,7 +89,6 @@ function test() {
     $reflection5 = new \ReflectionClass(Holder5::class);
     $reflection5->getProperty('property');
 
-    // new ReflectionProperty with 2 args
     new \ReflectionProperty(DirectPropHolder::class, 'usedViaDirect');
 }
 

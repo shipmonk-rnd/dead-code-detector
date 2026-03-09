@@ -135,20 +135,13 @@ function test() {
     $enumReflection1->getConstants();
     $enumReflection1->getMethod('used');
 
-    // new ReflectionMethod with 2 args
     new \ReflectionMethod(DirectHolder1::class, 'usedViaNew');
-
-    // new ReflectionMethod with 1 arg (deprecated in 8.4)
     new \ReflectionMethod('Reflection\DirectHolder1::usedViaNewOneArg');
-
-    // ReflectionMethod::createFromMethodName
     \ReflectionMethod::createFromMethodName('Reflection\DirectHolder1::usedViaCreateFromMethodName');
 
-    // new ReflectionMethod with object instance
     $obj = new DirectHolder2();
     new \ReflectionMethod($obj, '__construct');
 
-    // new ReflectionClassConstant
     new \ReflectionClassConstant(DirectConstHolder::class, 'USED_CONST');
 }
 

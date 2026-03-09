@@ -57,9 +57,6 @@ function test() {
     $reflection2->getConstant('Three');
     $reflection2->getReflectionConstant('Four');
 
-    // new ReflectionEnumUnitCase
     new \ReflectionEnumUnitCase(MyEnum3::class, 'Used');
-
-    // new ReflectionEnumBackedCase
     new \ReflectionEnumBackedCase(MyEnum4::class, 'Used');
 }
