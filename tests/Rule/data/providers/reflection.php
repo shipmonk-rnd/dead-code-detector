@@ -104,7 +104,7 @@ class DirectHolder1
 
 class DirectHolder2
 {
-    public function __construct() {}
+    public function usedViaObjectArg() {}
 }
 
 function test() {
@@ -140,7 +140,7 @@ function test() {
     \ReflectionMethod::createFromMethodName('Reflection\DirectHolder1::usedViaCreateFromMethodName');
 
     $obj = new DirectHolder2();
-    new \ReflectionMethod($obj, '__construct');
+    new \ReflectionMethod($obj, 'usedViaObjectArg');
 
     new \ReflectionClassConstant(DirectConstHolder::class, 'USED_CONST');
 }
