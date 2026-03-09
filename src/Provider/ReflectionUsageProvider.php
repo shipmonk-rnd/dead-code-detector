@@ -34,7 +34,6 @@ use function array_values;
 use function count;
 use function explode;
 use function in_array;
-use function str_contains;
 
 final class ReflectionUsageProvider implements MemberUsageProvider
 {
@@ -167,10 +166,6 @@ final class ReflectionUsageProvider implements MemberUsageProvider
 
         foreach ($scope->getType($arg->value)->getConstantStrings() as $constantString) {
             $value = $constantString->getValue();
-
-            if (!str_contains($value, '::')) {
-                continue;
-            }
 
             $parts = explode('::', $value, 2);
             $ownerClass = $parts[0];
