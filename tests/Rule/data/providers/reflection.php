@@ -54,6 +54,12 @@ class Holder6 extends HolderParent
     const NOT_IN_PARENT = 1;
 }
 
+class DirectConstHolder
+{
+    const USED_CONST = 1;
+    const NOT_USED_CONST = 2; // error: Unused Reflection\DirectConstHolder::NOT_USED_CONST
+}
+
 enum EnumHolder1 {
     const CONST1 = 1;
     public function used() {}
@@ -88,6 +94,19 @@ class GetAllConstantsChild extends GetAllConstantsParent {
     const CONSTANT = 1;
 }
 
+class DirectHolder1
+{
+    public function usedViaNew() {}
+    public function usedViaNewOneArg() {}
+    public function usedViaCreateFromMethodName() {}
+    public function notUsedDirect() {} // error: Unused Reflection\DirectHolder1::notUsedDirect
+}
+
+class DirectHolder2
+{
+    public function usedViaObjectArg() {}
+}
+
 function test() {
     GetAllConstantsChild::getConstants();
     GetAllConstantsChild::getConstants2();
@@ -115,6 +134,15 @@ function test() {
     $enumReflection1 = new \ReflectionClass(EnumHolder1::class);
     $enumReflection1->getConstants();
     $enumReflection1->getMethod('used');
+
+    new \ReflectionMethod(DirectHolder1::class, 'usedViaNew');
+    new \ReflectionMethod('Reflection\DirectHolder1::usedViaNewOneArg');
+    \ReflectionMethod::createFromMethodName('Reflection\DirectHolder1::usedViaCreateFromMethodName');
+
+    $obj = new DirectHolder2();
+    new \ReflectionMethod($obj, 'usedViaObjectArg');
+
+    new \ReflectionClassConstant(DirectConstHolder::class, 'USED_CONST');
 }
 
 /**

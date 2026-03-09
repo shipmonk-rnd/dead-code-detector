@@ -10,9 +10,15 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\TrinaryLogic;
 use ReflectionClass;
+use ReflectionClassConstant;
+use ReflectionEnumBackedCase;
+use ReflectionEnumUnitCase;
+use ReflectionMethod;
+use ReflectionProperty;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -26,6 +32,7 @@ use function array_filter;
 use function array_key_first;
 use function array_values;
 use function count;
+use function explode;
 use function in_array;
 
 final class ReflectionUsageProvider implements MemberUsageProvider
@@ -53,7 +60,197 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             return $this->processMethodCall($node, $scope);
         }
 
+        if ($node instanceof New_) {
+            return $this->processNew($node, $scope);
+        }
+
+        if ($node instanceof StaticCall) {
+            return $this->processStaticCall($node, $scope);
+        }
+
         return [];
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    private function processNew(
+        New_ $node,
+        Scope $scope
+    ): array
+    {
+        if (!$node->class instanceof Name) {
+            return [];
+        }
+
+        $className = $scope->resolveName($node->class);
+        $args = $node->getArgs();
+
+        if ($className === ReflectionMethod::class) {
+            return $this->processReflectionMethodConstructor($args, $node, $scope);
+        }
+
+        if ($className === ReflectionProperty::class && count($args) === 2) {
+            return $this->processClassMemberConstructor($args, $node, $scope, 'property');
+        }
+
+        if ($className === ReflectionClassConstant::class && count($args) === 2) {
+            return $this->processClassMemberConstructor($args, $node, $scope, 'constant');
+        }
+
+        if (($className === ReflectionEnumUnitCase::class || $className === ReflectionEnumBackedCase::class) && count($args) === 2) {
+            return $this->processClassMemberConstructor($args, $node, $scope, 'enumCase');
+        }
+
+        return [];
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    private function processStaticCall(
+        StaticCall $node,
+        Scope $scope
+    ): array
+    {
+        if (!$node->class instanceof Name) {
+            return [];
+        }
+
+        if ($node->name instanceof Expr) {
+            return [];
+        }
+
+        $className = $scope->resolveName($node->class);
+        $methodName = $node->name->toString();
+        $args = $node->getArgs();
+
+        if ($className === ReflectionMethod::class && $methodName === 'createFromMethodName' && count($args) === 1) {
+            return $this->processClassMethodString($args[array_key_first($args)], $node, $scope);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<Arg> $args
+     * @return list<ClassMemberUsage>
+     */
+    private function processReflectionMethodConstructor(
+        array $args,
+        Node $node,
+        Scope $scope
+    ): array
+    {
+        if (count($args) === 2) {
+            return $this->processClassMemberConstructor($args, $node, $scope, 'method');
+        }
+
+        if (count($args) === 1) {
+            return $this->processClassMethodString($args[array_key_first($args)], $node, $scope);
+        }
+
+        return [];
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    private function processClassMethodString(
+        Arg $arg,
+        Node $node,
+        Scope $scope
+    ): array
+    {
+        $usages = [];
+
+        foreach ($scope->getType($arg->value)->getConstantStrings() as $constantString) {
+            $value = $constantString->getValue();
+
+            $parts = explode('::', $value, 2);
+            $ownerClass = $parts[0];
+            $methodName = $parts[1] ?? null;
+
+            if ($methodName === null) {
+                continue;
+            }
+            $usage = $this->createMethodUsage($node, $scope, $ownerClass, $methodName);
+
+            if ($usage !== null) {
+                $usages[] = $usage;
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @param array<Arg> $args
+     * @param 'method'|'property'|'constant'|'enumCase' $memberType
+     * @return list<ClassMemberUsage>
+     */
+    private function processClassMemberConstructor(
+        array $args,
+        Node $node,
+        Scope $scope,
+        string $memberType
+    ): array
+    {
+        $argValues = array_values($args);
+        $classArg = $argValues[0] ?? null;
+        $memberArg = $argValues[1] ?? null;
+
+        if ($classArg === null || $memberArg === null) {
+            return [];
+        }
+
+        $classNames = [];
+
+        foreach ($scope->getType($classArg->value)->getConstantStrings() as $constantString) {
+            $classNames[] = $constantString->getValue();
+        }
+
+        foreach ($scope->getType($classArg->value)->getObjectClassNames() as $objectClassName) {
+            $classNames[] = $objectClassName;
+        }
+
+        if ($classNames === []) {
+            return [];
+        }
+
+        $memberNames = [];
+
+        foreach ($scope->getType($memberArg->value)->getConstantStrings() as $constantString) {
+            $memberNames[] = $constantString->getValue();
+        }
+
+        if ($memberNames === []) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($classNames as $ownerClass) {
+            foreach ($memberNames as $memberName) {
+                switch ($memberType) {
+                    case 'method':
+                        $usages[] = $this->createMethodUsage($node, $scope, $ownerClass, $memberName);
+                        break;
+                    case 'property':
+                        $usages[] = $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::READ);
+                        $usages[] = $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::WRITE);
+                        break;
+                    case 'constant':
+                        $usages[] = $this->createConstantUsage($node, $scope, $ownerClass, $memberName);
+                        break;
+                    case 'enumCase':
+                        $usages[] = $this->createEnumCaseUsage($node, $scope, $ownerClass, $memberName);
+                        break;
+                }
+            }
+        }
+
+        return array_values(array_filter($usages, static fn (?ClassMemberUsage $usage): bool => $usage !== null));
     }
 
     /**

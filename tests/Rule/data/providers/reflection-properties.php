@@ -66,6 +66,12 @@ class GetAllPropertiesChild extends GetAllPropertiesParent {
     public string $property;
 }
 
+class DirectPropHolder
+{
+    public string $usedViaDirect;
+    public string $notUsedDirect; // error: Property ReflectionProperties\DirectPropHolder::$notUsedDirect is never read // error: Property ReflectionProperties\DirectPropHolder::$notUsedDirect is never written
+}
+
 function test() {
     GetAllPropertiesChild::getProperties();
     GetAllPropertiesChild::getProperties2();
@@ -82,6 +88,8 @@ function test() {
 
     $reflection5 = new \ReflectionClass(Holder5::class);
     $reflection5->getProperty('property');
+
+    new \ReflectionProperty(DirectPropHolder::class, 'usedViaDirect');
 }
 
 /**

@@ -31,6 +31,18 @@ enum MyEnum2: int
     const Five = 5; // error: Unused ReflectionEnums\MyEnum2::Five
 }
 
+enum MyEnum3: string
+{
+    case Used = 'used';
+    case NotUsed = 'not_used'; // error: Unused ReflectionEnums\MyEnum3::NotUsed
+}
+
+enum MyEnum4: int
+{
+    case Used = 1;
+    case NotUsed = 2; // error: Unused ReflectionEnums\MyEnum4::NotUsed
+}
+
 
 function test() {
 
@@ -44,4 +56,7 @@ function test() {
     $reflection2->getCase('One');
     $reflection2->getConstant('Three');
     $reflection2->getReflectionConstant('Four');
+
+    new \ReflectionEnumUnitCase(MyEnum3::class, 'Used');
+    new \ReflectionEnumBackedCase(MyEnum4::class, 'Used');
 }
