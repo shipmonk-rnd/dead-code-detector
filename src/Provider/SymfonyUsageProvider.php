@@ -290,6 +290,28 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
+        foreach ($nativeReflection->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
+            $arguments = $attribute->getArguments();
+
+            $constructor = $arguments['constructor'] ?? null;
+
+            if (is_string($constructor) && $classReflection->hasNativeMethod($constructor)) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($constructor), 'Named constructor via #[Autoconfigure] attribute');
+            }
+
+            $calls = $arguments['calls'] ?? null;
+
+            if (is_array($calls)) {
+                foreach ($calls as $call) {
+                    $methodName = is_array($call) ? ($call[0] ?? null) : null;
+
+                    if (is_string($methodName) && $classReflection->hasNativeMethod($methodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via #[Autoconfigure(calls)] attribute');
+                    }
+                }
+            }
+        }
+
         return $usages;
     }
 
@@ -501,14 +523,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($this->isSchedulerTaskMethod($method)) {
             return 'Scheduler task method via scheduler attribute';
-        }
-
-        if ($this->isAutoconfigureConstructor($method)) {
-            return 'Named constructor via #[Autoconfigure] attribute';
-        }
-
-        if ($this->isAutoconfigureCall($method)) {
-            return 'Called via #[Autoconfigure(calls)] attribute';
         }
 
         if ($this->isMethodWithRouteAttribute($method)) {
@@ -772,45 +786,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 }
 
                 if ($targetMethod === null && $methodName === '__invoke') {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private function isAutoconfigureConstructor(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-
-        foreach ($class->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $constructor = $arguments['constructor'] ?? null;
-
-            if (is_string($constructor) && $constructor === $method->getName()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isAutoconfigureCall(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-        $methodName = $method->getName();
-
-        foreach ($class->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $calls = $arguments['calls'] ?? null;
-
-            if (!is_array($calls)) {
-                continue;
-            }
-
-            foreach ($calls as $call) {
-                if (is_array($call) && isset($call[0]) && $call[0] === $methodName) {
                     return true;
                 }
             }
