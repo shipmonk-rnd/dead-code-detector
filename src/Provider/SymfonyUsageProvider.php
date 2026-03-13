@@ -347,23 +347,17 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         foreach ($node->getMethodReflection()->getParameters() as $parameter) {
             foreach ($parameter->getAttributes() as $attributeReflection) {
-                if (
-                    $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireLocator'
-                    || $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
-                ) {
+                if ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireLocator') {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    // AutowireLocator uses 'services', TaggedLocator uses 'tag'
-                    $servicesArg = $arguments['services'] ?? $arguments['tag'] ?? null;
-
-                    if ($servicesArg === null || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
+                    if (!isset($arguments['services']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
                         continue;
                     }
 
-                    if ($servicesArg->isArray()->yes()) {
-                        $classNames = $servicesArg->getIterableValueType()->getConstantStrings();
+                    if ($arguments['services']->isArray()->yes()) {
+                        $classNames = $arguments['services']->getIterableValueType()->getConstantStrings();
                     } else {
-                        $classNames = $servicesArg->getConstantStrings();
+                        $classNames = $arguments['services']->getConstantStrings();
                     }
 
                     if ($classNames === []) {
@@ -395,6 +389,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 } elseif (
                     $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator'
                     || $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedIterator'
+                    || $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
                 ) {
                     $arguments = $attributeReflection->getArgumentTypes();
 
