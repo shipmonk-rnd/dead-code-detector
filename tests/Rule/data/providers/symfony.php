@@ -9,9 +9,13 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Interact;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\DependencyInjection\Attribute\AutowireCallable;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
+use Symfony\Component\DependencyInjection\Attribute\TaggedLocator;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -154,3 +158,55 @@ class Company {}
 class CompanyRepository {
     public function findByUniqueName(): void {}
 }
+
+class SomeController3 {
+
+    #[Route('/tagged', name: 'tagged')]
+    public function getAction(
+        #[TaggedIterator(TaggedInterface::class, defaultIndexMethod: 'getIndex')]
+        $iterator,
+        #[TaggedLocator(TaggedInterface::class, defaultIndexMethod: 'getKey')]
+        $locator
+    ): void {
+    }
+
+    #[Route('/callable', name: 'callable')]
+    public function callableAction(
+        #[AutowireCallable(service: AutowireCallableService::class, method: 'handle')] \Closure $handler,
+        #[AutowireCallable(service: AutowireCallableService::class)] \Closure $invoker
+    ): void {
+    }
+
+}
+
+interface TaggedInterface {
+    public function getIndex(): string;
+    public function getKey(): string;
+}
+
+class AutowireCallableService {
+    public function handle(): void {}
+    public function __invoke(): void {}
+    public function dead(): void {} // error: Unused Symfony\AutowireCallableService::dead
+}
+
+#[Autoconfigure(constructor: 'create')]
+class AutoconfiguredFactory {
+    public static function create(): self {
+        return new self();
+    }
+}
+
+#[Autoconfigure(calls: [['setLogger']])]
+class AutoconfiguredWithCalls {
+    public function setLogger(): void {}
+    public function dead(): void {} // error: Unused Symfony\AutoconfiguredWithCalls::dead
+}
+
+class RequiredPropertyService {
+    #[Required]
+    public object $dependency;
+
+    public object $unused; // error: Property Symfony\RequiredPropertyService::$unused is never read // error: Property Symfony\RequiredPropertyService::$unused is never written
+}
+
