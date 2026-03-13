@@ -11,7 +11,6 @@ use Symfony\Component\Console\Attribute\Interact;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use Symfony\Component\DependencyInjection\Attribute\AutowireCallable;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
@@ -170,24 +169,11 @@ class SomeController3 {
     ): void {
     }
 
-    #[Route('/callable', name: 'callable')]
-    public function callableAction(
-        #[AutowireCallable(service: AutowireCallableService::class, method: 'handle')] \Closure $handler,
-        #[AutowireCallable(service: AutowireCallableService::class)] \Closure $invoker
-    ): void {
-    }
-
 }
 
 interface TaggedInterface {
     public function getIndex(): string;
     public function getKey(): string;
-}
-
-class AutowireCallableService {
-    public function handle(): void {}
-    public function __invoke(): void {}
-    public function dead(): void {} // error: Unused Symfony\AutowireCallableService::dead
 }
 
 #[Autoconfigure(constructor: 'create')]
