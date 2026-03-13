@@ -191,7 +191,7 @@ class AutoconfiguredWithCalls {
 
 class RequiredPropertyService {
     #[Required]
-    public object $dependency;
+    public object $dependency; // error: Property Symfony\RequiredPropertyService::$dependency is never read
 
     public object $unused; // error: Property Symfony\RequiredPropertyService::$unused is never read // error: Property Symfony\RequiredPropertyService::$unused is never written
 }

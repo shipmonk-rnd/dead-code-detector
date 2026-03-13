@@ -308,7 +308,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             if ($this->hasAttribute($property, 'Symfony\Contracts\Service\Attribute\Required')) {
                 $usages[] = $this->createPropertyUsage($property, 'Autowired with #[Required] (set by DIC)', AccessType::WRITE);
-                $usages[] = $this->createPropertyUsage($property, 'Autowired with #[Required] (set by DIC)', AccessType::READ);
             }
         }
 
