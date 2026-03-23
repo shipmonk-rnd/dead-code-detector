@@ -9,8 +9,8 @@ use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\MissingServiceException;
-use function strpos;
-use function substr;
+use function str_contains;
+use function str_ends_with;
 
 /**
  * This formatter solves the following issue https://github.com/phpstan/phpstan/issues/12328
@@ -18,12 +18,12 @@ use function substr;
 final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
 {
 
-    private ErrorFormatter $originalFormatter;
+    private readonly ErrorFormatter $originalFormatter;
 
     /**
      * @var list<string>
      */
-    private array $identifiers;
+    private readonly array $identifiers;
 
     /**
      * @param list<string> $identifiers
@@ -31,7 +31,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
     public function __construct(
         Container $container,
         string $wrappedFormatter,
-        array $identifiers
+        array $identifiers,
     )
     {
         try {
@@ -46,7 +46,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
 
     public function formatErrors(
         AnalysisResult $analysisResult,
-        Output $output
+        Output $output,
     ): int
     {
         if (!$this->isPartialAnalysis()) {
@@ -94,7 +94,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
     private function isDeadCodeIdentifier(string $message): bool
     {
         foreach ($this->identifiers as $identifier) {
-            if (strpos($message, $identifier) !== false) {
+            if (str_contains($message, $identifier)) {
                 return true;
             }
         }
@@ -106,7 +106,7 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
         /** @var array<string> $argv */
         $argv = $_SERVER['argv'] ?? [];
         foreach ($argv as $arg) {
-            if (substr($arg, -4) === '.php') {
+            if (str_ends_with($arg, '.php')) {
                 return true;
             }
         }

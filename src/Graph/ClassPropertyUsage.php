@@ -19,7 +19,7 @@ final class ClassPropertyUsage extends ClassMemberUsage
 
     private readonly AccessType $accessType;
 
-    private bool $callsHook;
+    private readonly bool $callsHook;
 
     /**
      * @param UsageOrigin $origin The method where the read occurs

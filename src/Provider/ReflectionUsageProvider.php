@@ -73,7 +73,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function processNew(
         New_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->class instanceof Name) {
@@ -107,7 +107,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function processStaticCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->class instanceof Name) {
@@ -136,7 +136,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     private function processReflectionMethodConstructor(
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (count($args) === 2) {
@@ -156,7 +156,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     private function processClassMethodString(
         Arg $arg,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usages = [];
@@ -190,7 +190,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         array $args,
         Node $node,
         Scope $scope,
-        string $memberType
+        string $memberType,
     ): array
     {
         $argValues = array_values($args);
