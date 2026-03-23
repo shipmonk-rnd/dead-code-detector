@@ -66,13 +66,16 @@ parameters:
 - `#[AsController]` attribute
 - `#[AsCommand]` attribute
 - `#[Interact]` attribute
-- `#[Required]` attribute
+- `#[Required]` attribute (methods and properties)
 - `#[Route]` attributes
 - `#[Assert\Callback]` attributes
+- `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]` attributes
+- `#[Autoconfigure(constructor:)]` and `#[Autoconfigure(calls:)]`
+- `#[AutowireCallable]` attribute
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
-- `!php const` references in `config` yamls
-- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]` and `#[AutowireIterator]`
+- `!php/const` and `!php/enum` references in `config` yamls
+- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
 - Workflow event listener attributes: `#[AsAnnounceListener]`, ...
 - `#[AutoconfigureTag('doctrine.event_listener')]` attribute
 
