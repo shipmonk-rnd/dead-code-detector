@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Formatter;
 
-use LogicException;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
@@ -19,22 +18,16 @@ use function count;
 final class RemoveDeadCodeFormatter implements ErrorFormatter
 {
 
-    private FileSystem $fileSystem;
-
-    private OutputEnhancer $outputEnhancer;
-
     public function __construct(
-        FileSystem $fileSystem,
-        OutputEnhancer $outputEnhancer
+        private readonly FileSystem $fileSystem,
+        private readonly OutputEnhancer $outputEnhancer,
     )
     {
-        $this->fileSystem = $fileSystem;
-        $this->outputEnhancer = $outputEnhancer;
     }
 
     public function formatErrors(
         AnalysisResult $analysisResult,
-        Output $output
+        Output $output,
     ): int
     {
         $internalErrors = $analysisResult->getInternalErrorObjects();
@@ -70,7 +63,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 $className = $blackMember->getMember()->getClassName();
                 $memberName = $blackMember->getMember()->getMemberName();
                 $file = $blackMember->getFile();
-                $type = $blackMember->getMember()->getMemberType();
+                $type = $blackMember->getMember()->getMemberType()->value;
 
                 $deadMembersByFiles[$file][$className][$type][$memberName] = $excludedUsages;
             }
@@ -89,7 +82,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 foreach ($deadMembersByType as $memberType => $deadMembers) {
                     foreach ($deadMembers as $memberName => $excludedUsages) {
                         $membersCount++;
-                        $memberString = $this->getMemberTypeString($memberType);
+                        $memberString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
 
                         $output->writeLineFormatted(" • Removed $memberString <fg=white>$className::$memberName</>");
                         $this->printExcludedUsages($output, $excludedUsages);
@@ -112,7 +105,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
      */
     private function printExcludedUsages(
         Output $output,
-        array $excludedUsages
+        array $excludedUsages,
     ): void
     {
         foreach ($excludedUsages as $excludedUsage) {
@@ -135,20 +128,13 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
         return $this->outputEnhancer->getOriginReference($origin);
     }
 
-    /**
-     * @param MemberType::* $memberType
-     */
-    private function getMemberTypeString(int $memberType): string
+    private function getMemberTypeString(MemberType $memberType): string
     {
-        if ($memberType === MemberType::METHOD) {
-            return 'method';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            return 'constant';
-        } elseif ($memberType === MemberType::PROPERTY) {
-            return 'property';
-        } else {
-            throw new LogicException("Unsupported member type: $memberType");
-        }
+        return match ($memberType) {
+            MemberType::METHOD => 'method',
+            MemberType::CONSTANT => 'constant',
+            MemberType::PROPERTY => 'property',
+        };
     }
 
 }

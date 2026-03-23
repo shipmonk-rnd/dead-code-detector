@@ -12,13 +12,13 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function preg_match;
 use function preg_match_all;
+use function str_contains;
 use function stripos;
-use function strpos;
 
 final class NetteTesterUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(?bool $enabled)
     {
@@ -27,7 +27,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -68,7 +68,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
     private function getDataProviderMethods(
         ReflectionMethod $method,
         string $className,
-        string $methodName
+        string $methodName,
     ): array
     {
         $docComment = $method->getDocComment();
@@ -81,7 +81,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
 
         if (preg_match_all('#@dataprovider\s+(\S+)#i', $docComment, $matches) !== 0) {
             foreach ($matches[1] as $providerName) {
-                if (strpos($providerName, '.') !== false) {
+                if (str_contains($providerName, '.')) {
                     continue; // file reference, not a method name
                 }
 
@@ -95,7 +95,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
     private function createUsage(
         string $className,
         string $methodName,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(

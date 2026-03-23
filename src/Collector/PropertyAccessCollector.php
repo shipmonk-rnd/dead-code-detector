@@ -29,18 +29,12 @@ final class PropertyAccessCollector implements Collector
     use BufferedUsageCollector;
 
     /**
-     * @var list<MemberUsageExcluder>
-     */
-    private array $memberUsageExcluders;
-
-    /**
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
-        array $memberUsageExcluders
+        private readonly array $memberUsageExcluders,
     )
     {
-        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -53,7 +47,7 @@ final class PropertyAccessCollector implements Collector
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         if ($node instanceof PropertyFetch) {
@@ -75,13 +69,10 @@ final class PropertyAccessCollector implements Collector
         return $this->emitUsages($scope);
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function registerInstancePropertyAccess(
         PropertyFetch $node,
         Scope $scope,
-        int $accessType
+        AccessType $accessType,
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
@@ -105,13 +96,10 @@ final class PropertyAccessCollector implements Collector
         }
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function registerStaticPropertyAccess(
         StaticPropertyFetch $node,
         Scope $scope,
-        int $accessType
+        AccessType $accessType,
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
@@ -144,7 +132,7 @@ final class PropertyAccessCollector implements Collector
      */
     private function getPropertyNames(
         Expr $fetch,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($fetch->name instanceof Expr) {
@@ -168,7 +156,7 @@ final class PropertyAccessCollector implements Collector
     private function getDeclaringTypesWithProperty(
         ?string $propertyName,
         Type $callerType,
-        ?bool $isPossibleDescendant
+        ?bool $isPossibleDescendant,
     ): array
     {
         $typeNoNull = TypeUtils::toBenevolentUnion( // extract possible accesses even from Class|int
@@ -188,7 +176,7 @@ final class PropertyAccessCollector implements Collector
         }
 
         if ($propertyRefs === []) { // access over unknown type
-            $propertyRefs[] = new ClassPropertyRef(null, $propertyName, true);
+            $propertyRefs[] = new ClassPropertyRef(null, $propertyName, possibleDescendant: true);
         }
 
         return $propertyRefs;
@@ -197,7 +185,7 @@ final class PropertyAccessCollector implements Collector
     private function registerUsage(
         ClassPropertyUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $excluderName = null;
@@ -214,7 +202,7 @@ final class PropertyAccessCollector implements Collector
 
     /**
      * @param PropertyFetch|StaticPropertyFetch $fetch
-     * @return iterable<AccessType::*>
+     * @return iterable<AccessType>
      */
     private function getAccessTypes(Expr $fetch): iterable
     {
@@ -231,7 +219,7 @@ final class PropertyAccessCollector implements Collector
 
     private function isSelfReferenceInPropertyHook(
         Scope $scope,
-        ?string $propertyName
+        ?string $propertyName,
     ): bool
     {
         if ($propertyName === null) {
@@ -248,7 +236,7 @@ final class PropertyAccessCollector implements Collector
 
     private function registerPromotedPropertyWrites(
         InClassMethodNode $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         if ($node->getMethodReflection()->getName() !== '__construct') {
@@ -278,7 +266,7 @@ final class PropertyAccessCollector implements Collector
                     new ClassPropertyRef(
                         $classReflection->getName(),
                         $parameter->getName(),
-                        false,
+                        possibleDescendant: false,
                     ),
                     AccessType::WRITE,
                 ),

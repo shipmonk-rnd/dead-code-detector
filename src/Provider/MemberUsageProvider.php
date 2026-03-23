@@ -25,7 +25,7 @@ interface MemberUsageProvider
      */
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array;
 
 }

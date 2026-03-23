@@ -7,6 +7,8 @@ use LogicException;
 use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use TypeError;
+use ValueError;
 use function json_decode;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
@@ -14,17 +16,11 @@ use const JSON_THROW_ON_ERROR;
 final class CollectedUsage
 {
 
-    private ClassMemberUsage $usage;
-
-    private ?string $excludedBy;
-
     public function __construct(
-        ClassMemberUsage $usage,
-        ?string $excludedBy
+        private readonly ClassMemberUsage $usage,
+        private readonly ?string $excludedBy,
     )
     {
-        $this->usage = $usage;
-        $this->excludedBy = $excludedBy;
     }
 
     public function getUsage(): ClassMemberUsage
@@ -68,14 +64,14 @@ final class CollectedUsage
 
         $data = [
             'e' => $this->excludedBy,
-            't' => $this->usage->getMemberType(),
-            'a' => $this->usage->getAccessType(),
+            't' => $this->usage->getMemberType()->value,
+            'a' => $this->usage->getAccessType()->value,
             'p' => $this->usage->isPropagating(),
             'o' => [
                     'c' => $origin->getClassName(),
                     'm' => $origin->getMemberName(),
-                    'a' => $origin->getAccessType(),
-                    't' => $origin->getMemberType(),
+                    'a' => $origin->getAccessType()?->value,
+                    't' => $origin->getMemberType()?->value,
                     'f' => $origin->getFile() === $scopeFile ? '_' : $origin->getFile(),
                     'l' => $origin->getLine(),
                     'p' => $origin->getProvider(),
@@ -98,33 +94,39 @@ final class CollectedUsage
 
     public static function deserialize(
         string $data,
-        string $scopeFile
+        string $scopeFile,
     ): self
     {
         try {
-            /** @var array{e: string|null, t: MemberType::*, a: AccessType::*, p: bool, o: array{c: string|null, m: string|null, a: AccessType::*, t: MemberType::PROPERTY|MemberType::METHOD|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
-            $result = json_decode($data, true, 3, JSON_THROW_ON_ERROR);
+            /** @var array{e: string|null, t: value-of<MemberType>, a: value-of<AccessType>, p: bool, o: array{c: string|null, m: string|null, a: value-of<AccessType>|null, t: value-of<MemberType>|null, f: string|null, l: int|null, p: string|null, n: string|null}, m: array{c: string|null, m: string, d: bool, e: int}} $result */
+            $result = json_decode($data, associative: true, depth: 3, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
         }
 
-        $memberType = $result['t'];
-        $origin = new UsageOrigin(
-            $result['o']['c'],
-            $result['o']['m'],
-            $result['o']['t'],
-            $result['o']['a'],
-            $result['o']['f'] === '_' ? $scopeFile : $result['o']['f'],
-            $result['o']['l'],
-            $result['o']['p'],
-            $result['o']['n'],
-        );
-        $accessType = $result['a'];
+        try {
+            $memberType = MemberType::from($result['t']);
+            $accessType = AccessType::from($result['a']);
+
+            $origin = new UsageOrigin(
+                className: $result['o']['c'],
+                memberName: $result['o']['m'],
+                memberType: $result['o']['t'] !== null ? MemberType::from($result['o']['t']) : null,
+                accessType: $result['o']['a'] !== null ? AccessType::from($result['o']['a']) : null,
+                fileName: $result['o']['f'] === '_' ? $scopeFile : $result['o']['f'],
+                line: $result['o']['l'],
+                provider: $result['o']['p'],
+                note: $result['o']['n'],
+            );
+        } catch (TypeError | ValueError $e) {
+            throw new LogicException('Deserialization failure: ' . $e->getMessage(), 0, $e);
+        }
+
         $callsHook = $result['p'];
         $exclusionReason = $result['e'];
 
-        if ($memberType === MemberType::CONSTANT) {
-            $usage = new ClassConstantUsage(
+        $usage = match ($memberType) {
+            MemberType::CONSTANT => new ClassConstantUsage(
                 $origin,
                 new ClassConstantRef(
                     $result['m']['c'],
@@ -132,50 +134,38 @@ final class CollectedUsage
                     $result['m']['d'],
                     self::deserializeTrinary($result['m']['e']),
                 ),
-            );
-        } elseif ($memberType === MemberType::METHOD) {
-            $usage = new ClassMethodUsage(
+            ),
+            MemberType::METHOD => new ClassMethodUsage(
                 $origin,
                 new ClassMethodRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
-            );
-        } elseif ($memberType === MemberType::PROPERTY) {
-            $usage = new ClassPropertyUsage(
+            ),
+            MemberType::PROPERTY => new ClassPropertyUsage(
                 $origin,
                 new ClassPropertyRef($result['m']['c'], $result['m']['m'], $result['m']['d']),
                 $accessType,
                 $callsHook,
-            );
-        } else {
-            throw new LogicException('Unknown member type: ' . $memberType);
-        }
+            ),
+        };
 
         return new self($usage, $exclusionReason);
     }
 
     private function serializeTrinary(TrinaryLogic $isEnumCaseFetch): int
     {
-        if ($isEnumCaseFetch->no()) {
-            return -1;
-        }
-
-        if ($isEnumCaseFetch->yes()) {
-            return 1;
-        }
-
-        return 0;
+        return match (true) {
+            $isEnumCaseFetch->no() => -1,
+            $isEnumCaseFetch->yes() => 1,
+            default => 0,
+        };
     }
 
     public static function deserializeTrinary(int $value): TrinaryLogic
     {
-        if ($value === -1) {
-            return TrinaryLogic::createNo();
-        }
-
-        if ($value === 1) {
-            return TrinaryLogic::createYes();
-        }
-
-        return TrinaryLogic::createMaybe();
+        return match ($value) {
+            -1 => TrinaryLogic::createNo(),
+            1 => TrinaryLogic::createYes(),
+            default => TrinaryLogic::createMaybe(),
+        };
     }
 
 }

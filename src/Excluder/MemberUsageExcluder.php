@@ -28,7 +28,7 @@ interface MemberUsageExcluder
     public function shouldExclude(
         ClassMemberUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): bool;
 
 }

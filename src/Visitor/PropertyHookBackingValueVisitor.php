@@ -18,11 +18,10 @@ final class PropertyHookBackingValueVisitor extends NodeVisitorAbstract
 
     private bool $found = false;
 
-    private string $propertyName;
-
-    public function __construct(string $propertyName)
+    public function __construct(
+        private readonly string $propertyName,
+    )
     {
-        $this->propertyName = $propertyName;
     }
 
     public function isBackedProperty(): bool

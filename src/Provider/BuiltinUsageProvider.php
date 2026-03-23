@@ -13,11 +13,10 @@ use function ucfirst;
 final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    private bool $enabled;
-
-    public function __construct(bool $enabled)
+    public function __construct(
+        private readonly bool $enabled,
+    )
     {
-        $this->enabled = $enabled;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
@@ -92,7 +91,7 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     private function isBuiltinMember(
         ReflectionClass $reflectionClass,
-        Reflector $member
+        Reflector $member,
     ): bool
     {
         if ($member instanceof ReflectionMethod && !$reflectionClass->hasMethod($member->getName())) {

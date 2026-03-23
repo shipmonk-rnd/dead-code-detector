@@ -14,30 +14,15 @@ abstract class ClassMemberRef
 {
 
     /**
-     * @var C
-     */
-    private ?string $className;
-
-    /**
-     * @var M
-     */
-    private ?string $memberName;
-
-    private bool $possibleDescendant;
-
-    /**
      * @param C $className Null if member is accessed over unknown type, e.g. unknown caller like $unknown->method()
      * @param M $memberName Null if member name is unknown, e.g. unknown method like $class->$unknown()
      */
     public function __construct(
-        ?string $className,
-        ?string $memberName,
-        bool $possibleDescendant
+        private readonly ?string $className,
+        private readonly ?string $memberName,
+        private readonly bool $possibleDescendant,
     )
     {
-        $this->className = $className;
-        $this->memberName = $memberName;
-        $this->possibleDescendant = $possibleDescendant;
     }
 
     /**
@@ -71,10 +56,9 @@ abstract class ClassMemberRef
     }
 
     /**
-     * @param AccessType::* $accessType
      * @return list<string>
      */
-    public function toKeys(int $accessType): array
+    public function toKeys(AccessType $accessType): array
     {
         if ($this->className === null) {
             throw new LogicException('Cannot convert to keys without known class name.');
@@ -112,7 +96,7 @@ abstract class ClassMemberRef
      */
     abstract public function withKnownNames(
         string $className,
-        string $memberName
+        string $memberName,
     ): self;
 
     /**
@@ -126,14 +110,10 @@ abstract class ClassMemberRef
     abstract public function withKnownMember(string $memberName): self;
 
     /**
-     * @param AccessType::* $accessType
      * @return list<string>
      */
-    abstract protected function getKeyPrefixes(int $accessType): array;
+    abstract protected function getKeyPrefixes(AccessType $accessType): array;
 
-    /**
-     * @return MemberType::*
-     */
-    abstract public function getMemberType(): int;
+    abstract public function getMemberType(): MemberType;
 
 }

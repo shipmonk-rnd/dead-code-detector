@@ -38,18 +38,15 @@ use function in_array;
 final class ReflectionUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
-
     public function __construct(
-        bool $enabled
+        private readonly bool $enabled,
     )
     {
-        $this->enabled = $enabled;
     }
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -76,7 +73,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function processNew(
         New_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->class instanceof Name) {
@@ -110,7 +107,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function processStaticCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->class instanceof Name) {
@@ -139,7 +136,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     private function processReflectionMethodConstructor(
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (count($args) === 2) {
@@ -159,7 +156,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     private function processClassMethodString(
         Arg $arg,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usages = [];
@@ -193,7 +190,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         array $args,
         Node $node,
         Scope $scope,
-        string $memberType
+        string $memberType,
     ): array
     {
         $argValues = array_values($args);
@@ -258,7 +255,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function processMethodCall(
         MethodCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $callerType = $scope->getType($node->var);
@@ -321,7 +318,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usedConstants = [];
@@ -350,7 +347,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usedConstants = [];
@@ -379,7 +376,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usedMethods = [];
@@ -412,7 +409,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         string $methodName,
         array $args,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $usedProperties = [];
@@ -444,7 +441,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
      */
     private function getMethodNames(
         CallLike $call,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($call instanceof New_) {
@@ -468,7 +465,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         Node $node,
         Scope $scope,
         ?string $className,
-        ?string $constantName
+        ?string $constantName,
     ): ?ClassConstantUsage
     {
         if ($className === null && $constantName === null) {
@@ -480,8 +477,8 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             new ClassConstantRef(
                 $className,
                 $constantName,
-                true,
-                TrinaryLogic::createMaybe(),
+                possibleDescendant: true,
+                isEnumCase: TrinaryLogic::createMaybe(),
             ),
         );
     }
@@ -490,7 +487,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         Node $node,
         Scope $scope,
         ?string $className,
-        ?string $enumCaseName
+        ?string $enumCaseName,
     ): ?ClassConstantUsage
     {
         if ($className === null && $enumCaseName === null) {
@@ -502,8 +499,8 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             new ClassConstantRef(
                 $className,
                 $enumCaseName,
-                false,
-                TrinaryLogic::createYes(),
+                possibleDescendant: false,
+                isEnumCase: TrinaryLogic::createYes(),
             ),
         );
     }
@@ -512,7 +509,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         Node $node,
         Scope $scope,
         ?string $className,
-        ?string $methodName
+        ?string $methodName,
     ): ?ClassMethodUsage
     {
         if ($className === null && $methodName === null) {
@@ -524,20 +521,17 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                true,
+                possibleDescendant: true,
             ),
         );
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function createPropertyUsage(
         Node $node,
         Scope $scope,
         ?string $className,
         ?string $propertyName,
-        int $accessType
+        AccessType $accessType,
     ): ?ClassPropertyUsage
     {
         if ($className === null && $propertyName === null) {
@@ -549,7 +543,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             new ClassPropertyRef(
                 $className,
                 $propertyName,
-                true,
+                possibleDescendant: true,
             ),
             $accessType,
         );

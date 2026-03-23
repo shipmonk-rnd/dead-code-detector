@@ -43,18 +43,15 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
         'url_stat',
     ];
 
-    private bool $enabled;
-
     public function __construct(
-        bool $enabled
+        private readonly bool $enabled,
     )
     {
-        $this->enabled = $enabled;
     }
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -73,7 +70,7 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
      */
     private function processFunctionCall(
         FuncCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $functionNames = $this->getFunctionNames($node, $scope);
@@ -90,7 +87,7 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
      */
     private function getFunctionNames(
         FuncCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($node->name instanceof Name) {
@@ -110,7 +107,7 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
      */
     private function handleStreamWrapperRegister(
         FuncCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $secondArg = $node->getArgs()[1] ?? null;
@@ -133,7 +130,7 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
                     new ClassMethodRef(
                         $className,
                         $methodName,
-                        false,
+                        possibleDescendant: false,
                     ),
                 );
             }

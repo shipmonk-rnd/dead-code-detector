@@ -267,7 +267,7 @@ class DeserializationUsageProvider implements MemberUsageProvider
             $usageOrigin = UsageOrigin::createRegular($node, $scope);
 
             // record the hidden constructor call
-            $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', false);
+            $constructorRef = new ClassMethodRef($serializedClass->getValue(), '__construct', possibleDescendant: false);
 
             return [new ClassMethodUsage($usageOrigin, $constructorRef)];
         }
@@ -535,4 +535,4 @@ parameters:
 - All functionality must be tested
 
 ## Supported PHP versions
-- PHP 7.4 - 8.5
+- PHP 8.1 - 8.5

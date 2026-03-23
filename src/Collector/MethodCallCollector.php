@@ -41,18 +41,12 @@ final class MethodCallCollector implements Collector
     use BufferedUsageCollector;
 
     /**
-     * @var list<MemberUsageExcluder>
-     */
-    private array $memberUsageExcluders;
-
-    /**
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
-        array $memberUsageExcluders
+        private readonly array $memberUsageExcluders,
     )
     {
-        $this->memberUsageExcluders = $memberUsageExcluders;
     }
 
     public function getNodeType(): string
@@ -65,7 +59,7 @@ final class MethodCallCollector implements Collector
      */
     public function processNode(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         if ($node instanceof MethodCallableNode) { // @phpstan-ignore-line ignore BC promise
@@ -108,7 +102,7 @@ final class MethodCallCollector implements Collector
      */
     private function registerMethodCall(
         CallLike $methodCall,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $methodNames = $this->getMethodNames($methodCall, $scope);
@@ -146,7 +140,7 @@ final class MethodCallCollector implements Collector
 
     private function registerStaticCall(
         StaticCall $staticCall,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $methodNames = $this->getMethodNames($staticCall, $scope);
@@ -176,7 +170,7 @@ final class MethodCallCollector implements Collector
 
     private function registerArrayCallable(
         Array_ $array,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         if ($scope->getType($array)->isCallable()->yes()) {
@@ -204,13 +198,13 @@ final class MethodCallCollector implements Collector
 
     private function registerAttribute(
         Attribute $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $this->registerUsage(
             new ClassMethodUsage(
                 UsageOrigin::createRegular($node, $scope),
-                new ClassMethodRef($scope->resolveName($node->name), '__construct', false),
+                new ClassMethodRef($scope->resolveName($node->name), '__construct', possibleDescendant: false),
             ),
             $node,
             $scope,
@@ -219,7 +213,7 @@ final class MethodCallCollector implements Collector
 
     private function registerClone(
         Clone_ $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $methodName = '__clone';
@@ -239,7 +233,7 @@ final class MethodCallCollector implements Collector
 
     private function registerFunctionCall(
         FuncCall $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $args = $node->getArgs();
@@ -282,7 +276,7 @@ final class MethodCallCollector implements Collector
      */
     private function getMethodNames(
         CallLike $call,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if ($call instanceof New_) {
@@ -311,7 +305,7 @@ final class MethodCallCollector implements Collector
         ?string $methodName,
         Type $type,
         TrinaryLogic $isStaticCall,
-        ?bool $isPossibleDescendant = null
+        ?bool $isPossibleDescendant = null,
     ): array
     {
         $typeNoNull = TypeCombinator::removeNull($type); // remove null to support nullsafe calls
@@ -329,7 +323,7 @@ final class MethodCallCollector implements Collector
         $canBeClassStringCall = !$typeNoNull->isClassString()->no() && !$isStaticCall->no();
 
         if ($result === [] && ($canBeObjectCall || $canBeClassStringCall)) {
-            $result[] = new ClassMethodRef(null, $methodName, true); // call over unknown type
+            $result[] = new ClassMethodRef(null, $methodName, possibleDescendant: true); // call over unknown type
         }
 
         return $result;
@@ -338,7 +332,7 @@ final class MethodCallCollector implements Collector
     private function registerUsage(
         ClassMethodUsage $usage,
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): void
     {
         $excluderName = null;

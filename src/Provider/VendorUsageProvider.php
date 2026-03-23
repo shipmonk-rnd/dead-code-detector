@@ -10,25 +10,27 @@ use ReflectionProperty;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_keys;
+use function str_starts_with;
 use function strlen;
-use function strpos;
 use function substr;
 use function ucfirst;
 
 final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
+    private readonly bool $enabled;
+
     /**
      * @var list<string>
      */
-    private array $vendorDirs;
+    private readonly array $vendorDirs;
 
-    private bool $enabled;
-
-    public function __construct(bool $enabled)
+    public function __construct(
+        bool $enabled,
+    )
     {
-        $this->vendorDirs = array_keys(ClassLoader::getRegisteredLoaders());
         $this->enabled = $enabled;
+        $this->vendorDirs = array_keys(ClassLoader::getRegisteredLoaders());
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
@@ -105,7 +107,7 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     private function isForeignMember(
         ReflectionClass $reflectionClass,
-        Reflector $member
+        Reflector $member,
     ): bool
     {
         if ($member instanceof ReflectionMethod && !$reflectionClass->hasMethod($member->getName())) {
@@ -131,13 +133,13 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
 
         $pharPrefix = 'phar://';
 
-        if (strpos($filePath, $pharPrefix) === 0) {
+        if (str_starts_with($filePath, $pharPrefix)) {
             /** @var string $filePath Cannot resolve to false */
             $filePath = substr($filePath, strlen($pharPrefix));
         }
 
         foreach ($this->vendorDirs as $vendorDir) {
-            if (strpos($filePath, $vendorDir) === 0) {
+            if (str_starts_with($filePath, $vendorDir)) {
                 return true;
             }
         }

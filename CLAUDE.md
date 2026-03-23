@@ -24,5 +24,6 @@ PHPStan extension that finds unused class members (methods, constants, enum case
 
 ## Other rules
 
-- All code (functions, syntax, dependencies) MUST be compatible with PHP 7.4+.
+- All code (functions, syntax, dependencies) MUST be compatible with PHP 8.1+.
 - Library usage providers must not create or mimic 3rd party class stubs. Instead, install the dependency as a dev dependency in composer.json.
+- Use `readonly` properties everywhere possible

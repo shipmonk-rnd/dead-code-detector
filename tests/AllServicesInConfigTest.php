@@ -82,7 +82,7 @@ final class AllServicesInConfigTest extends PHPStanTestCase
                 continue;
             }
 
-            if (in_array($className, $excluded, true)) {
+            if (in_array($className, $excluded, strict: true)) {
                 continue;
             }
 

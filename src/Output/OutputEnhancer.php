@@ -11,22 +11,16 @@ use function str_replace;
 final class OutputEnhancer
 {
 
-    private RelativePathHelper $relativePathHelper;
-
-    private ?string $editorUrl;
-
     public function __construct(
-        RelativePathHelper $relativePathHelper,
-        ?string $editorUrl
+        private readonly RelativePathHelper $relativePathHelper,
+        private readonly ?string $editorUrl,
     )
     {
-        $this->relativePathHelper = $relativePathHelper;
-        $this->editorUrl = $editorUrl;
     }
 
     public function getOriginLink(
         UsageOrigin $origin,
-        string $title
+        string $title,
     ): string
     {
         $file = $origin->getFile();
@@ -45,7 +39,7 @@ final class OutputEnhancer
 
     public function getOriginReference(
         UsageOrigin $origin,
-        bool $preferFileLine = true
+        bool $preferFileLine = true,
     ): string
     {
         $file = $origin->getFile();
@@ -72,7 +66,7 @@ final class OutputEnhancer
     private function getLinkOrPlain(
         string $title,
         string $file,
-        int $line
+        int $line,
     ): string
     {
         if ($this->editorUrl === null) {

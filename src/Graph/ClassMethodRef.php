@@ -22,13 +22,13 @@ final class ClassMethodRef extends ClassMemberRef
     public function __construct(
         ?string $className,
         ?string $methodName,
-        bool $possibleDescendant
+        bool $possibleDescendant,
     )
     {
         parent::__construct($className, $methodName, $possibleDescendant);
     }
 
-    protected function getKeyPrefixes(int $accessType): array
+    protected function getKeyPrefixes(AccessType $accessType): array
     {
         if ($accessType !== AccessType::READ) {
             throw new LogicException('Method calls can only be read.');
@@ -36,17 +36,14 @@ final class ClassMethodRef extends ClassMemberRef
         return ['m'];
     }
 
-    /**
-     * @return MemberType::METHOD
-     */
-    public function getMemberType(): int
+    public function getMemberType(): MemberType
     {
         return MemberType::METHOD;
     }
 
     public function withKnownNames(
         string $className,
-        string $memberName
+        string $memberName,
     ): self
     {
         return new self(

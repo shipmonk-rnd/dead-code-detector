@@ -5,11 +5,10 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 final class VirtualUsageData
 {
 
-    private string $note;
-
-    private function __construct(string $note)
+    private function __construct(
+        private readonly string $note,
+    )
     {
-        $this->note = $note;
     }
 
     /**

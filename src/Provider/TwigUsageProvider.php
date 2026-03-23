@@ -18,6 +18,7 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\UnionType;
 use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -31,19 +32,19 @@ use function array_map;
 use function count;
 use function explode;
 use function in_array;
-use function strpos;
+use function str_starts_with;
 
 final class TwigUsageProvider implements MemberUsageProvider
 {
 
-    private bool $enabled;
+    private readonly ReflectionProvider $reflectionProvider;
 
     /**
      * @var list<string>
      */
-    private array $analysedPaths;
+    private readonly array $analysedPaths;
 
-    private ReflectionProvider $reflectionProvider;
+    private readonly bool $enabled;
 
     /**
      * @param list<string> $analysedPaths
@@ -51,7 +52,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     public function __construct(
         ReflectionProvider $reflectionProvider,
         array $analysedPaths,
-        ?bool $enabled
+        ?bool $enabled,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
@@ -68,7 +69,7 @@ final class TwigUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -113,7 +114,7 @@ final class TwigUsageProvider implements MemberUsageProvider
      */
     private function getMethodUsageFromNew(
         New_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->class instanceof Name) {
@@ -158,7 +159,7 @@ final class TwigUsageProvider implements MemberUsageProvider
                 $callable = [];
 
                 foreach ($arrayType->getValueTypes() as $valueType) {
-                    $callable[] = array_map(static function ($stringType): string {
+                    $callable[] = array_map(static function (ConstantStringType $stringType): string {
                         return $stringType->getValue();
                     }, $valueType->getConstantStrings());
                 }
@@ -189,7 +190,7 @@ final class TwigUsageProvider implements MemberUsageProvider
                 new ClassMethodRef(
                     $callable[0],
                     $callable[1],
-                    false,
+                    possibleDescendant: false,
                 ),
             );
         }
@@ -256,7 +257,7 @@ final class TwigUsageProvider implements MemberUsageProvider
 
     private function hasAttribute(
         ReflectionMethod $method,
-        string $attributeClass
+        string $attributeClass,
     ): bool
     {
         return $method->getAttributes($attributeClass) !== [];
@@ -264,7 +265,7 @@ final class TwigUsageProvider implements MemberUsageProvider
 
     private function createUsage(
         ExtendedMethodReflection $methodReflection,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -272,7 +273,7 @@ final class TwigUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $methodReflection->getDeclaringClass()->getName(),
                 $methodReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
         );
     }
@@ -282,7 +283,7 @@ final class TwigUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromTemplateReturn(
         Return_ $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->isInControllerMethodWithTemplate($scope)) {
@@ -314,7 +315,7 @@ final class TwigUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromRenderCall(
         MethodCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -354,7 +355,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     private function getParametersArgIndex(
         MethodCall $node,
         Scope $scope,
-        string $methodName
+        string $methodName,
     ): ?int
     {
         $callerType = $scope->getType($node->var);
@@ -410,7 +411,7 @@ final class TwigUsageProvider implements MemberUsageProvider
      */
     private function getRootContext(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): string
     {
         $functionName = $scope->getFunctionName();
@@ -421,7 +422,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     }
 
     private function isInControllerMethodWithTemplate(
-        Scope $scope
+        Scope $scope,
     ): bool
     {
         if (!$scope->isInClass()) {
@@ -461,7 +462,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     private function traverseClassNameRecursively(
         string $className,
         array &$visited,
-        string $context
+        string $context,
     ): array
     {
         if (isset($visited[$className])) {
@@ -491,7 +492,7 @@ final class TwigUsageProvider implements MemberUsageProvider
     private function getPublicMembersUsages(
         ClassReflection $classReflection,
         array &$visited,
-        string $context
+        string $context,
     ): array
     {
         $usages = [];
@@ -566,12 +567,12 @@ final class TwigUsageProvider implements MemberUsageProvider
     private function createMethodUsage(
         string $className,
         string $methodName,
-        string $context
+        string $context,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
-            new ClassMethodRef($className, $methodName, false),
+            new ClassMethodRef($className, $methodName, possibleDescendant: false),
         );
     }
 
@@ -581,19 +582,19 @@ final class TwigUsageProvider implements MemberUsageProvider
     private function createPropertyUsage(
         string $className,
         string $propertyName,
-        string $context
+        string $context,
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
             UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
-            new ClassPropertyRef($className, $propertyName, false),
+            new ClassPropertyRef($className, $propertyName, possibleDescendant: false),
             AccessType::READ,
         );
     }
 
     private function shouldSkipMethod(string $methodName): bool
     {
-        return strpos($methodName, '__') === 0;
+        return str_starts_with($methodName, '__');
     }
 
     private function shouldSkipClass(ClassReflection $classReflection): bool
@@ -604,7 +605,7 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         foreach ($this->analysedPaths as $path) {
-            if (strpos($fileName, $path) === 0) {
+            if (str_starts_with($fileName, $path)) {
                 return false; // do not traverse non-analyzed classes (e.g. vendor)
             }
         }

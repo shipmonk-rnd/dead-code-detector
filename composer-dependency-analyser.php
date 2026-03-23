@@ -13,12 +13,4 @@ $config = (new Configuration())
     ->ignoreErrorsOnExtensionAndPath('ext-simplexml', __DIR__ . '/src/Provider/SymfonyUsageProvider.php', [ErrorType::SHADOW_DEPENDENCY]) // guarded with extension_loaded()
     ->addPathToExclude(__DIR__ . '/tests/Rule/data');
 
-if (PHP_VERSION_ID < 80100) {
-    $config->ignoreUnknownClasses([
-        'ReflectionEnum',
-        'ReflectionEnumBackedCase',
-        'ReflectionEnumUnitCase'
-    ]);
-}
-
 return $config;

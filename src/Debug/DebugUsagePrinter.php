@@ -9,6 +9,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Enum\NeverReportedReason;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -27,29 +28,29 @@ use function ltrim;
 use function next;
 use function reset;
 use function sprintf;
+use function str_contains;
 use function str_repeat;
-use function strpos;
 
 final class DebugUsagePrinter
 {
 
     public const ANY_MEMBER = "\0";
 
-    private OutputEnhancer $outputEnhancer;
+    private readonly OutputEnhancer $outputEnhancer;
 
-    private ReflectionProvider $reflectionProvider;
+    private readonly ReflectionProvider $reflectionProvider;
 
     /**
      * memberKey => usage info
      *
-     * @var array<string, array{typename: string, memberType: MemberType::*, accessType: AccessType::*, analysed?: bool, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
+     * @var array<string, array{typename: string, memberType: MemberType, accessType: AccessType, analysed?: bool, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: value-of<NeverReportedReason>}>
      */
     private array $debugMembers;
 
     public function __construct(
         Container $container,
         OutputEnhancer $outputEnhancer,
-        ReflectionProvider $reflectionProvider
+        ReflectionProvider $reflectionProvider,
     )
     {
         $this->outputEnhancer = $outputEnhancer;
@@ -61,11 +62,11 @@ final class DebugUsagePrinter
     }
 
     /**
-     * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
+     * @param array<value-of<MemberType>, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
      */
     public function printMixedMemberUsages(
         Output $output,
-        array $mixedMemberUsages
+        array $mixedMemberUsages,
     ): void
     {
         if ($mixedMemberUsages === [] || !$output->isDebug()) {
@@ -96,11 +97,11 @@ final class DebugUsagePrinter
     }
 
     /**
-     * @param array<MemberType::*, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
+     * @param array<value-of<MemberType>, array<string, non-empty-list<CollectedUsage>>> $mixedMemberUsages
      */
     private function printMixedClassNameUsages(
         Output $output,
-        array $mixedMemberUsages
+        array $mixedMemberUsages,
     ): void
     {
         $totalCount = array_sum(array_map('count', $mixedMemberUsages));
@@ -117,7 +118,7 @@ final class DebugUsagePrinter
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
             foreach ($collectedUsages as $memberName => $usages) {
                 $examplesShown++;
-                $memberTypeString = $this->getMemberTypeString($memberType);
+                $memberTypeString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
                 $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
 
                 $exampleCaller = $this->getExampleCaller($usages);
@@ -141,11 +142,11 @@ final class DebugUsagePrinter
     }
 
     /**
-     * @param array<MemberType::*, non-empty-list<CollectedUsage>> $fullyMixedUsages
+     * @param array<value-of<MemberType>, non-empty-list<CollectedUsage>> $fullyMixedUsages
      */
     private function printMixedEverythingUsages(
         Output $output,
-        array $fullyMixedUsages
+        array $fullyMixedUsages,
     ): void
     {
         if ($fullyMixedUsages === []) {
@@ -154,12 +155,13 @@ final class DebugUsagePrinter
 
         foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
             $fullyMixedCount = count($collectedUsages);
-            $memberTypeString = $this->getMemberTypeString($memberType);
+            $memberTypeEnum = MemberType::from($memberType); // @phpstan-ignore missingType.checkedException, missingType.checkedException
+            $memberTypeString = $this->getMemberTypeString($memberTypeEnum);
 
-            if ($memberType === MemberType::METHOD) {
+            if ($memberTypeEnum === MemberType::METHOD) {
                 $memberAccessString = 'call';
                 $memberAccessPastTense = 'called';
-            } elseif ($memberType === MemberType::PROPERTY) {
+            } elseif ($memberTypeEnum === MemberType::PROPERTY) {
                 $memberAccessString = 'read';
                 $memberAccessPastTense = 'read';
             } else {
@@ -215,7 +217,7 @@ final class DebugUsagePrinter
      */
     public function printDebugMemberUsages(
         Output $output,
-        array $analysedClasses
+        array $analysedClasses,
     ): void
     {
         if ($this->debugMembers === [] || !$output->isDebug()) {
@@ -242,7 +244,7 @@ final class DebugUsagePrinter
 
                 foreach ($debugMember['eliminationPath'] as $fragmentKey => $fragmentUsages) {
                     if ($depth === 1) {
-                        $entrypoint = $this->outputEnhancer->getOriginReference($fragmentUsages[0]->getOrigin(), false);
+                        $entrypoint = $this->outputEnhancer->getOriginReference($fragmentUsages[0]->getOrigin(), preferFileLine: false);
                         $output->writeLineFormatted(sprintf('| <fg=gray>entry</> <fg=white>%s</>', $entrypoint));
                     }
 
@@ -303,11 +305,11 @@ final class DebugUsagePrinter
     private function prettyMemberKey(string $memberKey): string
     {
         if (
-            strpos($memberKey, 'm/') === false
-            && strpos($memberKey, 'c/') === false
-            && strpos($memberKey, 'e/') === false
-            && strpos($memberKey, 'pr/') === false
-            && strpos($memberKey, 'pw/') === false
+            !str_contains($memberKey, 'm/')
+            && !str_contains($memberKey, 'c/')
+            && !str_contains($memberKey, 'e/')
+            && !str_contains($memberKey, 'pr/')
+            && !str_contains($memberKey, 'pw/')
         ) {
             throw new LogicException("Invalid member key format: '$memberKey'");
         }
@@ -321,7 +323,7 @@ final class DebugUsagePrinter
      */
     public function recordUsage(
         CollectedUsage $collectedUsage,
-        array $alternativeKeys
+        array $alternativeKeys,
     ): void
     {
         if ($alternativeKeys === []) {
@@ -359,7 +361,7 @@ final class DebugUsagePrinter
      */
     public function markMemberAsWhite(
         BlackMember $blackMember,
-        array $eliminationPath
+        array $eliminationPath,
     ): void
     {
         $memberKeys = $blackMember->getMember()->toKeys($blackMember->getAccessType());
@@ -373,9 +375,12 @@ final class DebugUsagePrinter
         }
     }
 
+    /**
+     * @param value-of<NeverReportedReason> $reason
+     */
     public function markMemberAsNeverReported(
         BlackMember $blackMember,
-        string $reason
+        string $reason,
     ): void
     {
         $memberKeys = $blackMember->getMember()->toKeys($blackMember->getAccessType());
@@ -391,14 +396,14 @@ final class DebugUsagePrinter
 
     /**
      * @param list<string> $debugMembers
-     * @return array<string, array{typename: string, memberType: MemberType::*, accessType: AccessType::*, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: string}>
+     * @return array<string, array{typename: string, memberType: MemberType, accessType: AccessType, usages?: list<CollectedUsage>, eliminationPath?: array<string, non-empty-list<ClassMemberUsage>>, neverReported?: value-of<NeverReportedReason>}>
      */
     private function buildDebugMemberKeys(array $debugMembers): array
     {
         $result = [];
 
         foreach ($debugMembers as $debugMember) {
-            if (strpos($debugMember, '::') === false) {
+            if (!str_contains($debugMember, '::')) {
                 throw new LogicException("Invalid debug member format: '$debugMember', expected 'ClassName::memberName'");
             }
 
@@ -414,19 +419,19 @@ final class DebugUsagePrinter
 
             if (ReflectionHelper::hasOwnMethod($classReflection, $memberName)) {
                 $accessTypes = [AccessType::READ];
-                $ref = (new ClassMethodRef($normalizedClass, $memberName, false));
+                $ref = (new ClassMethodRef($normalizedClass, $memberName, possibleDescendant: false));
 
             } elseif (ReflectionHelper::hasOwnConstant($classReflection, $memberName)) {
                 $accessTypes = [AccessType::READ];
-                $ref = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createNo()));
+                $ref = (new ClassConstantRef($normalizedClass, $memberName, possibleDescendant: false, isEnumCase: TrinaryLogic::createNo()));
 
             } elseif (ReflectionHelper::hasOwnEnumCase($classReflection, $memberName)) {
                 $accessTypes = [AccessType::READ];
-                $ref = (new ClassConstantRef($normalizedClass, $memberName, false, TrinaryLogic::createYes()));
+                $ref = (new ClassConstantRef($normalizedClass, $memberName, possibleDescendant: false, isEnumCase: TrinaryLogic::createYes()));
 
             } elseif (ReflectionHelper::hasOwnProperty($classReflection, $memberName)) {
                 $accessTypes = [AccessType::READ, AccessType::WRITE];
-                $ref = (new ClassPropertyRef($normalizedClass, $memberName, false));
+                $ref = (new ClassPropertyRef($normalizedClass, $memberName, possibleDescendant: false));
 
             } else {
                 throw new LogicException("Member '$memberName' does not exist directly in '$normalizedClass'");
@@ -462,39 +467,25 @@ final class DebugUsagePrinter
         return true;
     }
 
-    /**
-     * @param MemberType::* $memberType
-     */
     private function getUsageWord(
-        int $memberType,
-        int $accessType
+        MemberType $memberType,
+        AccessType $accessType,
     ): string
     {
-        if ($memberType === MemberType::METHOD) {
-            return 'calls';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            return 'fetches';
-        } elseif ($memberType === MemberType::PROPERTY) {
-            return $accessType === AccessType::READ ? 'reads' : 'writes';
-        } else {
-            throw new LogicException("Unsupported member type: $memberType");
-        }
+        return match ($memberType) {
+            MemberType::METHOD => 'calls',
+            MemberType::CONSTANT => 'fetches',
+            MemberType::PROPERTY => $accessType === AccessType::READ ? 'reads' : 'writes',
+        };
     }
 
-    /**
-     * @param MemberType::* $memberType
-     */
-    private function getMemberTypeString(int $memberType): string
+    private function getMemberTypeString(MemberType $memberType): string
     {
-        if ($memberType === MemberType::METHOD) {
-            return 'method';
-        } elseif ($memberType === MemberType::CONSTANT) {
-            return 'constant';
-        } elseif ($memberType === MemberType::PROPERTY) {
-            return 'property';
-        } else {
-            throw new LogicException("Unsupported member type: $memberType");
-        }
+        return match ($memberType) {
+            MemberType::METHOD => 'method',
+            MemberType::CONSTANT => 'constant',
+            MemberType::PROPERTY => 'property',
+        };
     }
 
 }

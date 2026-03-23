@@ -45,19 +45,11 @@ parameters:
                 ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage: Usage
                 ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider: UsageProvider
                 ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder: UsageExcluder
-        enforceReadonlyPublicProperty:
-            enabled: false # we support even PHP 7.4
-        enforceClosureParamNativeTypehint:
-            enabled: false # we support even PHP 7.4 (cannot use mixed nor unions)
 
     ignoreErrors:
         -
             message: "#but it's missing from the PHPDoc @throws tag\\.$#" # allow uncatched exceptions in tests
             path: tests/*
-
-        -
-            message: "#class ReflectionEnum is not generic#"
-            reportUnmatched: false # reported only with PHP 8.0
 
         # allow referencing any attribute classes
         - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionClass\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'

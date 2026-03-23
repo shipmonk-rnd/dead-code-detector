@@ -5,7 +5,6 @@ namespace ShipMonk\PHPStan\DeadCode\Compatibility;
 use LogicException;
 use function array_map;
 use function count;
-use function get_class;
 use function implode;
 use function var_export;
 
@@ -13,28 +12,19 @@ final class BackwardCompatibilityChecker
 {
 
     /**
-     * @var list<object>
-     */
-    private array $servicesWithOldTag;
-
-    private ?bool $trackMixedAccessParameterValue;
-
-    /**
      * @param list<object> $servicesWithOldTag
      */
     public function __construct(
-        array $servicesWithOldTag,
-        ?bool $trackMixedAccessParameterValue
+        private readonly array $servicesWithOldTag,
+        private readonly ?bool $trackMixedAccessParameterValue,
     )
     {
-        $this->servicesWithOldTag = $servicesWithOldTag;
-        $this->trackMixedAccessParameterValue = $trackMixedAccessParameterValue;
     }
 
     public function check(): void
     {
         if (count($this->servicesWithOldTag) > 0) {
-            $serviceClassNames = implode(' and ', array_map(static fn (object $service) => get_class($service), $this->servicesWithOldTag));
+            $serviceClassNames = implode(' and ', array_map(static fn (object $service) => $service::class, $this->servicesWithOldTag));
             $plural = count($this->servicesWithOldTag) > 1 ? 's' : '';
             $isAre = count($this->servicesWithOldTag) > 1 ? 'are' : 'is';
 
@@ -42,7 +32,7 @@ final class BackwardCompatibilityChecker
         }
 
         if ($this->trackMixedAccessParameterValue !== null) {
-            $newValue = var_export(!$this->trackMixedAccessParameterValue, true);
+            $newValue = var_export(!$this->trackMixedAccessParameterValue, return: true);
             throw new LogicException("Using deprecated parameter 'trackMixedAccess', please use 'parameters.shipmonkDeadCode.usageExcluders.usageOverMixed.enabled: $newValue' instead.");
         }
     }
