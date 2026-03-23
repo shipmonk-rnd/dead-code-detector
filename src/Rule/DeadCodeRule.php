@@ -12,6 +12,7 @@ use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
@@ -76,6 +77,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         '__debugInfo' => null,
     ];
 
+    private UsageCacheStorage $usageCacheStorage;
+
     /**
      * typename => data
      *
@@ -129,6 +132,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     public function __construct(
         private readonly DebugUsagePrinter $debugUsagePrinter,
+        UsageCacheStorage $usageCacheStorage,
         private readonly ClassHierarchy $classHierarchy,
         private readonly bool $detectDeadMethods,
         private readonly bool $detectDeadConstants,
@@ -139,6 +143,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         BackwardCompatibilityChecker $checker,
     )
     {
+        $this->usageCacheStorage = $usageCacheStorage;
         $checker->check();
     }
 
@@ -174,23 +179,26 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         unset($methodCallData, $providedUsagesData, $constFetchData, $propertyAccessData);
 
         foreach ($memberUseData as $file => $usesPerFile) {
-            foreach ($usesPerFile as $useStrings) {
-                foreach ($useStrings as $useString) {
-                    $collectedUsage = CollectedUsage::deserialize($useString, $file);
-                    $memberUsage = $collectedUsage->getUsage();
-                    $className = $memberUsage->getMemberRef()->getClassName();
-                    $memberName = $memberUsage->getMemberRef()->getMemberName();
+            foreach ($usesPerFile as $hashes) {
+                foreach ($hashes as $hash) {
+                    foreach ($this->usageCacheStorage->read($hash, $file) as $collectedUsage) {
+                        $memberUsage = $collectedUsage->getUsage();
+                        $className = $memberUsage->getMemberRef()->getClassName();
+                        $memberName = $memberUsage->getMemberRef()->getMemberName();
 
-                    if ($className === null) {
-                        $memberNameString = $memberName ?? DebugUsagePrinter::ANY_MEMBER;
-                        $this->mixedClassNameUsages[$memberUsage->getMemberType()->value][$memberNameString][] = $collectedUsage;
-                        continue;
+                        if ($className === null) {
+                            $memberNameString = $memberName ?? DebugUsagePrinter::ANY_MEMBER;
+                            $this->mixedClassNameUsages[$memberUsage->getMemberType()->value][$memberNameString][] = $collectedUsage;
+                            continue;
+                        }
+
+                        $knownCollectedUsages[] = $collectedUsage;
                     }
-
-                    $knownCollectedUsages[] = $collectedUsage;
                 }
             }
         }
+
+        $this->usageCacheStorage->gc();
 
         foreach ($classDefinitionData as $file => $data) {
             foreach ($data as $typeData) {

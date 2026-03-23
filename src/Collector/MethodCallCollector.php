@@ -23,6 +23,7 @@ use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
@@ -44,9 +45,11 @@ final class MethodCallCollector implements Collector
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
+        UsageCacheStorage $usageCacheStorage,
         private readonly array $memberUsageExcluders,
     )
     {
+        $this->usageCacheStorage = $usageCacheStorage;
     }
 
     public function getNodeType(): string
@@ -94,7 +97,7 @@ final class MethodCallCollector implements Collector
             $this->registerAttribute($node, $scope);
         }
 
-        return $this->emitUsages($scope);
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     /**

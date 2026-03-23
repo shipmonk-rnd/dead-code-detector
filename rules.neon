@@ -9,6 +9,10 @@ services:
             identifiers: %shipmonkDeadCode.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis.identifiers%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage
+        arguments:
+            tmpDir: %tmpDir%
+    -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem

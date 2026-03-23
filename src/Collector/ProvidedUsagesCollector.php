@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -27,11 +28,13 @@ final class ProvidedUsagesCollector implements Collector
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
+        UsageCacheStorage $usageCacheStorage,
         private readonly ReflectionProvider $reflectionProvider,
         private readonly array $memberUsageProviders,
         private readonly array $memberUsageExcluders,
     )
     {
+        $this->usageCacheStorage = $usageCacheStorage;
     }
 
     public function getNodeType(): string
@@ -58,7 +61,7 @@ final class ProvidedUsagesCollector implements Collector
             }
         }
 
-        return $this->emitUsages($scope);
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     private function validateUsage(
