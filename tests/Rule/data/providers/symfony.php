@@ -189,6 +189,12 @@ class AutoconfiguredWithCalls {
     public function dead(): void {} // error: Unused Symfony\AutoconfiguredWithCalls::dead
 }
 
+#[Autoconfigure(calls: [['setCache' => ['@redis_cache']]])]
+class AutoconfiguredWithCallsKeyFormat {
+    public function setCache(): void {}
+    public function dead(): void {} // error: Unused Symfony\AutoconfiguredWithCallsKeyFormat::dead
+}
+
 class RequiredPropertyService {
     #[Required]
     public object $dependency; // error: Property Symfony\RequiredPropertyService::$dependency is never read

@@ -37,6 +37,7 @@ use SimpleXMLElement;
 use SplFileInfo;
 use UnexpectedValueException;
 use function array_filter;
+use function array_key_first;
 use function array_keys;
 use function count;
 use function explode;
@@ -303,7 +304,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             if (is_array($calls)) {
                 foreach ($calls as $call) {
-                    $methodName = is_array($call) ? ($call[0] ?? null) : null;
+                    if (!is_array($call)) {
+                        continue;
+                    }
+
+                    // ['setLogger'] or ['setLogger' => ['@logger']]
+                    $methodName = $call[0] ?? array_key_first($call);
 
                     if (is_string($methodName) && $classReflection->hasNativeMethod($methodName)) {
                         $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via #[Autoconfigure(calls)] attribute');
