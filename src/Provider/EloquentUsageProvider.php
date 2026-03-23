@@ -20,9 +20,9 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function in_array;
 use function is_array;
 use function is_string;
+use function str_ends_with;
+use function str_starts_with;
 use function strlen;
-use function strpos;
-use function substr;
 
 final class EloquentUsageProvider implements MemberUsageProvider
 {
@@ -33,10 +33,10 @@ final class EloquentUsageProvider implements MemberUsageProvider
         'retrieved', 'forceDeleting', 'forceDeleted', 'trashed',
     ];
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(
-        ?bool $enabled
+        ?bool $enabled,
     )
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('illuminate/database');
@@ -44,7 +44,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -95,7 +95,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromObserveCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier || $node->name->name !== 'observe') {
@@ -137,7 +137,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             foreach ([...self::OBSERVER_EVENT_METHODS, '__construct'] as $method) {
                 $usages[] = new ClassMethodUsage(
                     UsageOrigin::createRegular($node, $scope),
-                    new ClassMethodRef($observerClassName, $method, false),
+                    new ClassMethodRef($observerClassName, $method, possibleDescendant: false),
                 );
             }
         }
@@ -175,7 +175,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
                     foreach ([...self::OBSERVER_EVENT_METHODS, '__construct'] as $method) {
                         $usages[] = new ClassMethodUsage(
                             UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Eloquent observer via #[ObservedBy]')),
-                            new ClassMethodRef($className, $method, false),
+                            new ClassMethodRef($className, $method, possibleDescendant: false),
                         );
                     }
                 }
@@ -187,7 +187,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     private function shouldMarkAsUsed(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         return $this->isEloquentModelMethod($method, $classReflection)
@@ -198,7 +198,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     private function isEloquentModelMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Database\Eloquent\Model')) {
@@ -215,7 +215,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return 'Eloquent lifecycle/framework method';
         }
 
-        if (strpos($methodName, 'scope') === 0 && $methodName !== 'scope') {
+        if (str_starts_with($methodName, 'scope') && $methodName !== 'scope') {
             return 'Eloquent query scope';
         }
 
@@ -243,17 +243,17 @@ final class EloquentUsageProvider implements MemberUsageProvider
         $length = strlen($methodName);
 
         // Minimum: get + X + Attribute = 13 chars, same for set
-        if ($length <= 12 || substr($methodName, -9) !== 'Attribute') {
+        if ($length <= 12 || !str_ends_with($methodName, 'Attribute')) {
             return false;
         }
 
-        return strpos($methodName, 'get') === 0
-            || strpos($methodName, 'set') === 0;
+        return str_starts_with($methodName, 'get')
+            || str_starts_with($methodName, 'set');
     }
 
     private function isFactoryMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Database\Eloquent\Factories\Factory')) {
@@ -269,7 +269,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     private function isSeederMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Database\Seeder')) {
@@ -285,7 +285,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     private function isMigrationMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Database\Migrations\Migration')) {
@@ -304,7 +304,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
      */
     private function methodReturnsType(
         ReflectionMethod $method,
-        string $typePrefix
+        string $typePrefix,
     ): bool
     {
         $returnType = $method->getReturnType();
@@ -313,7 +313,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return false;
         }
 
-        return strpos($returnType->getName(), $typePrefix) === 0;
+        return str_starts_with($returnType->getName(), $typePrefix);
     }
 
     /**
@@ -321,7 +321,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
      */
     private function methodReturnsExactType(
         ReflectionMethod $method,
-        string $type
+        string $type,
     ): bool
     {
         $returnType = $method->getReturnType();
@@ -335,7 +335,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
 
     private function createUsage(
         ExtendedMethodReflection $methodReflection,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(

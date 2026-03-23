@@ -15,6 +15,7 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Type\Constant\ConstantStringType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -25,7 +26,10 @@ use function explode;
 use function implode;
 use function in_array;
 use function lcfirst;
+use function str_contains;
+use function str_ends_with;
 use function str_replace;
+use function str_starts_with;
 use function strpos;
 use function strrpos;
 use function substr;
@@ -34,22 +38,19 @@ use function ucwords;
 final class LaravelUsageProvider implements MemberUsageProvider
 {
 
-    private ReflectionProvider $reflectionProvider;
-
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(
-        ReflectionProvider $reflectionProvider,
-        ?bool $enabled
+        private readonly ReflectionProvider $reflectionProvider,
+        ?bool $enabled,
     )
     {
-        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('laravel/framework');
     }
 
     public function getUsages(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$this->enabled) {
@@ -103,7 +104,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromStaticCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $callerType = $node->class instanceof Expr
@@ -140,7 +141,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromRouteCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -155,7 +156,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, false),
+                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -165,7 +166,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, false),
+                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -175,7 +176,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -186,7 +187,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, false),
+                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -196,7 +197,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, false),
+                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -206,7 +207,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -219,7 +220,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ($resourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -232,7 +233,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ($apiResourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -246,7 +247,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromEventCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -261,7 +262,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['handle', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -272,7 +273,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['subscribe', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -286,7 +287,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromScheduleCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -301,7 +302,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['handle', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -315,7 +316,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromGateCall(
         StaticCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -330,7 +331,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, false),
+                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -339,7 +340,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, false),
+                        new ClassMethodRef($className, $method, possibleDescendant: false),
                     );
                 }
             }
@@ -359,7 +360,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromMethodCall(
         MethodCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         if (!$node->name instanceof Identifier) {
@@ -397,7 +398,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function getUsagesFromAuthorizeCall(
         MethodCall $node,
-        Scope $scope
+        Scope $scope,
     ): array
     {
         $args = $node->getArgs();
@@ -439,7 +440,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             foreach ($abilityNames as $abilityName) {
                 $usages[] = new ClassMethodUsage(
                     UsageOrigin::createRegular($node, $scope),
-                    new ClassMethodRef($policyClassName, $abilityName, false),
+                    new ClassMethodRef($policyClassName, $abilityName, possibleDescendant: false),
                 );
             }
         }
@@ -469,7 +470,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $candidates = [];
 
-        if (strpos($classDirname, '\\Models\\') !== false) {
+        if (str_contains($classDirname, '\\Models\\')) {
             $candidates[] = str_replace('\\Models\\', '\\Models\\Policies\\', $classDirname) . '\\' . $policyBasename;
             $candidates[] = str_replace('\\Models\\', '\\Policies\\', $classDirname) . '\\' . $policyBasename;
         }
@@ -494,7 +495,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function markAllPublicPolicyMethods(
         string $policyClassName,
-        UsageOrigin $origin
+        UsageOrigin $origin,
     ): array
     {
         if (!$this->reflectionProvider->hasClass($policyClassName)) {
@@ -513,7 +514,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             if ($method->isPublic()) {
                 $usages[] = new ClassMethodUsage(
                     $origin,
-                    new ClassMethodRef($policyClassName, $method->getName(), false),
+                    new ClassMethodRef($policyClassName, $method->getName(), possibleDescendant: false),
                 );
             }
         }
@@ -523,7 +524,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function kebabToCamelCase(string $string): string
     {
-        if (strpos($string, '-') === false) {
+        if (!str_contains($string, '-')) {
             return $string;
         }
 
@@ -544,7 +545,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
     private function extractCallablesFromArg(
         StaticCall $node,
         Scope $scope,
-        int $argIndex
+        int $argIndex,
     ): array
     {
         $arg = $node->getArgs()[$argIndex] ?? null;
@@ -561,9 +562,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
             foreach ($arrayType->getValueTypes() as $valueType) {
                 $callable[] = array_map(
-                    static function ($stringType): string {
-                        return $stringType->getValue();
-                    },
+                    static fn (ConstantStringType $stringType): string => $stringType->getValue(),
                     $valueType->getConstantStrings(),
                 );
             }
@@ -588,7 +587,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
     private function extractClassNamesFromArg(
         StaticCall $node,
         Scope $scope,
-        int $argIndex
+        int $argIndex,
     ): array
     {
         $arg = $node->getArgs()[$argIndex] ?? null;
@@ -615,7 +614,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
     private function extractControllerAtMethodFromArg(
         StaticCall $node,
         Scope $scope,
-        int $argIndex
+        int $argIndex,
     ): array
     {
         $arg = $node->getArgs()[$argIndex] ?? null;
@@ -643,7 +642,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function shouldMarkAsUsed(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         return $this->isCommandMethod($method, $classReflection)
@@ -662,7 +661,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isCommandMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Console\Command')) {
@@ -678,7 +677,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isJobMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (
@@ -702,7 +701,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isServiceProviderMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Support\ServiceProvider')) {
@@ -718,7 +717,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isMiddlewareMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         $methodName = $method->getName();
@@ -753,7 +752,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isNotificationMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Notifications\Notification')) {
@@ -775,7 +774,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isFormRequestMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Foundation\Http\FormRequest')) {
@@ -796,19 +795,19 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isPolicyMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         $className = $classReflection->getName();
 
-        if (strpos($className, '\\Policies\\') === false) {
+        if (!str_contains($className, '\\Policies\\')) {
             return null;
         }
 
         $lastSeparator = strrpos($className, '\\');
         $shortName = $lastSeparator !== false ? substr($className, $lastSeparator + 1) : $className;
 
-        if (substr($shortName, -6) !== 'Policy') {
+        if (!str_ends_with($shortName, 'Policy')) {
             return null;
         }
 
@@ -825,7 +824,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isMailableMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Mail\Mailable')) {
@@ -843,7 +842,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isBroadcastEventMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Contracts\Broadcasting\ShouldBroadcast')) {
@@ -861,7 +860,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isJsonResourceMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (!$classReflection->is('Illuminate\Http\Resources\Json\JsonResource')) {
@@ -879,7 +878,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isNotifiableMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         if (
@@ -889,7 +888,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if (strpos($method->getName(), 'routeNotificationFor') === 0) {
+        if (str_starts_with($method->getName(), 'routeNotificationFor')) {
             return 'Laravel notification routing method';
         }
 
@@ -898,12 +897,12 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function isEventListenerMethod(
         ReflectionMethod $method,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): ?string
     {
         $methodName = $method->getName();
 
-        if ($method->isPublic() && (strpos($methodName, 'handle') === 0 || $methodName === '__invoke')) {
+        if ($method->isPublic() && (str_starts_with($methodName, 'handle') || $methodName === '__invoke')) {
             if ($this->firstParamHasClassType($methodName, $classReflection)) {
                 return 'Laravel auto-discovered event listener method';
             }
@@ -927,7 +926,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
             $name = $classMethod->getName();
 
-            if (strpos($name, 'handle') !== 0 && $name !== '__invoke') {
+            if (!str_starts_with($name, 'handle') && $name !== '__invoke') {
                 continue;
             }
 
@@ -944,7 +943,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
      */
     private function firstParamHasClassType(
         string $methodName,
-        ClassReflection $classReflection
+        ClassReflection $classReflection,
     ): bool
     {
         foreach ($classReflection->getNativeMethod($methodName)->getVariants() as $variant) {
@@ -962,7 +961,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
     private function createUsage(
         ExtendedMethodReflection $methodReflection,
-        string $reason
+        string $reason,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
