@@ -11,6 +11,7 @@ use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ParameterNotFoundException;
@@ -24,21 +25,26 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use SimpleXMLElement;
 use SplFileInfo;
 use UnexpectedValueException;
 use function array_filter;
+use function array_key_first;
 use function array_keys;
 use function count;
 use function explode;
 use function extension_loaded;
 use function file_get_contents;
 use function in_array;
+use function is_array;
 use function is_dir;
 use function is_string;
 use function preg_match_all;
@@ -67,6 +73,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      * @var array<string, array<string, string>>
      */
     private array $dicConstants = [];
+
+    /**
+     * class => [enumCase => config file]
+     *
+     * @var array<string, array<string, string>>
+     */
+    private array $dicEnumCases = [];
 
     public function __construct(
         Container $container,
@@ -103,6 +116,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 ...$usages,
                 ...$this->getUniqueEntityUsages($node),
                 ...$this->getMethodUsagesFromReflection($node),
+                ...$this->getPropertyUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
             ];
         }
@@ -277,7 +291,72 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
+        foreach ($nativeReflection->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
+            $arguments = $attribute->getArguments();
+
+            $constructor = $arguments['constructor'] ?? null;
+
+            if (is_string($constructor) && $classReflection->hasNativeMethod($constructor)) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($constructor), 'Named constructor via #[Autoconfigure] attribute');
+            }
+
+            $calls = $arguments['calls'] ?? null;
+
+            if (is_array($calls)) {
+                foreach ($calls as $call) {
+                    if (!is_array($call)) {
+                        continue;
+                    }
+
+                    // ['setLogger'] or ['setLogger' => ['@logger']]
+                    $methodName = $call[0] ?? array_key_first($call);
+
+                    if (is_string($methodName) && $classReflection->hasNativeMethod($methodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via #[Autoconfigure(calls)] attribute');
+                    }
+                }
+            }
+        }
+
         return $usages;
+    }
+
+    /**
+     * @return list<ClassPropertyUsage>
+     */
+    private function getPropertyUsagesFromReflection(InClassNode $node): array
+    {
+        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+        $usages = [];
+
+        foreach ($nativeReflection->getProperties() as $property) {
+            if ($property->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
+                continue;
+            }
+
+            if ($this->hasAttribute($property, 'Symfony\Contracts\Service\Attribute\Required')) {
+                $usages[] = $this->createPropertyUsage($property, 'Autowired with #[Required] (set by DIC)', AccessType::WRITE);
+            }
+        }
+
+        return $usages;
+    }
+
+    private function createPropertyUsage(
+        ReflectionProperty $propertyReflection,
+        string $note,
+        AccessType $accessType,
+    ): ClassPropertyUsage
+    {
+        return new ClassPropertyUsage(
+            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
+            new ClassPropertyRef(
+                $propertyReflection->getDeclaringClass()->getName(),
+                $propertyReflection->getName(),
+                possibleDescendant: false,
+            ),
+            $accessType,
+        );
     }
 
     /**
@@ -332,7 +411,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             );
                         }
                     }
-                } elseif ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator') {
+                } elseif (
+                    $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator'
+                    || $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedIterator'
+                    || $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
+                ) {
                     $arguments = $attributeReflection->getArgumentTypes();
 
                     if (!isset($arguments['tag']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
@@ -358,7 +441,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
                         foreach ($classNames as $className) {
                             $usages[] = new ClassMethodUsage(
-                                UsageOrigin::createRegular($node, $scope),
+                                $usageOrigin,
                                 new ClassMethodRef(
                                     $className->getValue(),
                                     $method[0]->getValue(),
@@ -366,6 +449,39 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                                 ),
                             );
                         }
+                    }
+                } elseif ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireCallable') {
+                    $arguments = $attributeReflection->getArgumentTypes();
+
+                    if (!isset($arguments['service'])) {
+                        continue;
+                    }
+
+                    $serviceClasses = $arguments['service']->getConstantStrings();
+
+                    if ($serviceClasses === []) {
+                        continue;
+                    }
+
+                    $methodName = '__invoke';
+
+                    if (isset($arguments['method'])) {
+                        $methods = $arguments['method']->getConstantStrings();
+
+                        if (isset($methods[0])) {
+                            $methodName = $methods[0]->getValue();
+                        }
+                    }
+
+                    foreach ($serviceClasses as $serviceClass) {
+                        $usages[] = new ClassMethodUsage(
+                            $usageOrigin,
+                            new ClassMethodRef(
+                                $serviceClass->getValue(),
+                                $methodName,
+                                possibleDescendant: true,
+                            ),
+                        );
                     }
                 }
             }
@@ -402,6 +518,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($this->isConstructorWithAsControllerAttribute($method)) {
             return 'Class has #[AsController] attribute';
+        }
+
+        if ($this->isConstructorWithSchedulerAttribute($method)) {
+            return 'Class has scheduler attribute';
+        }
+
+        if ($this->isSchedulerTaskMethod($method)) {
+            return 'Scheduler task method via scheduler attribute';
         }
 
         if ($this->isMethodWithRouteAttribute($method)) {
@@ -631,6 +755,48 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      */
+    private function isConstructorWithSchedulerAttribute(ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor()) {
+            return false;
+        }
+
+        $class = $method->getDeclaringClass();
+
+        return $this->hasAttribute($class, 'Symfony\Component\Scheduler\Attribute\AsSchedule')
+            || $this->hasAttribute($class, 'Symfony\Component\Scheduler\Attribute\AsCronTask')
+            || $this->hasAttribute($class, 'Symfony\Component\Scheduler\Attribute\AsPeriodicTask');
+    }
+
+    private function isSchedulerTaskMethod(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+        $methodName = $method->getName();
+
+        foreach (['Symfony\Component\Scheduler\Attribute\AsCronTask', 'Symfony\Component\Scheduler\Attribute\AsPeriodicTask'] as $attributeClass) {
+            // Method-level attribute
+            if ($this->hasAttribute($method, $attributeClass)) {
+                return true;
+            }
+
+            // Class-level attribute with method parameter
+            foreach ($class->getAttributes($attributeClass) as $attribute) {
+                $arguments = $attribute->getArguments();
+                $targetMethod = $arguments['method'] ?? null;
+
+                if ($targetMethod === $methodName) {
+                    return true;
+                }
+
+                if ($targetMethod === null && $methodName === '__invoke') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function isProbablySymfonyListener(ReflectionMethod $method): bool
     {
         $methodName = $method->getName();
@@ -645,7 +811,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass|ReflectionMethod $classOrMethod
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(
@@ -754,6 +920,17 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             [$className, $constantName] = explode('::', $usedConstants); // @phpstan-ignore offsetAccess.notFound
             $this->dicConstants[$className][$constantName] = $yamlFile;
         }
+
+        preg_match_all(
+            "~!php/enum ($nameRegex(?:\\\\$nameRegex)+::$nameRegex)~",
+            $dicFileContents,
+            $enumMatches,
+        );
+
+        foreach ($enumMatches[1] as $usedEnumCase) {
+            [$className, $caseName] = explode('::', $usedEnumCase); // @phpstan-ignore offsetAccess.notFound
+            $this->dicEnumCases[$className][$caseName] = $yamlFile;
+        }
     }
 
     /**
@@ -775,6 +952,22 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     $constantName,
                     possibleDescendant: false,
                     isEnumCase: TrinaryLogic::createNo(),
+                ),
+            );
+        }
+
+        foreach ($this->dicEnumCases[$classReflection->getName()] ?? [] as $caseName => $configFile) {
+            if (!$classReflection->hasConstant($caseName)) {
+                continue;
+            }
+
+            $usages[] = new ClassConstantUsage(
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Referenced in config in ' . $configFile)),
+                new ClassConstantRef(
+                    $classReflection->getName(),
+                    $caseName,
+                    possibleDescendant: false,
+                    isEnumCase: TrinaryLogic::createYes(),
                 ),
             );
         }

@@ -2,6 +2,7 @@
 
 namespace Symfony;
 
+use Symfony\Component\DependencyInjection\Attribute\AutowireCallable;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -192,4 +193,21 @@ class MessageHandlerWithMethodLevelNamedRedirect
     public function deadMethod(): void // error: Unused Symfony\MessageHandlerWithMethodLevelNamedRedirect::deadMethod
     {
     }
+}
+
+class AutowireCallableConsumer {
+
+    #[Route('/callable', name: 'callable')]
+    public function callableAction(
+        #[AutowireCallable(service: AutowireCallableService::class, method: 'handle')] \Closure $handler,
+        #[AutowireCallable(service: AutowireCallableService::class)] \Closure $invoker
+    ): void {
+    }
+
+}
+
+class AutowireCallableService {
+    public function handle(): void {}
+    public function __invoke(): void {}
+    public function dead(): void {} // error: Unused Symfony\AutowireCallableService::dead
 }

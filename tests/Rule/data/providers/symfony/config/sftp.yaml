@@ -5,3 +5,4 @@ some_package:
             username: "%foo_ftp_username%"
             password: "%foo_ftp_password%"
             maxTries: !php/const Symfony\Sftp::RETRY_LIMIT
+            mode: !php/enum Symfony\SftpMode::PASSIVE

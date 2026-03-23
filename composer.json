@@ -47,6 +47,7 @@
         "symfony/framework-bundle": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "symfony/http-kernel": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "symfony/routing": "^5.4 || ^6.0 || ^7.0 || ^8.0",
+        "symfony/scheduler": "^6.3 || ^7.0 || ^8.0",
         "symfony/validator": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "twig/twig": "^3.0"
     },
