@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
@@ -352,6 +353,10 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
+        if (in_array($methodName, ['allows', 'denies', 'check'], true)) {
+            $usages = [...$usages, ...$this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node)];
+        }
+
         return $usages;
     }
 
@@ -367,41 +372,48 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if ($node->name->name !== 'authorize') {
+        $methodName = $node->name->name;
+
+        if (!in_array($methodName, ['authorize', 'can', 'cannot', 'cant'], true)) {
             return [];
         }
 
         $callerType = $scope->getType($node->var);
 
-        $hasAuthorize = false;
-
         foreach ($callerType->getObjectClassNames() as $callerClassName) {
-            if ($this->reflectionProvider->hasClass($callerClassName)) {
-                $callerReflection = $this->reflectionProvider->getClass($callerClassName);
+            if (!$this->reflectionProvider->hasClass($callerClassName)) {
+                continue;
+            }
 
+            $callerReflection = $this->reflectionProvider->getClass($callerClassName);
+
+            if ($methodName === 'authorize') {
                 if ($callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
-                    $hasAuthorize = true;
-                    break;
+                    return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
+                }
+            } else {
+                if (
+                    $callerReflection->is('Illuminate\Contracts\Auth\Access\Authorizable')
+                    || $callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\Authorizable')
+                ) {
+                    return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
                 }
             }
         }
 
-        if (!$hasAuthorize) {
-            return [];
-        }
-
-        return $this->getUsagesFromAuthorizeCall($node, $scope);
+        return [];
     }
 
     /**
+     * @param Arg[] $args
      * @return list<ClassMethodUsage>
      */
-    private function getUsagesFromAuthorizeCall(
-        MethodCall $node,
+    private function getUsagesFromAbilityArgs(
+        array $args,
         Scope $scope,
+        Node $node,
     ): array
     {
-        $args = $node->getArgs();
         $abilityArg = $args[0] ?? null;
         $modelArg = $args[1] ?? null;
 
