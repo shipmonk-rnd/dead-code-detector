@@ -336,13 +336,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    /**
-     * @param AccessType::* $accessType
-     */
     private function createPropertyUsage(
         ReflectionProperty $propertyReflection,
         string $note,
-        int $accessType
+        AccessType $accessType,
     ): ClassPropertyUsage
     {
         return new ClassPropertyUsage(
@@ -350,7 +347,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             new ClassPropertyRef(
                 $propertyReflection->getDeclaringClass()->getName(),
                 $propertyReflection->getName(),
-                false,
+                possibleDescendant: false,
             ),
             $accessType,
         );
@@ -476,7 +473,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             new ClassMethodRef(
                                 $serviceClass->getValue(),
                                 $methodName,
-                                true,
+                                possibleDescendant: true,
                             ),
                         );
                     }
@@ -963,8 +960,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 new ClassConstantRef(
                     $classReflection->getName(),
                     $caseName,
-                    false,
-                    TrinaryLogic::createYes(),
+                    possibleDescendant: false,
+                    isEnumCase: TrinaryLogic::createYes(),
                 ),
             );
         }
