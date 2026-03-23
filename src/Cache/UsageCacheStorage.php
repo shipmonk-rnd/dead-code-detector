@@ -11,12 +11,10 @@ use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
-use function getmypid;
 use function implode;
 use function is_dir;
 use function md5;
 use function mkdir;
-use function rename;
 use function unlink;
 
 final class UsageCacheStorage
@@ -55,10 +53,7 @@ final class UsageCacheStorage
 
         if (!file_exists($filePath)) {
             $this->ensureDirectoryExists();
-
-            $tmpFile = $filePath . '.' . getmypid() . '.tmp';
-            file_put_contents($tmpFile, $content);
-            rename($tmpFile, $filePath);
+            file_put_contents($filePath, $content);
         }
 
         return $hash;
