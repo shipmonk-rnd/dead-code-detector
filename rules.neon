@@ -108,6 +108,20 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.phpstan.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.eloquent.enabled%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.laravel.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -243,6 +257,10 @@ parameters:
                 enabled: null
             doctrine:
                 enabled: null
+            eloquent:
+                enabled: null
+            laravel:
+                enabled: null
             nette:
                 enabled: null
             netteTester:
@@ -319,6 +337,12 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             doctrine: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            eloquent: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            laravel: structure([
                 enabled: schema(bool(), nullable())
             ])
             nette: structure([
