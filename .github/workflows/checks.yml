@@ -103,7 +103,7 @@ jobs:
             -
                 name: Update dependencies
                 run: |
-                    composer remove --dev shipmonk/coverage-guard --no-update
+                    composer remove --dev shipmonk/coverage-guard brianium/paratest --no-update
                     composer update --no-progress --${{ matrix.dependency-version }} --prefer-dist --no-interaction
             -
                 name: Run tests
