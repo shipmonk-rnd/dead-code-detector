@@ -21,6 +21,7 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RequiresPhp;
 use PHPUnit\Framework\MockObject\MockObject;
 use ReflectionClass;
@@ -194,6 +195,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      * - mainly targets invalid class/trait/iface compositions
      */
     #[RequiresPhp('>= 8.5')]
+    #[IgnoreDeprecations]
     public function testNoFatalError(): void
     {
         $required = [];
