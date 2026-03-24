@@ -762,6 +762,9 @@ function testCanAndGateMethods(Post $post, Song $song, User $user): void
     Gate::allows('approve', $song);        // SongPolicy::approve
     Gate::denies('reject', $song);         // SongPolicy::reject
     Gate::check('flag', $song);            // SongPolicy::flag
+    Gate::any('promote', $song);           // SongPolicy::promote
+    Gate::none('demote', $song);           // SongPolicy::demote
+    Gate::authorize('feature', $song);     // SongPolicy::feature
 }
 
 // --- Controller using authorize() ---
@@ -889,6 +892,21 @@ class SongPolicy
     }
 
     public function flag(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function promote(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function demote(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function feature(object $user, object $song): bool
     {
         return true;
     }

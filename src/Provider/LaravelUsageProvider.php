@@ -353,7 +353,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if (in_array($methodName, ['allows', 'denies', 'check'], true)) {
+        if (in_array($methodName, ['allows', 'denies', 'check', 'any', 'none', 'authorize'], true)) {
             $usages = [...$usages, ...$this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node)];
         }
 
@@ -391,11 +391,15 @@ final class LaravelUsageProvider implements MemberUsageProvider
                 if ($callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
                     return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
                 }
-            } else {
+            } elseif ($methodName === 'can') {
                 if (
                     $callerReflection->is('Illuminate\Contracts\Auth\Access\Authorizable')
                     || $callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\Authorizable')
                 ) {
+                    return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
+                }
+            } else {
+                if ($callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\Authorizable')) {
                     return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
                 }
             }
