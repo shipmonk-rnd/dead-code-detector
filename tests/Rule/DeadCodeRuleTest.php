@@ -72,7 +72,6 @@ use function array_filter;
 use function array_map;
 use function array_merge;
 use function count;
-use function error_reporting;
 use function file_get_contents;
 use function implode;
 use function in_array;
@@ -84,8 +83,6 @@ use function preg_replace;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
-use const E_ALL;
-use const E_DEPRECATED;
 
 /**
  * @extends ShipMonkRuleTestCase<DeadCodeRule>
@@ -200,42 +197,35 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     #[RequiresPhp('>= 8.5')]
     public function testNoFatalError(): void
     {
-        // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
-        $previousErrorReporting = error_reporting(E_ALL & ~E_DEPRECATED);
+        $required = [];
 
-        try {
-            $required = [];
+        $fileProviders = array_merge(
+            iterator_to_array(self::provideFiles(), false),
+            iterator_to_array(self::provideGroupingFiles(), false),
+            iterator_to_array(self::provideAutoRemoveFiles(), false),
+        );
 
-            $fileProviders = array_merge(
-                iterator_to_array(self::provideFiles(), false),
-                iterator_to_array(self::provideGroupingFiles(), false),
-                iterator_to_array(self::provideAutoRemoveFiles(), false),
-            );
+        foreach ($fileProviders as $args) {
+            $files = is_array($args[0]) ? $args[0] : [$args[0]];
 
-            foreach ($fileProviders as $args) {
-                $files = is_array($args[0]) ? $args[0] : [$args[0]];
-
-                foreach ($files as $file) {
-                    if (isset($required[$file])) {
-                        continue;
-                    }
-
-                    try {
-                        ob_start();
-                        require $file;
-                        ob_end_clean();
-                    } catch (Throwable $e) {
-                        self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
-                    }
-
-                    $required[$file] = true;
+            foreach ($files as $file) {
+                if (isset($required[$file])) {
+                    continue;
                 }
-            }
 
-            $this->expectNotToPerformAssertions();
-        } finally {
-            error_reporting($previousErrorReporting);
+                try {
+                    ob_start();
+                    require $file;
+                    ob_end_clean();
+                } catch (Throwable $e) {
+                    self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
+                }
+
+                $required[$file] = true;
+            }
         }
+
+        $this->expectNotToPerformAssertions();
     }
 
     /**
