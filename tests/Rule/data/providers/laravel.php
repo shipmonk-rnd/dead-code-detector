@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\ServiceProvider;
 
@@ -550,6 +551,15 @@ class Album extends Model
 {
 }
 
+class Post extends Model
+{
+}
+
+class User extends Model
+{
+    use Authorizable;
+}
+
 // --- Mailables ---
 
 class WelcomeEmail extends Mailable
@@ -741,6 +751,19 @@ function registerPolicies(): void
     Route::post('/songs/upload', [SongController::class, 'upload']);
 }
 
+// --- can/cannot/cant and Gate::allows/denies/check (policy resolution via Authorizable) ---
+
+function testCanAndGateMethods(Post $post, Song $song, User $user): void
+{
+    $user->can('publish', $post);          // PostPolicy::publish
+    $user->cannot('archive', $post);       // PostPolicy::archive
+    $user->cant('draft', $post);           // PostPolicy::draft
+    $user->can('access', Album::class);    // AlbumPolicy::access (class-string)
+    Gate::allows('approve', $song);        // SongPolicy::approve
+    Gate::denies('reject', $song);         // SongPolicy::reject
+    Gate::check('flag', $song);            // SongPolicy::flag
+}
+
 // --- Controller using authorize() ---
 
 class SongController extends Controller
@@ -813,6 +836,26 @@ class PostPolicy
         return true;
     }
 
+    public function publish(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function archive(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function draft(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function unusedCustomAbility(object $user): bool // error: Unused Laravel\Policies\PostPolicy::unusedCustomAbility
+    {
+        return true;
+    }
+
     private function helperMethod(): void // error: Unused Laravel\Policies\PostPolicy::helperMethod
     {
     }
@@ -831,6 +874,21 @@ class SongPolicy
     }
 
     public function forceDownload(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function approve(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function reject(object $user, object $song): bool
+    {
+        return true;
+    }
+
+    public function flag(object $user, object $song): bool
     {
         return true;
     }
