@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Graph;
 
 use PHPStan\TrinaryLogic;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
@@ -10,9 +11,7 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 final class SerializationTest extends TestCase
 {
 
-    /**
-     * @dataProvider provideData
-     */
+    #[DataProvider('provideData')]
     public function testSerialization(
         string $filePath,
         CollectedUsage $expected,

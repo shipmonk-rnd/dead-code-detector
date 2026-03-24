@@ -2,14 +2,13 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Output;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class TextUtilsTest extends TestCase
 {
 
-    /**
-     * @dataProvider provideData
-     */
+    #[DataProvider('provideData')]
     public function testPluralize(
         int $count,
         string $singular,

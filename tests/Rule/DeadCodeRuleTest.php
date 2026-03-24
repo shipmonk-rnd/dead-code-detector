@@ -20,6 +20,8 @@ use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 use PHPUnit\Framework\MockObject\MockObject;
 use ReflectionClass;
 use ReflectionClassConstant;
@@ -168,9 +170,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
-     *
-     * @dataProvider provideFiles
      */
+    #[DataProvider('provideFiles')]
     public function testDead(
         $files,
         bool $requirementsMet = true,
@@ -182,9 +183,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
-     *
-     * @dataProvider provideFiles
      */
+    #[DataProvider('provideFiles')]
     public function testDeadWithGroups(
         $files,
         bool $requirementsMet = true,
@@ -196,9 +196,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     /**
      * Ensure we test real PHP code
      * - mainly targets invalid class/trait/iface compositions
-     *
-     * @requires PHP >= 8.5
      */
+    #[RequiresPhp('>= 8.5')]
     public function testNoFatalError(): void
     {
         // when lowest versions are installed, we get "Implicitly marking parameter xxx as nullable is deprecated" for symfony deps
@@ -471,9 +470,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
-    /**
-     * @dataProvider provideDebugUsageInvalidArgs
-     */
+    #[DataProvider('provideDebugUsageInvalidArgs')]
     public function testDebugUsageInvalidArgs(
         string $member,
         string $error,
@@ -503,9 +500,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
-     *
-     * @dataProvider provideFiles
      */
+    #[DataProvider('provideFiles')]
     public function testDetectionCanBeDisabled(
         $files,
         bool $requirementsMet = true,
@@ -597,9 +593,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     /**
      * @param string|non-empty-list<string> $files
-     *
-     * @dataProvider provideProviders
      */
+    #[DataProvider('provideProviders')]
     public function testProvidersCanBeDisabled(
         $files,
         bool $requirementsMet,
@@ -665,9 +660,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         return $output;
     }
 
-    /**
-     * @dataProvider provideAutoRemoveFiles
-     */
+    #[DataProvider('provideAutoRemoveFiles')]
     public function testAutoRemove(string $file): void
     {
         $writtenOutput = '';
@@ -776,9 +769,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     /**
      * @param string|list<string> $files
      * @param list<array{0: string, 1: int, 2?: string|null}> $expectedErrors
-     *
-     * @dataProvider provideGroupingFiles
      */
+    #[DataProvider('provideGroupingFiles')]
     public function testGrouping(
         $files,
         array $expectedErrors,
