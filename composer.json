@@ -18,6 +18,7 @@
     "require-dev": {
         "composer-runtime-api": "^2.0",
         "behat/behat": "^3.14",
+        "brianium/paratest": "^7.4.8",
         "composer/semver": "^3.4",
         "doctrine/orm": "^2.19 || ^3.0",
         "editorconfig-checker/editorconfig-checker": "^10.7.0",
@@ -94,13 +95,13 @@
             "composer validate --strict"
         ],
         "check:coverage": [
-            "XDEBUG_MODE=coverage phpunit tests --coverage-clover cache/clover.xml",
+            "XDEBUG_MODE=coverage paratest --functional --coverage-clover cache/clover.xml",
             "coverage-guard check cache/clover.xml --color"
         ],
         "check:cs": "phpcs",
         "check:dependencies": "composer-dependency-analyser",
         "check:ec": "ec src tests",
-        "check:tests": "phpunit",
+        "check:tests": "paratest --functional",
         "check:types": "phpstan analyse -vv --ansi",
         "fix:cs": "phpcbf"
     }
