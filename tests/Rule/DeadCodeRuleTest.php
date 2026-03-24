@@ -119,9 +119,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     protected function getRule(): DeadCodeRule
     {
-        $container = $this->createMock(Container::class);
-        $container->expects(self::any())
-            ->method('getParameter')
+        $container = $this->createStub(Container::class); // @phpstan-ignore staticMethod.dynamicCall
+        $container->method('getParameter')
             ->willReturn(['debug' => ['usagesOf' => $this->debugMembers]]);
 
         if ($this->rule === null) {
@@ -720,7 +719,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 ->with('errorFormatter.table')
                 ->willReturn($wrappedFormatter);
 
-            $output = $this->createOutput();
+            $output = $this->createStub(Output::class); // @phpstan-ignore staticMethod.dynamicCall
 
             $formatter = new FilterOutUnmatchedInlineIgnoresFormatter(
                 $container,
@@ -1296,7 +1295,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private function createPhpStanContainerMock(): Container
     {
-        $mock = $this->createMock(Container::class);
+        $mock = $this->createStub(Container::class); // @phpstan-ignore staticMethod.dynamicCall
         $mock->method('findServiceNamesByType')
             ->willReturnCallback(
                 static function (string $type): array {
