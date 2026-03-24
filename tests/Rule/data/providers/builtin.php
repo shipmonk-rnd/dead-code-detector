@@ -4,7 +4,7 @@ namespace BuiltinProvider;
 
 class MyIterator implements \IteratorAggregate
 {
-    public function getIterator()
+    public function getIterator(): \Traversable
     {
         yield 1;
     }

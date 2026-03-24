@@ -24,6 +24,7 @@ class ChildClass extends ParentToClone {
     }
 }
 
+#[\AllowDynamicProperties]
 class Coord
 {
     public function __construct() {}

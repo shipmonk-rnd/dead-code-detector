@@ -57,7 +57,7 @@ final class ParamsArePassedToServicesTest extends PHPStanTestCase
             $newPathSegment = $currentPath === '' ? (string) $key : $currentPath . '.' . $key;
 
             if (is_array($value)) {
-                if ($this->isList($value)) {
+                if ($this->isListArray($value)) {
                     // Non-empty lists are passed as a whole, add path without recursing
                     // Empty lists are ignored (no useful value to pass)
                     if ($value !== []) {
@@ -77,7 +77,7 @@ final class ParamsArePassedToServicesTest extends PHPStanTestCase
     /**
      * @param array<mixed> $array
      */
-    private function isList(array $array): bool
+    private function isListArray(array $array): bool
     {
         return array_values($array) === $array;
     }
