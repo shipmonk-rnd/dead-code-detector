@@ -18,7 +18,7 @@
     "require-dev": {
         "composer-runtime-api": "^2.0",
         "behat/behat": "^3.14",
-        "brianium/paratest": "^7.4.8",
+        "brianium/paratest": "^7.3",
         "composer/semver": "^3.4",
         "doctrine/orm": "^2.19 || ^3.0",
         "editorconfig-checker/editorconfig-checker": "^10.7.0",
