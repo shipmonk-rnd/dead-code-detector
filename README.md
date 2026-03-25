@@ -61,6 +61,7 @@ parameters:
 - **Calls made by DIC over your services!**
    - constructors, calls, factory methods
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
+   - or `shipmonkDeadCode.usageProviders.symfony.containerXmlPaths` must be configured
 - `#[AsEventListener]` attribute
 - `#[AsMessageHandler]` attribute
 - `#[AsController]` attribute

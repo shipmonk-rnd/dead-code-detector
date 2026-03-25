@@ -81,18 +81,31 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     private array $dicEnumCases = [];
 
+    /**
+     * @param list<string> $containerXmlPaths
+     */
     public function __construct(
         Container $container,
         ?bool $enabled,
         ?string $configDir,
+        array $containerXmlPaths,
     )
     {
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
-        $containerXmlPath = $this->getContainerXmlPath($container);
 
-        if ($this->enabled && $containerXmlPath !== null) {
-            $this->fillDicClasses($containerXmlPath);
+        if ($containerXmlPaths === []) {
+            $containerXmlPath = $this->getContainerXmlPath($container);
+
+            if ($containerXmlPath !== null) {
+                $containerXmlPaths = [$containerXmlPath];
+            }
+        }
+
+        if ($this->enabled) {
+            foreach ($containerXmlPaths as $containerXmlPath) {
+                $this->fillDicClasses($containerXmlPath);
+            }
         }
 
         if ($this->enabled && $this->configDir !== null) {
