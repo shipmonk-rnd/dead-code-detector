@@ -84,6 +84,7 @@ services:
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
             configDir: %shipmonkDeadCode.usageProviders.symfony.configDir%
+            containerXmlPaths: %shipmonkDeadCode.usageProviders.symfony.containerXmlPaths%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider
@@ -253,6 +254,7 @@ parameters:
             symfony:
                 enabled: null
                 configDir: null
+                containerXmlPaths: []
             twig:
                 enabled: null
             doctrine:
@@ -286,6 +288,7 @@ parameters:
 
 expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
+    - '[parameters][shipmonkDeadCode][usageProviders][symfony][containerXmlPaths]'
     - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
 parametersSchema:
@@ -332,6 +335,7 @@ parametersSchema:
             symfony: structure([
                 enabled: schema(bool(), nullable())
                 configDir: schema(string(), nullable())
+                containerXmlPaths: listOf(string())
             ])
             twig: structure([
                 enabled: schema(bool(), nullable())

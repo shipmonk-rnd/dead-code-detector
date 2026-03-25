@@ -1194,6 +1194,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->createContainerMockWithSymfonyConfig(),
                 $this->providersEnabled,
                 __DIR__ . '/data/providers/symfony/',
+                [],
             ),
             new TwigUsageProvider(
                 self::createReflectionProvider(),
