@@ -43,7 +43,7 @@ final class UsageCacheStorage
      * @param non-empty-list<CollectedUsage> $usages
      * @return non-empty-list<string>
      */
-    public function write(
+    public function pack(
         array $usages,
         string $scopeFile,
     ): array
@@ -73,7 +73,7 @@ final class UsageCacheStorage
     /**
      * @return non-empty-list<CollectedUsage>
      */
-    public function read(
+    public function unpack(
         string $data,
         string $scopeFile,
     ): array

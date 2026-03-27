@@ -26,11 +26,11 @@ final class UsageCacheStorageTest extends TestCase
         $scopeFile = '/app/index.php';
         $usages = $this->createSampleUsages();
 
-        $hashes = $cache->write($usages, $scopeFile);
+        $hashes = $cache->pack($usages, $scopeFile);
 
         self::assertCount(1, $hashes);
 
-        $restored = $cache->read($hashes[0], $scopeFile);
+        $restored = $cache->unpack($hashes[0], $scopeFile);
 
         self::assertCount(2, $restored);
         self::assertEquals($usages[0], $restored[0]);
@@ -44,8 +44,8 @@ final class UsageCacheStorageTest extends TestCase
         $scopeFile = '/app/index.php';
         $usages = $this->createSampleUsages();
 
-        $hashes1 = $cache->write($usages, $scopeFile);
-        $hashes2 = $cache->write($usages, $scopeFile);
+        $hashes1 = $cache->pack($usages, $scopeFile);
+        $hashes2 = $cache->pack($usages, $scopeFile);
 
         self::assertSame($hashes1, $hashes2);
     }
@@ -57,7 +57,7 @@ final class UsageCacheStorageTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('DCD cache file not found');
 
-        $cache->read('nonexistenthash', '/app/index.php');
+        $cache->unpack('nonexistenthash', '/app/index.php');
     }
 
     public function testDisabledCachePassesDataThrough(): void
@@ -67,14 +67,14 @@ final class UsageCacheStorageTest extends TestCase
         $scopeFile = '/app/index.php';
         $usages = $this->createSampleUsages();
 
-        $strings = $cache->write($usages, $scopeFile);
+        $strings = $cache->pack($usages, $scopeFile);
 
         self::assertCount(2, $strings);
 
         $restored = [];
 
         foreach ($strings as $string) {
-            foreach ($cache->read($string, $scopeFile) as $usage) {
+            foreach ($cache->unpack($string, $scopeFile) as $usage) {
                 $restored[] = $usage;
             }
         }
@@ -102,21 +102,21 @@ final class UsageCacheStorageTest extends TestCase
         $scopeFile = '/app/index.php';
         $usages = $this->createSampleUsages();
 
-        $hash1 = $cache->write([$usages[0]], $scopeFile);
-        $hash2 = $cache->write([$usages[1]], $scopeFile);
+        $hash1 = $cache->pack([$usages[0]], $scopeFile);
+        $hash2 = $cache->pack([$usages[1]], $scopeFile);
 
         // Only read hash1, so hash2 should be cleaned up
-        $cache->read($hash1[0], $scopeFile);
+        $cache->unpack($hash1[0], $scopeFile);
         $cache->gc();
 
         // hash1 should still be readable by a fresh instance
         $freshCache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
-        $restored = $freshCache->read($hash1[0], $scopeFile);
+        $restored = $freshCache->unpack($hash1[0], $scopeFile);
         self::assertCount(1, $restored);
 
         // hash2 should be gone
         $this->expectException(LogicException::class);
-        $freshCache->read($hash2[0], $scopeFile);
+        $freshCache->unpack($hash2[0], $scopeFile);
     }
 
     /**

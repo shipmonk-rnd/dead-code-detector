@@ -32,7 +32,7 @@ trait BufferedUsageCollector
     {
         if ($this->usages !== [] && (!$scope->isInClass() || $node instanceof ClassMethodsNode)) { // @phpstan-ignore phpstanApi.instanceofAssumption
             try {
-                return $this->usageCacheStorage->write($this->usages, $scope->getFile());
+                return $this->usageCacheStorage->pack($this->usages, $scope->getFile());
             } finally {
                 $this->usages = [];
             }

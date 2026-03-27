@@ -181,7 +181,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($memberUseData as $file => $usesPerFile) {
             foreach ($usesPerFile as $hashes) {
                 foreach ($hashes as $hash) {
-                    foreach ($this->usageCacheStorage->read($hash, $file) as $collectedUsage) {
+                    foreach ($this->usageCacheStorage->unpack($hash, $file) as $collectedUsage) {
                         $memberUsage = $collectedUsage->getUsage();
                         $className = $memberUsage->getMemberRef()->getClassName();
                         $memberName = $memberUsage->getMemberRef()->getMemberName();
