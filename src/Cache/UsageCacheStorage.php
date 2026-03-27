@@ -23,29 +23,39 @@ final class UsageCacheStorage
 
     private string $cacheDir;
 
+    private readonly bool $useOwnCache;
+
     /**
      * @var array<string, true>
      */
     private array $referencedHashes = [];
 
-    public function __construct(string $tmpDir)
+    public function __construct(
+        string $tmpDir,
+        bool $useOwnCache,
+    )
     {
         $this->cacheDir = $tmpDir . '/dcd';
+        $this->useOwnCache = $useOwnCache;
     }
 
     /**
      * @param non-empty-list<CollectedUsage> $usages
-     * @return string Hash identifier
+     * @return non-empty-list<string>
      */
     public function write(
         array $usages,
         string $scopeFile,
-    ): string
+    ): array
     {
         $serialized = array_map(
             static fn (CollectedUsage $usage): string => $usage->serialize($scopeFile),
             $usages,
         );
+
+        if (!$this->useOwnCache) {
+            return $serialized;
+        }
 
         $content = implode("\n", $serialized);
         $hash = md5($content);
@@ -57,24 +67,28 @@ final class UsageCacheStorage
             file_put_contents($filePath, $content);
         }
 
-        return $hash;
+        return [$hash];
     }
 
     /**
      * @return non-empty-list<CollectedUsage>
      */
     public function read(
-        string $hash,
+        string $data,
         string $scopeFile,
     ): array
     {
-        $this->referencedHashes[$hash] = true;
+        if (!$this->useOwnCache) {
+            return [CollectedUsage::deserialize($data, $scopeFile)];
+        }
 
-        $filePath = $this->getFilePath($hash);
+        $this->referencedHashes[$data] = true;
+
+        $filePath = $this->getFilePath($data);
 
         if (!file_exists($filePath)) {
             throw new LogicException(
-                "DCD cache file not found for hash '{$hash}' at '{$filePath}'. "
+                "DCD cache file not found for hash '{$data}' at '{$filePath}'. "
                 . 'Please clear the PHPStan result cache and re-run the analysis.',
             );
         }
@@ -86,14 +100,14 @@ final class UsageCacheStorage
         }
 
         return array_map(
-            static fn (string $data): CollectedUsage => CollectedUsage::deserialize($data, $scopeFile),
+            static fn (string $line): CollectedUsage => CollectedUsage::deserialize($line, $scopeFile),
             explode("\n", $content),
         );
     }
 
     public function gc(): void
     {
-        if (!is_dir($this->cacheDir)) {
+        if (!$this->useOwnCache || !is_dir($this->cacheDir)) {
             return;
         }
 

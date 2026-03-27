@@ -175,7 +175,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     private function getUsageCacheStorage(): UsageCacheStorage
     {
         if ($this->usageCacheStorage === null) {
-            $this->usageCacheStorage = new UsageCacheStorage(__DIR__ . '/../../cache');
+            $this->usageCacheStorage = new UsageCacheStorage(__DIR__ . '/../../cache', true);
         }
 
         return $this->usageCacheStorage;
