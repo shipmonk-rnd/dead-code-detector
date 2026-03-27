@@ -38,7 +38,7 @@ final class UsageCacheStorage
      */
     public function write(
         array $usages,
-        string $scopeFile
+        string $scopeFile,
     ): string
     {
         $serialized = array_map(
@@ -64,7 +64,7 @@ final class UsageCacheStorage
      */
     public function read(
         string $hash,
-        string $scopeFile
+        string $scopeFile,
     ): array
     {
         $this->referencedHashes[$hash] = true;

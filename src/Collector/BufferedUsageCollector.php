@@ -27,7 +27,7 @@ trait BufferedUsageCollector
      */
     private function tryFlushBuffer(
         Node $node,
-        Scope $scope
+        Scope $scope,
     ): ?array
     {
         if ($this->usages !== [] && (!$scope->isInClass() || $node instanceof ClassMethodsNode)) { // @phpstan-ignore phpstanApi.instanceofAssumption
