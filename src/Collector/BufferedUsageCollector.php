@@ -2,10 +2,12 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Collector;
 
+use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\Node\ClassMethodsNode;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
-use function array_map;
 
 /**
  * @phpstan-require-implements Collector
@@ -18,21 +20,25 @@ trait BufferedUsageCollector
      */
     private array $usages = [];
 
+    private UsageCacheStorage $usageCacheStorage;
+
     /**
      * @return non-empty-list<string>|null
      */
-    private function emitUsages(Scope $scope): ?array
+    private function tryFlushBuffer(
+        Node $node,
+        Scope $scope,
+    ): ?array
     {
-        try {
-            return $this->usages === []
-                ? null
-                : array_map(
-                    static fn (CollectedUsage $usage): string => $usage->serialize($scope->getFile()),
-                    $this->usages,
-                );
-        } finally {
-            $this->usages = [];
+        if ($this->usages !== [] && (!$scope->isInClass() || $node instanceof ClassMethodsNode)) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            try {
+                return $this->usageCacheStorage->pack($this->usages, $scope->getFile());
+            } finally {
+                $this->usages = [];
+            }
         }
+
+        return null;
     }
 
 }
