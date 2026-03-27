@@ -107,7 +107,7 @@ final class UsageCacheStorage
 
     public function gc(): void
     {
-        if (!$this->offloadCollectorData || !is_dir($this->cacheDir)) {
+        if (!is_dir($this->cacheDir)) {
             return;
         }
 
