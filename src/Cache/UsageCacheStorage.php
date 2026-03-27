@@ -15,6 +15,7 @@ use function implode;
 use function is_dir;
 use function md5;
 use function mkdir;
+use function substr;
 use function unlink;
 
 final class UsageCacheStorage
@@ -52,7 +53,7 @@ final class UsageCacheStorage
         $filePath = $this->getFilePath($hash);
 
         if (!file_exists($filePath)) {
-            $this->ensureDirectoryExists();
+            $this->ensureDirectoryExists($hash);
             file_put_contents($filePath, $content);
         }
 
@@ -97,33 +98,49 @@ final class UsageCacheStorage
         }
 
         try {
-            $iterator = new DirectoryIterator($this->cacheDir);
+            $subdirs = new DirectoryIterator($this->cacheDir);
         } catch (RuntimeException $e) {
             return;
         }
 
-        foreach ($iterator as $file) {
-            if ($file->isDot() || $file->isDir()) {
+        foreach ($subdirs as $subdir) {
+            if ($subdir->isDot() || !$subdir->isDir()) {
                 continue;
             }
 
-            $hash = $file->getBasename('.dat');
+            try {
+                $files = new DirectoryIterator($subdir->getPathname());
+            } catch (RuntimeException $e) {
+                continue;
+            }
 
-            if (!isset($this->referencedHashes[$hash])) {
-                @unlink($file->getPathname());
+            foreach ($files as $file) {
+                if ($file->isDot() || $file->isDir()) {
+                    continue;
+                }
+
+                $hash = $subdir->getFilename() . $file->getBasename('.dat');
+
+                if (!isset($this->referencedHashes[$hash])) {
+                    @unlink($file->getPathname());
+                }
             }
         }
     }
 
     private function getFilePath(string $hash): string
     {
-        return $this->cacheDir . '/' . $hash . '.dat';
+        $prefix = substr($hash, 0, 2);
+
+        return $this->cacheDir . '/' . $prefix . '/' . substr($hash, 2) . '.dat';
     }
 
-    private function ensureDirectoryExists(): void
+    private function ensureDirectoryExists(string $hash): void
     {
-        if (!is_dir($this->cacheDir)) {
-            @mkdir($this->cacheDir, 0777, true);
+        $dir = $this->cacheDir . '/' . substr($hash, 0, 2);
+
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
         }
     }
 
