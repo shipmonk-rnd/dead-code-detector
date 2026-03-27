@@ -21,7 +21,7 @@ use function unlink;
 final class UsageCacheStorage
 {
 
-    private string $cacheDir;
+    private readonly string $cacheDir;
 
     private readonly bool $offloadCollectorData;
 
