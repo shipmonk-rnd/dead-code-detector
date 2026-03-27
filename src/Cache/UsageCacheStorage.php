@@ -28,7 +28,7 @@ final class UsageCacheStorage
     /**
      * @var array<string, true>
      */
-    private array $referencedHashes = [];
+    private array $readHashes = [];
 
     public function __construct(
         string $tmpDir,
@@ -82,7 +82,7 @@ final class UsageCacheStorage
             return [CollectedUsage::deserialize($data, $scopeFile)];
         }
 
-        $this->referencedHashes[$data] = true;
+        $this->readHashes[$data] = true;
 
         $filePath = $this->getFilePath($data);
 
@@ -105,6 +105,9 @@ final class UsageCacheStorage
         );
     }
 
+    /**
+     * Delete all files in cacheDir that were not read by this cache instance
+     */
     public function gc(): void
     {
         if (!is_dir($this->cacheDir)) {
@@ -135,7 +138,7 @@ final class UsageCacheStorage
 
                 $hash = $subdir->getFilename() . $file->getBasename('.dat');
 
-                if (!isset($this->referencedHashes[$hash])) {
+                if (!isset($this->readHashes[$hash])) {
                     @unlink($file->getPathname());
                 }
             }
