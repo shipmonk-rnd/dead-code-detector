@@ -23,7 +23,7 @@ final class UsageCacheStorage
 
     private string $cacheDir;
 
-    private readonly bool $useOwnCache;
+    private readonly bool $offloadCollectorData;
 
     /**
      * @var array<string, true>
@@ -32,11 +32,11 @@ final class UsageCacheStorage
 
     public function __construct(
         string $tmpDir,
-        bool $useOwnCache,
+        bool $offloadCollectorData,
     )
     {
         $this->cacheDir = $tmpDir . '/dcd';
-        $this->useOwnCache = $useOwnCache;
+        $this->offloadCollectorData = $offloadCollectorData;
     }
 
     /**
@@ -53,7 +53,7 @@ final class UsageCacheStorage
             $usages,
         );
 
-        if (!$this->useOwnCache) {
+        if (!$this->offloadCollectorData) {
             return $serialized;
         }
 
@@ -78,7 +78,7 @@ final class UsageCacheStorage
         string $scopeFile,
     ): array
     {
-        if (!$this->useOwnCache) {
+        if (!$this->offloadCollectorData) {
             return [CollectedUsage::deserialize($data, $scopeFile)];
         }
 
@@ -107,7 +107,7 @@ final class UsageCacheStorage
 
     public function gc(): void
     {
-        if (!$this->useOwnCache || !is_dir($this->cacheDir)) {
+        if (!$this->offloadCollectorData || !is_dir($this->cacheDir)) {
             return;
         }
 

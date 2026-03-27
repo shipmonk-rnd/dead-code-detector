@@ -12,7 +12,7 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage
         arguments:
             tmpDir: %tmpDir%
-            useOwnCache: %shipmonkDeadCode.cache.useOwnCache%
+            offloadCollectorData: %shipmonkDeadCode.cache.offloadCollectorData%
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
@@ -231,7 +231,7 @@ parameters:
         trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
         cache:
-            useOwnCache: true
+            offloadCollectorData: true
         detect:
             deadMethods: true
             deadConstants: true
@@ -303,7 +303,7 @@ parametersSchema:
         trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
         reportTransitivelyDeadMethodAsSeparateError: bool()
         cache: structure([
-            useOwnCache: bool()
+            offloadCollectorData: bool()
         ])
         detect: structure([
             deadMethods: bool()
