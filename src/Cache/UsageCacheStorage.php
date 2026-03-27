@@ -64,7 +64,9 @@ final class UsageCacheStorage
 
         if (!file_exists($filePath)) {
             $this->ensureDirectoryExists($hash);
-            file_put_contents($filePath, $content);
+            if (file_put_contents($filePath, $content) === false) {
+                throw new LogicException("Failed to write DCD cache file: {$filePath}");
+            }
         }
 
         return [$hash];
