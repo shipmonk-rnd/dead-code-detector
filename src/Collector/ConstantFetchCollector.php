@@ -15,6 +15,7 @@ use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -38,10 +39,12 @@ final class ConstantFetchCollector implements Collector
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
+        UsageCacheStorage $usageCacheStorage,
         private readonly ReflectionProvider $reflectionProvider,
         private readonly array $memberUsageExcluders,
     )
     {
+        $this->usageCacheStorage = $usageCacheStorage;
     }
 
     public function getNodeType(): string
@@ -65,7 +68,7 @@ final class ConstantFetchCollector implements Collector
             $this->registerFunctionCall($node, $scope);
         }
 
-        return $this->emitUsages($scope);
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     private function registerFunctionCall(

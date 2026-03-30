@@ -12,6 +12,7 @@ use PHPStan\Node\InClassMethodNode;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
@@ -32,9 +33,11 @@ final class PropertyAccessCollector implements Collector
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
+        UsageCacheStorage $usageCacheStorage,
         private readonly array $memberUsageExcluders,
     )
     {
+        $this->usageCacheStorage = $usageCacheStorage;
     }
 
     public function getNodeType(): string
@@ -66,7 +69,7 @@ final class PropertyAccessCollector implements Collector
             $this->registerPromotedPropertyWrites($node, $scope);
         }
 
-        return $this->emitUsages($scope);
+        return $this->tryFlushBuffer($node, $scope);
     }
 
     private function registerInstancePropertyAccess(

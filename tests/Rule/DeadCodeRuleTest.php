@@ -28,6 +28,7 @@ use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ReflectionProperty;
+use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
@@ -115,6 +116,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private ?DeadCodeRule $rule = null;
 
+    private ?UsageCacheStorage $usageCacheStorage = null;
+
     private ?string $editorUrl = null;
 
     protected function getRule(): DeadCodeRule
@@ -131,6 +134,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                     $this->createOutputEnhancer(),
                     self::createReflectionProvider(),
                 ),
+                $this->getUsageCacheStorage(),
                 new ClassHierarchy(),
                 $this->detectDeadMethods,
                 $this->detectDeadConstants,
@@ -152,17 +156,29 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         $reflectionProvider = self::createReflectionProvider();
 
+        $usageCacheStorage = $this->getUsageCacheStorage();
+
         return [
             new ProvidedUsagesCollector(
+                $usageCacheStorage,
                 $reflectionProvider,
                 $this->getMemberUsageProviders(),
                 $this->getMemberUsageExcluders(),
             ),
             new ClassDefinitionCollector($reflectionProvider),
-            new MethodCallCollector($this->getMemberUsageExcluders()),
-            new ConstantFetchCollector($reflectionProvider, $this->getMemberUsageExcluders()),
-            new PropertyAccessCollector($this->getMemberUsageExcluders()),
+            new MethodCallCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($usageCacheStorage, $reflectionProvider, $this->getMemberUsageExcluders()),
+            new PropertyAccessCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
         ];
+    }
+
+    private function getUsageCacheStorage(): UsageCacheStorage
+    {
+        if ($this->usageCacheStorage === null) {
+            $this->usageCacheStorage = new UsageCacheStorage(__DIR__ . '/../../cache', offloadCollectorData: true);
+        }
+
+        return $this->usageCacheStorage;
     }
 
     /**

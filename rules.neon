@@ -9,6 +9,11 @@ services:
             identifiers: %shipmonkDeadCode.filterOutUnmatchedInlineIgnoresDuringPartialAnalysis.identifiers%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage
+        arguments:
+            tmpDir: %tmpDir%
+            offloadCollectorData: %shipmonkDeadCode.cache.offloadCollectorData%
+    -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
         class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
@@ -225,6 +230,8 @@ parameters:
     shipmonkDeadCode:
         trackMixedAccess: null
         reportTransitivelyDeadMethodAsSeparateError: false
+        cache:
+            offloadCollectorData: true
         detect:
             deadMethods: true
             deadConstants: true
@@ -295,6 +302,9 @@ parametersSchema:
     shipmonkDeadCode: structure([
         trackMixedAccess: schema(bool(), nullable()) # deprecated, use usageExcluders.usageOverMixed.enabled
         reportTransitivelyDeadMethodAsSeparateError: bool()
+        cache: structure([
+            offloadCollectorData: bool()
+        ])
         detect: structure([
             deadMethods: bool()
             deadConstants: bool()
