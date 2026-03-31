@@ -62,8 +62,7 @@ parameters:
    - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath`
    - `shipmonkDeadCode.usageProviders.symfony.containerXmlPaths` configured
 - `#[AsEventListener]`, `#[AsMessageHandler]`, `#[AsController]`, `#[AsCommand]`
-- `#[Interact]`, `#[Route]`, `#[Required]` (methods and properties)
-- `#[Assert\Callback]`
+- `#[Assert\Callback]`, `#[Interact]`, `#[Route]`, `#[Required]` (methods and properties)
 - `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]`
 - `#[AutoconfigureTag('doctrine.event_listener')]`, `#[Autoconfigure(constructor:)]`, `#[Autoconfigure(calls:)]`, `#[AutowireCallable]`
 - `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
