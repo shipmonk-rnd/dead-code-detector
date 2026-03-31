@@ -58,34 +58,22 @@ parameters:
 ## Supported libraries:
 
 #### Symfony:
-- **Calls made by DIC over your services!**
-   - constructors, calls, factory methods
-   - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath` must be used
-   - or `shipmonkDeadCode.usageProviders.symfony.containerXmlPaths` must be configured
-- `#[AsEventListener]` attribute
-- `#[AsMessageHandler]` attribute
-- `#[AsController]` attribute
-- `#[AsCommand]` attribute
-- `#[Interact]` attribute
-- `#[Required]` attribute (methods and properties)
-- `#[Route]` attributes
-- `#[Assert\Callback]` attributes
-- `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]` attributes
-- `#[Autoconfigure(constructor:)]` and `#[Autoconfigure(calls:)]`
-- `#[AutowireCallable]` attribute
+- Calls made by DIC over your services (constructors, calls, factory methods), requires either of those:
+   - [`phpstan/phpstan-symfony`](https://github.com/phpstan/phpstan-symfony) with `containerXmlPath`
+   - `shipmonkDeadCode.usageProviders.symfony.containerXmlPaths` configured
+- `#[AsEventListener]`, `#[AsMessageHandler]`, `#[AsController]`, `#[AsCommand]`
+- `#[Assert\Callback]`, `#[Interact]`, `#[Route]`, `#[Required]` (methods and properties)
+- `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]`
+- `#[AutoconfigureTag('doctrine.event_listener')]`, `#[Autoconfigure(constructor:)]`, `#[Autoconfigure(calls:)]`, `#[AutowireCallable]`
+- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
+- Workflow event listener attributes: `#[AsAnnounceListener]`, ...
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
 - `!php/const` and `!php/enum` references in `config` yamls
-- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
-- Workflow event listener attributes: `#[AsAnnounceListener]`, ...
-- `#[AutoconfigureTag('doctrine.event_listener')]` attribute
-
 
 #### Doctrine:
-- `#[AsEntityListener]` attribute
-- `#[AsDoctrineListener]` attribute
-- `Doctrine\ORM\Events::*` events
-- `Doctrine\Common\EventSubscriber` methods
+- `#[AsEntityListener]`, `#[AsDoctrineListener]` attribute
+- `Doctrine\ORM\Events::*` events, `Doctrine\Common\EventSubscriber` methods
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 - enums in `#[Column(enumType: UserStatus::class)]`
