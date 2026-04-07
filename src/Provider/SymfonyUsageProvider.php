@@ -921,9 +921,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return false;
         }
 
-        $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
-
-        return $this->hasAttribute($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', $isInstanceOf);
+        return $this->hasAttribute($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF);
     }
 
     private function isTwigComponentHookMethod(ReflectionMethod $method): bool
@@ -939,9 +937,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isLiveComponentActionMethod(ReflectionMethod $method): bool
     {
-        $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
-
-        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction', $isInstanceOf);
+        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction', ReflectionAttribute::IS_INSTANCEOF);
     }
 
     private function isLiveComponentLifecycleMethod(ReflectionMethod $method): bool
