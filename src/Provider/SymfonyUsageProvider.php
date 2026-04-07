@@ -734,10 +734,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
-        $isInstanceOf = 2; // ReflectionAttribute::IS_INSTANCEOF, since PHP 8.0
-
-        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', $isInstanceOf)
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', $isInstanceOf);
+        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
+            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
     }
 
     private function isMethodWithInteractAttribute(ReflectionMethod $method): bool
