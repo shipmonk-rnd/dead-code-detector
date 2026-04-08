@@ -48,6 +48,8 @@
         "symfony/http-kernel": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "symfony/routing": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "symfony/scheduler": "^6.3 || ^7.0 || ^8.0",
+        "symfony/ux-live-component": "^2.34",
+        "symfony/ux-twig-component": "^2.34",
         "symfony/validator": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "twig/twig": "^3.0"
     },

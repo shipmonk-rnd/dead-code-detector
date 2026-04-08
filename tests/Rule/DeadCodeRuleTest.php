@@ -984,6 +984,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php'];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
         yield 'provider-symfony-scheduler' => [__DIR__ . '/data/providers/symfony-scheduler.php', self::requiresPackage('symfony/scheduler', '>= 6.3')];
+        yield 'provider-symfony-ux' => [__DIR__ . '/data/providers/symfony-ux.php', self::requiresPackage('symfony/ux-live-component', '>= 2.0')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php'];
         yield 'provider-twig-template' => [__DIR__ . '/data/providers/twig-template.php'];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php'];

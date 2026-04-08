@@ -70,6 +70,7 @@ parameters:
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
 - `!php/const` and `!php/enum` references in `config` yamls
+- Symfony UX: `#[AsTwigComponent]`/`#[AsLiveComponent]` (constructor, `mount()`), `#[LiveProp]`, `#[LiveAction]`, `#[LiveListener]`, lifecycle hooks
 
 #### Doctrine:
 - `#[AsEntityListener]`, `#[AsDoctrineListener]` attribute

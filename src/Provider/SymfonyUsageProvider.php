@@ -51,7 +51,9 @@ use function preg_match_all;
 use function reset;
 use function simplexml_load_string;
 use function sprintf;
+use function str_ends_with;
 use function str_starts_with;
+use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
 {
@@ -331,6 +333,82 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
+        foreach ($nativeReflection->getProperties() as $property) {
+            if ($property->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
+                continue;
+            }
+
+            foreach ($property->getAttributes('Symfony\UX\LiveComponent\Attribute\LiveProp') as $livePropAttribute) {
+                $livePropArguments = $livePropAttribute->getArguments();
+
+                $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
+
+                if (is_string($hydrateWith)) {
+                    $hydrateMethodName = trim($hydrateWith, '()');
+
+                    if ($classReflection->hasNativeMethod($hydrateMethodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($hydrateMethodName), 'Called via #[LiveProp(hydrateWith)] attribute');
+                    }
+                }
+
+                $dehydrateWith = $livePropArguments['dehydrateWith'] ?? null;
+
+                if (is_string($dehydrateWith)) {
+                    $dehydrateMethodName = trim($dehydrateWith, '()');
+
+                    if ($classReflection->hasNativeMethod($dehydrateMethodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($dehydrateMethodName), 'Called via #[LiveProp(dehydrateWith)] attribute');
+                    }
+                }
+
+                $onUpdated = $livePropArguments['onUpdated'] ?? null;
+
+                if (is_string($onUpdated) && $classReflection->hasNativeMethod($onUpdated)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdated), 'Called via #[LiveProp(onUpdated)] attribute');
+                } elseif (is_array($onUpdated)) {
+                    foreach ($onUpdated as $onUpdatedMethod) {
+                        if (is_string($onUpdatedMethod) && $classReflection->hasNativeMethod($onUpdatedMethod)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdatedMethod), 'Called via #[LiveProp(onUpdated)] attribute');
+                        }
+                    }
+                }
+
+                $modifier = $livePropArguments['modifier'] ?? null;
+
+                if (is_string($modifier) && $classReflection->hasNativeMethod($modifier)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($modifier), 'Called via #[LiveProp(modifier)] attribute');
+                }
+
+                $fieldName = $livePropArguments['fieldName'] ?? null;
+
+                if (is_string($fieldName) && str_ends_with($fieldName, '()')) {
+                    $fieldMethodName = trim($fieldName, '()');
+
+                    if ($classReflection->hasNativeMethod($fieldMethodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($fieldMethodName), 'Called via #[LiveProp(fieldName)] attribute');
+                    }
+                }
+            }
+
+            foreach ($property->getAttributes('Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') as $exposeAttribute) {
+                $exposeArguments = $exposeAttribute->getArguments();
+                $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
+
+                if (is_string($getter) && $classReflection->hasNativeMethod($getter)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($getter), 'Called via #[ExposeInTemplate(getter)] attribute');
+                }
+            }
+        }
+
+        foreach ($nativeReflection->getAttributes('Symfony\UX\LiveComponent\Attribute\AsLiveComponent') as $liveComponentAttribute) {
+            $liveComponentArguments = $liveComponentAttribute->getArguments();
+            $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
+
+            if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
+            }
+        }
+
         return $usages;
     }
 
@@ -349,6 +427,15 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             if ($this->hasAttribute($property, 'Symfony\Contracts\Service\Attribute\Required')) {
                 $usages[] = $this->createPropertyUsage($property, 'Autowired with #[Required] (set by DIC)', AccessType::WRITE);
+            }
+
+            if ($this->hasAttribute($property, 'Symfony\UX\LiveComponent\Attribute\LiveProp')) {
+                $usages[] = $this->createPropertyUsage($property, 'Stateful property via #[LiveProp] (hydrated/dehydrated by framework)', AccessType::READ);
+                $usages[] = $this->createPropertyUsage($property, 'Stateful property via #[LiveProp] (hydrated/dehydrated by framework)', AccessType::WRITE);
+            }
+
+            if ($this->hasAttribute($property, 'Symfony\UX\TwigComponent\Attribute\ExposeInTemplate')) {
+                $usages[] = $this->createPropertyUsage($property, 'Exposed in template via #[ExposeInTemplate]', AccessType::READ);
             }
         }
 
@@ -555,6 +642,26 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($this->isProbablySymfonyListener($method)) {
             return 'Probable listener method';
+        }
+
+        if ($this->isConstructorOrMountOnTwigComponent($method)) {
+            return 'Class has #[AsTwigComponent] or #[AsLiveComponent] attribute';
+        }
+
+        if ($this->isTwigComponentHookMethod($method)) {
+            return 'Twig component lifecycle hook';
+        }
+
+        if ($this->isExposedInTemplateMethod($method)) {
+            return 'Exposed in template via #[ExposeInTemplate] attribute';
+        }
+
+        if ($this->isLiveComponentActionMethod($method)) {
+            return 'Live component action/listener method via attribute';
+        }
+
+        if ($this->isLiveComponentLifecycleMethod($method)) {
+            return 'Live component lifecycle hook';
         }
 
         return null;
@@ -806,6 +913,38 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return false;
+    }
+
+    private function isConstructorOrMountOnTwigComponent(ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor() && $method->getName() !== 'mount') {
+            return false;
+        }
+
+        return $this->hasAttribute($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF);
+    }
+
+    private function isTwigComponentHookMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\UX\TwigComponent\Attribute\PreMount')
+            || $this->hasAttribute($method, 'Symfony\UX\TwigComponent\Attribute\PostMount');
+    }
+
+    private function isExposedInTemplateMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\UX\TwigComponent\Attribute\ExposeInTemplate');
+    }
+
+    private function isLiveComponentActionMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction', ReflectionAttribute::IS_INSTANCEOF);
+    }
+
+    private function isLiveComponentLifecycleMethod(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\PostHydrate')
+            || $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\PreDehydrate')
+            || $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\PreReRender');
     }
 
     private function isProbablySymfonyListener(ReflectionMethod $method): bool
