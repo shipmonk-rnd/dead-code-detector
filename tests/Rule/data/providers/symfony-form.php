@@ -14,7 +14,17 @@ use Symfony\Component\Routing\Attribute\Route;
 
 // Case 1: configureOptions with setDefaults
 
-class ProductData {
+class BaseProductData {
+
+    public function getInherited(): string {
+        return '';
+    }
+}
+
+class ProductData extends BaseProductData {
+
+    public function __construct() {
+    }
 
     public string $name;
 
@@ -58,6 +68,10 @@ class ProductData {
 
     public function hasExpired(): bool {
         return false;
+    }
+
+    public static function staticFactory(): self { // error: Unused SymfonyForm\ProductData::staticFactory
+        return new self();
     }
 
     public function dead(): void { // error: Unused SymfonyForm\ProductData::dead
@@ -125,41 +139,7 @@ class PublicPropertyFormType extends AbstractType {
     }
 }
 
-// Case 1d: data class with constructor, static and inherited methods
-
-class BaseData {
-
-    public function getInherited(): string {
-        return '';
-    }
-}
-
-class ConstructorData extends BaseData {
-
-    public function __construct(
-        private readonly string $name,
-    ) {
-    }
-
-    public function getName(): string {
-        return $this->name;
-    }
-
-    public static function staticFactory(): self { // error: Unused SymfonyForm\ConstructorData::staticFactory
-        return new self('');
-    }
-}
-
-class ConstructorFormType extends AbstractType {
-
-    public function configureOptions(OptionsResolver $resolver): void {
-        $resolver->setDefaults([
-            'data_class' => ConstructorData::class,
-        ]);
-    }
-}
-
-// Case 1e: form without data_class
+// Case 1d: form without data_class
 
 class NoDataClassType extends AbstractType {
 
