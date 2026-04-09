@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\PHPStanTestCase;
 use ReflectionClass;
 use function mkdir;
@@ -16,7 +17,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
         $configDir = __DIR__ . '/../../config';
         @mkdir($configDir);
 
-        $provider = new SymfonyUsageProvider(self::getContainer(), true, null, []);
+        $provider = new SymfonyUsageProvider(self::getContainer(), self::getContainer()->getByType(ReflectionProvider::class), true, null, []);
 
         $providerReflection = new ReflectionClass(SymfonyUsageProvider::class);
         $configDirPropertyReflection = $providerReflection->getProperty('configDir');
@@ -38,7 +39,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
     {
         $containerXmlPath = __DIR__ . '/../Rule/data/providers/symfony/services.xml';
 
-        $provider = new SymfonyUsageProvider(self::getContainer(), true, null, [$containerXmlPath]);
+        $provider = new SymfonyUsageProvider(self::getContainer(), self::getContainer()->getByType(ReflectionProvider::class), true, null, [$containerXmlPath]);
 
         $providerReflection = new ReflectionClass(SymfonyUsageProvider::class);
         $dicCallsReflection = $providerReflection->getProperty('dicCalls');
@@ -56,7 +57,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
         $containerXmlPath = __DIR__ . '/../Rule/data/providers/symfony/services.xml';
 
         // Even though self::getContainer() has no symfony config, the explicit paths are used
-        $provider = new SymfonyUsageProvider(self::getContainer(), true, null, [$containerXmlPath]);
+        $provider = new SymfonyUsageProvider(self::getContainer(), self::getContainer()->getByType(ReflectionProvider::class), true, null, [$containerXmlPath]);
 
         $providerReflection = new ReflectionClass(SymfonyUsageProvider::class);
         $dicCallsReflection = $providerReflection->getProperty('dicCalls');
@@ -71,7 +72,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
     {
         // When containerXmlPaths is empty, it falls back to getContainerXmlPath(container)
         // self::getContainer() has no symfony parameter, so no DIC classes are loaded
-        $provider = new SymfonyUsageProvider(self::getContainer(), true, null, []);
+        $provider = new SymfonyUsageProvider(self::getContainer(), self::getContainer()->getByType(ReflectionProvider::class), true, null, []);
 
         $providerReflection = new ReflectionClass(SymfonyUsageProvider::class);
         $dicCallsReflection = $providerReflection->getProperty('dicCalls');
