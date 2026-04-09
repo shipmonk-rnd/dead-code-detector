@@ -14,49 +14,38 @@ use PHPStan\Analyser\ArgumentsNormalizer;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\Node\InClassNode;
-use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\UnionType;
 use ReflectionException;
-use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function count;
 use function explode;
 use function in_array;
-use function str_starts_with;
 
 final class TwigUsageProvider implements MemberUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
 
-    /**
-     * @var list<string>
-     */
-    private readonly array $analysedPaths;
+    private readonly TemplateViewDataTraverser $traverser;
 
     private readonly bool $enabled;
 
-    /**
-     * @param list<string> $analysedPaths
-     */
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        array $analysedPaths,
+        TemplateViewDataTraverser $traverser,
         ?bool $enabled,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->analysedPaths = $analysedPaths;
+        $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isTwigInstalled();
     }
 
@@ -295,19 +284,9 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         $referencedClassNames = $scope->getType($node->expr)->getReferencedClasses();
-
-        $usages = [];
-        $visited = [];
         $rootContext = $this->getRootContext($node, $scope);
 
-        foreach ($referencedClassNames as $className) {
-            $usages = [
-                ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, $rootContext),
-            ];
-        }
-
-        return $usages;
+        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this);
     }
 
     /**
@@ -336,20 +315,10 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         $parametersArg = $args[$parametersArgIndex];
-        $objectTypes = $scope->getType($parametersArg->value)->getReferencedClasses();
-
-        $usages = [];
-        $visited = [];
+        $referencedClassNames = $scope->getType($parametersArg->value)->getReferencedClasses();
         $rootContext = $this->getRootContext($node, $scope);
 
-        foreach ($objectTypes as $className) {
-            $usages = [
-                ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, $rootContext),
-            ];
-        }
-
-        return $usages;
+        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this);
     }
 
     private function getParametersArgIndex(
@@ -452,165 +421,6 @@ final class TwigUsageProvider implements MemberUsageProvider
         }
 
         return false;
-    }
-
-    /**
-     * @param non-empty-string $context
-     * @param array<string, true> $visited
-     * @return list<ClassMemberUsage>
-     */
-    private function traverseClassNameRecursively(
-        string $className,
-        array &$visited,
-        string $context,
-    ): array
-    {
-        if (isset($visited[$className])) {
-            return []; // Cycle detection
-        }
-
-        $visited[$className] = true;
-
-        if (!$this->reflectionProvider->hasClass($className)) {
-            return [];
-        }
-
-        $classReflection = $this->reflectionProvider->getClass($className);
-
-        if ($this->shouldSkipClass($classReflection)) {
-            return [];
-        }
-
-        return $this->getPublicMembersUsages($classReflection, $visited, $context);
-    }
-
-    /**
-     * @param array<string, true> $visited
-     * @param non-empty-string $context
-     * @return list<ClassMemberUsage>
-     */
-    private function getPublicMembersUsages(
-        ClassReflection $classReflection,
-        array &$visited,
-        string $context,
-    ): array
-    {
-        $usages = [];
-        $className = $classReflection->getName();
-        $nativeReflection = $classReflection->getNativeReflection();
-        $shortClassName = $nativeReflection->getShortName();
-
-        // Process public methods
-        foreach ($nativeReflection->getMethods() as $method) {
-            if (!$method->isPublic() || $method->isStatic()) {
-                continue;
-            }
-
-            // Skip magic methods
-            if ($this->shouldSkipMethod($method->getName())) {
-                continue;
-            }
-
-            // Mark method as used
-            $usages[] = $this->createMethodUsage($className, $method->getName(), $context);
-
-            // Traverse method return type
-            $extendedMethodReflection = $classReflection->getNativeMethod($method->getName());
-            $variants = $extendedMethodReflection->getVariants();
-            $newContext = "{$context} -> {$shortClassName}::{$method->getName()}";
-
-            foreach ($variants as $variant) {
-                $returnType = $variant->getReturnType();
-
-                foreach ($returnType->getReferencedClasses() as $returnClassName) {
-                    $usages = [
-                        ...$usages,
-                        ...$this->traverseClassNameRecursively(
-                            $returnClassName,
-                            $visited,
-                            $newContext,
-                        ),
-                    ];
-                }
-            }
-        }
-
-        // Process public properties
-        foreach ($nativeReflection->getProperties() as $property) {
-            if (!$property->isPublic() || $property->isStatic()) {
-                continue;
-            }
-
-            $usages[] = $this->createPropertyUsage($className, $property->getName(), $context);
-
-            $propertyReflection = $classReflection->getNativeProperty($property->getName());
-            $newContext = "{$context} -> {$shortClassName}::\${$property->getName()}";
-
-            foreach ($propertyReflection->getReadableType()->getReferencedClasses() as $propertyClassName) {
-                $usages = [
-                    ...$usages,
-                    ...$this->traverseClassNameRecursively(
-                        $propertyClassName,
-                        $visited,
-                        $newContext,
-                    ),
-                ];
-            }
-        }
-
-        return $usages;
-    }
-
-    /**
-     * @param non-empty-string $context
-     */
-    private function createMethodUsage(
-        string $className,
-        string $methodName,
-        string $context,
-    ): ClassMethodUsage
-    {
-        return new ClassMethodUsage(
-            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
-            new ClassMethodRef($className, $methodName, possibleDescendant: false),
-        );
-    }
-
-    /**
-     * @param non-empty-string $context
-     */
-    private function createPropertyUsage(
-        string $className,
-        string $propertyName,
-        string $context,
-    ): ClassPropertyUsage
-    {
-        return new ClassPropertyUsage(
-            UsageOrigin::createVirtual($this, VirtualUsageData::withNote($context)),
-            new ClassPropertyRef($className, $propertyName, possibleDescendant: false),
-            AccessType::READ,
-        );
-    }
-
-    private function shouldSkipMethod(string $methodName): bool
-    {
-        return str_starts_with($methodName, '__');
-    }
-
-    private function shouldSkipClass(ClassReflection $classReflection): bool
-    {
-        $fileName = $classReflection->getFileName();
-        if ($fileName === null) {
-            return true;
-        }
-
-        foreach ($this->analysedPaths as $path) {
-            if (str_starts_with($fileName, $path)) {
-                return false; // do not traverse non-analyzed classes (e.g. vendor)
-            }
-        }
-
-        return true;
     }
 
 }
