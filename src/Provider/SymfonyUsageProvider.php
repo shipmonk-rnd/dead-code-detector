@@ -886,6 +886,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
+            if (!$method->isPublic()) {
+                continue;
+            }
+
             $name = $method->getName();
 
             if ($this->isPropertyAccessorMethod($name)) {

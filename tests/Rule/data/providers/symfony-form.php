@@ -70,6 +70,10 @@ class ProductData extends BaseProductData {
         return false;
     }
 
+    private function getSecret(): string { // error: Unused SymfonyForm\ProductData::getSecret
+        return '';
+    }
+
     public static function staticFactory(): self { // error: Unused SymfonyForm\ProductData::staticFactory
         return new self();
     }
