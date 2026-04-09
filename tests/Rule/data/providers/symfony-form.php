@@ -124,8 +124,6 @@ class PublicPropertyData {
 
     public string $label;
 
-    public readonly string $code; // error: Property SymfonyForm\PublicPropertyData::$code is never written
-
     public function dead(): void { // error: Unused SymfonyForm\PublicPropertyData::dead
     }
 }
