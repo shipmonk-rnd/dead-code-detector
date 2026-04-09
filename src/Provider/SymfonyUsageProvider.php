@@ -66,6 +66,8 @@ use function trim;
 final class SymfonyUsageProvider implements MemberUsageProvider
 {
 
+    private readonly ReflectionProvider $reflectionProvider;
+
     private readonly bool $enabled;
 
     private readonly ?string $configDir;
@@ -103,12 +105,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     public function __construct(
         Container $container,
-        private readonly ReflectionProvider $reflectionProvider,
+        ReflectionProvider $reflectionProvider,
         ?bool $enabled,
         ?string $configDir,
         array $containerXmlPaths,
     )
     {
+        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
 
