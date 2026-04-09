@@ -909,27 +909,20 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
+            $propertyClassName = $property->getDeclaringClass()->getName();
+            $propertyName = $property->getName();
+
             $usages[] = new ClassPropertyUsage(
                 $origin,
-                new ClassPropertyRef(
-                    $property->getDeclaringClass()->getName(),
-                    $property->getName(),
-                    possibleDescendant: false,
-                ),
+                new ClassPropertyRef($propertyClassName, $propertyName, possibleDescendant: false),
                 AccessType::READ,
             );
 
-            if (!$property->isReadOnly()) {
-                $usages[] = new ClassPropertyUsage(
-                    $origin,
-                    new ClassPropertyRef(
-                        $property->getDeclaringClass()->getName(),
-                        $property->getName(),
-                        possibleDescendant: false,
-                    ),
-                    AccessType::WRITE,
-                );
-            }
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($propertyClassName, $propertyName, possibleDescendant: false),
+                AccessType::WRITE,
+            );
         }
 
         if ($classReflection->hasNativeMethod('__construct')) {
