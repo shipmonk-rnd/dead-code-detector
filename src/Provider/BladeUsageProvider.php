@@ -13,9 +13,21 @@ use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function strpos;
+use function substr;
 
 final class BladeUsageProvider implements MemberUsageProvider
 {
+
+    private const VIEW_FACADE_METHODS = [
+        'make' => true,
+        'first' => true,
+        'composer' => true,
+        'creator' => true,
+    ];
 
     private readonly ReflectionProvider $reflectionProvider;
 
@@ -88,7 +100,7 @@ final class BladeUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * Handles View::make('template', $data) and View::first($views, $data)
+     * Handles View::make/first('template', $data) and View::composer/creator('view', Class::class)
      *
      * @return list<ClassMemberUsage>
      */
@@ -103,7 +115,7 @@ final class BladeUsageProvider implements MemberUsageProvider
 
         $methodName = $node->name->toString();
 
-        if ($methodName !== 'make' && $methodName !== 'first') {
+        if (!isset(self::VIEW_FACADE_METHODS[$methodName])) {
             return [];
         }
 
@@ -122,17 +134,67 @@ final class BladeUsageProvider implements MemberUsageProvider
                 $classReflection->is('Illuminate\Support\Facades\View')
                 || $classReflection->is('Illuminate\Contracts\View\Factory')
             ) {
-                $args = $node->getArgs();
+                if ($methodName === 'make' || $methodName === 'first') {
+                    $args = $node->getArgs();
 
-                if (!isset($args[1])) {
-                    return [];
+                    if (!isset($args[1])) {
+                        return [];
+                    }
+
+                    return $this->traverseDataArg($args[1]->value, $node, $scope);
                 }
 
-                return $this->traverseDataArg($args[1]->value, $node, $scope);
+                // View::composer('view', Class::class) / View::creator('view', Class::class)
+                return $this->getUsagesFromComposerOrCreator($node, $scope, $methodName);
             }
         }
 
         return [];
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromComposerOrCreator(
+        StaticCall $node,
+        Scope $scope,
+        string $methodName,
+    ): array
+    {
+        $args = $node->getArgs();
+
+        if (!isset($args[1])) {
+            return [];
+        }
+
+        $callbackType = $scope->getType($args[1]->value);
+        $usages = [];
+
+        /** @var string $methodName View::composer → compose, View::creator → create */
+        $calledMethod = $methodName === 'composer' ? 'compose' : 'create';
+
+        foreach ($callbackType->getConstantStrings() as $stringType) {
+            $value = $stringType->getValue();
+
+            // Support 'Class@method' syntax
+            $atPos = strpos($value, '@');
+
+            if ($atPos !== false) {
+                $callbackClassName = substr($value, 0, $atPos);
+                $calledMethod = substr($value, $atPos + 1);
+            } else {
+                $callbackClassName = $value;
+            }
+
+            foreach ([$calledMethod, '__construct'] as $method) {
+                $usages[] = new ClassMethodUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    new ClassMethodRef($callbackClassName, $method, possibleDescendant: false),
+                );
+            }
+        }
+
+        return $usages;
     }
 
     /**

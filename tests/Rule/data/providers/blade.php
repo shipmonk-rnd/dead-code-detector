@@ -94,6 +94,47 @@ final class FactoryMakeModel
     public function getName(): string { return 'factory'; }
 }
 
+// --- View Composer/Creator ---
+
+final class BreadcrumbsViewComposer
+{
+
+    public function __construct()
+    {
+    }
+
+    public function compose(\Illuminate\Contracts\View\View $view): void
+    {
+    }
+
+}
+
+final class SidebarViewCreator
+{
+
+    public function __construct()
+    {
+    }
+
+    public function create(\Illuminate\Contracts\View\View $view): void
+    {
+    }
+
+}
+
+final class CustomMethodComposer
+{
+
+    public function __construct()
+    {
+    }
+
+    public function customCompose(\Illuminate\Contracts\View\View $view): void
+    {
+    }
+
+}
+
 // --- Unused model ---
 
 final class BladeUnusedModel
@@ -193,7 +234,7 @@ class BladeController extends Controller
 
 }
 
-// --- Route registrations ---
+// --- Route and View registrations ---
 
 function registerBladeRoutes(): void
 {
@@ -207,4 +248,10 @@ function registerBladeRoutes(): void
     Route::get('/with-key-value', [BladeController::class, 'withKeyValue']);
     Route::get('/with-array', [BladeController::class, 'withArray']);
     Route::get('/factory-make', [BladeController::class, 'factoryMake']);
+
+    ViewFacade::composer('layouts.app', BreadcrumbsViewComposer::class);
+    ViewFacade::creator('partials.sidebar', SidebarViewCreator::class);
+
+    // Class@method syntax
+    ViewFacade::composer('layouts.admin', 'Blade\CustomMethodComposer@customCompose');
 }
