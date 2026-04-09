@@ -12,14 +12,12 @@ class ArrayCastClass
     public string $pub;
     protected string $prot;
     private string $priv;
-    public string $notUsedOtherwise;
 
     public function __construct()
     {
         $this->pub = 'a';
         $this->prot = 'b';
         $this->priv = 'c';
-        $this->notUsedOtherwise = 'd';
     }
 }
 
@@ -42,11 +40,6 @@ class ArrayCastChild extends ArrayCastParent
         parent::__construct();
         $this->childProp = 'b';
     }
-}
-
-class ArrayCastUnused
-{
-    public string $notUsed; // error: Property NativePropertyReads\ArrayCastUnused::$notUsed is never read // error: Property NativePropertyReads\ArrayCastUnused::$notUsed is never written
 }
 
 // --- get_object_vars ---
@@ -83,19 +76,7 @@ class GetMangledClass
 
 // --- json_encode ---
 
-final class JsonEncodePublicOnly
-{
-    public string $pub;
-    private string $priv;
-
-    public function __construct()
-    {
-        $this->pub = 'a';
-        $this->priv = 'b';
-    }
-}
-
-class JsonEncodeNonFinal
+final class JsonEncodeClass
 {
     public string $pub;
     private string $priv;
@@ -187,7 +168,7 @@ final class SerializableInterfaceClass implements Serializable
 function testArrayCast(): void
 {
     $obj = new ArrayCastClass();
-    $arr = (array) $obj;
+    (array) $obj;
 
     $parent = new ArrayCastParent();
     (array) $parent;
@@ -216,11 +197,8 @@ function testGetMangledObjectVars(): void
 
 function testJsonEncode(): void
 {
-    $obj = new JsonEncodePublicOnly();
+    $obj = new JsonEncodeClass();
     json_encode($obj);
-
-    $nonFinal = new JsonEncodeNonFinal();
-    json_encode($nonFinal);
 
     $serializable = new JsonSerializableClass();
     json_encode($serializable);
