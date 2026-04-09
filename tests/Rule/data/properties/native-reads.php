@@ -165,6 +165,100 @@ final class SerializableInterfaceClass implements Serializable
     }
 }
 
+// --- json_encode transitive ---
+
+final class JsonEncodeNested
+{
+    public string $name;
+
+    public function __construct()
+    {
+        $this->name = 'nested';
+    }
+}
+
+final class JsonEncodeOuter
+{
+    public JsonEncodeNested $nested;
+    public \DateTimeInterface $date;
+
+    public function __construct()
+    {
+        $this->nested = new JsonEncodeNested();
+        $this->date = new \DateTimeImmutable();
+    }
+}
+
+final class JsonEncodeNestedJsonSerializable implements JsonSerializable
+{
+    public string $ignoredProp; // error: Property NativePropertyReads\JsonEncodeNestedJsonSerializable::$ignoredProp is never read // error: Property NativePropertyReads\JsonEncodeNestedJsonSerializable::$ignoredProp is never written
+
+    public function jsonSerialize(): mixed
+    {
+        return ['custom' => 'data'];
+    }
+}
+
+final class JsonEncodeOuterWithJsonSerializableNested
+{
+    public JsonEncodeNestedJsonSerializable $nested;
+
+    public function __construct()
+    {
+        $this->nested = new JsonEncodeNestedJsonSerializable();
+    }
+}
+
+// --- serialize transitive ---
+
+final class SerializeNested
+{
+    public string $name;
+    private int $id;
+
+    public function __construct()
+    {
+        $this->name = 'nested';
+        $this->id = 1;
+    }
+}
+
+final class SerializeOuter
+{
+    public SerializeNested $nested;
+
+    public function __construct()
+    {
+        $this->nested = new SerializeNested();
+    }
+}
+
+final class SerializeNestedWithMagic
+{
+    public string $ignoredProp; // error: Property NativePropertyReads\SerializeNestedWithMagic::$ignoredProp is never read // error: Property NativePropertyReads\SerializeNestedWithMagic::$ignoredProp is never written
+
+    /** @return array<string, mixed> */
+    public function __serialize(): array
+    {
+        return [];
+    }
+
+    /** @param array<string, mixed> $data */
+    public function __unserialize(array $data): void
+    {
+    }
+}
+
+final class SerializeOuterWithMagicNested
+{
+    public SerializeNestedWithMagic $nested;
+
+    public function __construct()
+    {
+        $this->nested = new SerializeNestedWithMagic();
+    }
+}
+
 function testArrayCast(): void
 {
     $obj = new ArrayCastClass();
@@ -208,6 +302,12 @@ function testJsonEncode(): void
 
     $serializable = new JsonSerializableClass();
     json_encode($serializable);
+
+    $outer = new JsonEncodeOuter();
+    json_encode($outer);
+
+    $outerWithJsonSerializable = new JsonEncodeOuterWithJsonSerializableNested();
+    json_encode($outerWithJsonSerializable);
 }
 
 function testSerialize(): void
@@ -223,4 +323,10 @@ function testSerialize(): void
 
     $iface = new SerializableInterfaceClass();
     serialize($iface);
+
+    $outer = new SerializeOuter();
+    serialize($outer);
+
+    $outerWithMagic = new SerializeOuterWithMagicNested();
+    serialize($outerWithMagic);
 }

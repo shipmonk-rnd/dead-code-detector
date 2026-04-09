@@ -14,6 +14,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassMethodNode;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
@@ -30,6 +31,7 @@ use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 use function array_map;
 use function current;
 use function in_array;
+use function str_starts_with;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -40,10 +42,13 @@ final class PropertyAccessCollector implements Collector
     use BufferedUsageCollector;
 
     /**
+     * @param list<string> $analysedPaths
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
         UsageCacheStorage $usageCacheStorage,
+        private readonly ReflectionProvider $reflectionProvider,
+        private readonly array $analysedPaths,
         private readonly array $memberUsageExcluders,
     )
     {
@@ -392,7 +397,8 @@ final class PropertyAccessCollector implements Collector
     }
 
     /**
-     * json_encode() reads only public properties of non-JsonSerializable objects
+     * json_encode() reads public properties of non-JsonSerializable objects,
+     * recursively for nested object properties.
      */
     private function registerJsonEncodePropertyReads(
         Type $type,
@@ -400,29 +406,71 @@ final class PropertyAccessCollector implements Collector
         Scope $scope,
     ): void
     {
-        foreach ($this->getObjectClassReflections($type) as $classReflection) {
-            if ($classReflection->implementsInterface(JsonSerializable::class)) {
-                continue;
-            }
+        $visited = [];
 
-            $this->registerUsage(
-                new ClassPropertyUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassPropertyRef(
-                        $classReflection->getName(),
-                        null,
-                        possibleDescendant: !$classReflection->isFinalByKeyword(),
-                    ),
-                    AccessType::READ,
-                ),
-                $node,
-                $scope,
-            );
+        foreach ($this->getObjectClassReflections($type) as $classReflection) {
+            $this->registerJsonEncodePropertyReadsRecursive($classReflection, $node, $scope, $visited);
         }
     }
 
     /**
-     * serialize() reads all properties when no __serialize() or Serializable or __sleep() exists.
+     * @param array<string, true> $visited
+     */
+    private function registerJsonEncodePropertyReadsRecursive(
+        ClassReflection $classReflection,
+        Node $node,
+        Scope $scope,
+        array &$visited,
+    ): void
+    {
+        if ($classReflection->implementsInterface(JsonSerializable::class)) {
+            return;
+        }
+
+        $className = $classReflection->getName();
+
+        if (isset($visited[$className])) {
+            return;
+        }
+
+        $visited[$className] = true;
+
+        $this->registerUsage(
+            new ClassPropertyUsage(
+                UsageOrigin::createRegular($node, $scope),
+                new ClassPropertyRef(
+                    $className,
+                    null,
+                    possibleDescendant: !$classReflection->isFinalByKeyword(),
+                ),
+                AccessType::READ,
+            ),
+            $node,
+            $scope,
+        );
+
+        foreach ($classReflection->getNativeReflection()->getProperties() as $property) {
+            if (!$property->isPublic() || $property->isStatic()) {
+                continue;
+            }
+
+            $propertyReflection = $classReflection->getNativeProperty($property->getName());
+
+            foreach ($propertyReflection->getReadableType()->getReferencedClasses() as $nestedClassName) {
+                $nestedClassReflection = $this->resolveClassForRecursion($nestedClassName);
+
+                if ($nestedClassReflection === null) {
+                    continue;
+                }
+
+                $this->registerJsonEncodePropertyReadsRecursive($nestedClassReflection, $node, $scope, $visited);
+            }
+        }
+    }
+
+    /**
+     * serialize() reads all properties when no __serialize() or Serializable exists,
+     * recursively for nested object properties.
      * When __sleep() exists, we conservatively mark all properties as read since we cannot
      * determine the return value statically.
      */
@@ -432,24 +480,65 @@ final class PropertyAccessCollector implements Collector
         Scope $scope,
     ): void
     {
+        $visited = [];
+
         foreach ($this->getObjectClassReflections($type) as $classReflection) {
-            if ($this->hasCustomSerializationLogic($classReflection)) {
+            $this->registerSerializePropertyReadsRecursive($classReflection, $node, $scope, $visited);
+        }
+    }
+
+    /**
+     * @param array<string, true> $visited
+     */
+    private function registerSerializePropertyReadsRecursive(
+        ClassReflection $classReflection,
+        Node $node,
+        Scope $scope,
+        array &$visited,
+    ): void
+    {
+        if ($this->hasCustomSerializationLogic($classReflection)) {
+            return;
+        }
+
+        $className = $classReflection->getName();
+
+        if (isset($visited[$className])) {
+            return;
+        }
+
+        $visited[$className] = true;
+
+        $this->registerUsage(
+            new ClassPropertyUsage(
+                UsageOrigin::createRegular($node, $scope),
+                new ClassPropertyRef(
+                    $className,
+                    null,
+                    possibleDescendant: !$classReflection->isFinalByKeyword(),
+                ),
+                AccessType::READ,
+            ),
+            $node,
+            $scope,
+        );
+
+        foreach ($classReflection->getNativeReflection()->getProperties() as $property) {
+            if ($property->isStatic()) {
                 continue;
             }
 
-            $this->registerUsage(
-                new ClassPropertyUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassPropertyRef(
-                        $classReflection->getName(),
-                        null,
-                        possibleDescendant: !$classReflection->isFinalByKeyword(),
-                    ),
-                    AccessType::READ,
-                ),
-                $node,
-                $scope,
-            );
+            $propertyReflection = $classReflection->getNativeProperty($property->getName());
+
+            foreach ($propertyReflection->getReadableType()->getReferencedClasses() as $nestedClassName) {
+                $nestedClassReflection = $this->resolveClassForRecursion($nestedClassName);
+
+                if ($nestedClassReflection === null) {
+                    continue;
+                }
+
+                $this->registerSerializePropertyReadsRecursive($nestedClassReflection, $node, $scope, $visited);
+            }
         }
     }
 
@@ -464,6 +553,29 @@ final class PropertyAccessCollector implements Collector
         }
 
         return false;
+    }
+
+    private function resolveClassForRecursion(string $className): ?ClassReflection
+    {
+        if (!$this->reflectionProvider->hasClass($className)) {
+            return null;
+        }
+
+        $classReflection = $this->reflectionProvider->getClass($className);
+
+        $fileName = $classReflection->getFileName();
+
+        if ($fileName === null) {
+            return null;
+        }
+
+        foreach ($this->analysedPaths as $path) {
+            if (str_starts_with($fileName, $path)) {
+                return $classReflection;
+            }
+        }
+
+        return null;
     }
 
     /**

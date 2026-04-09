@@ -168,7 +168,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
             new ConstantFetchCollector($usageCacheStorage, $reflectionProvider, $this->getMemberUsageExcluders()),
-            new PropertyAccessCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
+            new PropertyAccessCollector($usageCacheStorage, $reflectionProvider, [__DIR__ . '/data/'], $this->getMemberUsageExcluders()),
         ];
     }
 
