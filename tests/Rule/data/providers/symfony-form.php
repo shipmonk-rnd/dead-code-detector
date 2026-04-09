@@ -129,7 +129,7 @@ class PublicPropertyFormType extends AbstractType {
 
 class BaseData {
 
-    public function getInherited(): string { // error: Unused SymfonyForm\BaseData::getInherited
+    public function getInherited(): string {
         return '';
     }
 }

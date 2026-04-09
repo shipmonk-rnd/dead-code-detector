@@ -883,17 +883,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            if ($method->getDeclaringClass()->getName() !== $dataClassName) {
-                continue;
-            }
-
             $name = $method->getName();
 
             if ($this->isPropertyAccessorMethod($name)) {
                 $usages[] = new ClassMethodUsage(
                     $origin,
                     new ClassMethodRef(
-                        $dataClassName,
+                        $method->getDeclaringClass()->getName(),
                         $name,
                         possibleDescendant: false,
                     ),
@@ -906,10 +902,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            if ($property->getDeclaringClass()->getName() !== $dataClassName) {
-                continue;
-            }
-
             if (!$property->isPublic()) {
                 continue;
             }
@@ -917,7 +909,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $usages[] = new ClassPropertyUsage(
                 $origin,
                 new ClassPropertyRef(
-                    $dataClassName,
+                    $property->getDeclaringClass()->getName(),
                     $property->getName(),
                     possibleDescendant: false,
                 ),
@@ -928,7 +920,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 $usages[] = new ClassPropertyUsage(
                     $origin,
                     new ClassPropertyRef(
-                        $dataClassName,
+                        $property->getDeclaringClass()->getName(),
                         $property->getName(),
                         possibleDescendant: false,
                     ),
@@ -938,10 +930,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         if ($classReflection->hasNativeMethod('__construct')) {
+            $constructorDeclaringClass = $classReflection->getNativeMethod('__construct')->getDeclaringClass()->getName();
+
             $usages[] = new ClassMethodUsage(
                 $origin,
                 new ClassMethodRef(
-                    $dataClassName,
+                    $constructorDeclaringClass,
                     '__construct',
                     possibleDescendant: false,
                 ),
