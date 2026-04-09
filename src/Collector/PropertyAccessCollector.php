@@ -323,6 +323,18 @@ final class PropertyAccessCollector implements Collector
         foreach ($functionNames as $functionName) {
             if (in_array($functionName, ['get_object_vars', 'get_mangled_object_vars'], true)) {
                 $this->registerAllPropertyReadsForType($firstArgType, $node, $scope);
+
+                if ($this->getObjectClassReflections($firstArgType) === []) {
+                    $this->registerUsage(
+                        new ClassPropertyUsage(
+                            UsageOrigin::createRegular($node, $scope),
+                            new ClassPropertyRef(null, null, possibleDescendant: true),
+                            AccessType::READ,
+                        ),
+                        $node,
+                        $scope,
+                    );
+                }
             }
 
             if ($functionName === 'json_encode') {
@@ -371,18 +383,6 @@ final class PropertyAccessCollector implements Collector
                         null,
                         possibleDescendant: !$classReflection->isFinalByKeyword(),
                     ),
-                    AccessType::READ,
-                ),
-                $node,
-                $scope,
-            );
-        }
-
-        if ($this->getObjectClassReflections($type) === []) {
-            $this->registerUsage(
-                new ClassPropertyUsage(
-                    UsageOrigin::createRegular($node, $scope),
-                    new ClassPropertyRef(null, null, possibleDescendant: true),
                     AccessType::READ,
                 ),
                 $node,

@@ -183,6 +183,12 @@ function testArrayCastUnknownType($unknown): void
     (array) $unknown;
 }
 
+/** @param object $unknown */
+function testGetObjectVarsUnknownType($unknown): void
+{
+    get_object_vars($unknown);
+}
+
 function testGetObjectVars(): void
 {
     $obj = new GetObjectVarsClass();
