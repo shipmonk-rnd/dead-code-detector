@@ -813,7 +813,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         if ($methodName === 'createFormBuilder' && $this->isAbstractControllerType($callerType)) {
             $dataArgIndex = 0;
             $optionsArgIndex = 1;
-        } elseif (in_array($methodName, ['createForm'], true) && $this->isAbstractControllerType($callerType)) {
+        } elseif ($methodName === 'createForm' && $this->isAbstractControllerType($callerType)) {
             $dataArgIndex = 1;
             $optionsArgIndex = 2;
         } elseif (in_array($methodName, ['create', 'createBuilder'], true) && $this->isFormFactoryType($callerType)) {
