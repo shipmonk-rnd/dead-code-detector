@@ -21,6 +21,7 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\TrinaryLogic;
+use PHPStan\Type\Constant\ConstantStringType;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
@@ -68,6 +69,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      * @var array<string, array<string, true>>
      */
     private array $dicCalls = [];
+
+    /**
+     * tag => list of class names
+     *
+     * @var array<string, list<string>>
+     */
+    private array $dicTaggedClasses = [];
 
     /**
      * class => [constant => config file]
@@ -480,12 +488,16 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     }
 
                     if ($arguments['services']->isArray()->yes()) {
-                        $classNames = $arguments['services']->getIterableValueType()->getConstantStrings();
+                        $resolvedClassNames = [];
+
+                        foreach ($arguments['services']->getIterableValueType()->getConstantStrings() as $className) {
+                            $resolvedClassNames[] = $className->getValue();
+                        }
                     } else {
-                        $classNames = $arguments['services']->getConstantStrings();
+                        $resolvedClassNames = $this->resolveTaggedClassNames($arguments['services']->getConstantStrings());
                     }
 
-                    if ($classNames === []) {
+                    if ($resolvedClassNames === []) {
                         continue;
                     }
 
@@ -500,11 +512,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             continue;
                         }
 
-                        foreach ($classNames as $className) {
+                        foreach ($resolvedClassNames as $className) {
                             $usages[] = new ClassMethodUsage(
                                 $usageOrigin,
                                 new ClassMethodRef(
-                                    $className->getValue(),
+                                    $className,
                                     $method[0]->getValue(),
                                     possibleDescendant: true,
                                 ),
@@ -522,7 +534,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                         continue;
                     }
 
-                    $classNames = $arguments['tag']->getConstantStrings();
+                    $tagValues = $arguments['tag']->getConstantStrings();
+
+                    if ($tagValues === []) {
+                        continue;
+                    }
+
+                    $classNames = $this->resolveTaggedClassNames($tagValues);
 
                     if ($classNames === []) {
                         continue;
@@ -543,7 +561,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             $usages[] = new ClassMethodUsage(
                                 $usageOrigin,
                                 new ClassMethodRef(
-                                    $className->getValue(),
+                                    $className,
                                     $method[0]->getValue(),
                                     possibleDescendant: true,
                                 ),
@@ -711,6 +729,16 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
                     $this->dicCalls[$class][$method] = true;
                 }
+
+                foreach ($serviceDefinition->tag ?? [] as $tagDefinition) {
+                    /** @var SimpleXMLElement $tagAttributes */
+                    $tagAttributes = $tagDefinition->attributes();
+                    $tagName = $tagAttributes->name !== null ? (string) $tagAttributes->name : null;
+
+                    if ($tagName !== null) {
+                        $this->dicTaggedClasses[$tagName][] = $class;
+                    }
+                }
             }
 
             foreach ($serviceDefinition->factory ?? [] as $factoryDefinition) {
@@ -753,6 +781,29 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return $serviceMap;
+    }
+
+    /**
+     * @param list<ConstantStringType> $tagValues
+     * @return list<string>
+     */
+    private function resolveTaggedClassNames(array $tagValues): array
+    {
+        $classNames = [];
+
+        foreach ($tagValues as $tagValue) {
+            $value = $tagValue->getValue();
+
+            if (isset($this->dicTaggedClasses[$value])) {
+                foreach ($this->dicTaggedClasses[$value] as $class) {
+                    $classNames[] = $class;
+                }
+            } else {
+                $classNames[] = $value;
+            }
+        }
+
+        return $classNames;
     }
 
     private function isBundleConstructor(ReflectionMethod $method): bool
