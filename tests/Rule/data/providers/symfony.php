@@ -202,3 +202,52 @@ class RequiredPropertyService {
     public object $unused; // error: Property Symfony\RequiredPropertyService::$unused is never read // error: Property Symfony\RequiredPropertyService::$unused is never written
 }
 
+class CreateUserDto {
+    public function __construct(
+        public readonly string $name,
+        public readonly string $email,
+    ) {}
+}
+
+class MapPayloadController {
+    #[Route('/api/users', methods: ['POST'])]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] CreateUserDto $dto,
+    ): void {
+        echo $dto->name;
+        echo $dto->email;
+    }
+}
+
+class QueryStringDto {
+    public function __construct(
+        public readonly int $page,
+        public readonly int $limit, // error: Property Symfony\QueryStringDto::$limit is never read
+    ) {}
+}
+
+class QueryStringController {
+    #[Route('/api/items')]
+    public function list(
+        #[\Symfony\Component\HttpKernel\Attribute\MapQueryString] QueryStringDto $query,
+    ): void {
+        echo $query->page;
+    }
+}
+
+class SetterBasedDto {
+    private string $name; // error: Property Symfony\SetterBasedDto::$name is never read
+
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+}
+
+class SetterController {
+    #[Route('/api/setter')]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] SetterBasedDto $dto,
+    ): void {}
+}
+

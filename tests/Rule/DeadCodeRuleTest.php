@@ -1210,6 +1210,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
+                self::createReflectionProvider(),
                 $this->providersEnabled,
                 __DIR__ . '/data/providers/symfony/',
                 [],
