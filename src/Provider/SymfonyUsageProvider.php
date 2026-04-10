@@ -56,12 +56,14 @@ use function in_array;
 use function is_array;
 use function is_dir;
 use function is_string;
+use function lcfirst;
 use function preg_match_all;
 use function simplexml_load_string;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
+use function substr;
 use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
@@ -171,6 +173,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
                 ...$this->getMapInputUsages($node),
+                ...$this->getMapPayloadUsages($node),
             ];
         }
 
@@ -782,6 +785,92 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
                     new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
                 );
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function getMapPayloadUsages(InClassMethodNode $node): array
+    {
+        $usages = [];
+
+        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+            $isMapPayload = false;
+
+            foreach ($parameter->getAttributes() as $attributeReflection) {
+                if (
+                    $attributeReflection->getName() === 'Symfony\Component\HttpKernel\Attribute\MapRequestPayload'
+                    || $attributeReflection->getName() === 'Symfony\Component\HttpKernel\Attribute\MapQueryString'
+                ) {
+                    $isMapPayload = true;
+                    break;
+                }
+            }
+
+            if (!$isMapPayload) {
+                continue;
+            }
+
+            $parameterType = $parameter->getType();
+
+            if (!$parameterType->isObject()->yes()) {
+                continue;
+            }
+
+            foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
+                if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+                    continue;
+                }
+
+                $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
+                $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('DTO used via #[MapRequestPayload] or #[MapQueryString]'));
+
+                // Mark constructor as used (serializer instantiates the DTO)
+                if ($dtoReflection->hasConstructor()) {
+                    $usages[] = new ClassMethodUsage(
+                        $origin,
+                        new ClassMethodRef($dtoClassName, '__construct', possibleDescendant: false),
+                    );
+                }
+
+                // Mark all declared properties as written (serializer populates them)
+                foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
+                    if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
+                        continue;
+                    }
+
+                    $usages[] = new ClassPropertyUsage(
+                        $origin,
+                        new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
+                        AccessType::WRITE,
+                    );
+                }
+
+                // Mark setter methods as used (ObjectNormalizer calls them via PropertyAccessor)
+                foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
+                    if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
+                        continue;
+                    }
+
+                    $dtoMethodName = $dtoMethod->getName();
+
+                    if (!str_starts_with($dtoMethodName, 'set') || strlen($dtoMethodName) <= 3) {
+                        continue;
+                    }
+
+                    $propertyName = lcfirst(substr($dtoMethodName, 3));
+
+                    if ($dtoReflection->getNativeReflection()->hasProperty($propertyName)) {
+                        $usages[] = new ClassMethodUsage(
+                            $origin,
+                            new ClassMethodRef($dtoClassName, $dtoMethodName, possibleDescendant: false),
+                        );
+                    }
+                }
             }
         }
 
