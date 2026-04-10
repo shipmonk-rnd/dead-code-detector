@@ -24,6 +24,9 @@ class MyEntity
     #[\Doctrine\ORM\Mapping\PreUpdate]
     public function onUpdate(PreUpdateEventArgs $args): void {}
 
+    #[\Doctrine\ORM\Mapping\PostRemove]
+    public function onRemove(): void {}
+
 }
 
 #[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postUpdate', method: 'afterUpdate')]

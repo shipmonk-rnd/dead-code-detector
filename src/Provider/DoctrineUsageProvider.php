@@ -210,6 +210,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
     {
         return $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostLoad')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostPersist')
+            || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostRemove')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PostUpdate')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreFlush')
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PrePersist')
