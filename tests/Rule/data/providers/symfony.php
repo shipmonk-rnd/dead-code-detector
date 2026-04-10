@@ -235,3 +235,33 @@ class RequiredPropertyService {
     public object $unused; // error: Property Symfony\RequiredPropertyService::$unused is never read // error: Property Symfony\RequiredPropertyService::$unused is never written
 }
 
+class ImportInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file;
+
+    #[\Symfony\Component\Console\Attribute\Option]
+    public bool $force = false;
+
+    public string $notAnInput; // error: Property Symfony\ImportInput::$notAnInput is never read // error: Property Symfony\ImportInput::$notAnInput is never written
+
+    #[Interact]
+    public function askForConfirmation(): void {}
+}
+
+#[AsCommand(name: 'app:import')]
+class ImportCommand extends Command {
+    public function __invoke(
+        #[\Symfony\Component\Console\Attribute\MapInput] ImportInput $input,
+    ): int {
+        echo $input->file;
+        return 0;
+    }
+}
+
+class OrphanedInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $name; // error: Property Symfony\OrphanedInput::$name is never read // error: Property Symfony\OrphanedInput::$name is never written
+
+    #[Interact]
+    public function askSomething(): void {} // error: Unused Symfony\OrphanedInput::askSomething
+}

@@ -162,6 +162,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
+                ...$this->getMapInputUsages($node),
             ];
         }
 
@@ -642,6 +643,94 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    private function getMapInputUsages(InClassMethodNode $node): array
+    {
+        $usages = [];
+
+        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+            $isMapInput = false;
+
+            foreach ($parameter->getAttributes() as $attributeReflection) {
+                if ($attributeReflection->getName() === 'Symfony\Component\Console\Attribute\MapInput') {
+                    $isMapInput = true;
+                    break;
+                }
+            }
+
+            if (!$isMapInput) {
+                continue;
+            }
+
+            $parameterType = $parameter->getType();
+
+            if (!$parameterType->isObject()->yes()) {
+                continue;
+            }
+
+            foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
+                if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+                    continue;
+                }
+
+                $this->collectMapInputDtoUsages($dtoClassName, $usages);
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @param list<ClassMemberUsage> $usages
+     */
+    private function collectMapInputDtoUsages(
+        string $dtoClassName,
+        array &$usages,
+    ): void
+    {
+        $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
+        $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Console input DTO via #[MapInput]'));
+
+        foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
+            if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
+                continue;
+            }
+
+            $isInputProperty = $property->getAttributes('Symfony\Component\Console\Attribute\Argument') !== []
+                || $property->getAttributes('Symfony\Component\Console\Attribute\Option') !== [];
+
+            if (!$isInputProperty) {
+                continue;
+            }
+
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
+                AccessType::WRITE,
+            );
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
+                AccessType::READ,
+            );
+        }
+
+        foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
+            if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
+                continue;
+            }
+
+            if ($dtoMethod->getAttributes('Symfony\Component\Console\Attribute\Interact') !== []) {
+                $usages[] = new ClassMethodUsage(
+                    $origin,
+                    new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
+                );
+            }
+        }
     }
 
     private function shouldMarkAsUsed(ReflectionMethod $method): ?string
