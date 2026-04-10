@@ -184,6 +184,7 @@ services:
         tags:
             - phpstan.collector
         arguments:
+            analysedPaths: %analysedPaths%
             memberUsageExcluders: tagged(shipmonk.deadCode.memberUsageExcluder)
 
     -

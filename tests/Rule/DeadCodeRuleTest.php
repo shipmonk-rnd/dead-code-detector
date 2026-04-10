@@ -168,7 +168,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
             new ConstantFetchCollector($usageCacheStorage, $reflectionProvider, $this->getMemberUsageExcluders()),
-            new PropertyAccessCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
+            new PropertyAccessCollector($usageCacheStorage, $reflectionProvider, [__DIR__ . '/data/'], $this->getMemberUsageExcluders()),
         ];
     }
 
@@ -1067,6 +1067,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'property-write-multi' => [__DIR__ . '/data/properties/write-multi.php'];
         yield 'property-write-coalesce' => [__DIR__ . '/data/properties/write-coalesce.php'];
         yield 'property-write-inc-dec' => [__DIR__ . '/data/properties/write-inc-dec.php'];
+        yield 'property-native-reads' => [__DIR__ . '/data/properties/native-reads.php'];
         yield 'property-mixed' => [__DIR__ . '/data/properties/mixed/tracked.php'];
 
         // mixed member
