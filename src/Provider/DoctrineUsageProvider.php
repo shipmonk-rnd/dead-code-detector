@@ -220,7 +220,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
     /**
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
-     * - see Doctrine\ORM\Events::*
+     * - see Doctrine\ORM\Events::* and Doctrine\ORM\Tools\ToolEvents::*
      */
     private function isProbablyDoctrineListener(string $methodName): bool
     {
@@ -236,7 +236,9 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             || $methodName === 'preFlush'
             || $methodName === 'onFlush'
             || $methodName === 'postFlush'
-            || $methodName === 'onClear';
+            || $methodName === 'onClear'
+            || $methodName === 'postGenerateSchemaTable'
+            || $methodName === 'postGenerateSchema';
     }
 
     private function hasAttribute(

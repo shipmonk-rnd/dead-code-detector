@@ -56,6 +56,10 @@ class OldListenerHeuristics {
 
     public function postPersist(): void {}
 
+    public function postGenerateSchemaTable(): void {}
+
+    public function postGenerateSchema(): void {}
+
     public function deadCode(): void // error: Unused Doctrine\OldListenerHeuristics::deadCode
     {
 
