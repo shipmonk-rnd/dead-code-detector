@@ -18,5 +18,11 @@
         <service id="Symfony\DicClass4" class="Symfony\DicClass4" public="true" autowire="true" autoconfigure="true">
             <argument type="service" id=".4_TokenConfig~abc123"/>
         </service>
+        <service id="Symfony\TaggedServiceA" class="Symfony\TaggedServiceA" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.tagged_handler"/>
+        </service>
+        <service id="Symfony\TaggedServiceB" class="Symfony\TaggedServiceB" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.tagged_handler"/>
+        </service>
     </services>
 </container>

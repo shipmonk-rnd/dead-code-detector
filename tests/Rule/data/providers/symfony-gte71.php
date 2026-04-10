@@ -195,6 +195,36 @@ class MessageHandlerWithMethodLevelNamedRedirect
     }
 }
 
+class TaggedServiceA {
+    public function getIndex(): string { return 'a'; }
+    public function getPriority(): int { return 1; }
+    public function dead(): void {} // error: Unused Symfony\TaggedServiceA::dead
+}
+
+class TaggedServiceB {
+    public function getIndex(): string { return 'b'; }
+    public function getPriority(): int { return 2; }
+    public function dead(): void {} // error: Unused Symfony\TaggedServiceB::dead
+}
+
+class TaggedIteratorController {
+
+    #[Route('/tagged-string', name: 'tagged-string')]
+    public function iteratorAction(
+        #[AutowireIterator('app.tagged_handler', defaultIndexMethod: 'getIndex', defaultPriorityMethod: 'getPriority')]
+        $iterator,
+    ): void {
+    }
+
+    #[Route('/locator-string', name: 'locator-string')]
+    public function locatorAction(
+        #[AutowireLocator('app.tagged_handler', defaultIndexMethod: 'getIndex', defaultPriorityMethod: 'getPriority')]
+        $locator,
+    ): void {
+    }
+
+}
+
 class AutowireCallableConsumer {
 
     #[Route('/callable', name: 'callable')]
