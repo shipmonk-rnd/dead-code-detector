@@ -14,10 +14,12 @@ use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function array_merge;
 use function is_string;
+use function ltrim;
 use function str_contains;
 use function str_starts_with;
+use function strpos;
+use function substr;
 
 final class PhpUnitUsageProvider implements MemberUsageProvider
 {
@@ -61,13 +63,23 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
             $methodName = $method->getName();
 
             $externalDataProviderMethods = $this->getExternalDataProvidersFromAttributes($method);
-            $localDataProviderMethods = array_merge(
-                $this->getDataProvidersFromAnnotations($method->getDocComment()),
-                $this->getDataProvidersFromAttributes($method),
-            );
+            $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
+            $localDataProviderMethods = $this->getDataProvidersFromAttributes($method);
 
             foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
                 $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
+            }
+
+            foreach ($annotationDataProviders as $dataProvider) {
+                $separatorPos = strpos($dataProvider, '::');
+
+                if ($separatorPos !== false) {
+                    $providerClassName = ltrim(substr($dataProvider, 0, $separatorPos), '\\');
+                    $providerMethodName = substr($dataProvider, $separatorPos + 2);
+                    $usages[] = $this->createUsage($providerClassName, $providerMethodName, "External data provider method (annotation), used by $className::$methodName");
+                } else {
+                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                }
             }
 
             foreach ($localDataProviderMethods as $dataProvider) {

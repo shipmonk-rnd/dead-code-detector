@@ -25,6 +25,11 @@ class ExternalProvider {
     {
         return [];
     }
+
+    public static function provideViaAnnotation(): array
+    {
+        return [];
+    }
 }
 
 class SomeTest extends TestCase
@@ -57,6 +62,13 @@ class SomeTest extends TestCase
      * @dataProvider provideFromPhpDoc
      */
     public function testBar(string $arg): void
+    {
+    }
+
+    /**
+     * @dataProvider \PhpUnit\ExternalProvider::provideViaAnnotation
+     */
+    public function testExternalViaAnnotation(string $arg): void
     {
     }
 
