@@ -107,3 +107,18 @@ class CustomActionComponent
 
     public function deadMethod(): void {} // error: Unused SymfonyUx\CustomActionComponent::deadMethod
 }
+
+#[AsTwigComponent(template: new \Symfony\UX\TwigComponent\Attribute\FromMethod('getTemplatePath'))]
+class DynamicTemplateComponent
+{
+    public function __construct() {}
+
+    public function mount(): void {}
+
+    public function getTemplatePath(): string
+    {
+        return 'components/dynamic.html.twig';
+    }
+
+    public function deadMethod(): void {} // error: Unused SymfonyUx\DynamicTemplateComponent::deadMethod
+}

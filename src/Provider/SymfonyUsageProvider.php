@@ -36,6 +36,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use SimpleXMLElement;
 use SplFileInfo;
+use Symfony\UX\TwigComponent\Attribute\FromMethod;
 use UnexpectedValueException;
 use function array_filter;
 use function array_key_first;
@@ -414,6 +415,21 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
+            }
+        }
+
+        foreach (['Symfony\UX\TwigComponent\Attribute\AsTwigComponent', 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'] as $twigComponentAttributeClass) {
+            foreach ($nativeReflection->getAttributes($twigComponentAttributeClass) as $twigComponentAttribute) {
+                $twigComponentArguments = $twigComponentAttribute->getArguments();
+                $template = $twigComponentArguments['template'] ?? $twigComponentArguments[1] ?? null;
+
+                if ($template instanceof FromMethod) {
+                    $templateMethodName = $template->method;
+
+                    if ($classReflection->hasNativeMethod($templateMethodName)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
+                    }
+                }
             }
         }
 
