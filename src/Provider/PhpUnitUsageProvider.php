@@ -14,8 +14,10 @@ use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function array_merge;
+use function count;
+use function explode;
 use function is_string;
+use function ltrim;
 use function str_contains;
 use function str_starts_with;
 
@@ -61,13 +63,22 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
             $methodName = $method->getName();
 
             $externalDataProviderMethods = $this->getExternalDataProvidersFromAttributes($method);
-            $localDataProviderMethods = array_merge(
-                $this->getDataProvidersFromAnnotations($method->getDocComment()),
-                $this->getDataProvidersFromAttributes($method),
-            );
+            $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
+            $localDataProviderMethods = $this->getDataProvidersFromAttributes($method);
 
             foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
                 $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
+            }
+
+            foreach ($annotationDataProviders as $dataProvider) {
+                $parts = explode('::', $dataProvider, 2);
+
+                if (count($parts) === 2) {
+                    $providerClassName = ltrim($parts[0], '\\');
+                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName");
+                } else {
+                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                }
             }
 
             foreach ($localDataProviderMethods as $dataProvider) {
