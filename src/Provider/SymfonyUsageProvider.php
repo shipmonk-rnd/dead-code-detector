@@ -7,6 +7,9 @@ use Composer\InstalledVersions;
 use FilesystemIterator;
 use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
@@ -20,8 +23,10 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
@@ -55,10 +60,13 @@ use function simplexml_load_string;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
+use function strlen;
 use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
 {
+
+    private readonly ReflectionProvider $reflectionProvider;
 
     private readonly bool $enabled;
 
@@ -97,11 +105,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     public function __construct(
         Container $container,
+        ReflectionProvider $reflectionProvider,
         ?bool $enabled,
         ?string $configDir,
         array $containerXmlPaths,
     )
     {
+        $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
 
@@ -149,6 +159,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
+            ];
+        }
+
+        if ($node instanceof MethodCall) {
+            $usages = [
+                ...$usages,
+                ...$this->getFormDataClassUsages($node, $scope),
             ];
         }
 
@@ -699,6 +716,283 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return null;
+    }
+
+    /**
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function getFormDataClassUsages(
+        MethodCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        $methodName = $node->name->toString();
+        $args = $node->getArgs();
+
+        $dataClassName = $this->extractFormDataClassFromOptionsResolver($methodName, $node, $args, $scope)
+            ?? $this->extractFormDataClassFromFormFactory($methodName, $node, $args, $scope);
+
+        if ($dataClassName === null || !$this->reflectionProvider->hasClass($dataClassName)) {
+            return [];
+        }
+
+        return $this->emitPropertyAccessorUsages($node, $scope, $dataClassName);
+    }
+
+    /**
+     * Detects data_class from OptionsResolver::setDefaults() and OptionsResolver::setDefault()
+     *
+     * @param array<int|string, Arg> $args
+     */
+    private function extractFormDataClassFromOptionsResolver(
+        string $methodName,
+        MethodCall $node,
+        array $args,
+        Scope $scope,
+    ): ?string
+    {
+        if ($methodName === 'setDefaults' && isset($args[0])) {
+            if (!$this->isOptionsResolverType($scope->getType($node->var))) {
+                return null;
+            }
+
+            return $this->extractDataClassFromArray($scope->getType($args[0]->value));
+        }
+
+        if ($methodName === 'setDefault' && isset($args[0], $args[1])) {
+            if (!$this->isOptionsResolverType($scope->getType($node->var))) {
+                return null;
+            }
+
+            foreach ($scope->getType($args[0]->value)->getConstantStrings() as $constantString) {
+                if ($constantString->getValue() === 'data_class') {
+                    foreach ($scope->getType($args[1]->value)->getConstantStrings() as $valueString) {
+                        return $valueString->getValue();
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Detects data_class from FormFactory/Controller methods:
+     * - createForm($type, $data, ['data_class' => X]) or createForm($type, $data) where $data is typed
+     * - createNamed($name, $type, $data, ['data_class' => X]) or with typed $data
+     * - create($type, $data, ['data_class' => X]) or with typed $data
+     * - createFormBuilder($data, ['data_class' => X]) or with typed $data
+     * - createBuilder($type, $data, ['data_class' => X]) or with typed $data
+     * - createNamedBuilder($name, $type, $data, ['data_class' => X]) or with typed $data
+     *
+     * @param array<int|string, Arg> $args
+     */
+    private function extractFormDataClassFromFormFactory(
+        string $methodName,
+        MethodCall $node,
+        array $args,
+        Scope $scope,
+    ): ?string
+    {
+        $callerType = $scope->getType($node->var);
+
+        // AbstractController::createForm($type, $data, $options) — data at [1], options at [2]
+        // AbstractController::createFormBuilder($data, $options) — data at [0], options at [1]
+        // FormFactoryInterface::create($type, $data, $options) — data at [1], options at [2]
+        // FormFactoryInterface::createNamed($name, $type, $data, $options) — data at [2], options at [3]
+        // FormFactoryInterface::createBuilder($type, $data, $options) — data at [1], options at [2]
+        // FormFactoryInterface::createNamedBuilder($name, $type, $data, $options) — data at [2], options at [3]
+
+        $dataArgIndex = null;
+        $optionsArgIndex = null;
+
+        if ($methodName === 'createFormBuilder' && $this->isAbstractControllerType($callerType)) {
+            $dataArgIndex = 0;
+            $optionsArgIndex = 1;
+        } elseif ($methodName === 'createForm' && $this->isAbstractControllerType($callerType)) {
+            $dataArgIndex = 1;
+            $optionsArgIndex = 2;
+        } elseif (in_array($methodName, ['create', 'createBuilder'], true) && $this->isFormFactoryType($callerType)) {
+            $dataArgIndex = 1;
+            $optionsArgIndex = 2;
+        } elseif (in_array($methodName, ['createNamed', 'createNamedBuilder'], true) && $this->isFormFactoryType($callerType)) {
+            $dataArgIndex = 2;
+            $optionsArgIndex = 3;
+        } else {
+            return null;
+        }
+
+        // First, check explicit data_class in options array
+        if (isset($args[$optionsArgIndex])) {
+            $dataClassName = $this->extractDataClassFromArray($scope->getType($args[$optionsArgIndex]->value));
+
+            if ($dataClassName !== null) {
+                return $dataClassName;
+            }
+        }
+
+        // Then, infer from the data object type
+        if (isset($args[$dataArgIndex])) {
+            $dataType = $scope->getType($args[$dataArgIndex]->value);
+            $classNames = $dataType->getObjectClassNames();
+
+            if (count($classNames) === 1) {
+                return $classNames[0];
+            }
+        }
+
+        return null;
+    }
+
+    private function extractDataClassFromArray(Type $arrayType): ?string
+    {
+        foreach ($arrayType->getConstantArrays() as $constantArray) {
+            $keyTypes = $constantArray->getKeyTypes();
+            $valueTypes = $constantArray->getValueTypes();
+
+            foreach ($keyTypes as $index => $keyType) {
+                foreach ($keyType->getConstantStrings() as $keyString) {
+                    if ($keyString->getValue() === 'data_class') {
+                        foreach ($valueTypes[$index]->getConstantStrings() as $valueString) { // @phpstan-ignore offsetAccess.notFound
+                            return $valueString->getValue();
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function emitPropertyAccessorUsages(
+        Node $node,
+        Scope $scope,
+        string $dataClassName,
+    ): array
+    {
+        $classReflection = $this->reflectionProvider->getClass($dataClassName);
+        $usages = [];
+        $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Accessed by Symfony PropertyAccessor via form data_class'));
+
+        foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if ($method->isStatic()) {
+                continue;
+            }
+
+            if (!$method->isPublic()) {
+                continue;
+            }
+
+            $name = $method->getName();
+
+            if ($this->isPropertyAccessorMethod($name)) {
+                $usages[] = new ClassMethodUsage(
+                    $origin,
+                    new ClassMethodRef(
+                        $method->getDeclaringClass()->getName(),
+                        $name,
+                        possibleDescendant: false,
+                    ),
+                );
+            }
+        }
+
+        foreach ($classReflection->getNativeReflection()->getProperties() as $property) {
+            if ($property->isStatic()) {
+                continue;
+            }
+
+            if (!$property->isPublic()) {
+                continue;
+            }
+
+            $propertyClassName = $property->getDeclaringClass()->getName();
+            $propertyName = $property->getName();
+
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($propertyClassName, $propertyName, possibleDescendant: false),
+                AccessType::READ,
+            );
+
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($propertyClassName, $propertyName, possibleDescendant: false),
+                AccessType::WRITE,
+            );
+        }
+
+        if ($classReflection->hasNativeMethod('__construct')) {
+            $constructorDeclaringClass = $classReflection->getNativeMethod('__construct')->getDeclaringClass()->getName();
+
+            $usages[] = new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef(
+                    $constructorDeclaringClass,
+                    '__construct',
+                    possibleDescendant: false,
+                ),
+            );
+        }
+
+        return $usages;
+    }
+
+    private function isOptionsResolverType(Type $type): bool
+    {
+        foreach ($type->getObjectClassNames() as $className) {
+            if ($className === 'Symfony\Component\OptionsResolver\OptionsResolver') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isAbstractControllerType(Type $type): bool
+    {
+        foreach ($type->getObjectClassReflections() as $reflection) {
+            if (
+                $reflection->getName() === 'Symfony\Bundle\FrameworkBundle\Controller\AbstractController'
+                || $reflection->isSubclassOf('Symfony\Bundle\FrameworkBundle\Controller\AbstractController')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isFormFactoryType(Type $type): bool
+    {
+        foreach ($type->getObjectClassReflections() as $reflection) {
+            if (
+                $reflection->getName() === 'Symfony\Component\Form\FormFactoryInterface'
+                || $reflection->implementsInterface('Symfony\Component\Form\FormFactoryInterface')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isPropertyAccessorMethod(string $methodName): bool
+    {
+        foreach (['get', 'set', 'is', 'has', 'can', 'add', 'remove'] as $prefix) {
+            if (str_starts_with($methodName, $prefix) && isset($methodName[strlen($prefix)]) && $methodName[strlen($prefix)] >= 'A' && $methodName[strlen($prefix)] <= 'Z') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function fillDicClasses(string $containerXmlPath): void
