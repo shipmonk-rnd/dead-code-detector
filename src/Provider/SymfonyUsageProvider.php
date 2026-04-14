@@ -30,6 +30,8 @@ use PHPStan\Type\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
+use ReflectionEnum;
+use ReflectionNamedType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -152,6 +154,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 ...$this->getMethodUsagesFromReflection($node),
                 ...$this->getPropertyUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
+                ...$this->getInvokableCommandEnumUsages($node),
             ];
         }
 
@@ -665,6 +668,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($this->isConstructorWithAsCommandAttribute($method)) {
             return 'Class has #[AsCommand] attribute';
+        }
+
+        if ($this->isInvokeOnAsCommandClass($method)) {
+            return 'Invokable command method via #[AsCommand] attribute';
         }
 
         if ($this->isConstructorWithAsControllerAttribute($method)) {
@@ -1194,6 +1201,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
+    private function isInvokeOnAsCommandClass(ReflectionMethod $method): bool
+    {
+        $class = $method->getDeclaringClass();
+        return $method->getName() === '__invoke' && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
+    }
+
     private function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
@@ -1481,6 +1494,78 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     isEnumCase: TrinaryLogic::createYes(),
                 ),
             );
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassConstantUsage>
+     */
+    private function getInvokableCommandEnumUsages(InClassNode $node): array
+    {
+        $classReflection = $node->getClassReflection();
+        $nativeReflection = $classReflection->getNativeReflection();
+
+        if ($nativeReflection instanceof ReflectionEnum) {
+            return [];
+        }
+
+        if (!$this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')) {
+            return [];
+        }
+
+        $invokeMethod = null;
+
+        foreach ($nativeReflection->getMethods() as $method) {
+            if ($method->getName() === '__invoke') {
+                $invokeMethod = $method;
+                break;
+            }
+        }
+
+        if ($invokeMethod === null) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($invokeMethod->getParameters() as $parameter) {
+            $type = $parameter->getType();
+
+            if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+                continue;
+            }
+
+            $typeName = $type->getName();
+
+            if (!$this->reflectionProvider->hasClass($typeName)) {
+                continue;
+            }
+
+            $enumReflection = $this->reflectionProvider->getClass($typeName);
+
+            if (!$enumReflection->isBackedEnum()) {
+                continue;
+            }
+
+            $nativeEnumReflection = $enumReflection->getNativeReflection();
+
+            if (!$nativeEnumReflection instanceof ReflectionEnum) {
+                continue;
+            }
+
+            foreach ($nativeEnumReflection->getCases() as $case) {
+                $usages[] = new ClassConstantUsage(
+                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Invokable command parameter in ' . $nativeReflection->getShortName())),
+                    new ClassConstantRef(
+                        $typeName,
+                        $case->getName(),
+                        possibleDescendant: false,
+                        isEnumCase: TrinaryLogic::createYes(),
+                    ),
+                );
+            }
         }
 
         return $usages;
