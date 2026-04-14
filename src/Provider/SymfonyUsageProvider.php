@@ -646,7 +646,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<ClassMemberUsage>
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function getMapInputUsages(InClassMethodNode $node): array
     {
@@ -685,7 +685,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param list<ClassMemberUsage> $usages
+     * @param list<ClassMethodUsage|ClassPropertyUsage> $usages
      */
     private function collectMapInputDtoUsages(
         string $dtoClassName,
