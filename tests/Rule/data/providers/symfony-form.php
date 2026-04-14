@@ -270,3 +270,96 @@ class FactoryService {
         $this->formFactory->create(ProductType::class, $data);
     }
 }
+
+// Case 6: FormFactoryInterface::createNamed with typed data object
+
+class NamedData {
+
+    private string $value;
+
+    public function getValue(): string {
+        return $this->value;
+    }
+
+    public function setValue(string $value): void {
+        $this->value = $value;
+    }
+
+    public function dead(): void { // error: Unused SymfonyForm\NamedData::dead
+    }
+}
+
+class NamedFormService {
+
+    public function __construct( // error: Unused SymfonyForm\NamedFormService::__construct
+        private readonly FormFactoryInterface $formFactory, // error: Property SymfonyForm\NamedFormService::$formFactory is never read // error: Property SymfonyForm\NamedFormService::$formFactory is never written
+    ) {
+    }
+
+    public function doSomething(): void { // error: Unused SymfonyForm\NamedFormService::doSomething
+        $data = new NamedData();
+        $this->formFactory->createNamed('my_form', ProductType::class, $data);
+    }
+}
+
+// Case 7: FormFactoryInterface::createBuilder with typed data object
+
+class BuilderFactoryData {
+
+    private string $value;
+
+    public function getValue(): string {
+        return $this->value;
+    }
+
+    public function setValue(string $value): void {
+        $this->value = $value;
+    }
+
+    public function dead(): void { // error: Unused SymfonyForm\BuilderFactoryData::dead
+    }
+}
+
+class BuilderFactoryService {
+
+    public function __construct( // error: Unused SymfonyForm\BuilderFactoryService::__construct
+        private readonly FormFactoryInterface $formFactory, // error: Property SymfonyForm\BuilderFactoryService::$formFactory is never read // error: Property SymfonyForm\BuilderFactoryService::$formFactory is never written
+    ) {
+    }
+
+    public function doSomething(): void { // error: Unused SymfonyForm\BuilderFactoryService::doSomething
+        $data = new BuilderFactoryData();
+        $this->formFactory->createBuilder(ProductType::class, $data);
+    }
+}
+
+// Case 8: FormFactoryInterface::createNamedBuilder with typed data object
+
+class NamedBuilderData {
+
+    private string $value;
+
+    public function getValue(): string {
+        return $this->value;
+    }
+
+    public function setValue(string $value): void {
+        $this->value = $value;
+    }
+
+    public function dead(): void { // error: Unused SymfonyForm\NamedBuilderData::dead
+    }
+}
+
+class NamedBuilderService {
+
+    public function __construct( // error: Unused SymfonyForm\NamedBuilderService::__construct
+        private readonly FormFactoryInterface $formFactory, // error: Property SymfonyForm\NamedBuilderService::$formFactory is never read // error: Property SymfonyForm\NamedBuilderService::$formFactory is never written
+    ) {
+    }
+
+    public function doSomething(): void { // error: Unused SymfonyForm\NamedBuilderService::doSomething
+        $data = new NamedBuilderData();
+        $this->formFactory->createNamedBuilder('my_form', ProductType::class, $data);
+    }
+}
