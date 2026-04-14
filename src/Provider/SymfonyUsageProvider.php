@@ -670,10 +670,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return 'Class has #[AsCommand] attribute';
         }
 
-        if ($this->isInvokeOnAsCommandClass($method)) {
-            return 'Invokable command method via #[AsCommand] attribute';
-        }
-
         if ($this->isConstructorWithAsControllerAttribute($method)) {
             return 'Class has #[AsController] attribute';
         }
@@ -1201,12 +1197,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
-    private function isInvokeOnAsCommandClass(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-        return $method->getName() === '__invoke' && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
-    }
-
     private function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
@@ -1511,7 +1501,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if (!$this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')) {
+        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
+            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
+
+        if (!$isCommand) {
             return [];
         }
 

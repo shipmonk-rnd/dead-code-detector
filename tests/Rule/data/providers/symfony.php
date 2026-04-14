@@ -111,12 +111,25 @@ enum InvokableCommandUnused: string {
     case B = 'b'; // error: Unused Symfony\InvokableCommandUnused::B
 }
 
+enum InvokableCommandModeViaExtend: string {
+    case Fast = 'fast';
+    case Slow = 'slow';
+}
+
 #[AsCommand('app:invokable')]
 class InvokableCommand
 {
     public function __invoke(InvokableCommandMode $mode): int
     {
         InvokableCommandUnused::A;
+        return 0;
+    }
+}
+
+class InvokableCommandViaExtend extends Command
+{
+    public function __invoke(InvokableCommandModeViaExtend $mode): int
+    {
         return 0;
     }
 }
