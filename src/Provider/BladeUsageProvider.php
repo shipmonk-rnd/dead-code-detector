@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
@@ -145,7 +146,7 @@ final class BladeUsageProvider implements MemberUsageProvider
                 }
 
                 // View::composer('view', Class::class) / View::creator('view', Class::class)
-                return $this->getUsagesFromComposerOrCreator($node, $scope, $methodName);
+                return $this->getUsagesFromComposerOrCreator($node, $node->getArgs(), $scope, $methodName);
             }
         }
 
@@ -153,16 +154,16 @@ final class BladeUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * @param array<Arg> $args
      * @return list<ClassMethodUsage>
      */
     private function getUsagesFromComposerOrCreator(
-        StaticCall $node,
+        Node $node,
+        array $args,
         Scope $scope,
         string $methodName,
     ): array
     {
-        $args = $node->getArgs();
-
         if (!isset($args[1])) {
             return [];
         }
@@ -170,8 +171,8 @@ final class BladeUsageProvider implements MemberUsageProvider
         $callbackType = $scope->getType($args[1]->value);
         $usages = [];
 
-        /** @var string $methodName View::composer → compose, View::creator → create */
-        $calledMethod = $methodName === 'composer' ? 'compose' : 'create';
+        // View::composer → compose, View::creator → create (see Illuminate\View\Concerns\ManagesEvents::classEventMethodForPrefix)
+        $defaultMethod = $methodName === 'composer' ? 'compose' : 'create';
 
         foreach ($callbackType->getConstantStrings() as $stringType) {
             $value = $stringType->getValue();
@@ -184,6 +185,7 @@ final class BladeUsageProvider implements MemberUsageProvider
                 $calledMethod = substr($value, $atPos + 1);
             } else {
                 $callbackClassName = $value;
+                $calledMethod = $defaultMethod;
             }
 
             foreach ([$calledMethod, '__construct'] as $method) {
@@ -200,6 +202,7 @@ final class BladeUsageProvider implements MemberUsageProvider
     /**
      * Handles:
      * - $factory->make('template', $data) / $factory->first($views, $data)
+     * - $factory->composer('view', Class::class) / $factory->creator('view', Class::class)
      * - $response->view('template', $data)
      * - $view->with('key', $value) / $view->with(['key' => $value])
      *
@@ -233,6 +236,10 @@ final class BladeUsageProvider implements MemberUsageProvider
                     }
 
                     return $this->traverseDataArg($args[1]->value, $node, $scope);
+                }
+
+                if ($methodName === 'composer' || $methodName === 'creator') {
+                    return $this->getUsagesFromComposerOrCreator($node, $node->getArgs(), $scope, $methodName);
                 }
             }
 

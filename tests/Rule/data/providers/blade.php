@@ -135,6 +135,19 @@ final class CustomMethodComposer
 
 }
 
+final class FactoryComposer
+{
+
+    public function __construct()
+    {
+    }
+
+    public function compose(\Illuminate\Contracts\View\View $view): void
+    {
+    }
+
+}
+
 // --- Unused model ---
 
 final class BladeUnusedModel
@@ -222,6 +235,11 @@ class BladeController extends Controller
         ]);
     }
 
+    public function factoryComposer(): void
+    {
+        $this->viewFactory->composer('layouts.main', FactoryComposer::class);
+    }
+
     public function viewMakeNoData(): View // error: Unused Blade\BladeController::viewMakeNoData
     {
         return ViewFacade::make('blade.no-data');
@@ -248,6 +266,7 @@ function registerBladeRoutes(): void
     Route::get('/with-key-value', [BladeController::class, 'withKeyValue']);
     Route::get('/with-array', [BladeController::class, 'withArray']);
     Route::get('/factory-make', [BladeController::class, 'factoryMake']);
+    Route::get('/factory-composer', [BladeController::class, 'factoryComposer']);
 
     ViewFacade::composer('layouts.app', BreadcrumbsViewComposer::class);
     ViewFacade::creator('partials.sidebar', SidebarViewCreator::class);
