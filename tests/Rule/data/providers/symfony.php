@@ -101,6 +101,39 @@ class HelloCommand
     public function __construct() {}
 }
 
+enum InvokableCommandMode: string {
+    case Dry = 'dry';
+    case Wet = 'wet';
+}
+
+enum InvokableCommandUnused: string {
+    case A = 'a';
+    case B = 'b'; // error: Unused Symfony\InvokableCommandUnused::B
+}
+
+enum InvokableCommandModeViaExtend: string {
+    case Fast = 'fast';
+    case Slow = 'slow';
+}
+
+#[AsCommand('app:invokable')]
+class InvokableCommand
+{
+    public function __invoke(InvokableCommandMode $mode): int
+    {
+        InvokableCommandUnused::A;
+        return 0;
+    }
+}
+
+class InvokableCommandViaExtend extends Command
+{
+    public function __invoke(InvokableCommandModeViaExtend $mode): int
+    {
+        return 0;
+    }
+}
+
 class DicClassParent { // not present in DIC, but ctor is not dead
     public function __construct() {}
 }
