@@ -54,3 +54,9 @@ parameters:
         # allow referencing any attribute classes
         - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionClass\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
         - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionMethod\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
+
+        # Symfony Console 7.x (which introduced MapInput/Argument/Option attributes) requires PHP 8.2+,
+        # so on PHP 8.1 those classes are unknown and the literal class-string is rejected
+        -
+            message: '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionProperty\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
+            reportUnmatched: false
