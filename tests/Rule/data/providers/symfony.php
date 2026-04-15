@@ -265,3 +265,37 @@ class OrphanedInput {
     #[Interact]
     public function askSomething(): void {} // error: Unused Symfony\OrphanedInput::askSomething
 }
+
+class NestedFiltersInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $tag;
+
+    #[\Symfony\Component\Console\Attribute\Option]
+    public bool $strict = false;
+
+    public string $notAnInput; // error: Property Symfony\NestedFiltersInput::$notAnInput is never read // error: Property Symfony\NestedFiltersInput::$notAnInput is never written
+
+    #[Interact]
+    public function askForTag(): void {}
+
+    public function deadOnNested(): void {} // error: Unused Symfony\NestedFiltersInput::deadOnNested
+}
+
+class WrappedImportInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $name;
+
+    #[\Symfony\Component\Console\Attribute\MapInput]
+    public NestedFiltersInput $filters;
+}
+
+#[AsCommand(name: 'app:import-wrapped')]
+class WrappedImportCommand extends Command {
+    public function __invoke(
+        #[\Symfony\Component\Console\Attribute\MapInput] WrappedImportInput $input,
+    ): int {
+        echo $input->name;
+        echo $input->filters->tag;
+        return 0;
+    }
+}

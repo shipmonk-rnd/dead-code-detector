@@ -686,12 +686,24 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     /**
      * @param list<ClassMethodUsage|ClassPropertyUsage> $usages
+     * @param array<string, true> $visited
      */
     private function collectMapInputDtoUsages(
         string $dtoClassName,
         array &$usages,
+        array &$visited = [],
     ): void
     {
+        if (isset($visited[$dtoClassName])) {
+            return;
+        }
+
+        $visited[$dtoClassName] = true;
+
+        if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+            return;
+        }
+
         $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
         $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Console input DTO via #[MapInput]'));
 
@@ -702,8 +714,9 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             $isInputProperty = $property->getAttributes('Symfony\Component\Console\Attribute\Argument') !== []
                 || $property->getAttributes('Symfony\Component\Console\Attribute\Option') !== [];
+            $nestedMapInput = $property->getAttributes('Symfony\Component\Console\Attribute\MapInput') !== [];
 
-            if (!$isInputProperty) {
+            if (!$isInputProperty && !$nestedMapInput) {
                 continue;
             }
 
@@ -717,6 +730,18 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
                 AccessType::READ,
             );
+
+            if (!$nestedMapInput) {
+                continue;
+            }
+
+            $propertyType = $property->getType();
+
+            if (!$propertyType instanceof ReflectionNamedType || $propertyType->isBuiltin()) {
+                continue;
+            }
+
+            $this->collectMapInputDtoUsages($propertyType->getName(), $usages, $visited);
         }
 
         foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
