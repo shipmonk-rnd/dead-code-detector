@@ -92,11 +92,15 @@ services:
             containerXmlPaths: %shipmonkDeadCode.usageProviders.symfony.containerXmlPaths%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser
+        arguments:
+            analysedPaths: %analysedPaths%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
-            analysedPaths: %analysedPaths%
             enabled: %shipmonkDeadCode.usageProviders.twig.enabled%
 
     -
@@ -126,6 +130,13 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.laravel.enabled%
+
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\BladeUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.blade.enabled%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider
@@ -271,6 +282,8 @@ parameters:
                 enabled: null
             laravel:
                 enabled: null
+            blade:
+                enabled: null
             nette:
                 enabled: null
             netteTester:
@@ -358,6 +371,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             laravel: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            blade: structure([
                 enabled: schema(bool(), nullable())
             ])
             nette: structure([

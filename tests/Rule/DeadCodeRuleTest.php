@@ -47,6 +47,7 @@ use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\BladeUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
@@ -62,6 +63,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\ReflectionUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser;
 use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
@@ -995,6 +997,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
+        yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
@@ -1162,6 +1165,14 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
      */
     private function getMemberUsageProviders(): array
     {
+        $templateViewDataTraverser = new TemplateViewDataTraverser(
+            self::createReflectionProvider(),
+            [
+                __DIR__ . '/data/providers/twig-template.php',
+                __DIR__ . '/data/providers/blade.php',
+            ],
+        );
+
         $provides = [
             new ReflectionUsageProvider(
                 $this->providersEnabled,
@@ -1199,6 +1210,11 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
             ),
+            new BladeUsageProvider(
+                self::createReflectionProvider(),
+                $templateViewDataTraverser,
+                $this->providersEnabled,
+            ),
             new NetteTesterUsageProvider(
                 $this->providersEnabled,
             ),
@@ -1218,7 +1234,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new TwigUsageProvider(
                 self::createReflectionProvider(),
-                [__DIR__ . '/data/providers/twig-template.php'],
+                $templateViewDataTraverser,
                 $this->providersEnabled,
             ),
             new ApiPhpDocUsageProvider(
