@@ -686,11 +686,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
-                if (!$this->reflectionProvider->hasClass($dtoClassName)) {
-                    continue;
-                }
-
-                $this->collectMapInputDtoUsages($dtoClassName, $usages);
+                $usages = [...$usages, ...$this->collectMapInputDtoUsages($dtoClassName)];
             }
         }
 
@@ -698,51 +694,44 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param list<ClassMethodUsage|ClassPropertyUsage> $usages
      * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function collectMapInputDtoUsages(
         string $dtoClassName,
-        array &$usages,
         array &$visited = [],
-    ): void
+    ): array
     {
         if (isset($visited[$dtoClassName])) {
-            return;
+            return [];
         }
 
         $visited[$dtoClassName] = true;
 
         if (!$this->reflectionProvider->hasClass($dtoClassName)) {
-            return;
+            return [];
         }
 
         $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
-        $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Console input DTO via #[MapInput]'));
+        $nativeReflection = $dtoReflection->getNativeReflection();
+        $note = 'Console input DTO via #[MapInput]';
+        $usages = [];
 
-        foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
+        foreach ($nativeReflection->getProperties() as $property) {
             if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
                 continue;
             }
 
-            $isInputProperty = $property->getAttributes('Symfony\Component\Console\Attribute\Argument') !== []
-                || $property->getAttributes('Symfony\Component\Console\Attribute\Option') !== [];
-            $nestedMapInput = $property->getAttributes('Symfony\Component\Console\Attribute\MapInput') !== [];
+            $isInputProperty = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Argument')
+                || $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Option');
+            $nestedMapInput = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\MapInput');
 
             if (!$isInputProperty && !$nestedMapInput) {
                 continue;
             }
 
-            $usages[] = new ClassPropertyUsage(
-                $origin,
-                new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
-                AccessType::WRITE,
-            );
-            $usages[] = new ClassPropertyUsage(
-                $origin,
-                new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
-                AccessType::READ,
-            );
+            $usages[] = $this->createPropertyUsage($property, $note, AccessType::WRITE);
+            $usages[] = $this->createPropertyUsage($property, $note, AccessType::READ);
 
             if (!$nestedMapInput) {
                 continue;
@@ -754,21 +743,23 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            $this->collectMapInputDtoUsages($propertyType->getName(), $usages, $visited);
+            $usages = [...$usages, ...$this->collectMapInputDtoUsages($propertyType->getName(), $visited)];
         }
 
-        foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
+        foreach ($nativeReflection->getMethods() as $dtoMethod) {
             if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
                 continue;
             }
 
-            if ($dtoMethod->getAttributes('Symfony\Component\Console\Attribute\Interact') !== []) {
+            if ($this->hasAttribute($dtoMethod, 'Symfony\Component\Console\Attribute\Interact')) {
                 $usages[] = new ClassMethodUsage(
-                    $origin,
+                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
                     new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
                 );
             }
         }
+
+        return $usages;
     }
 
     private function shouldMarkAsUsed(ReflectionMethod $method): ?string
