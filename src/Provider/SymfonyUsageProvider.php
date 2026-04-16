@@ -650,6 +650,23 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     private function getMapInputUsages(InClassMethodNode $node): array
     {
+        if ($node->getMethodReflection()->getName() !== '__invoke') {
+            return [];
+        }
+
+        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+
+        if ($nativeReflection instanceof ReflectionEnum) {
+            return [];
+        }
+
+        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
+            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
+
+        if (!$isCommand) {
+            return [];
+        }
+
         $usages = [];
 
         foreach ($node->getMethodReflection()->getParameters() as $parameter) {
