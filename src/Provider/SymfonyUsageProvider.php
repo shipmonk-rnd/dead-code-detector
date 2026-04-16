@@ -13,6 +13,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
@@ -30,7 +31,6 @@ use PHPStan\Type\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
-use ReflectionEnum;
 use ReflectionNamedType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -655,10 +655,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         $nativeReflection = $node->getClassReflection()->getNativeReflection();
-
-        if ($nativeReflection instanceof ReflectionEnum) {
-            return [];
-        }
 
         $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
             || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
@@ -1456,7 +1452,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass|ReflectionMethod|ReflectionProperty $classOrMethod
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(
