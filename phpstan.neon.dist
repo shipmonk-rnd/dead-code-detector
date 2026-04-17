@@ -51,6 +51,10 @@ parameters:
             message: "#but it's missing from the PHPDoc @throws tag\\.$#" # allow uncatched exceptions in tests
             path: tests/*
 
-        # allow referencing any attribute classes
+        # allow referencing any attribute classes (ReflectionProperty variant only triggers on PHP 8.1,
+        # where Symfony Console 6.x is installed and MapInput/Argument/Option attribute classes are unknown)
         - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionClass\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
         - '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionMethod\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
+        -
+            message: '#^Parameter \#1 \$name of method PHPStan\\BetterReflection\\Reflection\\Adapter\\ReflectionProperty\:\:getAttributes\(\) expects class\-string\|null, string given\.$#'
+            reportUnmatched: false

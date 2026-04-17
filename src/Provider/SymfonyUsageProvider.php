@@ -13,6 +13,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
@@ -30,7 +31,6 @@ use PHPStan\Type\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
-use ReflectionEnum;
 use ReflectionNamedType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -162,6 +162,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
+                ...$this->getMapInputUsages($node),
             ];
         }
 
@@ -638,6 +639,123 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                         );
                     }
                 }
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function getMapInputUsages(InClassMethodNode $node): array
+    {
+        if ($node->getMethodReflection()->getName() !== '__invoke') {
+            return [];
+        }
+
+        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+
+        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
+            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
+
+        if (!$isCommand) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+            $isMapInput = false;
+
+            foreach ($parameter->getAttributes() as $attributeReflection) {
+                if ($attributeReflection->getName() === 'Symfony\Component\Console\Attribute\MapInput') {
+                    $isMapInput = true;
+                    break;
+                }
+            }
+
+            if (!$isMapInput) {
+                continue;
+            }
+
+            $parameterType = $parameter->getType();
+
+            if (!$parameterType->isObject()->yes()) {
+                continue;
+            }
+
+            foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
+                $usages = [...$usages, ...$this->collectMapInputDtoUsages($dtoClassName)];
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectMapInputDtoUsages(
+        string $dtoClassName,
+        array &$visited = [],
+    ): array
+    {
+        if (isset($visited[$dtoClassName])) {
+            return [];
+        }
+
+        $visited[$dtoClassName] = true;
+
+        if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+            return [];
+        }
+
+        $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
+        $nativeReflection = $dtoReflection->getNativeReflection();
+        $note = 'Console input DTO via #[MapInput]';
+        $usages = [];
+
+        foreach ($nativeReflection->getProperties() as $property) {
+            if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
+                continue;
+            }
+
+            $isInputProperty = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Argument')
+                || $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Option');
+            $nestedMapInput = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\MapInput');
+
+            if (!$isInputProperty && !$nestedMapInput) {
+                continue;
+            }
+
+            $usages[] = $this->createPropertyUsage($property, $note, AccessType::WRITE);
+            $usages[] = $this->createPropertyUsage($property, $note, AccessType::READ);
+
+            if (!$nestedMapInput) {
+                continue;
+            }
+
+            $propertyType = $property->getType();
+
+            if (!$propertyType instanceof ReflectionNamedType || $propertyType->isBuiltin()) {
+                continue;
+            }
+
+            $usages = [...$usages, ...$this->collectMapInputDtoUsages($propertyType->getName(), $visited)];
+        }
+
+        foreach ($nativeReflection->getMethods() as $dtoMethod) {
+            if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
+                continue;
+            }
+
+            if ($this->hasAttribute($dtoMethod, 'Symfony\Component\Console\Attribute\Interact')) {
+                $usages[] = new ClassMethodUsage(
+                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
+                    new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
+                );
             }
         }
 
@@ -1325,7 +1443,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @param ReflectionClass|ReflectionMethod|ReflectionProperty $classOrMethod
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
      * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(
