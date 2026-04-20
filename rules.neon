@@ -92,6 +92,13 @@ services:
             containerXmlPaths: %shipmonkDeadCode.usageProviders.symfony.containerXmlPaths%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\ApiPlatformUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.apiPlatform.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser
         arguments:
             analysedPaths: %analysedPaths%
@@ -274,6 +281,8 @@ parameters:
                 enabled: null
                 configDir: null
                 containerXmlPaths: []
+            apiPlatform:
+                enabled: null
             twig:
                 enabled: null
             doctrine:
@@ -360,6 +369,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
                 configDir: schema(string(), nullable())
                 containerXmlPaths: listOf(string())
+            ])
+            apiPlatform: structure([
+                enabled: schema(bool(), nullable())
             ])
             twig: structure([
                 enabled: schema(bool(), nullable())
