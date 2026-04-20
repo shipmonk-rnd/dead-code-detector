@@ -28,6 +28,7 @@ parameters:
         check:
             missingCheckedExceptionInThrows: true
             tooWideThrowType: true
+            throwTypeCovariance: true
         implicitThrows: false
         uncheckedExceptionClasses:
             - LogicException
