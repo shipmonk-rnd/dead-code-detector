@@ -1143,6 +1143,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         foreach ($xml->services->service as $serviceDefinition) {
             /** @var SimpleXMLElement $serviceAttributes */
             $serviceAttributes = $serviceDefinition->attributes();
+
+            if ($this->isServiceNotInstantiatedByContainer($serviceDefinition, $serviceAttributes)) {
+                continue;
+            }
+
             $class = isset($serviceAttributes->class) ? (string) $serviceAttributes->class : null;
             $constructor = isset($serviceAttributes->constructor) ? (string) $serviceAttributes->constructor : '__construct';
 
@@ -1189,6 +1194,32 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 }
             }
         }
+    }
+
+    private function isServiceNotInstantiatedByContainer(
+        SimpleXMLElement $serviceDefinition,
+        SimpleXMLElement $serviceAttributes,
+    ): bool
+    {
+        if (isset($serviceAttributes->abstract) && (string) $serviceAttributes->abstract === 'true') {
+            return true;
+        }
+
+        if (isset($serviceAttributes->synthetic) && (string) $serviceAttributes->synthetic === 'true') {
+            return true;
+        }
+
+        foreach ($serviceDefinition->tag ?? [] as $tagDefinition) {
+            /** @var SimpleXMLElement $tagAttributes */
+            $tagAttributes = $tagDefinition->attributes();
+            $tagName = $tagAttributes->name !== null ? (string) $tagAttributes->name : null;
+
+            if ($tagName === 'container.error' || $tagName === 'container.excluded') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

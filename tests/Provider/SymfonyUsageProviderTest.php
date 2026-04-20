@@ -50,6 +50,11 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
         self::assertArrayHasKey('Symfony\DicClass1', $dicCalls);
         self::assertArrayHasKey('__construct', $dicCalls['Symfony\DicClass1']);
         self::assertArrayHasKey('calledViaDic', $dicCalls['Symfony\DicClass1']);
+
+        self::assertArrayNotHasKey('Symfony\DicErroredService', $dicCalls);
+        self::assertArrayNotHasKey('Symfony\DicExcludedService', $dicCalls);
+        self::assertArrayNotHasKey('Symfony\DicSyntheticService', $dicCalls);
+        self::assertArrayNotHasKey('Symfony\DicAbstractService', $dicCalls);
     }
 
     public function testExplicitContainerXmlPathsTakesPrecedenceOverContainer(): void

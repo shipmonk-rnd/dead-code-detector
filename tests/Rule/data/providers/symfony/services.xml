@@ -24,5 +24,13 @@
         <service id="Symfony\TaggedServiceB" class="Symfony\TaggedServiceB" public="true" autowire="true" autoconfigure="true">
             <tag name="app.tagged_handler"/>
         </service>
+        <service id="Symfony\DicErroredService" class="Symfony\DicErroredService" autowire="true" autoconfigure="true">
+            <tag name="container.error" message="Cannot autowire service &quot;Symfony\DicErroredService&quot;: argument &quot;$name&quot; of method &quot;__construct()&quot; is type-hinted &quot;string&quot;, you should configure its value explicitly."/>
+        </service>
+        <service id="Symfony\DicExcludedService" class="Symfony\DicExcludedService" abstract="true">
+            <tag name="container.excluded" source="because it's a Doctrine entity"/>
+        </service>
+        <service id="Symfony\DicSyntheticService" class="Symfony\DicSyntheticService" synthetic="true" public="true"/>
+        <service id="Symfony\DicAbstractService" class="Symfony\DicAbstractService" abstract="true"/>
     </services>
 </container>

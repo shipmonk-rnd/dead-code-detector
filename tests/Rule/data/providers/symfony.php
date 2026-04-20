@@ -160,6 +160,22 @@ class DicClass4 {
     public function __construct() {}
 }
 
+class DicErroredService {
+    public function __construct(string $name) {} // error: Unused Symfony\DicErroredService::__construct
+}
+
+class DicExcludedService {
+    public function __construct() {} // error: Unused Symfony\DicExcludedService::__construct
+}
+
+class DicSyntheticService {
+    public function __construct() {} // error: Unused Symfony\DicSyntheticService::__construct
+}
+
+class DicAbstractService {
+    public function __construct() {} // error: Unused Symfony\DicAbstractService::__construct
+}
+
 class Sftp {
     const RETRY_LIMIT = 3; // used in yaml via !php/const
 }
