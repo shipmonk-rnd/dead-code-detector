@@ -79,6 +79,7 @@ final class UsageCacheStorageTest extends TestCase
             }
         }
 
+        // @phpstan-ignore staticMethod.alreadyNarrowedType (https://github.com/phpstan/phpstan/issues/14543)
         self::assertCount(2, $restored);
         self::assertEquals($usages[0], $restored[0]);
         self::assertEquals($usages[1], $restored[1]);
