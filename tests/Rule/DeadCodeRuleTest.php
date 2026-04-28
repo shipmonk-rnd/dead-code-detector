@@ -1366,10 +1366,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         foreach ($errors as $error) {
             $result[] = $error;
 
+            /** @var list<array{blackMember: BlackMember, transitive: bool}> $metadata */
             $metadata = $error->getMetadata();
 
-            /** @var BlackMember $blackMember */
-            /** @var bool $transitive */
             foreach ($metadata as ['blackMember' => $blackMember, 'transitive' => $transitive]) {
                 if (!$transitive) {
                     continue;
