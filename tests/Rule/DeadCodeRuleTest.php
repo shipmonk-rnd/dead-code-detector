@@ -1214,6 +1214,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 self::createReflectionProvider(),
                 $templateViewDataTraverser,
                 $this->providersEnabled,
+                false,
             ),
             new NetteTesterUsageProvider(
                 $this->providersEnabled,

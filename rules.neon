@@ -137,6 +137,7 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.blade.enabled%
+            deduplicateAcrossViews: %shipmonkDeadCode.usageProviders.blade.deduplicateAcrossViews%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider
@@ -284,6 +285,7 @@ parameters:
                 enabled: null
             blade:
                 enabled: null
+                deduplicateAcrossViews: false
             nette:
                 enabled: null
             netteTester:
@@ -375,6 +377,7 @@ parametersSchema:
             ])
             blade: structure([
                 enabled: schema(bool(), nullable())
+                deduplicateAcrossViews: bool()
             ])
             nette: structure([
                 enabled: schema(bool(), nullable())

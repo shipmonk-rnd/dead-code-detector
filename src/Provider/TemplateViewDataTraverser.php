@@ -24,6 +24,13 @@ final class TemplateViewDataTraverser
     private readonly array $analysedPaths;
 
     /**
+     * Classes whose members have already been emitted at least once in deduplication mode.
+     *
+     * @var array<string, true>
+     */
+    private array $seenClasses = [];
+
+    /**
      * @param list<string> $analysedPaths
      */
     public function __construct(
@@ -39,6 +46,9 @@ final class TemplateViewDataTraverser
      * Traverses referenced class names recursively, marking all public methods and properties as used.
      * Used by template engine providers (Twig, Blade) to handle data passed to views.
      *
+     * When $deduplicateAcrossViews is true, each class is emitted at most once across the whole analysis run
+     * (correct for dead-code detection but loses per-call-site diagnostic precision).
+     *
      * @param list<string> $referencedClassNames
      * @param non-empty-string $rootContext
      * @return list<ClassMemberUsage>
@@ -47,6 +57,7 @@ final class TemplateViewDataTraverser
         array $referencedClassNames,
         string $rootContext,
         MemberUsageProvider $provider,
+        bool $deduplicateAcrossViews = false,
     ): array
     {
         $usages = [];
@@ -55,7 +66,7 @@ final class TemplateViewDataTraverser
         foreach ($referencedClassNames as $className) {
             $usages = [
                 ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, $rootContext, $provider),
+                ...$this->traverseClassNameRecursively($className, $visited, $rootContext, $provider, $deduplicateAcrossViews),
             ];
         }
 
@@ -72,6 +83,7 @@ final class TemplateViewDataTraverser
         array &$visited,
         string $context,
         MemberUsageProvider $provider,
+        bool $deduplicateAcrossViews,
     ): array
     {
         if (isset($visited[$className])) {
@@ -79,6 +91,10 @@ final class TemplateViewDataTraverser
         }
 
         $visited[$className] = true;
+
+        if ($deduplicateAcrossViews && isset($this->seenClasses[$className])) {
+            return [];
+        }
 
         if (!$this->reflectionProvider->hasClass($className)) {
             return [];
@@ -90,7 +106,11 @@ final class TemplateViewDataTraverser
             return [];
         }
 
-        return $this->getPublicMembersUsages($classReflection, $visited, $context, $provider);
+        if ($deduplicateAcrossViews) {
+            $this->seenClasses[$className] = true;
+        }
+
+        return $this->getPublicMembersUsages($classReflection, $visited, $context, $provider, $deduplicateAcrossViews);
     }
 
     /**
@@ -103,6 +123,7 @@ final class TemplateViewDataTraverser
         array &$visited,
         string $context,
         MemberUsageProvider $provider,
+        bool $deduplicateAcrossViews,
     ): array
     {
         $usages = [];
@@ -147,6 +168,7 @@ final class TemplateViewDataTraverser
                             $visited,
                             $newContext,
                             $provider,
+                            $deduplicateAcrossViews,
                         ),
                     ];
                 }
@@ -183,6 +205,7 @@ final class TemplateViewDataTraverser
                         $visited,
                         $newContext,
                         $provider,
+                        $deduplicateAcrossViews,
                     ),
                 ];
             }
