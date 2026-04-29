@@ -121,6 +121,13 @@ final class TemplateViewDataTraverser
                 continue;
             }
 
+            // Skip methods declared outside analysed paths (vendor base classes/traits)
+            $declaringFile = $method->getDeclaringClass()->getFileName();
+
+            if (!$this->isFileAnalysed($declaringFile === false ? null : $declaringFile)) {
+                continue;
+            }
+
             // Mark method as used
             $usages[] = new ClassMethodUsage(
                 UsageOrigin::createVirtual($provider, VirtualUsageData::withNote($context)),
@@ -152,6 +159,13 @@ final class TemplateViewDataTraverser
                 continue;
             }
 
+            // Skip properties declared outside analysed paths (vendor base classes/traits)
+            $declaringFile = $property->getDeclaringClass()->getFileName();
+
+            if (!$this->isFileAnalysed($declaringFile === false ? null : $declaringFile)) {
+                continue;
+            }
+
             $usages[] = new ClassPropertyUsage(
                 UsageOrigin::createVirtual($provider, VirtualUsageData::withNote($context)),
                 new ClassPropertyRef($className, $property->getName(), possibleDescendant: false),
@@ -179,19 +193,22 @@ final class TemplateViewDataTraverser
 
     private function shouldSkipClass(ClassReflection $classReflection): bool
     {
-        $fileName = $classReflection->getFileName();
+        return !$this->isFileAnalysed($classReflection->getFileName());
+    }
 
+    private function isFileAnalysed(?string $fileName): bool
+    {
         if ($fileName === null) {
-            return true;
+            return false;
         }
 
         foreach ($this->analysedPaths as $path) {
             if (str_starts_with($fileName, $path)) {
-                return false; // do not traverse non-analyzed classes (e.g. vendor)
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
 }
