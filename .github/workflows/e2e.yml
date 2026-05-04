@@ -12,7 +12,6 @@ jobs:
                     -
                         repo: phpstan/phpstan-src
                         executable: bin/phpstan
-                        exclude-identifiers: shipmonk.deadEnumCase|shipmonk.deadProperty
                     -
                         repo: spaze/phpstan-disallowed-calls
                     -
@@ -70,4 +69,4 @@ jobs:
 
             -
                 name: Check for dead code errors
-                run: jq -e '.files[].messages[] | select(.identifier | test("^shipmonk\\.dead")) | select(.identifier | test("${{ matrix.exclude-identifiers || '^$' }}") | not)' /tmp/phpstan-output.json && exit 1 || exit 0
+                run: jq -e '.files[].messages[] | select(.identifier | test("^shipmonk\\.dead"))' /tmp/phpstan-output.json && exit 1 || exit 0
