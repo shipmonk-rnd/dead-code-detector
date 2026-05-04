@@ -36,15 +36,19 @@ final class BladeUsageProvider implements MemberUsageProvider
 
     private readonly bool $enabled;
 
+    private readonly bool $deduplicateAcrossViews;
+
     public function __construct(
         ReflectionProvider $reflectionProvider,
         TemplateViewDataTraverser $traverser,
         ?bool $enabled,
+        bool $deduplicateAcrossViews,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->traverser = $traverser;
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('laravel/framework');
+        $this->deduplicateAcrossViews = $deduplicateAcrossViews;
     }
 
     public function getUsages(
@@ -300,7 +304,7 @@ final class BladeUsageProvider implements MemberUsageProvider
         $referencedClassNames = $scope->getType($dataExpr)->getReferencedClasses();
         $rootContext = $this->getRootContext($node, $scope);
 
-        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this);
+        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this, $this->deduplicateAcrossViews);
     }
 
     /**
