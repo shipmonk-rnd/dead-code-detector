@@ -135,6 +135,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                     $container,
                     $this->createOutputEnhancer(),
                     self::createReflectionProvider(),
+                    ['enabled' => false, 'deduplicateAcrossViews' => false],
                 ),
                 $this->getUsageCacheStorage(),
                 new ClassHierarchy(),

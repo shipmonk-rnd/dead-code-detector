@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Debug;
 
+use Composer\InstalledVersions;
 use LogicException;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
@@ -40,6 +41,8 @@ final class DebugUsagePrinter
 
     private readonly ReflectionProvider $reflectionProvider;
 
+    private readonly bool $bladeDedupActive;
+
     /**
      * memberKey => usage info
      *
@@ -47,10 +50,14 @@ final class DebugUsagePrinter
      */
     private array $debugMembers;
 
+    /**
+     * @param array{enabled: bool|null, deduplicateAcrossViews: bool} $bladeOptions
+     */
     public function __construct(
         Container $container,
         OutputEnhancer $outputEnhancer,
         ReflectionProvider $reflectionProvider,
+        array $bladeOptions,
     )
     {
         $this->outputEnhancer = $outputEnhancer;
@@ -59,6 +66,8 @@ final class DebugUsagePrinter
             // @phpstan-ignore offsetAccess.nonOffsetAccessible, offsetAccess.nonOffsetAccessible, missingType.checkedException, argument.type
             $container->getParameter('shipmonkDeadCode')['debug']['usagesOf'], // prevents https://github.com/phpstan/phpstan/issues/12740
         );
+        $bladeEnabled = $bladeOptions['enabled'] ?? InstalledVersions::isInstalled('laravel/framework');
+        $this->bladeDedupActive = $bladeEnabled && $bladeOptions['deduplicateAcrossViews'];
     }
 
     /**
@@ -222,6 +231,14 @@ final class DebugUsagePrinter
     {
         if ($this->debugMembers === [] || !$output->isDebug()) {
             return;
+        }
+
+        if ($this->bladeDedupActive) {
+            $output->writeLineFormatted('');
+            $output->writeLineFormatted('<fg=yellow>Warning: Blade view-data usages are deduplicated across call sites</>');
+            $output->writeLineFormatted('<fg=yellow>The report below may show fewer usages than actually exist — only the first encountered call site per class is recorded for Blade views.</>');
+            $output->writeLineFormatted('<fg=yellow>To see all usages, opt out by setting deduplicateAcrossViews: false.</>');
+            $output->writeLineFormatted('<fg=yellow>Opt-out may significantly increase RAM usage, see https://github.com/shipmonk-rnd/dead-code-detector/issues/349</>');
         }
 
         $output->writeLineFormatted("\n<fg=red>Usage debugging information:</>");
