@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedLocator;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -314,4 +315,20 @@ class WrappedImportCommand extends Command {
         echo $input->filters->tag;
         return 0;
     }
+}
+
+class EventListenerOnMethodNotInDic
+{
+    public function __construct() {} // ctor required to invoke the #[AsEventListener] method below
+
+    #[AsEventListener]
+    public function __invoke(object $event): void {}
+}
+
+#[AsEventListener]
+class EventListenerOnClassNotInDic
+{
+    public function __construct() {} // ctor required to invoke the listener
+
+    public function __invoke(object $event): void {}
 }
