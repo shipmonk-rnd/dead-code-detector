@@ -772,6 +772,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return 'Event listener method via #[AsEventListener] attribute';
         }
 
+        if ($this->isConstructorOfAnEventListenerClass($method)) {
+            return 'Constructor of an event listener class (required by DIC to invoke the listener)';
+        }
+
         if ($this->isMessageHandlerMethodWithAsMessageHandlerAttribute($method)) {
             return 'Message handler method via #[AsMessageHandler] attribute';
         }
@@ -1284,6 +1288,27 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         return $this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')
             || $this->hasAttribute($method, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener');
+    }
+
+    private function isConstructorOfAnEventListenerClass(ReflectionMethod $method): bool
+    {
+        if (!$method->isConstructor()) {
+            return false;
+        }
+
+        $class = $method->getDeclaringClass();
+
+        if ($this->hasAttribute($class, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')) {
+            return true;
+        }
+
+        foreach ($class->getMethods() as $classMethod) {
+            if ($this->hasAttribute($classMethod, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool

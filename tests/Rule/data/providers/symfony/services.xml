@@ -32,5 +32,11 @@
         </service>
         <service id="Symfony\DicSyntheticService" class="Symfony\DicSyntheticService" synthetic="true" public="true"/>
         <service id="Symfony\DicAbstractService" class="Symfony\DicAbstractService" abstract="true"/>
+        <service id="Symfony\EventListenerOnMethodNotInDic" class="Symfony\EventListenerOnMethodNotInDic" abstract="true">
+            <tag name="container.excluded" source="conditionally registered (e.g. via #[When])"/>
+        </service>
+        <service id="Symfony\EventListenerOnClassNotInDic" class="Symfony\EventListenerOnClassNotInDic" abstract="true">
+            <tag name="container.excluded" source="conditionally registered (e.g. via #[When])"/>
+        </service>
     </services>
 </container>
