@@ -38,5 +38,8 @@
         <service id="Symfony\EventListenerOnClassNotInDic" class="Symfony\EventListenerOnClassNotInDic" abstract="true">
             <tag name="container.excluded" source="conditionally registered (e.g. via #[When])"/>
         </service>
+        <service id="Symfony\SwappedServiceClassNotInDic" class="Symfony\SwappedServiceClassNotInDic" abstract="true">
+            <tag name="container.excluded" source="#[Exclude]'d but constructed via Definition::setClass() in a compiler pass"/>
+        </service>
     </services>
 </container>

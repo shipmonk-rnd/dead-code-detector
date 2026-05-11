@@ -27,6 +27,7 @@ use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\ObjectType;
 use PHPStan\Type\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -170,6 +171,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getFormDataClassUsages($node, $scope),
+                ...$this->getDefinitionSetClassUsages($node, $scope),
             ];
         }
 
@@ -869,10 +871,58 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * Detects data_class from OptionsResolver::setDefaults() and OptionsResolver::setDefault()
-     *
-     * @param array<int|string, Arg> $args
+     * @return list<ClassMethodUsage>
      */
+    private function getDefinitionSetClassUsages(
+        MethodCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        if ($node->name->toString() !== 'setClass') {
+            return [];
+        }
+
+        $args = $node->getArgs();
+
+        if (!isset($args[0])) {
+            return [];
+        }
+
+        if (
+            !(new ObjectType('Symfony\Component\DependencyInjection\Definition'))
+                ->isSuperTypeOf($scope->getType($node->var))
+                ->yes()
+        ) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($scope->getType($args[0]->value)->getConstantStrings() as $constantString) {
+            $className = $constantString->getValue();
+
+            if (!$this->reflectionProvider->hasClass($className)) {
+                continue;
+            }
+
+            $usages[] = new ClassMethodUsage(
+                UsageOrigin::createRegular($node, $scope),
+                new ClassMethodRef($className, '__construct', false),
+            );
+        }
+
+        return $usages;
+    }
+
+/**
+ * Detects data_class from OptionsResolver::setDefaults() and OptionsResolver::setDefault()
+ *
+ * @param array<int|string, Arg> $args
+ */
     private function extractFormDataClassFromOptionsResolver(
         string $methodName,
         MethodCall $node,

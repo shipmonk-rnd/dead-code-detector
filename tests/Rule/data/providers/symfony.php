@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedLocator;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Attribute\AsController;
@@ -331,4 +333,17 @@ class EventListenerOnClassNotInDic
     public function __construct() {} // ctor required to invoke the listener
 
     public function __invoke(object $event): void {}
+}
+
+class SwappedServiceClassNotInDic
+{
+    public function __construct() {}
+}
+
+class SetClassCompilerPass implements CompilerPassInterface
+{
+    public function process(ContainerBuilder $container): void
+    {
+        $container->getDefinition('some.service.id')->setClass(SwappedServiceClassNotInDic::class);
+    }
 }
