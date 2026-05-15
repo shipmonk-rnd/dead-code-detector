@@ -335,6 +335,18 @@ function testArrayColumn(): void
     array_column($list, null, 'idxNull');
 }
 
+final class ArrayColumnUnrelated
+{
+    public string $onlyTouchedByMixedCall; // error: Property NativePropertyReads\ArrayColumnUnrelated::$onlyTouchedByMixedCall is never read // error: Property NativePropertyReads\ArrayColumnUnrelated::$onlyTouchedByMixedCall is never written
+}
+
+/** @param mixed $mixed */
+function testArrayColumnMixed($mixed): void
+{
+    // mixed element type could be array — don't mark every $onlyTouchedByMixedCall in the codebase
+    array_column($mixed, 'onlyTouchedByMixedCall');
+}
+
 function testSerialize(): void
 {
     $default = new SerializeDefault();

@@ -373,7 +373,7 @@ final class PropertyAccessCollector implements Collector
     {
         $elementType = $firstArgType->getIterableValueType();
 
-        if ($elementType->isObject()->no()) {
+        if (!$elementType->isObject()->yes()) {
             return;
         }
 
