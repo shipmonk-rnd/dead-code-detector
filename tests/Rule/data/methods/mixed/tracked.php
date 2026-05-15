@@ -36,7 +36,7 @@ class Implementor implements IFace {
     public function getter4() {}
     public function getter5() {} // error: Unused DeadMixed1\Implementor::getter5
     public function getter6() {}
-    public function mixedGetter7() {} // error: Unused DeadMixed1\Implementor::mixedGetter7 (all usages excluded by mixedPrefix excluder)
+    public function mixedGetter7() {} // error: Unused DeadMixed1\Implementor::mixedGetter7
 
 }
 
