@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Collector;
 
 use JsonSerializable;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Cast\Array_ as ArrayCast;
 use PhpParser\Node\Expr\FuncCall;
@@ -348,6 +349,53 @@ final class PropertyAccessCollector implements Collector
 
             if ($functionName === 'serialize') {
                 $this->registerSerializePropertyReads($firstArgType, $node, $scope);
+            }
+
+            if ($functionName === 'array_column') {
+                $this->registerArrayColumnPropertyReads($firstArgType, $args, $node, $scope);
+            }
+        }
+    }
+
+    /**
+     * array_column($array, $column_key, $index_key) reads public properties
+     * named by the string $column_key and $index_key from objects in $array.
+     * For array elements, it reads array keys instead — not relevant here.
+     *
+     * @param array<Arg> $args
+     */
+    private function registerArrayColumnPropertyReads(
+        Type $firstArgType,
+        array $args,
+        FuncCall $node,
+        Scope $scope,
+    ): void
+    {
+        $elementType = $firstArgType->getIterableValueType();
+
+        if ($elementType->isObject()->no()) {
+            return;
+        }
+
+        foreach ([1, 2] as $argIndex) {
+            if (!isset($args[$argIndex])) {
+                continue;
+            }
+
+            foreach ($scope->getType($args[$argIndex]->value)->getConstantStrings() as $constantString) {
+                $propertyName = $constantString->getValue();
+
+                foreach ($this->getDeclaringTypesWithProperty($propertyName, $elementType, null) as $propertyRef) {
+                    $this->registerUsage(
+                        new ClassPropertyUsage(
+                            UsageOrigin::createRegular($node, $scope),
+                            $propertyRef,
+                            AccessType::READ,
+                        ),
+                        $node,
+                        $scope,
+                    );
+                }
             }
         }
     }

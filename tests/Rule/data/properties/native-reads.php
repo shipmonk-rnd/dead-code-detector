@@ -310,6 +310,31 @@ function testJsonEncode(): void
     json_encode($outerWithJsonSerializable);
 }
 
+// --- array_column ---
+
+final class ArrayColumnClass
+{
+    public string $col;
+    public string $idx;
+    public string $idxNull;
+    public string $unused; // error: Property NativePropertyReads\ArrayColumnClass::$unused is never read
+
+    public function __construct()
+    {
+        $this->col = 'a';
+        $this->idx = 'b';
+        $this->idxNull = 'c';
+        $this->unused = 'd';
+    }
+}
+
+function testArrayColumn(): void
+{
+    $list = [new ArrayColumnClass()];
+    array_column($list, 'col', 'idx');
+    array_column($list, null, 'idxNull');
+}
+
 function testSerialize(): void
 {
     $default = new SerializeDefault();
