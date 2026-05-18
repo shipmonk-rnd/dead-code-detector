@@ -310,6 +310,80 @@ function testJsonEncode(): void
     json_encode($outerWithJsonSerializable);
 }
 
+// --- array_column ---
+
+final class ArrayColumnClass
+{
+    public string $col;
+    public string $idx;
+    public string $idxNull;
+    public string $unused; // error: Property NativePropertyReads\ArrayColumnClass::$unused is never read
+
+    public function __construct()
+    {
+        $this->col = 'a';
+        $this->idx = 'b';
+        $this->idxNull = 'c';
+        $this->unused = 'd';
+    }
+}
+
+function testArrayColumn(): void
+{
+    $list = [new ArrayColumnClass()];
+    array_column($list, 'col', 'idx');
+    array_column($list, null, 'idxNull');
+}
+
+final class ArrayColumnUnrelated
+{
+    public string $onlyTouchedByMixedCall; // error: Property NativePropertyReads\ArrayColumnUnrelated::$onlyTouchedByMixedCall is never read // error: Property NativePropertyReads\ArrayColumnUnrelated::$onlyTouchedByMixedCall is never written
+}
+
+/** @param mixed $mixed */
+function testArrayColumnMixed($mixed): void
+{
+    // mixed element type could be array — don't mark every $onlyTouchedByMixedCall in the codebase
+    array_column($mixed, 'onlyTouchedByMixedCall');
+}
+
+class ArrayColumnParent
+{
+    public string $inherited;
+
+    public function __construct()
+    {
+        $this->inherited = 'p';
+    }
+}
+
+final class ArrayColumnChild extends ArrayColumnParent
+{
+}
+
+final class ArrayColumnUnion
+{
+    public string $shared;
+
+    public function __construct()
+    {
+        $this->shared = 'u';
+    }
+}
+
+/**
+ * @param list<ArrayColumnChild> $children
+ * @param list<ArrayColumnClass|ArrayColumnUnion> $mixed
+ */
+function testArrayColumnInheritedAndUnion(array $children, array $mixed): void
+{
+    array_column($children, 'inherited');
+    array_column($mixed, 'shared');
+
+    new ArrayColumnChild();
+    new ArrayColumnUnion();
+}
+
 function testSerialize(): void
 {
     $default = new SerializeDefault();
