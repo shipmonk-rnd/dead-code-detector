@@ -347,6 +347,43 @@ function testArrayColumnMixed($mixed): void
     array_column($mixed, 'onlyTouchedByMixedCall');
 }
 
+class ArrayColumnParent
+{
+    public string $inherited;
+
+    public function __construct()
+    {
+        $this->inherited = 'p';
+    }
+}
+
+final class ArrayColumnChild extends ArrayColumnParent
+{
+}
+
+final class ArrayColumnUnion
+{
+    public string $shared;
+
+    public function __construct()
+    {
+        $this->shared = 'u';
+    }
+}
+
+/**
+ * @param list<ArrayColumnChild> $children
+ * @param list<ArrayColumnClass|ArrayColumnUnion> $mixed
+ */
+function testArrayColumnInheritedAndUnion(array $children, array $mixed): void
+{
+    array_column($children, 'inherited');
+    array_column($mixed, 'shared');
+
+    new ArrayColumnChild();
+    new ArrayColumnUnion();
+}
+
 function testSerialize(): void
 {
     $default = new SerializeDefault();
