@@ -72,6 +72,11 @@ parameters:
 - `!php/const` and `!php/enum` references in `config` yamls
 - Symfony UX: `#[AsTwigComponent]`/`#[AsLiveComponent]` (constructor, `mount()`), `#[LiveProp]`, `#[LiveAction]`, `#[LiveListener]`, lifecycle hooks
 
+#### API Platform:
+- Resource classes — properties (serialized/deserialized), constructor, and PropertyAccessor-style accessors on classes with `#[ApiResource]` or any operation attribute (`#[Get]`, `#[GetCollection]`, `#[Post]`, `#[Put]`, `#[Patch]`, `#[Delete]`, GraphQL `#[Query]`/`#[Mutation]`/…)
+- `provider:`, `processor:`, `controller:` class-string references in operation attributes (supports `Class::method` syntax)
+- Filter classes referenced via `#[ApiFilter]` (class and property level)
+
 #### Doctrine:
 - `#[AsEntityListener]`, `#[AsDoctrineListener]` attribute
 - `Doctrine\ORM\Events::*` events, `Doctrine\Common\EventSubscriber` methods
