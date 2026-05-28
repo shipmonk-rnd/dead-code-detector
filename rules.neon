@@ -85,6 +85,11 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.behat.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser
+        arguments:
+            analysedPaths: %analysedPaths%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\SymfonyUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -92,11 +97,6 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.symfony.enabled%
             configDir: %shipmonkDeadCode.usageProviders.symfony.configDir%
             containerXmlPaths: %shipmonkDeadCode.usageProviders.symfony.containerXmlPaths%
-
-    -
-        class: ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser
-        arguments:
-            analysedPaths: %analysedPaths%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider

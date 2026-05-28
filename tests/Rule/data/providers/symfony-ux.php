@@ -38,9 +38,11 @@ class AlertComponent
     #[ExposeInTemplate]
     public function computedValue(): string { return ''; }
 
-    public string $notExposed = ''; // error: Property SymfonyUx\AlertComponent::$notExposed is never read
+    public string $notExposed = '';
 
-    public function deadMethod(): void {} // error: Unused SymfonyUx\AlertComponent::deadMethod
+    public function exposedByDefault(): void {}
+
+    private function reallyDead(): void {} // error: Unused SymfonyUx\AlertComponent::reallyDead
 }
 
 #[AsLiveComponent]
@@ -71,9 +73,11 @@ class CounterComponent
     #[PreReRender]
     public function beforeReRender(): void {}
 
-    public int $notLiveProp = 0; // error: Property SymfonyUx\CounterComponent::$notLiveProp is never read
+    public int $notLiveProp = 0;
 
-    public function deadMethod(): void {} // error: Unused SymfonyUx\CounterComponent::deadMethod
+    public function exposedByDefault(): void {}
+
+    private function reallyDead(): void {} // error: Unused SymfonyUx\CounterComponent::reallyDead
 }
 
 #[AsLiveComponent(defaultAction: 'render')]
@@ -105,7 +109,9 @@ class CustomActionComponent
 
     public function getFieldName(): string { return 'field'; }
 
-    public function deadMethod(): void {} // error: Unused SymfonyUx\CustomActionComponent::deadMethod
+    public function exposedByDefault(): void {}
+
+    private function reallyDead(): void {} // error: Unused SymfonyUx\CustomActionComponent::reallyDead
 }
 
 #[AsTwigComponent(template: new \Symfony\UX\TwigComponent\Attribute\FromMethod('getTemplatePath'))]
@@ -120,5 +126,7 @@ class DynamicTemplateComponent
         return 'components/dynamic.html.twig';
     }
 
-    public function deadMethod(): void {} // error: Unused SymfonyUx\DynamicTemplateComponent::deadMethod
+    public function exposedByDefault(): void {}
+
+    private function reallyDead(): void {} // error: Unused SymfonyUx\DynamicTemplateComponent::reallyDead
 }
