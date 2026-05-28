@@ -36,6 +36,7 @@ use Reflector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
+use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
@@ -69,6 +70,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
+
+    private readonly TemplateViewDataTraverser $traverser;
 
     private readonly bool $enabled;
 
@@ -108,12 +111,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     public function __construct(
         Container $container,
         ReflectionProvider $reflectionProvider,
+        TemplateViewDataTraverser $traverser,
         ?bool $enabled,
         ?string $configDir,
         array $containerXmlPaths,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
 
@@ -155,6 +160,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 ...$this->getPropertyUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
                 ...$this->getInvokableCommandEnumUsages($node),
+                ...$this->getTwigComponentTemplateUsages($node),
             ];
         }
 
@@ -485,6 +491,24 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMemberUsage>
+     */
+    private function getTwigComponentTemplateUsages(InClassNode $node): array
+    {
+        $classReflection = $node->getClassReflection();
+        $nativeReflection = $classReflection->getNativeReflection();
+
+        if (!$this->hasAttribute($nativeReflection, 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF)) {
+            return [];
+        }
+
+        $className = $classReflection->getName();
+        $rootContext = "Public members of #[AsTwigComponent] {$className} exposed in template";
+
+        return $this->traverser->getUsages([$className], $rootContext, $this);
     }
 
     private function createPropertyUsage(
