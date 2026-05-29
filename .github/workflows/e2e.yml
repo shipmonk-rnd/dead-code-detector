@@ -54,9 +54,12 @@ jobs:
 
             -
                 name: Update Dead Code Detector
+                env:
+                    HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+                    HEAD_REF: ${{ github.head_ref }}
                 run: |
-                    composer config repositories.pr vcs https://github.com/${{ github.event.pull_request.head.repo.full_name }}
-                    composer require --dev shipmonk/dead-code-detector:dev-${{ github.head_ref }} --with-all-dependencies --minimal-changes
+                    composer config repositories.pr vcs "https://github.com/$HEAD_REPO"
+                    composer require --dev "shipmonk/dead-code-detector:dev-$HEAD_REF" --with-all-dependencies --minimal-changes
 
             -
                 name: Run analysis
