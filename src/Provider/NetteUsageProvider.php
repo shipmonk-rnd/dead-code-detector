@@ -48,24 +48,24 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
     private array $serviceClasses = [];
 
     /**
-     * @param list<string> $containerPaths Paths to NEON files describing the DI container services
+     * @param list<string> $containerNeonPaths Paths to NEON files describing the DI container services
      */
     public function __construct(
         ReflectionProvider $reflectionProvider,
         ?bool $enabled,
-        array $containerPaths,
+        array $containerNeonPaths,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->enabled = $enabled ?? $this->isNetteInstalled();
 
-        if ($this->enabled && $containerPaths !== []) {
+        if ($this->enabled && $containerNeonPaths !== []) {
             if (!class_exists(Neon::class)) {
-                throw new LogicException('Install nette/neon to use the containerPaths option of the Nette usage provider');
+                throw new LogicException('Install nette/neon to use the containerNeonPaths option of the Nette usage provider');
             }
 
-            foreach ($containerPaths as $containerPath) {
-                $this->loadServicesFromNeon($containerPath);
+            foreach ($containerNeonPaths as $containerNeonPath) {
+                $this->loadServicesFromNeon($containerNeonPath);
             }
         }
     }
@@ -235,12 +235,12 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         return $classes;
     }
 
-    private function loadServicesFromNeon(string $containerPath): void
+    private function loadServicesFromNeon(string $containerNeonPath): void
     {
-        $contents = file_get_contents($containerPath);
+        $contents = file_get_contents($containerNeonPath);
 
         if ($contents === false) {
-            throw new LogicException(sprintf('Nette container file %s does not exist or is not readable', $containerPath));
+            throw new LogicException(sprintf('Nette container file %s does not exist or is not readable', $containerNeonPath));
         }
 
         foreach (self::findServiceClassesInNeon($contents) as $class) {
