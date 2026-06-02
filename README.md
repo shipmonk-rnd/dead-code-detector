@@ -102,6 +102,18 @@ parameters:
 #### Nette:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
+- constructors of classes instantiated by the DI container, when `shipmonkDeadCode.usageProviders.nette.containerPaths` is configured (requires `nette/neon`):
+
+```neon
+parameters:
+    shipmonkDeadCode:
+        usageProviders:
+            nette:
+                containerPaths:
+                    - app/config/services.neon
+```
+
+  Paths are resolved relative to the config file. Resolves service definitions of every supported shape (`- Foo\Bar`, `name: Foo\Bar`, `Foo\Bar(args)`, `create:`/`factory:`, `class:`, `type:`, `implement:`), but `imported: true` services and `@service::method` factory-call references are skipped. Currently only constructors are marked; methods referenced in `setup:`/`arguments:` are out of scope.
 
 #### Nette Tester:
 - `test*` methods, `setUp`/`tearDown`, `@dataProvider` methods in `Tester\TestCase` subclasses

@@ -1000,6 +1000,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
         yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
+        yield 'provider-nette-container' => [__DIR__ . '/data/providers/nette-container.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php'];
@@ -1224,6 +1225,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new NetteUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
+                [__DIR__ . '/data/providers/nette/services.neon'],
             ),
             new StreamWrapperUsageProvider(
                 $this->providersEnabled,
