@@ -147,6 +147,7 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.nette.enabled%
+            containerNeonPaths: %shipmonkDeadCode.usageProviders.nette.containerNeonPaths%
 
     -
         class: ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider
@@ -290,6 +291,7 @@ parameters:
                 deduplicateAcrossViews: true
             nette:
                 enabled: null
+                containerNeonPaths: []
             netteTester:
                 enabled: null
             streamWrapper:
@@ -314,6 +316,7 @@ parameters:
 expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][containerXmlPaths]'
+    - '[parameters][shipmonkDeadCode][usageProviders][nette][containerNeonPaths]'
     - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
 parametersSchema:
@@ -383,6 +386,7 @@ parametersSchema:
             ])
             nette: structure([
                 enabled: schema(bool(), nullable())
+                containerNeonPaths: listOf(string())
             ])
             netteTester: structure([
                 enabled: schema(bool(), nullable())

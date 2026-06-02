@@ -1,0 +1,19 @@
+services:
+    - NetteContainerProvider\RegisteredScalar
+    named: NetteContainerProvider\RegisteredNamed
+    entity: NetteContainerProvider\RegisteredEntity(some-arg)
+    viaCreate:
+        create: NetteContainerProvider\RegisteredViaCreate
+    viaFactory:
+        factory: NetteContainerProvider\RegisteredViaFactoryKey
+    viaClass:
+        class: NetteContainerProvider\RegisteredViaClass
+    viaType:
+        type: NetteContainerProvider\RegisteredViaType
+    child: NetteContainerProvider\RegisteredChild
+    productFactory:
+        implement: NetteContainerProvider\ProductFactory
+    imported:
+        type: NetteContainerProvider\ImportedService
+        imported: true
+    factoryCall: @serviceName::createSomething
