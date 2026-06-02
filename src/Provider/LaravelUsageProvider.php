@@ -798,7 +798,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         $formRequestMethods = [
-            'authorize', 'rules', 'messages', 'attributes',
+            'authorize', 'rules', 'messages', 'attributes', 'after', 'validator', 'withValidator',
             'prepareForValidation', 'passedValidation', 'failedValidation', 'failedAuthorization',
         ];
 
