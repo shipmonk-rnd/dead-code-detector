@@ -33,6 +33,12 @@ jobs:
                         repo: shipmonk-rnd/composer-dependency-analyser
                     -
                         repo: shipmonk-rnd/coverage-guard
+                    -
+                        repo: spaze/michalspacek.cz
+                        php: 8.5
+                        composer-working-directory: app/vendor-dev
+                        working-directory: app
+                        executable: vendor-dev/vendor/phpstan/phpstan/phpstan
 
             fail-fast: false
         steps:
@@ -54,6 +60,7 @@ jobs:
 
             -
                 name: Update Dead Code Detector
+                working-directory: ${{ matrix.composer-working-directory || '.' }}
                 env:
                     HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
                     HEAD_REF: ${{ github.head_ref }}
@@ -64,6 +71,7 @@ jobs:
             -
                 name: Run analysis
                 continue-on-error: true
+                working-directory: ${{ matrix.working-directory || '.' }}
                 run: ${{ matrix.executable || 'vendor/bin/phpstan' }} analyse ${{ matrix.args }} -vvv --ansi --error-format=prettyJson > /tmp/phpstan-output.json
 
             -
