@@ -459,6 +459,7 @@ class ApiOutputPropertyUsageProvider extends ReflectionBasedMemberUsageProvider
 
 #### Interface methods:
 - If you never call interface method over the interface, but only over its implementors, it gets reported as dead
+  - The same applies for abstract methods
 - But you may want to keep the interface method to force some unification across implementors
   - The easiest way to ignore it is via custom `MemberUsageProvider`:
 
