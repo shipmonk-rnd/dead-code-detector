@@ -73,6 +73,11 @@
             "dealerdirect/phpcodesniffer-composer-installer": false,
             "ergebnis/composer-normalize": true
         },
+        "audit": {
+            "ignore": {
+                "laravel/framework": "dev-only dep for provider tests; need to be able to install on PHP 8.1 (bugfixes not backported)"
+            }
+        },
         "sort-packages": true
     },
     "extra": {
