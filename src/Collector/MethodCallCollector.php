@@ -19,6 +19,7 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\MethodCallableNode;
 use PHPStan\Node\StaticMethodCallableNode;
 use PHPStan\TrinaryLogic;
+use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
@@ -181,8 +182,13 @@ final class MethodCallCollector implements Collector
                 $callableTypeAndNames = $constantArray->findTypeAndMethodNames();
 
                 foreach ($callableTypeAndNames as $typeAndName) {
-                    $caller = $typeAndName->getType();
-                    $methodName = $typeAndName->getMethod();
+                    if ($typeAndName->isUnknown()) {
+                        $caller = $constantArray->getOffsetValueType(new ConstantIntegerType(0));
+                        $methodName = null; // unknown method name
+                    } else {
+                        $caller = $typeAndName->getType();
+                        $methodName = $typeAndName->getMethod();
+                    }
 
                     foreach ($this->getDeclaringTypesWithMethod($methodName, $caller, TrinaryLogic::createMaybe()) as $methodRef) {
                         $this->registerUsage(

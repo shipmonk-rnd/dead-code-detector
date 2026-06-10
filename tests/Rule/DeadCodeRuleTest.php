@@ -904,6 +904,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-anonym' => [__DIR__ . '/data/methods/anonym.php'];
         yield 'method-enum' => [__DIR__ . '/data/methods/enum.php'];
         yield 'method-callables' => [__DIR__ . '/data/methods/callables.php'];
+        yield 'method-array-callable-dynamic-name' => [__DIR__ . '/data/methods/array-callable-dynamic-name.php'];
         yield 'method-code' => [__DIR__ . '/data/methods/basic.php'];
         yield 'method-ctor' => [__DIR__ . '/data/methods/ctor.php'];
         yield 'method-ctor-interface' => [__DIR__ . '/data/methods/ctor-interface.php'];
