@@ -47,5 +47,3 @@ function runFullyUnknown(string $className, string $methodName): void
 }
 
 (new Test())->run('maybeCalledDynamically');
-runOverDynamicClassString(StaticHandler::class);
-runFullyUnknown('AnyClass', 'anyMethod');
