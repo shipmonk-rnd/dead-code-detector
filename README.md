@@ -176,10 +176,11 @@ parameters:
                     - %currentWorkingDirectory%/tests
 ```
 
-With such setup, members used only in tests will be reported with corresponding message, e.g:
+With such setup, members used only in tests will be reported with a corresponding tip, e.g:
 
 ```
-Unused AddressValidator::isValidPostalCode (all usages excluded by tests excluder)
+Unused AddressValidator::isValidPostalCode
+💡 All usages excluded by tests excluder
 ```
 
 > [!TIP]

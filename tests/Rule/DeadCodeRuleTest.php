@@ -401,8 +401,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->debugMembers = ['DebugMixed\Foo::any'];
         $this->analyse([__DIR__ . '/data/debug/mixed.php'], [
             [
-                'Unused DebugMixed\Foo::any (all usages excluded by usageOverMixed excluder)',
+                'Unused DebugMixed\Foo::any',
                 7,
+                'All usages excluded by usageOverMixed excluder',
             ],
         ]);
         $rule = $this->getRule();
