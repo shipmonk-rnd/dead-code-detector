@@ -229,21 +229,18 @@ final class ReflectionUsageProvider implements MemberUsageProvider
 
         foreach ($classNames as $ownerClass) {
             foreach ($memberNames as $memberName) {
-                switch ($memberType) {
-                    case 'method':
-                        $usages[] = $this->createMethodUsage($node, $scope, $ownerClass, $memberName);
-                        break;
-                    case 'property':
-                        $usages[] = $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::READ);
-                        $usages[] = $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::WRITE);
-                        break;
-                    case 'constant':
-                        $usages[] = $this->createConstantUsage($node, $scope, $ownerClass, $memberName);
-                        break;
-                    case 'enumCase':
-                        $usages[] = $this->createEnumCaseUsage($node, $scope, $ownerClass, $memberName);
-                        break;
-                }
+                $usages = [
+                    ...$usages,
+                    ...match ($memberType) {
+                        'method' => [$this->createMethodUsage($node, $scope, $ownerClass, $memberName)],
+                        'property' => [
+                            $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::READ),
+                            $this->createPropertyUsage($node, $scope, $ownerClass, $memberName, AccessType::WRITE),
+                        ],
+                        'constant' => [$this->createConstantUsage($node, $scope, $ownerClass, $memberName)],
+                        'enumCase' => [$this->createEnumCaseUsage($node, $scope, $ownerClass, $memberName)],
+                    },
+                ];
             }
         }
 
