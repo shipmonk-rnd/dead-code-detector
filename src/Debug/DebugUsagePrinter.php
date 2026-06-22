@@ -239,7 +239,7 @@ final class DebugUsagePrinter
         }
 
         if (!$this->analysed) {
-            $output->writeLineFormatted("\n<fg=yellow>Usage debugging is unavailable in single-file analysis; point the analysed paths at a directory.</>");
+            $output->writeLineFormatted("\n<fg=yellow>Usage debugging is unavailable in files-only analysis.</>");
             return;
         }
 
