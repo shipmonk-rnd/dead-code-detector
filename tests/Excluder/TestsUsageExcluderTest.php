@@ -19,7 +19,6 @@ final class TestsUsageExcluderTest extends PHPStanTestCase
 
         self::assertSame([
             realpath(__DIR__ . '/../../tests'),
-            realpath(__DIR__ . '/../../tests/Provider/data'),
             realpath(__DIR__ . '/../../tests/Rule/data'),
         ], $devPathsPropertyReflection->getValue($excluder));
     }

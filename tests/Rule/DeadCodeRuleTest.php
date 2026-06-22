@@ -7,6 +7,7 @@ use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
 use Generator;
 use LogicException;
+use PhpatProvider\RegisteredArchitectureTest;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
@@ -235,7 +236,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
                 try {
                     ob_start();
-                    require $file;
+                    require_once $file;
                     ob_end_clean();
                 } catch (Throwable $e) {
                     self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
@@ -1015,6 +1016,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
+        yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php', self::requiresPackage('phpat/phpat', '>= 0.12')];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
         yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
@@ -1374,7 +1376,11 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 },
             );
         $mock->method('getServicesByTag')
-            ->willReturn([]);
+            ->willReturnCallback(
+                static fn (string $tag): array => $tag === 'phpat.test'
+                    ? [new RegisteredArchitectureTest()]
+                    : [],
+            );
         return $mock;
     }
 
