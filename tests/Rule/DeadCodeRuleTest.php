@@ -450,6 +450,23 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
+    public function testDebugUsageSkippedInOnlyFilesAnalysis(): void
+    {
+        $this->debugMembers = ['DateTime::format'];
+
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $expectedOutput = <<<'OUTPUT'
+
+        Usage debugging is unavailable in files-only analysis.
+        OUTPUT;
+
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
     public function testDebugUsageOriginLink(): void
     {
         $this->editorUrl = '( %relFile% at line %line% )';
