@@ -56,6 +56,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
@@ -1224,6 +1225,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
                 $this->createPhpStanContainerMock(),
             ),
+            new PhpatUsageProvider(
+                $this->providersEnabled,
+                $this->createPhpStanContainerMock(),
+            ),
             new EloquentUsageProvider(
                 $this->providersEnabled,
             ),
@@ -1368,6 +1373,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                     return [];
                 },
             );
+        $mock->method('getServicesByTag')
+            ->willReturn([]);
         return $mock;
     }
 

@@ -99,6 +99,9 @@ parameters:
 #### PHPStan:
 - constructor calls for DIC services (rules, extensions, ...)
 
+#### PHPat:
+- architecture test methods (`test*` or `#[TestRule]`) of classes registered via the `phpat.test` service tag
+
 #### Nette:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
