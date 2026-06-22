@@ -243,10 +243,10 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         foreach ($method->getAttributes(ParamProviders::class) as $providerAttributeReflection) {
             $providers = $providerAttributeReflection->getArguments()[0]
                 ?? $providerAttributeReflection->getArguments()['providers']
-                ?? null;
+                ?? [];
 
             if (!is_array($providers)) {
-                continue;
+                $providers = [$providers];
             }
 
             foreach ($providers as $provider) {

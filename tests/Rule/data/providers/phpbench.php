@@ -28,12 +28,22 @@ class SimpleBench
     {
     }
 
+    #[ParamProviders('provideSingleStringParams')]
+    public function benchWithSingleStringParams(array $params): void
+    {
+    }
+
     #[ParamProviders([1])]
     public function benchWithInvalidAttributeDontBreakIt(array $params): void
     {
     }
 
     public function provideParams(): array
+    {
+        return [];
+    }
+
+    public function provideSingleStringParams(): array
     {
         return [];
     }
