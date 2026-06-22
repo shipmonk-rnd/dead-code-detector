@@ -450,6 +450,26 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
     }
 
+    public function testDebugUsageSkippedInOnlyFilesAnalysis(): void
+    {
+        // In only-files analysis (e.g. editor on-the-fly single-file checks), DeadCodeRule::processNode()
+        // short-circuits before markAnalysedMembers() runs. The debug printer must degrade gracefully
+        // instead of asserting the missing 'analysed' flag. Skipping the analysis here mimics that short-circuit.
+        $this->debugMembers = ['DateTime::format'];
+
+        $rule = $this->getRule();
+
+        $actualOutput = '';
+        $rule->print($this->getOutputMock($actualOutput));
+
+        $expectedOutput = <<<'OUTPUT'
+
+        Usage debugging is unavailable in single-file analysis; point the analysed paths at a directory.
+        OUTPUT;
+
+        self::assertSame($expectedOutput . "\n", $this->trimFgColors($actualOutput));
+    }
+
     public function testDebugUsageOriginLink(): void
     {
         $this->editorUrl = '( %relFile% at line %line% )';

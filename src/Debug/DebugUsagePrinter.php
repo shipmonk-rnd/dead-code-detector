@@ -51,6 +51,11 @@ final class DebugUsagePrinter
     private array $debugMembers;
 
     /**
+     * False until markAnalysedMembers() runs, which only happens for full (non only-files) analysis.
+     */
+    private bool $analysed = false;
+
+    /**
      * @param array{enabled: bool|null, deduplicateAcrossViews: bool} $bladeOptions
      */
     public function __construct(
@@ -233,6 +238,11 @@ final class DebugUsagePrinter
             return;
         }
 
+        if (!$this->analysed) {
+            $output->writeLineFormatted("\n<fg=yellow>Usage debugging is unavailable in single-file analysis; point the analysed paths at a directory.</>");
+            return;
+        }
+
         if ($this->bladeDedupActive) {
             $output->writeLineFormatted('');
             $output->writeLineFormatted('<fg=yellow>Warning: Blade view-data usages are deduplicated across call sites</>');
@@ -368,6 +378,8 @@ final class DebugUsagePrinter
      */
     public function markAnalysedMembers(array $blackMembers): void
     {
+        $this->analysed = true;
+
         foreach ($this->debugMembers as $memberKey => $debugMember) {
             $this->debugMembers[$memberKey]['analysed'] = isset($blackMembers[$memberKey]);
         }
