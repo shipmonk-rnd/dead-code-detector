@@ -206,7 +206,9 @@ final class ClassDefinitionCollector implements Collector
         return $traits;
     }
 
-    /** @return value-of<ClassLikeKind> */
+    /**
+     * @return value-of<ClassLikeKind>
+     */
     private function getKind(ClassLike $node): string
     {
         if ($node instanceof Class_) {
