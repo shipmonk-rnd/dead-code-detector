@@ -235,7 +235,9 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         return $result;
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private function getParamProvidersFromAttributes(ReflectionMethod $method): array
     {
         $result = [];
