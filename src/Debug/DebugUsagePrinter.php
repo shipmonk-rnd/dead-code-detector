@@ -133,7 +133,9 @@ final class DebugUsagePrinter
             foreach ($collectedUsages as $memberName => $usages) {
                 $examplesShown++;
                 $memberTypeString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
-                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $memberName, $memberTypeString));
+                // method buckets are keyed in lowercase (case-insensitive matching), so show the original-case name from the usage
+                $displayName = $usages[0]->getUsage()->getMemberRef()->getMemberName() ?? $memberName;
+                $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $displayName, $memberTypeString));
 
                 $exampleCaller = $this->getExampleCaller($usages);
                 $output->writeFormatted(sprintf(', for example in <fg=white>%s</>', $exampleCaller));

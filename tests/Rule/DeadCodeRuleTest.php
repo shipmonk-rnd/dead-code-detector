@@ -925,6 +925,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-callables' => [__DIR__ . '/data/methods/callables.php'];
         yield 'method-array-callable-dynamic-name' => [__DIR__ . '/data/methods/array-callable-dynamic-name.php', self::requiresPackage('phpstan/phpstan', '>= 2.1.54')]; // is_callable() narrowing of [$obj, $method] arrays exists since 2.1.54
         yield 'method-code' => [__DIR__ . '/data/methods/basic.php'];
+        yield 'method-case-insensitive' => [__DIR__ . '/data/methods/case-insensitive.php'];
         yield 'method-ctor' => [__DIR__ . '/data/methods/ctor.php'];
         yield 'method-ctor-interface' => [__DIR__ . '/data/methods/ctor-interface.php'];
         yield 'method-ctor-private' => [__DIR__ . '/data/methods/ctor-private.php'];
