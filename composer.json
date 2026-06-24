@@ -29,6 +29,7 @@
         "nette/tester": "^2.4",
         "nette/utils": "^3.0 || ^4.0",
         "nikic/php-parser": "^5.4.0",
+        "phpat/phpat": "^0.12",
         "phpbench/phpbench": "^1.2",
         "phpstan/phpstan-phpunit": "^2.0.16",
         "phpstan/phpstan-strict-rules": "^2.0.10",

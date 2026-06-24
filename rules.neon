@@ -120,6 +120,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.phpstan.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PhpatUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.phpat.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -268,6 +275,8 @@ parameters:
                 enabled: true
             phpstan:
                 enabled: true
+            phpat:
+                enabled: null
             phpunit:
                 enabled: null
             phpbench:
@@ -353,6 +362,9 @@ parametersSchema:
             ])
             phpstan: structure([
                 enabled: bool()
+            ])
+            phpat: structure([
+                enabled: schema(bool(), nullable())
             ])
             phpunit: structure([
                 enabled: schema(bool(), nullable())

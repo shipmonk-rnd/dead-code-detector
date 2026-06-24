@@ -7,6 +7,7 @@ use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
 use Generator;
 use LogicException;
+use PhpatProvider\RegisteredArchitectureTest;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
 use PHPStan\Analyser\Scope;
@@ -56,6 +57,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PhpatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpUnitUsageProvider;
@@ -234,7 +236,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
                 try {
                     ob_start();
-                    require $file;
+                    require_once $file;
                     ob_end_clean();
                 } catch (Throwable $e) {
                     self::fail("Fatal error in {$e->getFile()}:{$e->getLine()}:\n {$e->getMessage()}");
@@ -1014,6 +1016,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
+        yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
         yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
@@ -1224,6 +1227,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
                 $this->createPhpStanContainerMock(),
             ),
+            new PhpatUsageProvider(
+                $this->providersEnabled,
+                $this->createPhpStanContainerMock(),
+            ),
             new EloquentUsageProvider(
                 $this->providersEnabled,
             ),
@@ -1367,6 +1374,12 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
                     return [];
                 },
+            );
+        $mock->method('getServicesByTag')
+            ->willReturnCallback(
+                static fn (string $tag): array => $tag === 'phpat.test'
+                    ? [new RegisteredArchitectureTest()]
+                    : [],
             );
         return $mock;
     }
