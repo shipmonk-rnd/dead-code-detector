@@ -1016,7 +1016,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
-        yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php', self::requiresPackage('phpat/phpat', '>= 0.12')];
+        yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
         yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
