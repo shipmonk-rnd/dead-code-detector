@@ -91,16 +91,16 @@ final class DebugUsagePrinter
         $mixedClassNameUsages = [];
 
         foreach ($mixedMemberUsages as $memberType => $collectedUsagesByMemberName) {
-            foreach ($collectedUsagesByMemberName as $memberName => $collectedUsages) {
+            foreach ($collectedUsagesByMemberName as $normalizedMemberNameOrAny => $collectedUsages) {
                 foreach ($collectedUsages as $collectedUsage) {
                     if ($collectedUsage->isExcluded()) {
                         continue;
                     }
 
-                    if ($memberName === self::ANY_MEMBER) {
+                    if ($normalizedMemberNameOrAny === self::ANY_MEMBER) {
                         $mixedEverythingUsages[$memberType][] = $collectedUsage;
                     } else {
-                        $mixedClassNameUsages[$memberType][$memberName][] = $collectedUsage;
+                        $mixedClassNameUsages[$memberType][$normalizedMemberNameOrAny][] = $collectedUsage;
                     }
                 }
             }
@@ -130,11 +130,11 @@ final class DebugUsagePrinter
         $output->writeLineFormatted(sprintf('<fg=yellow>Found %d usage%s over unknown type</>:', $totalCount, $plural));
 
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
-            foreach ($collectedUsages as $memberName => $usages) {
+            foreach ($collectedUsages as $normalizedMemberName => $usages) {
                 $examplesShown++;
                 $memberTypeString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
                 // method buckets are keyed in lowercase (case-insensitive matching), so show the original-case name from the usage
-                $displayName = $usages[0]->getUsage()->getMemberRef()->getMemberName() ?? $memberName;
+                $displayName = $usages[0]->getUsage()->getMemberRef()->getMemberName() ?? $normalizedMemberName;
                 $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $displayName, $memberTypeString));
 
                 $exampleCaller = $this->getExampleCaller($usages);

@@ -119,7 +119,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private array $blackMembers = [];
 
     /**
-     * memberType => [memberName => CollectedUsage[]]
+     * memberType => [normalizedMemberNameOrAny => CollectedUsage[]] where the index is the normalized member name or the ANY_MEMBER sentinel
      *
      * @var array<value-of<MemberType>, array<string, non-empty-list<CollectedUsage>>>
      */
@@ -190,10 +190,10 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
                         if ($className === null) {
                             $memberType = $memberUsage->getMemberType()->value;
-                            $memberNameString = $memberName === null
+                            $normalizedMemberNameOrAny = $memberName === null
                                 ? DebugUsagePrinter::ANY_MEMBER
-                                : $this->getMixedUsageMemberKey($memberType, $memberName);
-                            $this->mixedClassNameUsages[$memberType][$memberNameString][] = $collectedUsage;
+                                : $this->getNormalizedMemberName($memberType, $memberName);
+                            $this->mixedClassNameUsages[$memberType][$normalizedMemberNameOrAny][] = $collectedUsage;
                             continue;
                         }
 
@@ -309,9 +309,9 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
                 foreach ($memberNames as $memberName) {
-                    $mixedUsageKey = $this->getMixedUsageMemberKey($memberType, $memberName);
+                    $normalizedMemberName = $this->getNormalizedMemberName($memberType, $memberName);
 
-                    foreach ($this->mixedClassNameUsages[$memberType][$mixedUsageKey] ?? [] as $mixedUsage) {
+                    foreach ($this->mixedClassNameUsages[$memberType][$normalizedMemberName] ?? [] as $mixedUsage) {
                         $knownCollectedUsages[] = $mixedUsage->concretizeMixedClassNameUsage($typeName);
                     }
                 }
@@ -1047,7 +1047,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      *
      * @param value-of<MemberType> $memberType
      */
-    private function getMixedUsageMemberKey(
+    private function getNormalizedMemberName(
         int $memberType,
         string $memberName,
     ): string
