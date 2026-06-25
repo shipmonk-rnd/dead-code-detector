@@ -46,6 +46,8 @@ use function in_array;
 use function ksort;
 use function serialize;
 use function str_starts_with;
+use function strcasecmp;
+use function strtolower;
 
 /**
  * @implements Rule<CollectedDataNode>
@@ -117,7 +119,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     private array $blackMembers = [];
 
     /**
-     * memberType => [memberName => CollectedUsage[]]
+     * memberType => [normalizedMemberNameOrAny => CollectedUsage[]] where the index is the normalized member name or the ANY_MEMBER sentinel
      *
      * @var array<value-of<MemberType>, array<string, non-empty-list<CollectedUsage>>>
      */
@@ -187,8 +189,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                         $memberName = $memberUsage->getMemberRef()->getMemberName();
 
                         if ($className === null) {
-                            $memberNameString = $memberName ?? DebugUsagePrinter::ANY_MEMBER;
-                            $this->mixedClassNameUsages[$memberUsage->getMemberType()->value][$memberNameString][] = $collectedUsage;
+                            $memberType = $memberUsage->getMemberType()->value;
+                            $normalizedMemberNameOrAny = $memberName === null
+                                ? DebugUsagePrinter::ANY_MEMBER
+                                : $this->getNormalizedMemberName($memberType, $memberName);
+                            $this->mixedClassNameUsages[$memberType][$normalizedMemberNameOrAny][] = $collectedUsage;
                             continue;
                         }
 
@@ -304,7 +309,9 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
             foreach ($memberNamesForMixedExpand as $memberType => $memberNames) {
                 foreach ($memberNames as $memberName) {
-                    foreach ($this->mixedClassNameUsages[$memberType][$memberName] ?? [] as $mixedUsage) {
+                    $normalizedMemberName = $this->getNormalizedMemberName($memberType, $memberName);
+
+                    foreach ($this->mixedClassNameUsages[$memberType][$normalizedMemberName] ?? [] as $mixedUsage) {
                         $knownCollectedUsages[] = $mixedUsage->concretizeMixedClassNameUsage($typeName);
                     }
                 }
@@ -574,8 +581,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         bool $includeParentLookup = true,
     ): array
     {
-        if ($this->isExistingRef($memberRef)) {
-            return $memberRef->toKeys($accessType);
+        $definedMemberName = $this->findDefinedMemberName($memberRef);
+
+        if ($definedMemberName !== null) {
+            // use the declared-case name so the usage matches the definition even when called with a different case
+            return $memberRef->withKnownMember($definedMemberName)->toKeys($accessType);
         }
 
         // search for definition in traits
@@ -673,10 +683,14 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $memberType = $memberRef->getMemberType();
         $className = $memberRef->getClassName();
         $memberName = $memberRef->getMemberName();
+        $caseInsensitive = $memberRef instanceof ClassMethodRef; // method names are case-insensitive in PHP
 
         foreach ($this->traitMembers[$memberType->value][$className] ?? [] as $traitName => $traitMemberNames) {
             foreach ($traitMemberNames as $aliasedMemberName => $traitMemberName) {
-                if ($memberName === $aliasedMemberName) {
+                if (
+                    $memberName === $aliasedMemberName
+                    || ($caseInsensitive && strcasecmp($aliasedMemberName, $memberName) === 0)
+                ) {
                     return $memberRef->withKnownNames($traitName, $traitMemberName)->toKeys($accessType);
                 }
             }
@@ -947,23 +961,38 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     }
 
     /**
+     * Returns the name of the member as actually declared on the class, or null if it does not exist there.
+     * Method lookups are case-insensitive (PHP method names are), so the returned name may differ in case
+     * from the one in $memberRef - that declared-case name is then used for graph matching and reporting.
+     *
      * @param ClassMemberRef<string, string> $memberRef
      */
-    private function isExistingRef(
+    private function findDefinedMemberName(
         ClassMemberRef $memberRef,
-    ): bool
+    ): ?string
     {
         $typeName = $memberRef->getClassName();
         $memberName = $memberRef->getMemberName();
+        $caseInsensitive = $memberRef instanceof ClassMethodRef; // method names are case-insensitive in PHP
 
         $keys = $this->getTypeDefinitionKeysForMemberType($memberRef);
 
         foreach ($keys as $key) {
-            if (array_key_exists($memberName, $this->typeDefinitions[$typeName][$key] ?? [])) {
-                return true;
+            $definedMembers = $this->typeDefinitions[$typeName][$key] ?? [];
+
+            if (array_key_exists($memberName, $definedMembers)) {
+                return $memberName;
+            }
+
+            if ($caseInsensitive) {
+                foreach (array_keys($definedMembers) as $definedName) {
+                    if (strcasecmp($definedName, $memberName) === 0) {
+                        return $definedName;
+                    }
+                }
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -1010,6 +1039,20 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         throw new LogicException('Invalid member type');
+    }
+
+    /**
+     * Member name used to bucket usages with unknown class name. Method names are normalized to lowercase
+     * since they are case-insensitive in PHP; other member types stay case-sensitive.
+     *
+     * @param value-of<MemberType> $memberType
+     */
+    private function getNormalizedMemberName(
+        int $memberType,
+        string $memberName,
+    ): string
+    {
+        return $memberType === MemberType::METHOD->value ? strtolower($memberName) : $memberName;
     }
 
     /**
