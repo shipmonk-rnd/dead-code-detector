@@ -101,27 +101,27 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         if (
             $reflection->is(SignalReceiver::class)
-            && str_starts_with($methodName, 'handle')
+            && CaseInsensitiveName::startsWith($methodName, 'handle')
         ) {
             return VirtualUsageData::withNote('Signal handler method');
         }
 
         if (
             $reflection->is(Container::class)
-            && str_starts_with($methodName, 'createComponent')
+            && CaseInsensitiveName::startsWith($methodName, 'createComponent')
         ) {
             return VirtualUsageData::withNote('Component factory method');
         }
 
         if (
             $reflection->is(Control::class)
-            && str_starts_with($methodName, 'render')
+            && CaseInsensitiveName::startsWith($methodName, 'render')
         ) {
             return VirtualUsageData::withNote('Render method');
         }
 
         if (
-            $reflection->is(Presenter::class) && str_starts_with($methodName, 'action')
+            $reflection->is(Presenter::class) && CaseInsensitiveName::startsWith($methodName, 'action')
         ) {
             return VirtualUsageData::withNote('Presenter action method');
         }

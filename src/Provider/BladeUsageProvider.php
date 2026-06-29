@@ -18,6 +18,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function strpos;
+use function strtolower;
 use function substr;
 
 final class BladeUsageProvider implements MemberUsageProvider
@@ -91,7 +92,7 @@ final class BladeUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if ($node->name->toString() !== 'view') {
+        if (!CaseInsensitiveName::equals($node->name->toString(), 'view')) {
             return [];
         }
 
@@ -120,7 +121,7 @@ final class BladeUsageProvider implements MemberUsageProvider
 
         $methodName = $node->name->toString();
 
-        if (!isset(self::VIEW_FACADE_METHODS[$methodName])) {
+        if (!isset(self::VIEW_FACADE_METHODS[strtolower($methodName)])) {
             return [];
         }
 
@@ -139,7 +140,7 @@ final class BladeUsageProvider implements MemberUsageProvider
                 $classReflection->is('Illuminate\Support\Facades\View')
                 || $classReflection->is('Illuminate\Contracts\View\Factory')
             ) {
-                if ($methodName === 'make' || $methodName === 'first') {
+                if (CaseInsensitiveName::equals($methodName, 'make') || CaseInsensitiveName::equals($methodName, 'first')) {
                     $args = $node->getArgs();
 
                     if (!isset($args[1])) {
@@ -176,7 +177,7 @@ final class BladeUsageProvider implements MemberUsageProvider
         $usages = [];
 
         // View::composer → compose, View::creator → create (see Illuminate\View\Concerns\ManagesEvents::classEventMethodForPrefix)
-        $defaultMethod = $methodName === 'composer' ? 'compose' : 'create';
+        $defaultMethod = CaseInsensitiveName::equals($methodName, 'composer') ? 'compose' : 'create';
 
         foreach ($callbackType->getConstantStrings() as $stringType) {
             $value = $stringType->getValue();
@@ -232,7 +233,7 @@ final class BladeUsageProvider implements MemberUsageProvider
             $classReflection = $this->reflectionProvider->getClass($className);
 
             if ($classReflection->is('Illuminate\Contracts\View\Factory')) {
-                if ($methodName === 'make' || $methodName === 'first') {
+                if (CaseInsensitiveName::equals($methodName, 'make') || CaseInsensitiveName::equals($methodName, 'first')) {
                     $args = $node->getArgs();
 
                     if (!isset($args[1])) {
@@ -242,13 +243,13 @@ final class BladeUsageProvider implements MemberUsageProvider
                     return $this->traverseDataArg($args[1]->value, $node, $scope);
                 }
 
-                if ($methodName === 'composer' || $methodName === 'creator') {
+                if (CaseInsensitiveName::equals($methodName, 'composer') || CaseInsensitiveName::equals($methodName, 'creator')) {
                     return $this->getUsagesFromComposerOrCreator($node, $node->getArgs(), $scope, $methodName);
                 }
             }
 
             if ($classReflection->is('Illuminate\Contracts\Routing\ResponseFactory')) {
-                if ($methodName === 'view') {
+                if (CaseInsensitiveName::equals($methodName, 'view')) {
                     $args = $node->getArgs();
 
                     if (!isset($args[1])) {
@@ -260,7 +261,7 @@ final class BladeUsageProvider implements MemberUsageProvider
             }
 
             if ($classReflection->is('Illuminate\Contracts\View\View')) {
-                if ($methodName === 'with') {
+                if (CaseInsensitiveName::equals($methodName, 'with')) {
                     return $this->getUsagesFromWithCall($node, $scope);
                 }
             }

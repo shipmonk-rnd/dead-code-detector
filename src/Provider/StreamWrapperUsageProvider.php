@@ -9,7 +9,6 @@ use PHPStan\Analyser\Scope;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function in_array;
 
 /**
  * See: https://php.net/manual/en/class.streamwrapper.php
@@ -75,7 +74,7 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
     {
         $functionNames = $this->getFunctionNames($node, $scope);
 
-        if (in_array('stream_wrapper_register', $functionNames, true)) {
+        if (CaseInsensitiveName::isOneOf('stream_wrapper_register', $functionNames)) {
             return $this->handleStreamWrapperRegister($node, $scope);
         }
 

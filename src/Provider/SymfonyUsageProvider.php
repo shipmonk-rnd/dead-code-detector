@@ -250,7 +250,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if ($scope->getFunction()->getName() !== 'getSubscribedEvents') {
+        if (!CaseInsensitiveName::equals($scope->getFunction()->getName(), 'getSubscribedEvents')) {
             return [];
         }
 
@@ -674,7 +674,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      */
     private function getMapInputUsages(InClassMethodNode $node): array
     {
-        if ($node->getMethodReflection()->getName() !== '__invoke') {
+        if (!CaseInsensitiveName::equals($node->getMethodReflection()->getName(), '__invoke')) {
             return [];
         }
 
@@ -904,7 +904,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         Scope $scope,
     ): ?string
     {
-        if ($methodName === 'setDefaults' && isset($args[0])) {
+        if (CaseInsensitiveName::equals($methodName, 'setDefaults') && isset($args[0])) {
             if (!$this->isOptionsResolverType($scope->getType($node->var))) {
                 return null;
             }
@@ -912,7 +912,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return $this->extractDataClassFromArray($scope->getType($args[0]->value));
         }
 
-        if ($methodName === 'setDefault' && isset($args[0], $args[1])) {
+        if (CaseInsensitiveName::equals($methodName, 'setDefault') && isset($args[0], $args[1])) {
             if (!$this->isOptionsResolverType($scope->getType($node->var))) {
                 return null;
             }
@@ -959,16 +959,16 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $dataArgIndex = null;
         $optionsArgIndex = null;
 
-        if ($methodName === 'createFormBuilder' && $this->isAbstractControllerType($callerType)) {
+        if (CaseInsensitiveName::equals($methodName, 'createFormBuilder') && $this->isAbstractControllerType($callerType)) {
             $dataArgIndex = 0;
             $optionsArgIndex = 1;
-        } elseif ($methodName === 'createForm' && $this->isAbstractControllerType($callerType)) {
+        } elseif (CaseInsensitiveName::equals($methodName, 'createForm') && $this->isAbstractControllerType($callerType)) {
             $dataArgIndex = 1;
             $optionsArgIndex = 2;
-        } elseif (in_array($methodName, ['create', 'createBuilder'], true) && $this->isFormFactoryType($callerType)) {
+        } elseif (CaseInsensitiveName::isOneOf($methodName, ['create', 'createBuilder']) && $this->isFormFactoryType($callerType)) {
             $dataArgIndex = 1;
             $optionsArgIndex = 2;
-        } elseif (in_array($methodName, ['createNamed', 'createNamedBuilder'], true) && $this->isFormFactoryType($callerType)) {
+        } elseif (CaseInsensitiveName::isOneOf($methodName, ['createNamed', 'createNamedBuilder']) && $this->isFormFactoryType($callerType)) {
             $dataArgIndex = 2;
             $optionsArgIndex = 3;
         } else {
@@ -1136,7 +1136,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     private function isPropertyAccessorMethod(string $methodName): bool
     {
         foreach (['get', 'set', 'is', 'has', 'can', 'add', 'remove'] as $prefix) {
-            if (str_starts_with($methodName, $prefix) && isset($methodName[strlen($prefix)]) && $methodName[strlen($prefix)] >= 'A' && $methodName[strlen($prefix)] <= 'Z') {
+            if (CaseInsensitiveName::startsWith($methodName, $prefix) && isset($methodName[strlen($prefix)]) && $methodName[strlen($prefix)] >= 'A' && $methodName[strlen($prefix)] <= 'Z') {
                 return true;
             }
         }
@@ -1345,7 +1345,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $arguments = $attribute->getArguments();
             $targetMethod = $arguments['method'] ?? $arguments[3] ?? $methodName;
 
-            if ($targetMethod === $methodName) {
+            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
                 return true;
             }
         }
@@ -1355,21 +1355,21 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $arguments = $attribute->getArguments();
             $targetMethod = $arguments['method'] ?? $arguments[3] ?? '__invoke';
 
-            if ($targetMethod === $methodName) {
+            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
                 return true;
             }
         }
 
         // Check if any other method points to this method (only if explicitly specified)
         foreach ($class->getMethods() as $otherMethod) {
-            if ($otherMethod->getName() === $methodName) {
+            if (CaseInsensitiveName::equals($otherMethod->getName(), $methodName)) {
                 continue;
             }
 
             foreach ($otherMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
                 $arguments = $attribute->getArguments();
                 $targetMethod = $arguments['method'] ?? $arguments[3] ?? null;
-                if ($methodName === $targetMethod) {
+                if (is_string($targetMethod) && CaseInsensitiveName::equals($methodName, $targetMethod)) {
                     return true;
                 }
             }
@@ -1424,7 +1424,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
             $callback = $arguments['callback'] ?? $arguments[0] ?? null;
 
-            if ($callback === $method->getName()) {
+            if (is_string($callback) && CaseInsensitiveName::equals($callback, $method->getName())) {
                 return true;
             }
         }
@@ -1464,11 +1464,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 $arguments = $attribute->getArguments();
                 $targetMethod = $arguments['method'] ?? null;
 
-                if ($targetMethod === $methodName) {
+                if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
                     return true;
                 }
 
-                if ($targetMethod === null && $methodName === '__invoke') {
+                if ($targetMethod === null && CaseInsensitiveName::equals($methodName, '__invoke')) {
                     return true;
                 }
             }
@@ -1479,7 +1479,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isConstructorOrMountOnTwigComponent(ReflectionMethod $method): bool
     {
-        if (!$method->isConstructor() && $method->getName() !== 'mount') {
+        if (!$method->isConstructor() && !CaseInsensitiveName::equals($method->getName(), 'mount')) {
             return false;
         }
 
@@ -1513,13 +1513,15 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     {
         $methodName = $method->getName();
 
-        return $methodName === 'onKernelResponse'
-            || $methodName === 'onKernelException'
-            || $methodName === 'onKernelRequest'
-            || $methodName === 'onConsoleError'
-            || $methodName === 'onConsoleCommand'
-            || $methodName === 'onConsoleSignal'
-            || $methodName === 'onConsoleTerminate';
+        return CaseInsensitiveName::isOneOf($methodName, [
+            'onKernelResponse',
+            'onKernelException',
+            'onKernelRequest',
+            'onConsoleError',
+            'onConsoleCommand',
+            'onConsoleSignal',
+            'onConsoleTerminate',
+        ]);
     }
 
     /**
@@ -1709,7 +1711,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $invokeMethod = null;
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if ($method->getName() === '__invoke') {
+            if (CaseInsensitiveName::equals($method->getName(), '__invoke')) {
                 $invokeMethod = $method;
                 break;
             }

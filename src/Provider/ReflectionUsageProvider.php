@@ -33,7 +33,6 @@ use function array_key_first;
 use function array_values;
 use function count;
 use function explode;
-use function in_array;
 
 final class ReflectionUsageProvider implements MemberUsageProvider
 {
@@ -122,7 +121,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         $methodName = $node->name->toString();
         $args = $node->getArgs();
 
-        if ($className === ReflectionMethod::class && $methodName === 'createFromMethodName' && count($args) === 1) {
+        if ($className === ReflectionMethod::class && CaseInsensitiveName::equals($methodName, 'createFromMethodName') && count($args) === 1) {
             return $this->processClassMethodString($args[array_key_first($args)], $node, $scope);
         }
 
@@ -320,11 +319,11 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     {
         $usedConstants = [];
 
-        if ($methodName === 'getConstants' || $methodName === 'getReflectionConstants') {
+        if (CaseInsensitiveName::isOneOf($methodName, ['getConstants', 'getReflectionConstants'])) {
             $usedConstants[] = $this->createConstantUsage($node, $scope, $genericClassName, null);
         }
 
-        if (($methodName === 'getConstant' || $methodName === 'getReflectionConstant') && count($args) === 1) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['getConstant', 'getReflectionConstant']) && count($args) === 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
@@ -349,11 +348,11 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     {
         $usedConstants = [];
 
-        if ($methodName === 'getCases') {
+        if (CaseInsensitiveName::equals($methodName, 'getCases')) {
             $usedConstants[] = $this->createEnumCaseUsage($node, $scope, $genericClassName, null);
         }
 
-        if (($methodName === 'getCase') && count($args) === 1) {
+        if (CaseInsensitiveName::equals($methodName, 'getCase') && count($args) === 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
@@ -378,11 +377,11 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     {
         $usedMethods = [];
 
-        if ($methodName === 'getMethods') {
+        if (CaseInsensitiveName::equals($methodName, 'getMethods')) {
             $usedMethods[] = $this->createMethodUsage($node, $scope, $genericClassName, null);
         }
 
-        if ($methodName === 'getMethod' && count($args) === 1) {
+        if (CaseInsensitiveName::equals($methodName, 'getMethod') && count($args) === 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {
@@ -390,7 +389,7 @@ final class ReflectionUsageProvider implements MemberUsageProvider
             }
         }
 
-        if (in_array($methodName, ['getConstructor', 'newInstance', 'newInstanceArgs'], true)) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['getConstructor', 'newInstance', 'newInstanceArgs'])) {
             $usedMethods[] = $this->createMethodUsage($node, $scope, $genericClassName, '__construct');
         }
 
@@ -412,15 +411,17 @@ final class ReflectionUsageProvider implements MemberUsageProvider
         $usedProperties = [];
 
         if (
-            $methodName === 'getProperties'
-            || $methodName === 'getDefaultProperties' // simplified, ideally should mark white only default properties
-            || $methodName === 'getStaticProperties' // simplified, ideally should mark white only static properties
+            CaseInsensitiveName::isOneOf($methodName, [
+                'getProperties',
+                'getDefaultProperties', // simplified, ideally should mark white only default properties
+                'getStaticProperties', // simplified, ideally should mark white only static properties
+            ])
         ) {
             $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null, AccessType::READ);
             $usedProperties[] = $this->createPropertyUsage($node, $scope, $genericClassName, null, AccessType::WRITE); // ReflectionProperty is not generic, so we cannot track setValue call
         }
 
-        if (in_array($methodName, ['getProperty', 'getStaticPropertyValue'], true) && count($args) >= 1) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['getProperty', 'getStaticPropertyValue']) && count($args) >= 1) {
             $firstArg = $args[array_key_first($args)];
 
             foreach ($scope->getType($firstArg->value)->getConstantStrings() as $constantString) {

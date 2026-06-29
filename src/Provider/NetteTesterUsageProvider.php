@@ -50,7 +50,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
                 $usages[] = $this->createUsage($className, $methodName, 'Test method');
             }
 
-            if ($methodName === 'setUp' || $methodName === 'tearDown') {
+            if (CaseInsensitiveName::isOneOf($methodName, ['setUp', 'tearDown'])) {
                 $usages[] = $this->createUsage($className, $methodName, 'Lifecycle method');
             }
 

@@ -28,6 +28,7 @@ use function array_map;
 use function count;
 use function explode;
 use function in_array;
+use function strtolower;
 
 final class TwigUsageProvider implements MemberUsageProvider
 {
@@ -341,7 +342,7 @@ final class TwigUsageProvider implements MemberUsageProvider
             $classReflection = $this->reflectionProvider->getClass($className);
 
             if ($classReflection->is('Twig\Environment')) {
-                if ($methodName === 'render' || $methodName === 'display') {
+                if (CaseInsensitiveName::isOneOf($methodName, ['render', 'display'])) {
                     return 1;
                 }
             }
@@ -351,24 +352,24 @@ final class TwigUsageProvider implements MemberUsageProvider
                     'render' => 0,
                     'display' => 0,
                     'stream' => 0,
-                    'streamBlock' => 1,
-                    'renderBlock' => 1,
-                    'displayBlock' => 1,
+                    'streamblock' => 1,
+                    'renderblock' => 1,
+                    'displayblock' => 1,
                 ];
 
-                return $wrapperMethods[$methodName] ?? null;
+                return $wrapperMethods[strtolower($methodName)] ?? null;
             }
 
             if ($classReflection->is('Symfony\Bundle\FrameworkBundle\Controller\AbstractController')) {
                 $controllerMethods = [
                     'render' => 1,
-                    'renderView' => 1,
-                    'renderBlock' => 2,
-                    'renderBlockView' => 2,
+                    'renderview' => 1,
+                    'renderblock' => 2,
+                    'renderblockview' => 2,
                     'stream' => 1,
                 ];
 
-                return $controllerMethods[$methodName] ?? null;
+                return $controllerMethods[strtolower($methodName)] ?? null;
             }
         }
 
