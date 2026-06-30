@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PHPStan\DeadCode\Provider;
+namespace ShipMonk\PHPStan\DeadCode\Naming;
 
 use function array_map;
 use function in_array;

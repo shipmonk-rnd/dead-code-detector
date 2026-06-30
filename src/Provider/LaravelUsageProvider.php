@@ -20,6 +20,7 @@ use PHPStan\Type\Constant\ConstantStringType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function array_map;
 use function array_slice;
 use function count;

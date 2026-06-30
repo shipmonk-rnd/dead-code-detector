@@ -9,6 +9,7 @@ use PHPStan\Analyser\Scope;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 
 /**
  * See: https://php.net/manual/en/class.streamwrapper.php

@@ -14,6 +14,7 @@ use Nette\SmartObject;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionMethod;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function class_exists;
 use function file_get_contents;
 use function is_array;

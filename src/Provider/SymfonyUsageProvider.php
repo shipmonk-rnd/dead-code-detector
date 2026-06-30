@@ -42,6 +42,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use SimpleXMLElement;
 use SplFileInfo;
 use Symfony\UX\TwigComponent\Attribute\FromMethod;

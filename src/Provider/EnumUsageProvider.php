@@ -18,6 +18,7 @@ use ReflectionEnumBackedCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use UnitEnum;
 use function array_filter;
 use function is_int;
