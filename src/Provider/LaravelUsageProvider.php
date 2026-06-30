@@ -671,7 +671,8 @@ final class LaravelUsageProvider implements MemberUsageProvider
             ?? $this->isBroadcastEventMethod($method, $classReflection)
             ?? $this->isJsonResourceMethod($method, $classReflection)
             ?? $this->isNotifiableMethod($method, $classReflection)
-            ?? $this->isEventListenerMethod($method, $classReflection);
+            ?? $this->isEventListenerMethod($method, $classReflection)
+            ?? $this->isExceptionMethod($method, $classReflection);
     }
 
     private function isCommandMethod(
@@ -940,6 +941,28 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         if ($method->isConstructor() && $this->hasAutoDiscoveredListenerMethod($classReflection)) {
             return 'Laravel auto-discovered event listener method';
+        }
+
+        return null;
+    }
+
+    private function isExceptionMethod(
+        ReflectionMethod $method,
+        ClassReflection $classReflection,
+    ): ?string
+    {
+        if (!$classReflection->is('Throwable')) {
+            return null;
+        }
+
+        $methodName = $method->getName();
+
+        $exceptionMethods = [
+            'context', 'render', 'report',
+        ];
+
+        if ($method->isPublic() && CaseInsensitiveName::isOneOf($methodName, $exceptionMethods)) {
+            return 'Laravel exception method';
         }
 
         return null;
