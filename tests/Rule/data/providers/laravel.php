@@ -748,12 +748,12 @@ class InvalidOrderException extends Exception
 
     public function render(Request $request): Response
     {
-        return response();
+        return new Response();
     }
 
     public function report(): bool
     {
-        return [];
+        return false;
     }
 
     private function helperMethod(): void // error: Unused Laravel\InvalidOrderException::helperMethod
