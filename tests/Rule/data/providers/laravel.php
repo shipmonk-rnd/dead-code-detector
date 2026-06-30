@@ -761,6 +761,19 @@ class InvalidOrderException extends Exception
     }
 }
 
+// Throwable that is not an Exception (extends Error) — the framework reports/renders it the same way
+class InvalidOrderError extends \Error
+{
+    public function report(): bool
+    {
+        return false;
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\InvalidOrderError::helperMethod
+    {
+    }
+}
+
 // =====================
 // Route/Event/Schedule Registrations (AST-based detection)
 // =====================

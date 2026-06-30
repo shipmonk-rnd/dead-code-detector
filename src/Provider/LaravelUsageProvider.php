@@ -951,7 +951,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         ClassReflection $classReflection,
     ): ?string
     {
-        if (!$classReflection->is('Exception')) {
+        if (!$classReflection->is('Throwable')) {
             return null;
         }
 
