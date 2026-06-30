@@ -962,7 +962,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         ];
 
         if ($method->isPublic() && CaseInsensitiveName::isOneOf($methodName, $exceptionMethods)) {
-            return 'Laravel exceptiopn method';
+            return 'Laravel exception method';
         }
 
         return null;
