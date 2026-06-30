@@ -16,9 +16,9 @@ use PHPStan\PhpDocParser\Parser\TokenIterator;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function array_merge;
 use function explode;
-use function in_array;
 use function is_array;
 use function is_string;
 use function preg_match;
@@ -149,7 +149,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             $beforeMethodsFromAnnotations = $this->getMethodNamesFromAnnotation($docComment, '@BeforeMethods');
             $afterMethodsFromAnnotations = $this->getMethodNamesFromAnnotation($docComment, '@AfterMethods');
 
-            if (in_array($methodName, $beforeMethodsFromAnnotations, true) || in_array($methodName, $afterMethodsFromAnnotations, true)) {
+            if (CaseInsensitiveName::isOneOf($methodName, $beforeMethodsFromAnnotations) || CaseInsensitiveName::isOneOf($methodName, $afterMethodsFromAnnotations)) {
                 return true;
             }
         }
@@ -162,7 +162,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             }
 
             foreach ($methods as $beforeMethod) {
-                if ($beforeMethod === $methodName) {
+                if (is_string($beforeMethod) && CaseInsensitiveName::equals($beforeMethod, $methodName)) {
                     return true;
                 }
             }
@@ -175,7 +175,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
             }
 
             foreach ($methods as $afterMethod) {
-                if ($afterMethod === $methodName) {
+                if (is_string($afterMethod) && CaseInsensitiveName::equals($afterMethod, $methodName)) {
                     return true;
                 }
             }

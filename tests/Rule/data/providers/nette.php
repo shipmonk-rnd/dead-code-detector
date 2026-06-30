@@ -26,6 +26,10 @@ final class PagePresenter extends Presenter
         $this->redirect('Login:');
     }
 
+    public function HandleCaseInsensitive() { // upper-cased 'H': Nette resolves signals via case-insensitive getMethod(), so this is still a live handler
+        $this->redirect('Login:');
+    }
+
 }
 
 /**

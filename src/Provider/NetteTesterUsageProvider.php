@@ -10,6 +10,7 @@ use PHPStan\Node\InClassNode;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function preg_match;
 use function preg_match_all;
 use function str_contains;
@@ -50,7 +51,7 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
                 $usages[] = $this->createUsage($className, $methodName, 'Test method');
             }
 
-            if ($methodName === 'setUp' || $methodName === 'tearDown') {
+            if (CaseInsensitiveName::isOneOf($methodName, ['setUp', 'tearDown'])) {
                 $usages[] = $this->createUsage($className, $methodName, 'Lifecycle method');
             }
 

@@ -23,6 +23,8 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use function is_string;
 use function str_starts_with;
 
 final class DoctrineUsageProvider implements MemberUsageProvider
@@ -128,7 +130,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        if ($scope->getFunction()->getName() !== 'getSubscribedEvents') {
+        if (!CaseInsensitiveName::equals($scope->getFunction()->getName(), 'getSubscribedEvents')) {
             return [];
         }
 
@@ -224,21 +226,23 @@ final class DoctrineUsageProvider implements MemberUsageProvider
      */
     private function isProbablyDoctrineListener(string $methodName): bool
     {
-        return $methodName === 'preRemove'
-            || $methodName === 'postRemove'
-            || $methodName === 'prePersist'
-            || $methodName === 'postPersist'
-            || $methodName === 'preUpdate'
-            || $methodName === 'postUpdate'
-            || $methodName === 'postLoad'
-            || $methodName === 'loadClassMetadata'
-            || $methodName === 'onClassMetadataNotFound'
-            || $methodName === 'preFlush'
-            || $methodName === 'onFlush'
-            || $methodName === 'postFlush'
-            || $methodName === 'onClear'
-            || $methodName === 'postGenerateSchemaTable'
-            || $methodName === 'postGenerateSchema';
+        return CaseInsensitiveName::isOneOf($methodName, [
+            'preRemove',
+            'postRemove',
+            'prePersist',
+            'postPersist',
+            'preUpdate',
+            'postUpdate',
+            'postLoad',
+            'loadClassMetadata',
+            'onClassMetadataNotFound',
+            'preFlush',
+            'onFlush',
+            'postFlush',
+            'onClear',
+            'postGenerateSchemaTable',
+            'postGenerateSchema',
+        ]);
     }
 
     private function hasAttribute(
@@ -257,7 +261,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
             $listenerMethodName = $attribute->getArguments()['method'] ?? $attribute->getArguments()[1] ?? null;
 
-            if ($listenerMethodName === $methodName) {
+            if (is_string($listenerMethodName) && CaseInsensitiveName::equals($listenerMethodName, $methodName)) {
                 return true;
             }
         }
@@ -275,7 +279,10 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
             // AsDoctrineListener doesn't have a 'method' parameter
             // Symfony looks for a method named after the event, or falls back to __invoke
-            if ($eventName === $methodName || $methodName === '__invoke') {
+            if (
+                (is_string($eventName) && CaseInsensitiveName::equals($eventName, $methodName))
+                || CaseInsensitiveName::equals($methodName, '__invoke')
+            ) {
                 return true;
             }
         }
@@ -303,10 +310,10 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             if ($listenerMethodName === null) {
                 $eventName = $arguments['event'] ?? null;
 
-                if ($eventName === $methodName) {
+                if (is_string($eventName) && CaseInsensitiveName::equals($eventName, $methodName)) {
                     return true;
                 }
-            } elseif ($listenerMethodName === $methodName) {
+            } elseif (is_string($listenerMethodName) && CaseInsensitiveName::equals($listenerMethodName, $methodName)) {
                 return true;
             }
         }

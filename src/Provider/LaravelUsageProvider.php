@@ -20,17 +20,16 @@ use PHPStan\Type\Constant\ConstantStringType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function array_map;
 use function array_slice;
 use function count;
 use function explode;
 use function implode;
-use function in_array;
 use function lcfirst;
 use function str_contains;
 use function str_ends_with;
 use function str_replace;
-use function str_starts_with;
 use function strpos;
 use function strrpos;
 use function substr;
@@ -152,7 +151,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if (in_array($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any'], true)) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any'])) {
             foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
@@ -183,7 +182,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($methodName === 'match') {
+        if (CaseInsensitiveName::equals($methodName, 'match')) {
             foreach ($this->extractCallablesFromArg($node, $scope, 2) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
@@ -214,7 +213,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($methodName === 'resource') {
+        if (CaseInsensitiveName::equals($methodName, 'resource')) {
             $resourceMethods = ['__construct', 'index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
 
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
@@ -227,7 +226,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($methodName === 'apiResource') {
+        if (CaseInsensitiveName::equals($methodName, 'apiResource')) {
             $apiResourceMethods = ['__construct', 'index', 'store', 'show', 'update', 'destroy'];
 
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
@@ -258,7 +257,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if ($methodName === 'listen') {
+        if (CaseInsensitiveName::equals($methodName, 'listen')) {
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $className) {
                 foreach (['handle', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
@@ -269,7 +268,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($methodName === 'subscribe') {
+        if (CaseInsensitiveName::equals($methodName, 'subscribe')) {
             foreach ($this->extractClassNamesFromArg($node, $scope, 0) as $className) {
                 foreach (['subscribe', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
@@ -298,7 +297,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if ($methodName === 'job') {
+        if (CaseInsensitiveName::equals($methodName, 'job')) {
             foreach ($this->extractClassNamesFromArg($node, $scope, 0) as $className) {
                 foreach (['handle', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
@@ -327,7 +326,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if ($methodName === 'define') {
+        if (CaseInsensitiveName::equals($methodName, 'define')) {
             foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
@@ -347,13 +346,13 @@ final class LaravelUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($methodName === 'policy') {
+        if (CaseInsensitiveName::equals($methodName, 'policy')) {
             foreach ($this->extractClassNamesFromArg($node, $scope, 1) as $policyClassName) {
                 $usages = [...$usages, ...$this->markAllPublicPolicyMethods($policyClassName, UsageOrigin::createRegular($node, $scope))];
             }
         }
 
-        if (in_array($methodName, ['allows', 'denies', 'check', 'any', 'none', 'authorize'], true)) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['allows', 'denies', 'check', 'any', 'none', 'authorize'])) {
             $usages = [...$usages, ...$this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node)];
         }
 
@@ -374,7 +373,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $methodName = $node->name->name;
 
-        if (!in_array($methodName, ['authorize', 'can', 'cannot', 'cant'], true)) {
+        if (!CaseInsensitiveName::isOneOf($methodName, ['authorize', 'can', 'cannot', 'cant'])) {
             return [];
         }
 
@@ -387,11 +386,11 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
             $callerReflection = $this->reflectionProvider->getClass($callerClassName);
 
-            if ($methodName === 'authorize') {
+            if (CaseInsensitiveName::equals($methodName, 'authorize')) {
                 if ($callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
                     return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
                 }
-            } elseif ($methodName === 'can') {
+            } elseif (CaseInsensitiveName::equals($methodName, 'can')) {
                 if (
                     $callerReflection->is('Illuminate\Contracts\Auth\Access\Authorizable')
                     || $callerReflection->hasTraitUse('Illuminate\Foundation\Auth\Access\Authorizable')
@@ -684,7 +683,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if ($method->isConstructor() || $method->getName() === 'handle') {
+        if ($method->isConstructor() || CaseInsensitiveName::equals($method->getName(), 'handle')) {
             return 'Laravel console command method';
         }
 
@@ -708,7 +707,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             'uniqueId', 'tags', 'backoff', 'uniqueVia', 'displayName',
         ];
 
-        if (in_array($method->getName(), $jobMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $jobMethods)) {
             return 'Laravel job method';
         }
 
@@ -724,7 +723,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if ($method->isConstructor() || in_array($method->getName(), ['register', 'boot'], true)) {
+        if ($method->isConstructor() || CaseInsensitiveName::isOneOf($method->getName(), ['register', 'boot'])) {
             return 'Laravel service provider method';
         }
 
@@ -738,7 +737,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
     {
         $methodName = $method->getName();
 
-        if ($methodName !== 'handle' && $methodName !== 'terminate' && !$method->isConstructor()) {
+        if (!CaseInsensitiveName::equals($methodName, 'handle') && !CaseInsensitiveName::equals($methodName, 'terminate') && !$method->isConstructor()) {
             return null;
         }
 
@@ -781,7 +780,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             'via', 'toMail', 'toArray', 'toDatabase', 'toBroadcast', 'toVonage', 'toSlack',
         ];
 
-        if (in_array($methodName, $notificationMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($methodName, $notificationMethods)) {
             return 'Laravel notification method';
         }
 
@@ -802,7 +801,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             'prepareForValidation', 'passedValidation', 'failedValidation', 'failedAuthorization',
         ];
 
-        if (in_array($method->getName(), $formRequestMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $formRequestMethods)) {
             return 'Laravel form request method';
         }
 
@@ -831,7 +830,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             'before', 'viewAny', 'view', 'create', 'update', 'delete', 'restore', 'forceDelete',
         ];
 
-        if (in_array($method->getName(), $policyMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $policyMethods)) {
             return 'Laravel policy method';
         }
 
@@ -849,7 +848,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $mailableMethods = ['build', 'content', 'envelope', 'attachments', 'headers'];
 
-        if (in_array($method->getName(), $mailableMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $mailableMethods)) {
             return 'Laravel mailable method';
         }
 
@@ -867,7 +866,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $broadcastMethods = ['broadcastWith', 'broadcastAs', 'broadcastWhen'];
 
-        if (in_array($method->getName(), $broadcastMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $broadcastMethods)) {
             return 'Laravel broadcast event method';
         }
 
@@ -885,7 +884,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $resourceMethods = ['paginationInformation'];
 
-        if (in_array($method->getName(), $resourceMethods, true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), $resourceMethods)) {
             return 'Laravel JSON resource method';
         }
 
@@ -904,7 +903,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if (str_starts_with($method->getName(), 'routeNotificationFor')) {
+        if (CaseInsensitiveName::startsWith($method->getName(), 'routeNotificationFor')) {
             return 'Laravel notification routing method';
         }
 
@@ -918,7 +917,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
     {
         $methodName = $method->getName();
 
-        if ($method->isPublic() && (str_starts_with($methodName, 'handle') || $methodName === '__invoke')) {
+        if ($method->isPublic() && (CaseInsensitiveName::startsWith($methodName, 'handle') || CaseInsensitiveName::equals($methodName, '__invoke'))) {
             if ($this->firstParamHasClassType($methodName, $classReflection)) {
                 return 'Laravel auto-discovered event listener method';
             }
@@ -942,7 +941,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
             $name = $classMethod->getName();
 
-            if (!str_starts_with($name, 'handle') && $name !== '__invoke') {
+            if (!CaseInsensitiveName::startsWith($name, 'handle') && !CaseInsensitiveName::equals($name, '__invoke')) {
                 continue;
             }
 

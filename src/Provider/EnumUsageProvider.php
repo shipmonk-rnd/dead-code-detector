@@ -18,9 +18,9 @@ use ReflectionEnumBackedCase;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use UnitEnum;
 use function array_filter;
-use function in_array;
 use function is_int;
 use function is_string;
 
@@ -76,7 +76,7 @@ final class EnumUsageProvider implements MemberUsageProvider
         $result = [];
 
         foreach ($methodNames as $methodName) {
-            if (!in_array($methodName, ['tryFrom', 'from', 'cases'], true)) {
+            if ($methodName === null || !CaseInsensitiveName::isOneOf($methodName, ['tryFrom', 'from', 'cases'])) {
                 continue;
             }
 

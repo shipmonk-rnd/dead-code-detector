@@ -17,10 +17,9 @@ use PHPStan\Type\ObjectType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function in_array;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function is_array;
 use function is_string;
-use function str_ends_with;
 use function str_starts_with;
 use function strlen;
 
@@ -211,11 +210,11 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return 'Eloquent model constructor';
         }
 
-        if (in_array($methodName, ['boot', 'booted', 'casts', 'newFactory'], true)) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['boot', 'booted', 'casts', 'newFactory'])) {
             return 'Eloquent lifecycle/framework method';
         }
 
-        if (str_starts_with($methodName, 'scope') && $methodName !== 'scope') {
+        if (CaseInsensitiveName::startsWith($methodName, 'scope') && !CaseInsensitiveName::equals($methodName, 'scope')) {
             return 'Eloquent query scope';
         }
 
@@ -243,12 +242,12 @@ final class EloquentUsageProvider implements MemberUsageProvider
         $length = strlen($methodName);
 
         // Minimum: get + X + Attribute = 13 chars, same for set
-        if ($length <= 12 || !str_ends_with($methodName, 'Attribute')) {
+        if ($length <= 12 || !CaseInsensitiveName::endsWith($methodName, 'Attribute')) {
             return false;
         }
 
-        return str_starts_with($methodName, 'get')
-            || str_starts_with($methodName, 'set');
+        return CaseInsensitiveName::startsWith($methodName, 'get')
+            || CaseInsensitiveName::startsWith($methodName, 'set');
     }
 
     private function isFactoryMethod(
@@ -260,7 +259,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if (in_array($method->getName(), ['definition', 'configure'], true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), ['definition', 'configure'])) {
             return 'Eloquent factory method';
         }
 
@@ -276,7 +275,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if ($method->getName() === 'run') {
+        if (CaseInsensitiveName::equals($method->getName(), 'run')) {
             return 'Eloquent seeder method';
         }
 
@@ -292,7 +291,7 @@ final class EloquentUsageProvider implements MemberUsageProvider
             return null;
         }
 
-        if (in_array($method->getName(), ['up', 'down'], true)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), ['up', 'down'])) {
             return 'Eloquent migration method';
         }
 

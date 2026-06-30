@@ -107,6 +107,12 @@ class DirectHolder2
     public function usedViaObjectArg() {}
 }
 
+class CaseInsensitiveHolder
+{
+    public function usedViaUppercasedGetMethod() {}
+    public function notUsedCaseInsensitive() {} // error: Unused Reflection\CaseInsensitiveHolder::notUsedCaseInsensitive
+}
+
 function test() {
     GetAllConstantsChild::getConstants();
     GetAllConstantsChild::getConstants2();
@@ -141,6 +147,9 @@ function test() {
 
     $obj = new DirectHolder2();
     new \ReflectionMethod($obj, 'usedViaObjectArg');
+
+    $reflectionCi = new \ReflectionClass(CaseInsensitiveHolder::class);
+    $reflectionCi->GETMETHOD('usedViaUppercasedGetMethod'); // differently-cased getMethod() must still mark the member used
 
     new \ReflectionClassConstant(DirectConstHolder::class, 'USED_CONST');
 }
