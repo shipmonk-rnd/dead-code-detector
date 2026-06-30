@@ -488,8 +488,34 @@ class InvoiceNotification extends Notification
         return new \stdClass();
     }
 
+    public function afterSending(object $notifiable, string $channel, mixed $response): void
+    {
+        return;
+    }
+
     private function helperMethod(): void // error: Unused Laravel\InvoiceNotification::helperMethod
     {
+    }
+}
+
+// --- Queueable notifications ---
+
+class InvoiceQueueableNotification extends InvoiceNotification implements ShouldQueue
+{
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return true;
+    }
+    /** @return array<string, string> */
+    public function viaConnections(): array
+    {
+        return [];
+    }
+
+    /** @return array<string, string> */
+    public function viaQueues(): array
+    {
+        return [];
     }
 }
 
