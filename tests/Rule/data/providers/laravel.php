@@ -2,6 +2,7 @@
 
 namespace Laravel;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Notifiable;
@@ -729,6 +731,32 @@ class ThrottleMiddleware
     }
 
     private function helperMethod(): void // error: Unused Laravel\ThrottleMiddleware::helperMethod
+    {
+    }
+}
+
+
+// --- Exceptions ---
+
+class InvalidOrderException extends Exception
+{
+    /** @return array<string, mixed> */
+    public function context(): array
+    {
+        return [];
+    }
+
+    public function render(Request $request): Response
+    {
+        return response();
+    }
+
+    public function report(): bool
+    {
+        return [];
+    }
+
+    private function helperMethod(): void // error: Unused Laravel\InvalidOrderException::helperMethod
     {
     }
 }
