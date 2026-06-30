@@ -778,7 +778,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $notificationMethods = [
             'via', 'toMail', 'toArray', 'toDatabase', 'toBroadcast', 'toVonage', 'toSlack',
-            'afterSending',
+            'afterSending', 'shouldSend',
         ];
 
         if (CaseInsensitiveName::isOneOf($methodName, $notificationMethods)) {
@@ -790,7 +790,7 @@ final class LaravelUsageProvider implements MemberUsageProvider
         }
 
         $queueableNotificationMethods = [
-            'shouldSend', 'viaConnections', 'viaQueues', 'withDelay', 'withMessageGroups', 'messageGroup', 'deduplicationId', 'withDeduplicators',
+            'viaConnections', 'viaQueues', 'withDelay', 'withMessageGroups', 'messageGroup', 'deduplicationId', 'withDeduplicators',
         ];
 
         if (CaseInsensitiveName::isOneOf($methodName, $queueableNotificationMethods)) {

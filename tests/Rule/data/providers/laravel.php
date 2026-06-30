@@ -493,6 +493,11 @@ class InvoiceNotification extends Notification
         return;
     }
 
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return true;
+    }
+
     private function helperMethod(): void // error: Unused Laravel\InvoiceNotification::helperMethod
     {
     }
@@ -502,10 +507,6 @@ class InvoiceNotification extends Notification
 
 class InvoiceQueueableNotification extends InvoiceNotification implements ShouldQueue
 {
-    public function shouldSend(object $notifiable, string $channel): bool
-    {
-        return true;
-    }
     /** @return array<string, string> */
     public function viaConnections(): array
     {
