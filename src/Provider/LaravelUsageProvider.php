@@ -778,10 +778,23 @@ final class LaravelUsageProvider implements MemberUsageProvider
 
         $notificationMethods = [
             'via', 'toMail', 'toArray', 'toDatabase', 'toBroadcast', 'toVonage', 'toSlack',
+            'afterSending', 'shouldSend',
         ];
 
         if (CaseInsensitiveName::isOneOf($methodName, $notificationMethods)) {
             return 'Laravel notification method';
+        }
+
+        if (!$classReflection->is('Illuminate\Contracts\Queue\ShouldQueue')) {
+            return null;
+        }
+
+        $queueableNotificationMethods = [
+            'viaConnections', 'viaQueues', 'withDelay', 'withMessageGroups', 'messageGroup', 'deduplicationId', 'withDeduplicators',
+        ];
+
+        if (CaseInsensitiveName::isOneOf($methodName, $queueableNotificationMethods)) {
+            return 'Laravel queueable notification method';
         }
 
         return null;
