@@ -36,7 +36,7 @@ $config->addRule(new class implements CoverageRule {
         $requiredCoverage = $this->getRequiredCoverage($classReflection, $codeBlock->getMethodName());
 
         if ($codeBlock->getCoveragePercentage() < $requiredCoverage) {
-            return CoverageError::create("Method <white>{$codeBlock->getMethodName()}</white> requires $requiredCoverage% coverage, but has only $coverage%.");
+            return CoverageError::create("Method <bold>{$codeBlock->getMethodName()}</bold> requires $requiredCoverage% coverage, but has only $coverage%.");
         }
 
         return null;
