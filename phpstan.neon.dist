@@ -8,6 +8,9 @@ includes:
     - ./rules.neon
 
 parameters:
+    phpVersion:
+        min: 80100
+        max: 80500
     paths:
         - src
         - tests

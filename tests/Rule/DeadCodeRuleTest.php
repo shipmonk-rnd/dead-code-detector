@@ -1401,6 +1401,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             DeadCodeRule::class,
         );
 
+        if ($buildMainErrorMessages === null) {
+            throw new LogicException('Failed to bind closure to ' . DeadCodeRule::class);
+        }
+
         foreach ($errors as $error) {
             $result[] = $error;
 
@@ -1486,9 +1490,15 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         $this->rule = null;
 
-        Closure::bind(function (): void {
+        $resetAnalyser = Closure::bind(function (): void {
             $this->analyser = null;
-        }, $this, OriginalRuleTestCase::class)();
+        }, $this, OriginalRuleTestCase::class);
+
+        if ($resetAnalyser === null) {
+            throw new LogicException('Failed to bind closure to ' . OriginalRuleTestCase::class);
+        }
+
+        $resetAnalyser();
     }
 
     /**
