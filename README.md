@@ -201,9 +201,6 @@ services:
             - shipmonk.deadCode.memberUsageProvider
 ```
 
-> [!IMPORTANT]
-> _The interface & tag changed in [0.7](../../releases/tag/0.7.0). If you are using PHPStan 1.x, those were [used differently](../../blob/0.5.0/README.md#customization)._
-
 ### Reflection-based customization:
 - For simple reflection usecases, you can just extend `ShipMonk\PHPStan\DeadCode\Provider\ReflectionBasedMemberUsageProvider`:
 
