@@ -318,7 +318,19 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        return $this->processKnownCollectedUsages($knownCollectedUsages);
+        $errors = $this->processKnownCollectedUsages($knownCollectedUsages);
+
+        // the usage graph is the analysis output and has just been turned into errors;
+        // processNode(CollectedDataNode) runs once per process, so this state would
+        // otherwise stay allocated for the rest of the process (~90k objects on a
+        // 2.4k-file codebase). DebugUsagePrinter received its own copies earlier;
+        // $typeDefinitions and $mixedClassNameUsages are kept for print().
+        $this->traitMembers = [];
+        $this->memberAlternativesCache = [];
+        $this->blackMembers = [];
+        $this->usageGraph = [];
+
+        return $errors;
     }
 
     /**
