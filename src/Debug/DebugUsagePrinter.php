@@ -438,7 +438,7 @@ final class DebugUsagePrinter
                 throw new LogicException("Invalid debug member format: '$debugMember', expected 'ClassName::memberName'");
             }
 
-            [$class, $memberName] = explode('::', $debugMember); // @phpstan-ignore offsetAccess.notFound
+            [$class, $memberName] = explode('::', $debugMember);
             $normalizedClass = ltrim($class, '\\');
             $memberName = ltrim($memberName, '$');
 

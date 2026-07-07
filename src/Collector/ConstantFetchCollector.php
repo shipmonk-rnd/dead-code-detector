@@ -102,7 +102,6 @@ final class ConstantFetchCollector implements Collector
                     continue;
                 }
 
-                // @phpstan-ignore offsetAccess.notFound
                 [$className, $constantName] = explode('::', $constantString->getValue());
 
                 if ($this->reflectionProvider->hasClass($className)) {
