@@ -170,6 +170,14 @@ services:
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.streamWrapper.enabled%
 
+    -
+        class: ShipMonk\PHPStan\DeadCode\Provider\ComposerUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.composer.enabled%
+            composerJsonPaths: %shipmonkDeadCode.usageProviders.composer.composerJsonPaths%
+
 
     -
         class: ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder
@@ -305,6 +313,9 @@ parameters:
                 enabled: null
             streamWrapper:
                 enabled: true
+            composer:
+                enabled: true
+                composerJsonPaths: []
         usageExcluders:
             tests:
                 enabled: false
@@ -326,6 +337,7 @@ expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][containerXmlPaths]'
     - '[parameters][shipmonkDeadCode][usageProviders][nette][containerNeonPaths]'
+    - '[parameters][shipmonkDeadCode][usageProviders][composer][composerJsonPaths]'
     - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
 parametersSchema:
@@ -405,6 +417,10 @@ parametersSchema:
             ])
             streamWrapper: structure([
                 enabled: bool()
+            ])
+            composer: structure([
+                enabled: bool()
+                composerJsonPaths: listOf(string())
             ])
         ])
         usageExcluders: structure([
