@@ -67,6 +67,23 @@ final class Child extends Base
 
 }
 
+final class Sizes
+{
+
+    public const SIZE_SMALL = 1; // error: Unused DeadConstPhpDoc\Sizes::SIZE_SMALL
+    public const SIZE_LARGE = 2; // error: Unused DeadConstPhpDoc\Sizes::SIZE_LARGE
+
+    /**
+     * @param self::SIZE_* $size
+     */
+    public static function pick(int $size): void
+    {
+        echo $size;
+    }
+
+}
+
 PaginationInput::create(5);
 BulkInput::process(1, []);
 Child::handle(1);
+Sizes::pick(1);

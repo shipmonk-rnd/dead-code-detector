@@ -176,7 +176,7 @@ final class ConstantFetchCollector implements Collector
 
         foreach ($visitor->getConstFetchNodes() as $constFetchNode) {
             if (str_contains($constFetchNode->name, '*')) {
-                continue; // constant mask (e.g. self::SIZE_*), see https://github.com/shipmonk-rnd/dead-code-detector/issues/223
+                continue; // constant mask (e.g. self::SIZE_*)
             }
 
             $ownerClassName = $this->resolvePhpDocConstFetchOwner($constFetchNode->className, $nameScope, $scope);
