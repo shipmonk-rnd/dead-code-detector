@@ -179,7 +179,7 @@ final class ConstantFetchCollector implements Collector
                 continue; // constant mask (e.g. self::SIZE_*)
             }
 
-            $ownerClassName = $this->resolvePhpDocConstFetchOwner($constFetchNode->className, $nameScope, $scope);
+            $ownerClassName = $this->resolvePhpDocConstFetchOwner($constFetchNode->className, $nameScope);
 
             if ($ownerClassName === null) {
                 continue;
@@ -197,21 +197,22 @@ final class ConstantFetchCollector implements Collector
     private function resolvePhpDocConstFetchOwner(
         string $className,
         NameScope $nameScope,
-        Scope $scope,
     ): ?string
     {
         $lowerClassName = strtolower($className);
 
         if ($lowerClassName === 'self' || $lowerClassName === 'static') {
-            return $scope->isInClass() ? $scope->getClassReflection()->getName() : null;
+            return $nameScope->getClassName();
         }
 
         if ($lowerClassName === 'parent') {
-            if (!$scope->isInClass()) {
+            $currentClassName = $nameScope->getClassName();
+
+            if ($currentClassName === null || !$this->reflectionProvider->hasClass($currentClassName)) {
                 return null;
             }
 
-            $parent = $scope->getClassReflection()->getParentClass();
+            $parent = $this->reflectionProvider->getClass($currentClassName)->getParentClass();
 
             return $parent !== null ? $parent->getName() : null;
         }
