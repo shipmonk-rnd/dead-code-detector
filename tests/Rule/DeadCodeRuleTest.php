@@ -21,6 +21,7 @@ use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
+use PHPStan\Type\FileTypeMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhp;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -172,7 +173,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new ClassDefinitionCollector($reflectionProvider),
             new MethodCallCollector($usageCacheStorage, $this->getMemberUsageExcluders()),
-            new ConstantFetchCollector($usageCacheStorage, $reflectionProvider, $this->getMemberUsageExcluders()),
+            new ConstantFetchCollector($usageCacheStorage, $reflectionProvider, self::getContainer()->getByType(FileTypeMapper::class), $this->getMemberUsageExcluders()),
             new PropertyAccessCollector($usageCacheStorage, $reflectionProvider, [__DIR__ . '/data/'], $this->getMemberUsageExcluders()),
         ];
     }
@@ -1043,6 +1044,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'const-descendant-4' => [__DIR__ . '/data/constants/descendant-4.php'];
         yield 'const-dynamic' => [__DIR__ . '/data/constants/dynamic.php'];
         yield 'const-expr' => [__DIR__ . '/data/constants/expr.php'];
+        yield 'const-phpdoc' => [__DIR__ . '/data/constants/phpdoc.php'];
         yield 'const-magic' => [__DIR__ . '/data/constants/magic.php'];
         yield 'const-mixed' => [__DIR__ . '/data/constants/mixed/tracked.php'];
         yield 'const-soft-final' => [__DIR__ . '/data/constants/soft-final.php'];

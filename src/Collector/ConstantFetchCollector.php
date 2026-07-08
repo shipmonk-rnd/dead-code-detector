@@ -8,11 +8,17 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Function_;
+use PHPStan\Analyser\NameScope;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
+use PHPStan\PhpDocParser\Ast\NodeTraverser as PhpDocNodeTraverser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\FileTypeMapper;
+use PHPStan\Type\ObjectType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
 use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
@@ -21,11 +27,13 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Visitor\PhpDocConstFetchCollectingVisitor;
 use function array_map;
 use function count;
 use function current;
 use function explode;
 use function str_contains;
+use function strtolower;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -41,6 +49,7 @@ final class ConstantFetchCollector implements Collector
     public function __construct(
         UsageCacheStorage $usageCacheStorage,
         private readonly ReflectionProvider $reflectionProvider,
+        private readonly FileTypeMapper $fileTypeMapper,
         private readonly array $memberUsageExcluders,
     )
     {
@@ -67,6 +76,8 @@ final class ConstantFetchCollector implements Collector
         if ($node instanceof FuncCall) {
             $this->registerFunctionCall($node, $scope);
         }
+
+        $this->registerPhpDocConstantFetches($node, $scope);
 
         return $this->tryFlushBuffer($node, $scope);
     }
@@ -122,6 +133,91 @@ final class ConstantFetchCollector implements Collector
                 );
             }
         }
+    }
+
+    /**
+     * PHPStan eagerly resolves e.g. int<1, self::MAX> down to a literal int<1, 100>, so the reference
+     * to the constant survives only in the raw PhpDoc type AST. We walk it for ConstFetchNode occurrences.
+     */
+    private function registerPhpDocConstantFetches(
+        Node $node,
+        Scope $scope,
+    ): void
+    {
+        $docComment = $node->getDocComment();
+
+        if ($docComment === null || !str_contains($docComment->getText(), '::')) {
+            return;
+        }
+
+        if ($node instanceof ClassMethod || $node instanceof Function_) {
+            $functionName = $node->name->toString();
+        } else {
+            $function = $scope->getFunction();
+            $functionName = $function !== null ? $function->getName() : null;
+        }
+
+        $resolvedPhpDoc = $this->fileTypeMapper->getResolvedPhpDoc(
+            $scope->getFile(),
+            $scope->isInClass() ? $scope->getClassReflection()->getName() : null,
+            $scope->isInTrait() ? $scope->getTraitReflection()->getName() : null,
+            $functionName,
+            $docComment->getText(),
+        );
+
+        $nameScope = $resolvedPhpDoc->getNullableNameScope();
+
+        if ($nameScope === null) {
+            return;
+        }
+
+        $visitor = new PhpDocConstFetchCollectingVisitor();
+        (new PhpDocNodeTraverser([$visitor]))->traverse($resolvedPhpDoc->getPhpDocNodes());
+
+        foreach ($visitor->getConstFetchNodes() as $constFetchNode) {
+            if (str_contains($constFetchNode->name, '*')) {
+                continue; // constant mask (e.g. self::SIZE_*)
+            }
+
+            $ownerClassName = $this->resolvePhpDocConstFetchOwner($constFetchNode->className, $nameScope);
+
+            if ($ownerClassName === null) {
+                continue;
+            }
+
+            $possibleDescendant = strtolower($constFetchNode->className) === 'static';
+
+            foreach ($this->getDeclaringTypesWithConstant(new ObjectType($ownerClassName), $constFetchNode->name, $possibleDescendant) as $constantRef) {
+                $usage = new ClassConstantUsage(UsageOrigin::createRegular($node, $scope), $constantRef);
+                $this->registerUsage($usage, $node, $scope);
+            }
+        }
+    }
+
+    private function resolvePhpDocConstFetchOwner(
+        string $className,
+        NameScope $nameScope,
+    ): ?string
+    {
+        $lowerClassName = strtolower($className);
+
+        if ($lowerClassName === 'self' || $lowerClassName === 'static') {
+            return $nameScope->getClassName();
+        }
+
+        if ($lowerClassName === 'parent') {
+            $currentClassName = $nameScope->getClassName();
+
+            if ($currentClassName === null || !$this->reflectionProvider->hasClass($currentClassName)) {
+                return null;
+            }
+
+            $parent = $this->reflectionProvider->getClass($currentClassName)->getParentClass();
+
+            return $parent !== null ? $parent->getName() : null;
+        }
+
+        return $nameScope->resolveStringName($className);
     }
 
     private function registerFetch(
