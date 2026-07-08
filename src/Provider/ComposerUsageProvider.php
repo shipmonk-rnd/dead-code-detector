@@ -4,13 +4,8 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\Autoload\ClassLoader;
 use LogicException;
-use PhpParser\Node;
-use PHPStan\Analyser\Scope;
-use PHPStan\Node\InClassNode;
-use PHPStan\Reflection\ClassReflection;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
-use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use PHPStan\Reflection\ReflectionProvider;
+use ReflectionMethod;
 use function array_filter;
 use function array_keys;
 use function count;
@@ -34,24 +29,25 @@ use const JSON_ERROR_NONE;
  *
  * @see https://getcomposer.org/doc/articles/scripts.md#defining-scripts
  */
-final class ComposerUsageProvider implements MemberUsageProvider
+final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 {
 
-    private readonly bool $enabled;
+    private readonly ReflectionProvider $reflectionProvider;
 
     /**
-     * class => [method => note]
+     * declaring class => [method => note]
      *
      * @var array<string, array<string, string>>
      */
     private array $scriptCalls = [];
 
     public function __construct(
+        ReflectionProvider $reflectionProvider,
         bool $enabled,
         ?string $composerJsonPath,
     )
     {
-        $this->enabled = $enabled;
+        $this->reflectionProvider = $reflectionProvider;
 
         if ($enabled) {
             if ($composerJsonPath === null) {
@@ -70,47 +66,13 @@ final class ComposerUsageProvider implements MemberUsageProvider
         }
     }
 
-    public function getUsages(
-        Node $node,
-        Scope $scope,
-    ): array
+    protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled || $this->scriptCalls === []) {
-            return [];
-        }
+        $note = $this->scriptCalls[$method->getDeclaringClass()->getName()][$method->getName()] ?? null;
 
-        if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
-            return $this->getScriptUsages($node->getClassReflection());
-        }
-
-        return [];
-    }
-
-    /**
-     * @return list<ClassMethodUsage>
-     */
-    private function getScriptUsages(ClassReflection $classReflection): array
-    {
-        $usages = [];
-
-        foreach ($this->scriptCalls[$classReflection->getName()] ?? [] as $methodName => $note) {
-            if (!$classReflection->hasNativeMethod($methodName)) {
-                continue;
-            }
-
-            $methodReflection = $classReflection->getNativeMethod($methodName);
-
-            $usages[] = new ClassMethodUsage(
-                UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
-                new ClassMethodRef(
-                    $methodReflection->getDeclaringClass()->getName(),
-                    $methodReflection->getName(),
-                    possibleDescendant: false,
-                ),
-            );
-        }
-
-        return $usages;
+        return $note === null
+            ? null
+            : VirtualUsageData::withNote($note);
     }
 
     private function extractScriptCallbacks(string $composerJsonPath): void
@@ -146,9 +108,30 @@ final class ComposerUsageProvider implements MemberUsageProvider
                 [$className, $methodName] = explode('::', $listener, 2); // @phpstan-ignore offsetAccess.notFound
                 $className = ltrim($className, '\\');
 
-                $this->scriptCalls[$className][$methodName] = sprintf("Composer script '%s' in %s", $scriptName, $composerJsonPath);
+                $this->registerScriptCallback($className, $methodName, sprintf("Composer script '%s' in %s", $scriptName, $composerJsonPath));
             }
         }
+    }
+
+    private function registerScriptCallback(
+        string $className,
+        string $methodName,
+        string $note,
+    ): void
+    {
+        if (!$this->reflectionProvider->hasClass($className)) {
+            return;
+        }
+
+        $nativeClassReflection = $this->reflectionProvider->getClass($className)->getNativeReflection();
+
+        if (!$nativeClassReflection->hasMethod($methodName)) {
+            return;
+        }
+
+        $nativeMethodReflection = $nativeClassReflection->getMethod($methodName); // @phpstan-ignore missingType.checkedException (guarded by hasMethod above)
+
+        $this->scriptCalls[$nativeMethodReflection->getDeclaringClass()->getName()][$nativeMethodReflection->getName()] = $note;
     }
 
     /**

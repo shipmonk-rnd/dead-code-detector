@@ -1261,6 +1261,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
             ),
             new ComposerUsageProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
                 __DIR__ . '/data/providers/composer/composer.json',
             ),
