@@ -318,7 +318,15 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        return $this->processKnownCollectedUsages($knownCollectedUsages);
+        $errors = $this->processKnownCollectedUsages($knownCollectedUsages);
+
+        // free memory, this data can be huge and are no longer needed
+        $this->traitMembers = [];
+        $this->memberAlternativesCache = [];
+        $this->blackMembers = [];
+        $this->usageGraph = [];
+
+        return $errors;
     }
 
     /**
