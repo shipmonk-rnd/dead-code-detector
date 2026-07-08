@@ -46,24 +46,21 @@ final class ComposerUsageProvider implements MemberUsageProvider
      */
     private array $scriptCalls = [];
 
-    /**
-     * @param list<string> $composerJsonPaths
-     */
     public function __construct(
         bool $enabled,
-        array $composerJsonPaths,
+        ?string $composerJsonPath,
     )
     {
         $this->enabled = $enabled;
 
-        if ($enabled && $composerJsonPaths === []) {
-            $autodetectedPath = $this->autodetectComposerJsonPath();
+        if ($enabled) {
+            if ($composerJsonPath === null) {
+                $autodetectedPath = $this->autodetectComposerJsonPath();
 
-            if ($autodetectedPath !== null) {
-                $this->extractScriptCallbacks($autodetectedPath);
-            }
-        } elseif ($enabled) {
-            foreach ($composerJsonPaths as $composerJsonPath) {
+                if ($autodetectedPath !== null) {
+                    $this->extractScriptCallbacks($autodetectedPath);
+                }
+            } else {
                 if (!is_file($composerJsonPath)) {
                     throw new LogicException(sprintf('Composer json %s does not exist', $composerJsonPath));
                 }

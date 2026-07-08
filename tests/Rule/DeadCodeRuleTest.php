@@ -1262,7 +1262,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new ComposerUsageProvider(
                 $this->providersEnabled,
-                [__DIR__ . '/data/providers/composer/composer.json'],
+                __DIR__ . '/data/providers/composer/composer.json',
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),

@@ -10,11 +10,11 @@ use ReflectionClass;
 final class ComposerUsageProviderTest extends PHPStanTestCase
 {
 
-    public function testComposerJsonPathsCollectScriptCallbacks(): void
+    public function testComposerJsonPathCollectsScriptCallbacks(): void
     {
         $composerJsonPath = __DIR__ . '/../Rule/data/providers/composer/composer.json';
 
-        $provider = new ComposerUsageProvider(true, [$composerJsonPath]);
+        $provider = new ComposerUsageProvider(true, $composerJsonPath);
         $scriptCalls = $this->getScriptCalls($provider);
 
         self::assertArrayHasKey('ComposerProvider\Scripts', $scriptCalls);
@@ -32,7 +32,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
 
     public function testAutodetectsComposerJson(): void
     {
-        $provider = new ComposerUsageProvider(true, []);
+        $provider = new ComposerUsageProvider(true, null);
 
         // this repository has no PHP callbacks in its own composer.json scripts
         self::assertSame([], $this->getScriptCalls($provider));
@@ -44,7 +44,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
         $extraLoader->register();
 
         try {
-            $provider = new ComposerUsageProvider(true, []);
+            $provider = new ComposerUsageProvider(true, null);
 
             self::assertSame([], $this->getScriptCalls($provider));
         } finally {
@@ -54,7 +54,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
 
     public function testDisabled(): void
     {
-        $provider = new ComposerUsageProvider(false, [__DIR__ . '/not-a-file.json']);
+        $provider = new ComposerUsageProvider(false, __DIR__ . '/not-a-file.json');
 
         self::assertSame([], $this->getScriptCalls($provider));
     }
@@ -63,7 +63,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
     {
         self::expectException(LogicException::class);
 
-        new ComposerUsageProvider(true, [__DIR__ . '/not-a-file.json']);
+        new ComposerUsageProvider(true, __DIR__ . '/not-a-file.json');
     }
 
     /**

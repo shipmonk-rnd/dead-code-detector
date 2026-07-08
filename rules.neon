@@ -176,7 +176,7 @@ services:
             - shipmonk.deadCode.memberUsageProvider
         arguments:
             enabled: %shipmonkDeadCode.usageProviders.composer.enabled%
-            composerJsonPaths: %shipmonkDeadCode.usageProviders.composer.composerJsonPaths%
+            composerJsonPath: %shipmonkDeadCode.usageProviders.composer.composerJsonPath%
 
 
     -
@@ -315,7 +315,7 @@ parameters:
                 enabled: true
             composer:
                 enabled: true
-                composerJsonPaths: []
+                composerJsonPath: null
         usageExcluders:
             tests:
                 enabled: false
@@ -337,7 +337,7 @@ expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][containerXmlPaths]'
     - '[parameters][shipmonkDeadCode][usageProviders][nette][containerNeonPaths]'
-    - '[parameters][shipmonkDeadCode][usageProviders][composer][composerJsonPaths]'
+    - '[parameters][shipmonkDeadCode][usageProviders][composer][composerJsonPath]'
     - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
 parametersSchema:
@@ -420,7 +420,7 @@ parametersSchema:
             ])
             composer: structure([
                 enabled: bool()
-                composerJsonPaths: listOf(string())
+                composerJsonPath: schema(string(), nullable())
             ])
         ])
         usageExcluders: structure([
