@@ -819,6 +819,24 @@ function registerPolicies(): void
     Route::post('/songs/upload', [SongController::class, 'upload']);
 }
 
+// --- Real-time facades ---
+
+class RealtimeFacadeService
+{
+    public function usedViaFacade(): void
+    {
+    }
+
+    public function unusedViaFacade(): void // error: Unused Laravel\RealtimeFacadeService::unusedViaFacade
+    {
+    }
+}
+
+function useRealTimeFacade(): void
+{
+    \Facades\Laravel\RealtimeFacadeService::usedViaFacade();
+}
+
 // --- can/cannot/cant and Gate::allows/denies/check (policy resolution via Authorizable) ---
 
 function testCanAndGateMethods(Post $post, Song $song, User $user): void

@@ -30,6 +30,8 @@ use function lcfirst;
 use function str_contains;
 use function str_ends_with;
 use function str_replace;
+use function str_starts_with;
+use function strlen;
 use function strpos;
 use function strrpos;
 use function substr;
@@ -131,9 +133,74 @@ final class LaravelUsageProvider implements MemberUsageProvider
             if ($className === 'Illuminate\Support\Facades\Gate' || $className === 'Illuminate\Auth\Access\Gate') {
                 $usages = [...$usages, ...$this->getUsagesFromGateCall($node, $scope)];
             }
+
+            if (str_starts_with($className, 'Facades\\')) {
+                $usages = [...$usages, ...$this->getUsagesFromRealTimeFacadeCall($node, $scope, $className)];
+            }
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Foundation\AliasLoader::load()
+     */
+    private function getUsagesFromRealTimeFacadeCall(
+        StaticCall $node,
+        Scope $scope,
+        string $facadeClassName,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        $underlyingClassName = substr($facadeClassName, strlen('Facades\\'));
+
+        if ($underlyingClassName === '') {
+            return [];
+        }
+
+        $methodName = $node->name->name;
+
+        if ($this->isFacadeBuiltInMethod($methodName)) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ([$methodName, '__construct'] as $method) {
+            $usages[] = new ClassMethodUsage(
+                UsageOrigin::createRegular($node, $scope),
+                new ClassMethodRef($underlyingClassName, $method, possibleDescendant: true),
+            );
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @see \Illuminate\Support\Facades\Facade
+     */
+    private function isFacadeBuiltInMethod(string $methodName): bool
+    {
+        return CaseInsensitiveName::isOneOf($methodName, [
+            'clearResolvedInstance',
+            'clearResolvedInstances',
+            'defaultAliases',
+            'expects',
+            'getFacadeApplication',
+            'getFacadeRoot',
+            'isFake',
+            'partialMock',
+            'resolved',
+            'setFacadeApplication',
+            'shouldReceive',
+            'spy',
+            'swap',
+        ]);
     }
 
     /**

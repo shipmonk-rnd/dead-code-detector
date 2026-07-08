@@ -115,6 +115,7 @@ parameters:
 - Event listeners — `Event::listen()`, `Event::subscribe()`, auto-discovered listeners (`handle*`/`__invoke` with typed first param)
 - Scheduled jobs — `Schedule::job()`
 - Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()` with automatic policy class resolution
+- Real-time facades — `\Facades\...` static calls mapped to the underlying class
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
 
 #### Eloquent:
