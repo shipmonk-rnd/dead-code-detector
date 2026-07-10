@@ -48,22 +48,33 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->loadScriptCallbacks($enabled, $composerJsonPath);
+    }
 
-        if ($enabled) {
-            if ($composerJsonPath === null) {
-                $autodetectedPath = $this->autodetectComposerJsonPath();
-
-                if ($autodetectedPath !== null) {
-                    $this->extractScriptCallbacks($autodetectedPath);
-                }
-            } else {
-                if (!is_file($composerJsonPath)) {
-                    throw new LogicException(sprintf('Composer json %s does not exist', $composerJsonPath));
-                }
-
-                $this->extractScriptCallbacks($composerJsonPath);
-            }
+    private function loadScriptCallbacks(
+        bool $enabled,
+        ?string $composerJsonPath,
+    ): void
+    {
+        if (!$enabled) {
+            return;
         }
+
+        if ($composerJsonPath === null) {
+            $autodetectedPath = $this->autodetectComposerJsonPath();
+
+            if ($autodetectedPath !== null) {
+                $this->extractScriptCallbacks($autodetectedPath);
+            }
+
+            return;
+        }
+
+        if (!is_file($composerJsonPath)) {
+            throw new LogicException(sprintf('Composer json %s does not exist', $composerJsonPath));
+        }
+
+        $this->extractScriptCallbacks($composerJsonPath);
     }
 
     protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
