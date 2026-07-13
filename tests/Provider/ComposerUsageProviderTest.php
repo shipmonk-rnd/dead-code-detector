@@ -7,6 +7,7 @@ use LogicException;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\PHPStanTestCase;
 use ReflectionClass;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator;
 
 final class ComposerUsageProviderTest extends PHPStanTestCase
 {
@@ -15,7 +16,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
     {
         $composerJsonPath = __DIR__ . '/../Rule/data/providers/composer/composer.json';
 
-        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), true, $composerJsonPath);
+        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), new ComposerRootLocator(), true, $composerJsonPath);
         $scriptCalls = $this->getScriptCalls($provider);
 
         self::assertArrayHasKey('ComposerProvider\Scripts', $scriptCalls);
@@ -40,7 +41,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
 
     public function testAutodetectsComposerJson(): void
     {
-        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), true, null);
+        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), new ComposerRootLocator(), true, null);
 
         // this repository has no PHP callbacks in its own composer.json scripts
         self::assertSame([], $this->getScriptCalls($provider));
@@ -52,7 +53,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
         $extraLoader->register();
 
         try {
-            $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), true, null);
+            $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), new ComposerRootLocator(), true, null);
 
             self::assertSame([], $this->getScriptCalls($provider));
         } finally {
@@ -62,7 +63,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
 
     public function testDisabled(): void
     {
-        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), false, __DIR__ . '/not-a-file.json');
+        $provider = new ComposerUsageProvider($this->getReflectionProviderFromContainer(), new ComposerRootLocator(), false, __DIR__ . '/not-a-file.json');
 
         self::assertSame([], $this->getScriptCalls($provider));
     }
@@ -71,7 +72,7 @@ final class ComposerUsageProviderTest extends PHPStanTestCase
     {
         self::expectException(LogicException::class);
 
-        new ComposerUsageProvider($this->getReflectionProviderFromContainer(), true, __DIR__ . '/not-a-file.json');
+        new ComposerUsageProvider($this->getReflectionProviderFromContainer(), new ComposerRootLocator(), true, __DIR__ . '/not-a-file.json');
     }
 
     private function getReflectionProviderFromContainer(): ReflectionProvider
