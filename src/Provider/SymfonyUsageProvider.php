@@ -896,32 +896,24 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     );
                 }
 
-                // Mark all declared properties as written (serializer populates them)
+                // Mark properties as written (serializer populates them), including ones inherited from project-level parents
                 foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
-                    if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
-                        continue;
-                    }
-
                     $usages[] = new ClassPropertyUsage(
                         $origin,
-                        new ClassPropertyRef($dtoClassName, $property->getName(), possibleDescendant: false),
+                        new ClassPropertyRef($property->getDeclaringClass()->getName(), $property->getName(), possibleDescendant: false),
                         AccessType::WRITE,
                     );
                 }
 
-                // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor)
+                // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor), including inherited ones
                 foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
-                    if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
-                        continue;
-                    }
-
                     if (!$this->isPayloadMutator($dtoReflection->getNativeReflection(), $dtoMethod)) {
                         continue;
                     }
 
                     $usages[] = new ClassMethodUsage(
                         $origin,
-                        new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
+                        new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
                     );
                 }
             }

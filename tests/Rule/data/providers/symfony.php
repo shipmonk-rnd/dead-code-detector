@@ -443,6 +443,31 @@ class SetterBasedDto {
     }
 }
 
+abstract class AbstractPayloadDto {
+    public ?string $requestId = null;
+
+    private ?string $locale = null; // error: Property Symfony\AbstractPayloadDto::$locale is never read
+
+    public function setLocale(string $locale): void
+    {
+        $this->locale = $locale;
+    }
+}
+
+class ChildPayloadDto extends AbstractPayloadDto {
+    public ?string $comment = null;
+}
+
+class ChildPayloadController {
+    #[Route('/api/child', methods: ['POST'])]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] ChildPayloadDto $dto,
+    ): void {
+        echo $dto->requestId;
+        echo $dto->comment;
+    }
+}
+
 class CollectionDto {
     /** @var list<string> */
     private array $tags = [];
