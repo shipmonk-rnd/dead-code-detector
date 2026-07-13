@@ -898,6 +898,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
                 // Mark properties as written (serializer populates them), including ones inherited from project-level parents
                 foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
+                    // PropertyAccessor writes only public non-static non-readonly properties; others get populated via constructor or mutators
+                    if (!$property->isPublic() || $property->isStatic() || $property->isReadOnly()) {
+                        continue;
+                    }
+
                     $usages[] = new ClassPropertyUsage(
                         $origin,
                         new ClassPropertyRef($property->getDeclaringClass()->getName(), $property->getName(), possibleDescendant: false),

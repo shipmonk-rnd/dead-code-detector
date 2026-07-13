@@ -443,6 +443,21 @@ class SetterBasedDto {
     }
 }
 
+class UnwritablePropsDto {
+    public string $writable;
+
+    private string $untouched; // error: Property Symfony\UnwritablePropsDto::$untouched is never read // error: Property Symfony\UnwritablePropsDto::$untouched is never written
+}
+
+class UnwritablePropsController {
+    #[Route('/api/unwritable', methods: ['POST'])]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] UnwritablePropsDto $dto,
+    ): void {
+        echo $dto->writable;
+    }
+}
+
 abstract class AbstractPayloadDto {
     public ?string $requestId = null;
 
