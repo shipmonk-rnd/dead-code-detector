@@ -27,6 +27,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
@@ -815,11 +816,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            $parameterType = $parameter->getType();
-
-            if (!$parameterType->isObject()->yes()) {
-                continue;
-            }
+            $parameterType = TypeCombinator::removeNull($parameter->getType());
 
             foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
                 if (!$this->reflectionProvider->hasClass($dtoClassName)) {

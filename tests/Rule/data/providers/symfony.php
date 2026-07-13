@@ -366,6 +366,21 @@ class QueryStringController {
     }
 }
 
+class NullableQueryDto {
+    public function __construct(
+        public readonly string $sort,
+    ) {}
+}
+
+class NullableQueryController {
+    #[Route('/api/nullable')]
+    public function list(
+        #[\Symfony\Component\HttpKernel\Attribute\MapQueryString] ?NullableQueryDto $query = null,
+    ): void {
+        echo $query?->sort;
+    }
+}
+
 class SetterBasedDto {
     private string $name; // error: Property Symfony\SetterBasedDto::$name is never read
 
