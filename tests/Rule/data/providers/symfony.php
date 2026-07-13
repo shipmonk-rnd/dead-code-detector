@@ -366,6 +366,24 @@ class QueryStringController {
     }
 }
 
+#[\Attribute(\Attribute::TARGET_PARAMETER)]
+class CustomMapPayload extends \Symfony\Component\HttpKernel\Attribute\MapRequestPayload {}
+
+class CustomAttributeDto {
+    public function __construct(
+        public readonly string $title,
+    ) {}
+}
+
+class CustomAttributeController {
+    #[Route('/api/custom', methods: ['POST'])]
+    public function create(
+        #[CustomMapPayload] CustomAttributeDto $dto,
+    ): void {
+        echo $dto->title;
+    }
+}
+
 class NullableQueryDto {
     public function __construct(
         public readonly string $sort,

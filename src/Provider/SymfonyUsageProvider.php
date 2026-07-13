@@ -792,6 +792,18 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
+    private function isMapPayloadAttribute(string $attributeClassName): bool
+    {
+        if (!$this->reflectionProvider->hasClass($attributeClassName)) {
+            return false;
+        }
+
+        $attributeReflection = $this->reflectionProvider->getClass($attributeClassName);
+
+        return $attributeReflection->is('Symfony\Component\HttpKernel\Attribute\MapRequestPayload')
+            || $attributeReflection->is('Symfony\Component\HttpKernel\Attribute\MapQueryString');
+    }
+
     /**
      * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
@@ -803,10 +815,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $isMapPayload = false;
 
             foreach ($parameter->getAttributes() as $attributeReflection) {
-                if (
-                    $attributeReflection->getName() === 'Symfony\Component\HttpKernel\Attribute\MapRequestPayload'
-                    || $attributeReflection->getName() === 'Symfony\Component\HttpKernel\Attribute\MapQueryString'
-                ) {
+                if ($this->isMapPayloadAttribute($attributeReflection->getName())) {
                     $isMapPayload = true;
                     break;
                 }
