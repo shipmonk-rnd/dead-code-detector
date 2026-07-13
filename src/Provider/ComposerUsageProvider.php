@@ -2,26 +2,18 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use Composer\Autoload\ClassLoader;
 use LogicException;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionMethod;
-use function array_filter;
-use function array_keys;
-use function count;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use function explode;
-use function file_get_contents;
 use function is_array;
 use function is_file;
 use function is_string;
-use function json_decode;
-use function json_last_error;
 use function ltrim;
-use function reset;
 use function sprintf;
 use function str_contains;
 use function str_starts_with;
-use const JSON_ERROR_NONE;
 
 /**
  * Detects static methods referenced as PHP callbacks in the scripts section of composer.json,
@@ -34,6 +26,8 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private readonly ReflectionProvider $reflectionProvider;
 
+    private readonly ComposerIntrospector $composerIntrospector;
+
     /**
      * declaring class => [method => note]
      *
@@ -43,11 +37,13 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
+        ComposerIntrospector $composerIntrospector,
         bool $enabled,
         ?string $composerJsonPath,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->composerIntrospector = $composerIntrospector;
         $this->loadScriptCallbacks($enabled, $composerJsonPath);
     }
 
@@ -61,7 +57,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         if ($composerJsonPath === null) {
-            $autodetectedPath = $this->autodetectComposerJsonPath();
+            $autodetectedPath = $this->composerIntrospector->autodetectComposerJsonPath();
 
             if ($autodetectedPath !== null) {
                 $this->extractScriptCallbacks($autodetectedPath);
@@ -88,18 +84,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private function extractScriptCallbacks(string $composerJsonPath): void
     {
-        $composerJsonRawData = file_get_contents($composerJsonPath);
-
-        if ($composerJsonRawData === false) {
-            return;
-        }
-
-        $composerJsonData = json_decode($composerJsonRawData, associative: true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($composerJsonData)) {
-            return;
-        }
-
+        $composerJsonData = $this->composerIntrospector->parseComposerJson($composerJsonPath);
         $scripts = $composerJsonData['scripts'] ?? [];
 
         if (!is_array($scripts)) {
@@ -153,25 +138,6 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
         return !str_starts_with($listener, '@')
             && !str_contains($listener, ' ')
             && str_contains($listener, '::');
-    }
-
-    private function autodetectComposerJsonPath(): ?string
-    {
-        $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
-            return !str_starts_with($vendorDir, 'phar://');
-        });
-
-        if (count($vendorDirs) !== 1) {
-            return null;
-        }
-
-        $composerJsonPath = reset($vendorDirs) . '/../composer.json';
-
-        if (!is_file($composerJsonPath)) {
-            return null;
-        }
-
-        return $composerJsonPath;
     }
 
 }

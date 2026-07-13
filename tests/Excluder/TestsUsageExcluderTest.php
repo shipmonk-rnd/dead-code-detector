@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Excluder;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\PHPStanTestCase;
 use ReflectionClass;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use function realpath;
 
 final class TestsUsageExcluderTest extends PHPStanTestCase
@@ -12,7 +13,7 @@ final class TestsUsageExcluderTest extends PHPStanTestCase
 
     public function testAutodetectComposerDevPaths(): void
     {
-        $excluder = new TestsUsageExcluder(self::getContainer()->getByType(ReflectionProvider::class), true, null);
+        $excluder = new TestsUsageExcluder(self::getContainer()->getByType(ReflectionProvider::class), new ComposerIntrospector(), true, null);
 
         $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
         $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');

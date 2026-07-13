@@ -2,33 +2,27 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Excluder;
 
-use Composer\Autoload\ClassLoader;
 use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ReflectionProvider;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
-use function array_filter;
-use function array_keys;
-use function count;
 use function dirname;
-use function file_get_contents;
 use function glob;
 use function is_array;
-use function is_file;
-use function json_decode;
-use function json_last_error;
+use function is_string;
 use function preg_match;
 use function realpath;
-use function reset;
 use function str_contains;
 use function str_starts_with;
-use const JSON_ERROR_NONE;
 
 final class TestsUsageExcluder implements MemberUsageExcluder
 {
 
     private readonly ReflectionProvider $reflectionProvider;
+
+    private readonly ComposerIntrospector $composerIntrospector;
 
     private readonly bool $enabled;
 
@@ -42,11 +36,13 @@ final class TestsUsageExcluder implements MemberUsageExcluder
      */
     public function __construct(
         ReflectionProvider $reflectionProvider,
+        ComposerIntrospector $composerIntrospector,
         bool $enabled,
         ?array $devPaths,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->composerIntrospector = $composerIntrospector;
         $this->enabled = $enabled;
 
         if ($devPaths !== null) {
@@ -120,78 +116,53 @@ final class TestsUsageExcluder implements MemberUsageExcluder
      */
     private function autodetectComposerDevPaths(): array
     {
-        $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
-            return !str_starts_with($vendorDir, 'phar://');
-        });
+        $composerJsonPath = $this->composerIntrospector->autodetectComposerJsonPath();
 
-        if (count($vendorDirs) !== 1) {
+        if ($composerJsonPath === null) {
             return [];
         }
 
-        $vendorDir = reset($vendorDirs);
-        $composerJsonPath = $vendorDir . '/../composer.json';
+        $composerJsonData = $this->composerIntrospector->parseComposerJson($composerJsonPath);
+        $autoloadDev = $composerJsonData['autoload-dev'] ?? [];
 
-        $composerJsonData = $this->parseComposerJson($composerJsonPath);
+        if (!is_array($autoloadDev)) {
+            return [];
+        }
+
         $basePath = dirname($composerJsonPath);
 
         return [
-            ...$this->extractAutoloadPaths($basePath, $composerJsonData['autoload-dev']['psr-0'] ?? []),
-            ...$this->extractAutoloadPaths($basePath, $composerJsonData['autoload-dev']['psr-4'] ?? []),
-            ...$this->extractAutoloadPaths($basePath, $composerJsonData['autoload-dev']['files'] ?? []),
-            ...$this->extractAutoloadPaths($basePath, $composerJsonData['autoload-dev']['classmap'] ?? []),
+            ...$this->extractAutoloadPaths($basePath, $autoloadDev['psr-0'] ?? []),
+            ...$this->extractAutoloadPaths($basePath, $autoloadDev['psr-4'] ?? []),
+            ...$this->extractAutoloadPaths($basePath, $autoloadDev['files'] ?? []),
+            ...$this->extractAutoloadPaths($basePath, $autoloadDev['classmap'] ?? []),
         ];
     }
 
     /**
-     * @return array{
-     *     autoload-dev?: array{
-     *          psr-0?: array<string, string|string[]>,
-     *          psr-4?: array<string, string|string[]>,
-     *          files?: string[],
-     *          classmap?: string[],
-     *     }
-     * }
-     */
-    private function parseComposerJson(string $composerJsonPath): array
-    {
-        if (!is_file($composerJsonPath)) {
-            return [];
-        }
-
-        $composerJsonRawData = file_get_contents($composerJsonPath);
-
-        if ($composerJsonRawData === false) {
-            return [];
-        }
-
-        $composerJsonData = json_decode($composerJsonRawData, associative: true);
-
-        $jsonError = json_last_error();
-
-        if ($jsonError !== JSON_ERROR_NONE) {
-            return [];
-        }
-
-        return $composerJsonData; // @phpstan-ignore-line ignore mixed returned
-    }
-
-    /**
-     * @param array<string|array<string>> $autoload
      * @return list<string>
      */
     private function extractAutoloadPaths(
         string $basePath,
-        array $autoload,
+        mixed $autoload,
     ): array
     {
+        if (!is_array($autoload)) {
+            return [];
+        }
+
         $result = [];
 
         foreach ($autoload as $paths) {
             if (!is_array($paths)) {
-                $paths = [$paths]; // @phpstan-ignore shipmonk.variableTypeOverwritten
+                $paths = [$paths];
             }
 
             foreach ($paths as $path) {
+                if (!is_string($path)) {
+                    continue;
+                }
+
                 $isAbsolute = preg_match('#([a-z]:)?[/\\\\]#Ai', $path);
 
                 if ($isAbsolute === 1) {

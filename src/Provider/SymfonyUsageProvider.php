@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use Composer\Autoload\ClassLoader;
 use Composer\InstalledVersions;
 use FilesystemIterator;
 use LogicException;
@@ -33,6 +32,7 @@ use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionNamedType;
 use Reflector;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -47,9 +47,7 @@ use SimpleXMLElement;
 use SplFileInfo;
 use Symfony\UX\TwigComponent\Attribute\FromMethod;
 use UnexpectedValueException;
-use function array_filter;
 use function array_key_first;
-use function array_keys;
 use function count;
 use function explode;
 use function extension_loaded;
@@ -59,7 +57,6 @@ use function is_array;
 use function is_dir;
 use function is_string;
 use function preg_match_all;
-use function reset;
 use function simplexml_load_string;
 use function sprintf;
 use function str_ends_with;
@@ -71,6 +68,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
+
+    private readonly ComposerIntrospector $composerIntrospector;
 
     private readonly TemplateViewDataTraverser $traverser;
 
@@ -112,6 +111,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     public function __construct(
         Container $container,
         ReflectionProvider $reflectionProvider,
+        ComposerIntrospector $composerIntrospector,
         TemplateViewDataTraverser $traverser,
         ?bool $enabled,
         ?string $configDir,
@@ -119,6 +119,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     )
     {
         $this->reflectionProvider = $reflectionProvider;
+        $this->composerIntrospector = $composerIntrospector;
         $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
@@ -1575,15 +1576,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function autodetectConfigDir(): ?string
     {
-        $vendorDirs = array_filter(array_keys(ClassLoader::getRegisteredLoaders()), static function (string $vendorDir): bool {
-            return !str_starts_with($vendorDir, 'phar://');
-        });
+        $vendorDir = $this->composerIntrospector->autodetectVendorDir();
 
-        if (count($vendorDirs) !== 1) {
+        if ($vendorDir === null) {
             return null;
         }
 
-        $vendorDir = reset($vendorDirs);
         $configDir = $vendorDir . '/../config';
 
         if (is_dir($configDir)) {
