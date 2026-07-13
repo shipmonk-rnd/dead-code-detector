@@ -458,6 +458,46 @@ class UnwritablePropsController {
     }
 }
 
+class NestedAddressDto {
+    public function __construct(
+        public readonly string $city,
+        public readonly string $zip, // error: Property Symfony\NestedAddressDto::$zip is never read
+    ) {}
+}
+
+class NestedMetadataDto {
+    private ?string $source = null; // error: Property Symfony\NestedMetadataDto::$source is never read
+
+    public function setSource(string $source): void
+    {
+        $this->source = $source;
+    }
+}
+
+class OrderDto {
+    private ?NestedMetadataDto $metadata = null; // error: Property Symfony\OrderDto::$metadata is never read
+
+    public function __construct(
+        public readonly string $number,
+        public readonly NestedAddressDto $shippingAddress,
+    ) {}
+
+    public function setMetadata(NestedMetadataDto $metadata): void
+    {
+        $this->metadata = $metadata;
+    }
+}
+
+class OrderController {
+    #[Route('/api/orders', methods: ['POST'])]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] OrderDto $dto,
+    ): void {
+        echo $dto->number;
+        echo $dto->shippingAddress->city;
+    }
+}
+
 abstract class AbstractPayloadDto {
     public ?string $requestId = null;
 

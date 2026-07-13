@@ -33,6 +33,7 @@ use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionException;
 use ReflectionNamedType;
+use ReflectionType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -880,51 +881,107 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 break;
             }
 
+            $visited = [];
+
             foreach ($dtoClassNames as $dtoClassName) {
-                if (!$this->reflectionProvider->hasClass($dtoClassName)) {
-                    continue;
-                }
-
-                $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
-                $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('DTO used via #[MapRequestPayload] or #[MapQueryString]'));
-
-                // Mark constructor as used (serializer instantiates the DTO)
-                if ($dtoReflection->hasConstructor()) {
-                    $usages[] = new ClassMethodUsage(
-                        $origin,
-                        new ClassMethodRef($dtoClassName, '__construct', possibleDescendant: false),
-                    );
-                }
-
-                // Mark properties as written (serializer populates them), including ones inherited from project-level parents
-                foreach ($dtoReflection->getNativeReflection()->getProperties() as $property) {
-                    // PropertyAccessor writes only public non-static non-readonly properties; others get populated via constructor or mutators
-                    if (!$property->isPublic() || $property->isStatic() || $property->isReadOnly()) {
-                        continue;
-                    }
-
-                    $usages[] = new ClassPropertyUsage(
-                        $origin,
-                        new ClassPropertyRef($property->getDeclaringClass()->getName(), $property->getName(), possibleDescendant: false),
-                        AccessType::WRITE,
-                    );
-                }
-
-                // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor), including inherited ones
-                foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
-                    if (!$this->isPayloadMutator($dtoReflection->getNativeReflection(), $dtoMethod)) {
-                        continue;
-                    }
-
-                    $usages[] = new ClassMethodUsage(
-                        $origin,
-                        new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
-                    );
-                }
+                $usages = [...$usages, ...$this->collectPayloadDtoUsages($dtoClassName, $visited)];
             }
         }
 
         return $usages;
+    }
+
+    /**
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectPayloadDtoUsages(
+        string $dtoClassName,
+        array &$visited,
+    ): array
+    {
+        if (isset($visited[$dtoClassName])) {
+            return [];
+        }
+
+        $visited[$dtoClassName] = true;
+
+        if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+            return [];
+        }
+
+        $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
+        $nativeReflection = $dtoReflection->getNativeReflection();
+        $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('DTO used via #[MapRequestPayload] or #[MapQueryString]'));
+        $usages = [];
+
+        // Mark constructor as used (serializer instantiates the DTO) and recurse into its parameters
+        if ($dtoReflection->hasConstructor()) {
+            $usages[] = new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef($dtoClassName, '__construct', possibleDescendant: false),
+            );
+        }
+
+        $constructor = $nativeReflection->getConstructor();
+
+        if ($constructor !== null) {
+            foreach ($constructor->getParameters() as $constructorParameter) {
+                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($constructorParameter->getType(), $visited)];
+            }
+        }
+
+        // Mark properties as written (serializer populates them), including ones inherited from project-level parents
+        foreach ($nativeReflection->getProperties() as $property) {
+            // PropertyAccessor writes only public non-static non-readonly properties; others get populated via constructor or mutators
+            if (!$property->isPublic() || $property->isStatic() || $property->isReadOnly()) {
+                continue;
+            }
+
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($property->getDeclaringClass()->getName(), $property->getName(), possibleDescendant: false),
+                AccessType::WRITE,
+            );
+
+            $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($property->getType(), $visited)];
+        }
+
+        // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor), including inherited ones
+        foreach ($nativeReflection->getMethods() as $dtoMethod) {
+            if (!$this->isPayloadMutator($nativeReflection, $dtoMethod)) {
+                continue;
+            }
+
+            $usages[] = new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
+            );
+
+            foreach ($dtoMethod->getParameters() as $mutatorParameter) {
+                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * Nested DTOs are denormalized recursively, so their members are used the same way as the root DTO's.
+     *
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectNestedPayloadDtoUsages(
+        ?ReflectionType $type,
+        array &$visited,
+    ): array
+    {
+        if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+            return [];
+        }
+
+        return $this->collectPayloadDtoUsages($type->getName(), $visited);
     }
 
     private function shouldMarkAsUsed(ReflectionMethod $method): ?string
