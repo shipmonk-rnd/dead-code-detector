@@ -1,0 +1,15 @@
+{
+    "scripts": {
+        "post-install-cmd": "ComposerProvider\\Scripts::postInstall",
+        "multiple": [
+            "ComposerProvider\\Scripts::first",
+            "\\ComposerProvider\\Scripts::withLeadingSlash",
+            "echo done",
+            "@post-install-cmd"
+        ],
+        "with-space": "ComposerProvider\\Scripts::notAPhpScript --arg",
+        "inherited": "ComposerProvider\\Child::inheritedHook",
+        "unknown-method": "ComposerProvider\\Scripts::nonExistingMethod",
+        "unknown-class": "ComposerProvider\\NonExistingClass::method"
+    }
+}

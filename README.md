@@ -162,6 +162,11 @@ parameters:
 #### StreamWrapper:
 - Detects usages caused by `stream_wrapper_register`
 
+#### Composer:
+- Detects static methods referenced as PHP callbacks in `scripts` section of `composer.json`
+  - e.g. `"post-install-cmd": "MyVendor\\MyClass::postInstall"`
+  - `composer.json` is autodetected, but you can point it elsewhere via `shipmonkDeadCode.usageProviders.composer.composerJsonPath`
+
 Those providers are enabled by default, but you can disable them if needed.
 
 ## Excluding usages in tests:

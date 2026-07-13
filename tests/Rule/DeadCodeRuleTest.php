@@ -51,6 +51,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ApiPhpDocUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BehatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BladeUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\BuiltinUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\ComposerUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
@@ -1026,6 +1027,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette-container' => [__DIR__ . '/data/providers/nette-container.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
+        yield 'provider-composer' => [__DIR__ . '/data/providers/composer.php'];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php'];
         yield 'provider-enum-hooks' => [__DIR__ . '/data/providers/enum-hooks.php'];
         yield 'provider-builtin' => [__DIR__ . '/data/providers/builtin.php'];
@@ -1257,6 +1259,11 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new StreamWrapperUsageProvider(
                 $this->providersEnabled,
+            ),
+            new ComposerUsageProvider(
+                self::getContainer()->getByType(ReflectionProvider::class),
+                $this->providersEnabled,
+                __DIR__ . '/data/providers/composer/composer.json',
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
