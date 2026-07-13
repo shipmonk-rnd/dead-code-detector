@@ -812,22 +812,29 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $usages = [];
 
         foreach ($node->getMethodReflection()->getParameters() as $parameter) {
-            $isMapPayload = false;
+            $dtoClassNames = [];
 
             foreach ($parameter->getAttributes() as $attributeReflection) {
-                if ($this->isMapPayloadAttribute($attributeReflection->getName())) {
-                    $isMapPayload = true;
-                    break;
+                if (!$this->isMapPayloadAttribute($attributeReflection->getName())) {
+                    continue;
                 }
+
+                $parameterType = TypeCombinator::removeNull($parameter->getType());
+                $dtoClassNames = $parameterType->getObjectClassNames();
+
+                // #[MapRequestPayload(type: ItemDto::class)] denormalizes an array parameter to ItemDto[]
+                $typeArgument = $attributeReflection->getArgumentTypes()['type'] ?? null;
+
+                if ($typeArgument !== null) {
+                    foreach ($typeArgument->getConstantStrings() as $typeConstantString) {
+                        $dtoClassNames[] = $typeConstantString->getValue();
+                    }
+                }
+
+                break;
             }
 
-            if (!$isMapPayload) {
-                continue;
-            }
-
-            $parameterType = TypeCombinator::removeNull($parameter->getType());
-
-            foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
+            foreach ($dtoClassNames as $dtoClassName) {
                 if (!$this->reflectionProvider->hasClass($dtoClassName)) {
                     continue;
                 }
