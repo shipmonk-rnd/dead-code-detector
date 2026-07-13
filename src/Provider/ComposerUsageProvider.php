@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use LogicException;
 use PHPStan\Reflection\ReflectionProvider;
 use ReflectionMethod;
-use ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use function explode;
 use function is_array;
 use function is_file;
@@ -26,7 +26,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private readonly ReflectionProvider $reflectionProvider;
 
-    private readonly ComposerRootLocator $composerRootLocator;
+    private readonly ComposerIntrospector $composerIntrospector;
 
     /**
      * declaring class => [method => note]
@@ -37,13 +37,13 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        ComposerRootLocator $composerRootLocator,
+        ComposerIntrospector $composerIntrospector,
         bool $enabled,
         ?string $composerJsonPath,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->composerRootLocator = $composerRootLocator;
+        $this->composerIntrospector = $composerIntrospector;
         $this->loadScriptCallbacks($enabled, $composerJsonPath);
     }
 
@@ -57,7 +57,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         if ($composerJsonPath === null) {
-            $autodetectedPath = $this->composerRootLocator->autodetectComposerJsonPath();
+            $autodetectedPath = $this->composerIntrospector->autodetectComposerJsonPath();
 
             if ($autodetectedPath !== null) {
                 $this->extractScriptCallbacks($autodetectedPath);
@@ -84,7 +84,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
 
     private function extractScriptCallbacks(string $composerJsonPath): void
     {
-        $composerJsonData = $this->composerRootLocator->parseComposerJson($composerJsonPath);
+        $composerJsonData = $this->composerIntrospector->parseComposerJson($composerJsonPath);
         $scripts = $composerJsonData['scripts'] ?? [];
 
         if (!is_array($scripts)) {

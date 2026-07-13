@@ -37,7 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Collector\MethodCallCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\PropertyAccessCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ProvidedUsagesCollector;
 use ShipMonk\PHPStan\DeadCode\Compatibility\BackwardCompatibilityChecker;
-use ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Debug\DebugUsagePrinter;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
@@ -1263,14 +1263,14 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new ComposerUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
-                new ComposerRootLocator(),
+                new ComposerIntrospector(),
                 $this->providersEnabled,
                 __DIR__ . '/data/providers/composer/composer.json',
             ),
             new SymfonyUsageProvider(
                 $this->createContainerMockWithSymfonyConfig(),
                 self::getContainer()->getByType(ReflectionProvider::class),
-                new ComposerRootLocator(),
+                new ComposerIntrospector(),
                 $templateViewDataTraverser,
                 $this->providersEnabled,
                 __DIR__ . '/data/providers/symfony/',
@@ -1336,7 +1336,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $excluders = [
             new TestsUsageExcluder(
                 self::createReflectionProvider(),
-                new ComposerRootLocator(),
+                new ComposerIntrospector(),
                 true,
                 [__DIR__ . '/data/excluders/../excluders/tests/tests'], // tests path normalization
             ),

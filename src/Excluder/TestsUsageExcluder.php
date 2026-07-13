@@ -6,7 +6,7 @@ use LogicException;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ReflectionProvider;
-use ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use function dirname;
 use function glob;
@@ -22,7 +22,7 @@ final class TestsUsageExcluder implements MemberUsageExcluder
 
     private readonly ReflectionProvider $reflectionProvider;
 
-    private readonly ComposerRootLocator $composerRootLocator;
+    private readonly ComposerIntrospector $composerIntrospector;
 
     private readonly bool $enabled;
 
@@ -36,13 +36,13 @@ final class TestsUsageExcluder implements MemberUsageExcluder
      */
     public function __construct(
         ReflectionProvider $reflectionProvider,
-        ComposerRootLocator $composerRootLocator,
+        ComposerIntrospector $composerIntrospector,
         bool $enabled,
         ?array $devPaths,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->composerRootLocator = $composerRootLocator;
+        $this->composerIntrospector = $composerIntrospector;
         $this->enabled = $enabled;
 
         if ($devPaths !== null) {
@@ -116,13 +116,13 @@ final class TestsUsageExcluder implements MemberUsageExcluder
      */
     private function autodetectComposerDevPaths(): array
     {
-        $composerJsonPath = $this->composerRootLocator->autodetectComposerJsonPath();
+        $composerJsonPath = $this->composerIntrospector->autodetectComposerJsonPath();
 
         if ($composerJsonPath === null) {
             return [];
         }
 
-        $composerJsonData = $this->composerRootLocator->parseComposerJson($composerJsonPath);
+        $composerJsonData = $this->composerIntrospector->parseComposerJson($composerJsonPath);
         $autoloadDev = $composerJsonData['autoload-dev'] ?? [];
 
         if (!is_array($autoloadDev)) {

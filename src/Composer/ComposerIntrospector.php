@@ -15,7 +15,7 @@ use function reset;
 use function str_starts_with;
 use const JSON_ERROR_NONE;
 
-final class ComposerRootLocator
+final class ComposerIntrospector
 {
 
     /**

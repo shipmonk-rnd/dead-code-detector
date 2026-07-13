@@ -32,7 +32,7 @@ use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionNamedType;
 use Reflector;
-use ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator;
+use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -69,7 +69,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private readonly ReflectionProvider $reflectionProvider;
 
-    private readonly ComposerRootLocator $composerRootLocator;
+    private readonly ComposerIntrospector $composerIntrospector;
 
     private readonly TemplateViewDataTraverser $traverser;
 
@@ -111,7 +111,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     public function __construct(
         Container $container,
         ReflectionProvider $reflectionProvider,
-        ComposerRootLocator $composerRootLocator,
+        ComposerIntrospector $composerIntrospector,
         TemplateViewDataTraverser $traverser,
         ?bool $enabled,
         ?string $configDir,
@@ -119,7 +119,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     )
     {
         $this->reflectionProvider = $reflectionProvider;
-        $this->composerRootLocator = $composerRootLocator;
+        $this->composerIntrospector = $composerIntrospector;
         $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isSymfonyInstalled();
         $this->configDir = $configDir ?? $this->autodetectConfigDir();
@@ -1576,7 +1576,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function autodetectConfigDir(): ?string
     {
-        $vendorDir = $this->composerRootLocator->autodetectVendorDir();
+        $vendorDir = $this->composerIntrospector->autodetectVendorDir();
 
         if ($vendorDir === null) {
             return null;

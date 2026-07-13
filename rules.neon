@@ -14,7 +14,7 @@ services:
             tmpDir: %tmpDir%
             offloadCollectorData: %shipmonkDeadCode.cache.offloadCollectorData%
     -
-        class: ShipMonk\PHPStan\DeadCode\Composer\ComposerRootLocator
+        class: ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
