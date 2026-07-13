@@ -419,9 +419,27 @@ class NullableQueryController {
 class SetterBasedDto {
     private string $name; // error: Property Symfony\SetterBasedDto::$name is never read
 
+    /** @var array<string, string> */
+    private array $extras = []; // error: Property Symfony\SetterBasedDto::$extras is never read
+
     public function setName(string $name): void
     {
         $this->name = $name;
+    }
+
+    public function setNickname(string $nickname): void // setter without backing property, still called by PropertyAccessor
+    {
+        $this->extras['nickname'] = $nickname;
+    }
+
+    protected function setInternal(string $value): void // error: Unused Symfony\SetterBasedDto::setInternal
+    {
+        $this->extras['internal'] = $value;
+    }
+
+    public function setDefaults(): void // error: Unused Symfony\SetterBasedDto::setDefaults
+    {
+        $this->extras = [];
     }
 }
 

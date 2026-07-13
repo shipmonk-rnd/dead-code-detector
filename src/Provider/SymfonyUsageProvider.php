@@ -57,14 +57,12 @@ use function in_array;
 use function is_array;
 use function is_dir;
 use function is_string;
-use function lcfirst;
 use function preg_match_all;
 use function simplexml_load_string;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
-use function substr;
 use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
@@ -875,14 +873,15 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                         continue;
                     }
 
-                    $propertyName = lcfirst(substr($dtoMethodName, 3));
-
-                    if ($dtoReflection->getNativeReflection()->hasProperty($propertyName)) {
-                        $usages[] = new ClassMethodUsage(
-                            $origin,
-                            new ClassMethodRef($dtoClassName, $dtoMethodName, possibleDescendant: false),
-                        );
+                    // mirrors ReflectionExtractor::isMethodAccessible() used by PropertyAccessor
+                    if (!$dtoMethod->isPublic() || $dtoMethod->getNumberOfRequiredParameters() > 1 || $dtoMethod->getNumberOfParameters() < 1) {
+                        continue;
                     }
+
+                    $usages[] = new ClassMethodUsage(
+                        $origin,
+                        new ClassMethodRef($dtoClassName, $dtoMethodName, possibleDescendant: false),
+                    );
                 }
             }
         }
