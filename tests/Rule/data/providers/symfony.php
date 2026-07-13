@@ -443,6 +443,41 @@ class SetterBasedDto {
     }
 }
 
+class CollectionDto {
+    /** @var list<string> */
+    private array $tags = [];
+
+    public function addTag(string $tag): void
+    {
+        $this->tags[] = $tag;
+    }
+
+    public function removeTag(string $tag): void
+    {
+        $this->tags = array_values(array_diff($this->tags, [$tag]));
+    }
+
+    public function addOrphan(string $value): void // error: Unused Symfony\CollectionDto::addOrphan
+    {
+        $this->tags[] = $value;
+    }
+
+    /** @return list<string> */
+    public function getTags(): array
+    {
+        return $this->tags;
+    }
+}
+
+class CollectionController {
+    #[Route('/api/collection', methods: ['POST'])]
+    public function create(
+        #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] CollectionDto $dto,
+    ): void {
+        print_r($dto->getTags());
+    }
+}
+
 class SetterController {
     #[Route('/api/setter')]
     public function create(

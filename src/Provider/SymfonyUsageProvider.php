@@ -31,6 +31,7 @@ use PHPStan\Type\TypeCombinator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
+use ReflectionException;
 use ReflectionNamedType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
@@ -63,6 +64,7 @@ use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
+use function substr;
 use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
@@ -803,6 +805,52 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * Mirrors what ReflectionExtractor::getWriteInfo() (used by PropertyAccessor) treats as a mutator:
+     * a set* method, or a pair of add* and remove* methods where both exist.
+     *
+     * @param ReflectionClass|ReflectionEnum $classReflection
+     */
+    private function isPayloadMutator(
+        Reflector $classReflection,
+        ReflectionMethod $method,
+    ): bool
+    {
+        if (!$this->isAccessibleMutatorMethod($method)) {
+            return false;
+        }
+
+        $methodName = $method->getName();
+
+        if (str_starts_with($methodName, 'set') && strlen($methodName) > 3) {
+            return true;
+        }
+
+        foreach ([['add', 'remove'], ['remove', 'add']] as [$prefix, $counterpartPrefix]) {
+            if (str_starts_with($methodName, $prefix) && strlen($methodName) > strlen($prefix)) {
+                $counterpartName = $counterpartPrefix . substr($methodName, strlen($prefix));
+
+                try {
+                    return $this->isAccessibleMutatorMethod($classReflection->getMethod($counterpartName));
+                } catch (ReflectionException $e) {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Mirrors ReflectionExtractor::isMethodAccessible() used by PropertyAccessor
+     */
+    private function isAccessibleMutatorMethod(ReflectionMethod $method): bool
+    {
+        return $method->isPublic()
+            && $method->getNumberOfRequiredParameters() <= 1
+            && $method->getNumberOfParameters() >= 1;
+    }
+
+    /**
      * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function getMapPayloadUsages(InClassMethodNode $node): array
@@ -861,26 +909,19 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     );
                 }
 
-                // Mark setter methods as used (ObjectNormalizer calls them via PropertyAccessor)
+                // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor)
                 foreach ($dtoReflection->getNativeReflection()->getMethods() as $dtoMethod) {
                     if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
                         continue;
                     }
 
-                    $dtoMethodName = $dtoMethod->getName();
-
-                    if (!str_starts_with($dtoMethodName, 'set') || strlen($dtoMethodName) <= 3) {
-                        continue;
-                    }
-
-                    // mirrors ReflectionExtractor::isMethodAccessible() used by PropertyAccessor
-                    if (!$dtoMethod->isPublic() || $dtoMethod->getNumberOfRequiredParameters() > 1 || $dtoMethod->getNumberOfParameters() < 1) {
+                    if (!$this->isPayloadMutator($dtoReflection->getNativeReflection(), $dtoMethod)) {
                         continue;
                     }
 
                     $usages[] = new ClassMethodUsage(
                         $origin,
-                        new ClassMethodRef($dtoClassName, $dtoMethodName, possibleDescendant: false),
+                        new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
                     );
                 }
             }
