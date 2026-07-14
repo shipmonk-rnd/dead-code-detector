@@ -33,7 +33,6 @@ use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionException;
 use ReflectionNamedType;
-use ReflectionType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
@@ -921,13 +920,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 $origin,
                 new ClassMethodRef($dtoClassName, '__construct', possibleDescendant: false),
             );
-        }
 
-        $constructor = $nativeReflection->getConstructor();
-
-        if ($constructor !== null) {
-            foreach ($constructor->getParameters() as $constructorParameter) {
-                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($constructorParameter->getType(), $visited)];
+            foreach ($dtoReflection->getConstructor()->getVariants() as $constructorVariant) {
+                foreach ($constructorVariant->getParameters() as $constructorParameter) {
+                    $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($constructorParameter->getType(), $visited)];
+                }
             }
         }
 
@@ -944,7 +941,9 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 AccessType::WRITE,
             );
 
-            $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($property->getType(), $visited)];
+            if ($dtoReflection->hasNativeProperty($property->getName())) {
+                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($dtoReflection->getNativeProperty($property->getName())->getWritableType(), $visited)];
+            }
         }
 
         // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor), including inherited ones
@@ -958,8 +957,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
             );
 
-            foreach ($dtoMethod->getParameters() as $mutatorParameter) {
-                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
+            if ($dtoReflection->hasNativeMethod($dtoMethod->getName())) {
+                foreach ($dtoReflection->getNativeMethod($dtoMethod->getName())->getVariants() as $mutatorVariant) {
+                    foreach ($mutatorVariant->getParameters() as $mutatorParameter) {
+                        $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
+                    }
+                }
             }
         }
 
@@ -968,20 +971,29 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     /**
      * Nested DTOs are denormalized recursively, so their members are used the same way as the root DTO's.
+     * Collections declared via PhpDoc (e.g. list<ItemDto>) are denormalized element-by-element,
+     * the vendor reads those types via PropertyInfo's PhpDocExtractor.
      *
      * @param array<string, true> $visited
      * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function collectNestedPayloadDtoUsages(
-        ?ReflectionType $type,
+        Type $type,
         array &$visited,
     ): array
     {
-        if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
-            return [];
+        $type = TypeCombinator::removeNull($type);
+        $usages = [];
+
+        foreach ($type->getObjectClassNames() as $nestedClassName) {
+            $usages = [...$usages, ...$this->collectPayloadDtoUsages($nestedClassName, $visited)];
         }
 
-        return $this->collectPayloadDtoUsages($type->getName(), $visited);
+        if ($type->isIterable()->yes()) {
+            $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($type->getIterableValueType(), $visited)];
+        }
+
+        return $usages;
     }
 
     private function shouldMarkAsUsed(ReflectionMethod $method): ?string

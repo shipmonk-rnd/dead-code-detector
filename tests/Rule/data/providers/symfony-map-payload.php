@@ -171,6 +171,44 @@ class OrderController {
     }
 }
 
+class CartLineDto {
+    public function __construct(
+        public readonly string $product,
+        public readonly int $quantity, // error: Property SymfonyMapPayload\CartLineDto::$quantity is never read
+    ) {}
+}
+
+class CartCouponDto {
+    public ?string $code = null;
+}
+
+class CartDto {
+    /** @var list<CartCouponDto> */
+    public array $coupons = [];
+
+    /**
+     * @param list<CartLineDto> $lines
+     */
+    public function __construct(
+        public readonly array $lines,
+    ) {}
+}
+
+class CartController {
+    #[Route('/api/cart', methods: ['POST'])]
+    public function create(
+        #[MapRequestPayload] CartDto $dto,
+    ): void {
+        foreach ($dto->lines as $line) {
+            echo $line->product;
+        }
+
+        foreach ($dto->coupons as $coupon) {
+            echo $coupon->code;
+        }
+    }
+}
+
 abstract class AbstractPayloadDto {
     public ?string $requestId = null;
 
