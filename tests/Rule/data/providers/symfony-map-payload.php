@@ -8,7 +8,13 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use function array_diff;
 use function array_values;
+use function class_exists;
 use function print_r;
+
+// CustomMapPayload below extends a class that exists only in symfony/http-kernel >= 6.3; prevent a fatal in testNoFatalError
+if (!class_exists(MapRequestPayload::class)) {
+    return;
+}
 
 class CreateUserDto {
     public function __construct(
