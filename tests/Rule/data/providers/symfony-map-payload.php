@@ -43,23 +43,6 @@ class QueryStringController {
     }
 }
 
-class BatchItemDto {
-    public function __construct(
-        public readonly string $sku,
-    ) {}
-}
-
-class BatchController {
-    #[Route('/api/batch', methods: ['POST'])]
-    public function create(
-        #[MapRequestPayload(type: BatchItemDto::class)] array $items,
-    ): void {
-        foreach ($items as $item) {
-            echo $item->sku;
-        }
-    }
-}
-
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class CustomMapPayload extends MapRequestPayload {}
 
