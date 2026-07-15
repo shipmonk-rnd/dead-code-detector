@@ -27,9 +27,11 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\TrinaryLogic;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
+use ReflectionException;
 use ReflectionNamedType;
 use Reflector;
 use ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector;
@@ -62,6 +64,7 @@ use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
+use function substr;
 use function trim;
 
 final class SymfonyUsageProvider implements MemberUsageProvider
@@ -171,6 +174,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
                 ...$this->getMapInputUsages($node),
+                ...$this->getMapPayloadUsages($node),
             ];
         }
 
@@ -783,6 +787,210 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
                 );
             }
+        }
+
+        return $usages;
+    }
+
+    private function isMapPayloadAttribute(string $attributeClassName): bool
+    {
+        if (!$this->reflectionProvider->hasClass($attributeClassName)) {
+            return false;
+        }
+
+        $attributeReflection = $this->reflectionProvider->getClass($attributeClassName);
+
+        return $attributeReflection->is('Symfony\Component\HttpKernel\Attribute\MapRequestPayload')
+            || $attributeReflection->is('Symfony\Component\HttpKernel\Attribute\MapQueryString');
+    }
+
+    /**
+     * Mirrors what ReflectionExtractor::getWriteInfo() (used by PropertyAccessor) treats as a mutator:
+     * a set* method, or a pair of add* and remove* methods where both exist.
+     *
+     * @param ReflectionClass|ReflectionEnum $classReflection
+     */
+    private function isPayloadMutator(
+        Reflector $classReflection,
+        ReflectionMethod $method,
+    ): bool
+    {
+        if (!$this->isAccessibleMutatorMethod($method)) {
+            return false;
+        }
+
+        $methodName = $method->getName();
+
+        if (str_starts_with($methodName, 'set') && strlen($methodName) > 3) {
+            return true;
+        }
+
+        foreach ([['add', 'remove'], ['remove', 'add']] as [$prefix, $counterpartPrefix]) {
+            if (str_starts_with($methodName, $prefix) && strlen($methodName) > strlen($prefix)) {
+                $counterpartName = $counterpartPrefix . substr($methodName, strlen($prefix));
+
+                try {
+                    return $this->isAccessibleMutatorMethod($classReflection->getMethod($counterpartName));
+                } catch (ReflectionException $e) {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Mirrors ReflectionExtractor::isMethodAccessible() used by PropertyAccessor
+     */
+    private function isAccessibleMutatorMethod(ReflectionMethod $method): bool
+    {
+        return $method->isPublic()
+            && $method->getNumberOfRequiredParameters() <= 1
+            && $method->getNumberOfParameters() >= 1;
+    }
+
+    /**
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function getMapPayloadUsages(InClassMethodNode $node): array
+    {
+        $usages = [];
+
+        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+            $dtoClassNames = [];
+
+            foreach ($parameter->getAttributes() as $attributeReflection) {
+                if (!$this->isMapPayloadAttribute($attributeReflection->getName())) {
+                    continue;
+                }
+
+                $parameterType = TypeCombinator::removeNull($parameter->getType());
+                $dtoClassNames = $parameterType->getObjectClassNames();
+
+                // #[MapRequestPayload(type: ItemDto::class)] denormalizes an array parameter to ItemDto[]
+                $typeArgument = $attributeReflection->getArgumentTypes()['type'] ?? null;
+
+                if ($typeArgument !== null) {
+                    foreach ($typeArgument->getConstantStrings() as $typeConstantString) {
+                        $dtoClassNames[] = $typeConstantString->getValue();
+                    }
+                }
+
+                break;
+            }
+
+            $visited = [];
+
+            foreach ($dtoClassNames as $dtoClassName) {
+                $usages = [...$usages, ...$this->collectPayloadDtoUsages($dtoClassName, $visited)];
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectPayloadDtoUsages(
+        string $dtoClassName,
+        array &$visited,
+    ): array
+    {
+        if (isset($visited[$dtoClassName])) {
+            return [];
+        }
+
+        $visited[$dtoClassName] = true;
+
+        if (!$this->reflectionProvider->hasClass($dtoClassName)) {
+            return [];
+        }
+
+        $dtoReflection = $this->reflectionProvider->getClass($dtoClassName);
+        $nativeReflection = $dtoReflection->getNativeReflection();
+        $origin = UsageOrigin::createVirtual($this, VirtualUsageData::withNote('DTO used via #[MapRequestPayload] or #[MapQueryString]'));
+        $usages = [];
+
+        // Mark constructor as used (serializer instantiates the DTO) and recurse into its parameters
+        if ($dtoReflection->hasConstructor()) {
+            $usages[] = new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef($dtoClassName, '__construct', possibleDescendant: false),
+            );
+
+            foreach ($dtoReflection->getConstructor()->getVariants() as $constructorVariant) {
+                foreach ($constructorVariant->getParameters() as $constructorParameter) {
+                    $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($constructorParameter->getType(), $visited)];
+                }
+            }
+        }
+
+        // Mark properties as written (serializer populates them), including ones inherited from project-level parents
+        foreach ($nativeReflection->getProperties() as $property) {
+            // PropertyAccessor writes only public non-static non-readonly properties; others get populated via constructor or mutators
+            if (!$property->isPublic() || $property->isStatic() || $property->isReadOnly()) {
+                continue;
+            }
+
+            $usages[] = new ClassPropertyUsage(
+                $origin,
+                new ClassPropertyRef($property->getDeclaringClass()->getName(), $property->getName(), possibleDescendant: false),
+                AccessType::WRITE,
+            );
+
+            if ($dtoReflection->hasNativeProperty($property->getName())) {
+                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($dtoReflection->getNativeProperty($property->getName())->getWritableType(), $visited)];
+            }
+        }
+
+        // Mark mutator methods as used (ObjectNormalizer calls them via PropertyAccessor), including inherited ones
+        foreach ($nativeReflection->getMethods() as $dtoMethod) {
+            if (!$this->isPayloadMutator($nativeReflection, $dtoMethod)) {
+                continue;
+            }
+
+            $usages[] = new ClassMethodUsage(
+                $origin,
+                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
+            );
+
+            if ($dtoReflection->hasNativeMethod($dtoMethod->getName())) {
+                foreach ($dtoReflection->getNativeMethod($dtoMethod->getName())->getVariants() as $mutatorVariant) {
+                    foreach ($mutatorVariant->getParameters() as $mutatorParameter) {
+                        $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
+                    }
+                }
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * Nested DTOs are denormalized recursively, so their members are used the same way as the root DTO's.
+     * Collections declared via PhpDoc (e.g. list<ItemDto>) are denormalized element-by-element,
+     * the vendor reads those types via PropertyInfo's PhpDocExtractor.
+     *
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectNestedPayloadDtoUsages(
+        Type $type,
+        array &$visited,
+    ): array
+    {
+        $type = TypeCombinator::removeNull($type);
+        $usages = [];
+
+        foreach ($type->getObjectClassNames() as $nestedClassName) {
+            $usages = [...$usages, ...$this->collectPayloadDtoUsages($nestedClassName, $visited)];
+        }
+
+        if ($type->isIterable()->yes()) {
+            $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($type->getIterableValueType(), $visited)];
         }
 
         return $usages;
