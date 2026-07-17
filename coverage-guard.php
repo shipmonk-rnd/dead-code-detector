@@ -3,6 +3,7 @@
 use PHPStan\Collectors\Collector;
 use PHPStan\Rules\Rule;
 use ShipMonk\CoverageGuard\Config;
+use ShipMonk\CoverageGuard\Excluder\IgnoreThrowNewExceptionLineExcluder;
 use ShipMonk\CoverageGuard\Hierarchy\ClassMethodBlock;
 use ShipMonk\CoverageGuard\Hierarchy\CodeBlock;
 use ShipMonk\CoverageGuard\Rule\CoverageError;
@@ -64,5 +65,7 @@ $config->addRule(new class implements CoverageRule {
     }
 
 });
+
+$config->addExecutableLineExcluder(new IgnoreThrowNewExceptionLineExcluder([LogicException::class]));
 
 return $config;
