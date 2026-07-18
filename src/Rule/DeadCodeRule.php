@@ -861,12 +861,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     {
         $representative = $blackMembersGroup[0];
 
-        $exclusionMessage = $representative->getExclusionMessage();
         $excludedUsages = $representative->getExcludedUsages();
 
         $mainErrorMessage = $this->buildMainErrorMessages($representative);
 
-        $builder = RuleErrorBuilder::message("{$mainErrorMessage}{$exclusionMessage}")
+        $builder = RuleErrorBuilder::message($mainErrorMessage)
             ->file($representative->getFile())
             ->line($representative->getLine())
             ->identifier($representative->getErrorIdentifier());
@@ -878,13 +877,22 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             'excludedUsages' => $excludedUsages,
         ];
 
+        $representativeExclusionTip = $representative->getExclusionTip();
+
+        if ($representativeExclusionTip !== null) {
+            $builder->addTip($representativeExclusionTip);
+        }
+
         $tips = [];
 
         foreach (array_slice($blackMembersGroup, 1) as $transitivelyDeadMember) {
-            $exclusionMessage = $transitivelyDeadMember->getExclusionMessage();
+            $exclusionTip = $transitivelyDeadMember->getExclusionTip();
             $excludedUsages = $transitivelyDeadMember->getExcludedUsages();
 
-            $tips[] = $this->buildTransitiveErrorMessages($transitivelyDeadMember) . $exclusionMessage;
+            $transitiveMessage = $this->buildTransitiveErrorMessages($transitivelyDeadMember);
+            $tips[] = $exclusionTip !== null
+                ? "{$transitiveMessage}. {$exclusionTip}"
+                : $transitiveMessage;
             $metadata[] = [
                 'blackMember' => $transitivelyDeadMember,
                 'transitive' => true,
