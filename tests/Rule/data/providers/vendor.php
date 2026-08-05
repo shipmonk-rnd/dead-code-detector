@@ -3,8 +3,8 @@
 namespace Default;
 
 use PhpParser\Node;
+use PhpParser\NodeVisitor;
 use PHPStan\Analyser\Scope;
-use PHPStan\Rules\Properties\ReadWritePropertiesExtensionProvider;
 use PHPStan\Rules\Rule as RuleFromVendor;
 use PHPUnit\Framework\TestCase;
 
@@ -13,9 +13,9 @@ interface IMyRule extends RuleFromVendor
     public function getNodeType(): string;
 }
 
-interface MyPropertiesExtensionProvider extends ReadWritePropertiesExtensionProvider {
+interface MyNodeVisitor extends NodeVisitor {
 
-    public const EXTENSION_TAG = 'overridden-from-vendor';
+    public const DONT_TRAVERSE_CHILDREN = 100;
 
 }
 
