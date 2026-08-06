@@ -9,8 +9,10 @@ use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\NodeCompiler\Exception\UnableToCompileNode;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
@@ -1630,7 +1632,26 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $attributes = $method->getDeclaringClass()->getAttributes('Symfony\Component\Validator\Constraints\Callback');
 
         foreach ($attributes as $attribute) {
-            $arguments = $attribute->getArguments();
+            $expressions = $attribute->getArgumentsExpressions();
+            $callbackExpression = $expressions['callback'] ?? $expressions[0] ?? null;
+
+            if ($callbackExpression === null) {
+                continue;
+            }
+
+            if ($callbackExpression instanceof String_) {
+                if (CaseInsensitiveName::equals($callbackExpression->value, $method->getName())) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            try { // e.g. #[Callback(self::CALLBACK_METHOD)] needs compilation
+                $arguments = $attribute->getArguments();
+            } catch (UnableToCompileNode $e) { // @phpstan-ignore catch.internalClass, catch.neverThrown (PHP 8.5 allows closures in attributes, those have no compile-time value)
+                continue;
+            }
 
             $callback = $arguments['callback'] ?? $arguments[0] ?? null;
 
