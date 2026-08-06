@@ -9,10 +9,8 @@ use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
-use PHPStan\BetterReflection\NodeCompiler\Exception\UnableToCompileNode;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
@@ -1629,34 +1627,26 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
     {
-        $attributes = $method->getDeclaringClass()->getAttributes('Symfony\Component\Validator\Constraints\Callback');
+        $declaringClassName = $method->getDeclaringClass()->getName();
 
-        foreach ($attributes as $attribute) {
-            $expressions = $attribute->getArgumentsExpressions();
-            $callbackExpression = $expressions['callback'] ?? $expressions[0] ?? null;
-
-            if ($callbackExpression === null) {
-                continue;
-            }
-
-            if ($callbackExpression instanceof String_) {
-                if (CaseInsensitiveName::equals($callbackExpression->value, $method->getName())) {
-                    return true;
+        if ($this->reflectionProvider->hasClass($declaringClassName)) {
+            foreach ($this->reflectionProvider->getClass($declaringClassName)->getAttributes() as $attribute) {
+                if ($attribute->getName() !== 'Symfony\Component\Validator\Constraints\Callback') {
+                    continue;
                 }
 
-                continue;
-            }
+                // Type-level access never compiles argument values, so closure callbacks (PHP 8.5+) cause no error
+                $callbackType = $attribute->getArgumentTypes()['callback'] ?? null;
 
-            try { // e.g. #[Callback(self::CALLBACK_METHOD)] needs compilation
-                $arguments = $attribute->getArguments();
-            } catch (UnableToCompileNode $e) { // @phpstan-ignore catch.internalClass, catch.neverThrown (PHP 8.5 allows closures in attributes, those have no compile-time value)
-                continue;
-            }
+                if ($callbackType === null) {
+                    continue;
+                }
 
-            $callback = $arguments['callback'] ?? $arguments[0] ?? null;
-
-            if (is_string($callback) && CaseInsensitiveName::equals($callback, $method->getName())) {
-                return true;
+                foreach ($callbackType->getConstantStrings() as $constantString) {
+                    if (CaseInsensitiveName::equals($constantString->getValue(), $method->getName())) {
+                        return true;
+                    }
+                }
             }
         }
 
