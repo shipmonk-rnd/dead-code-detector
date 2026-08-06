@@ -1010,6 +1010,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-reflection-properties' => [__DIR__ . '/data/providers/reflection-properties.php'];
         yield 'provider-symfony' => [__DIR__ . '/data/providers/symfony.php'];
         yield 'provider-symfony-7.1' => [__DIR__ . '/data/providers/symfony-gte71.php', self::requiresPackage('symfony/dependency-injection', '>= 7.1')];
+        yield 'provider-symfony-callback-closure' => [__DIR__ . '/data/providers/symfony-callback-closure.php'];
         yield 'provider-symfony-map-payload' => [__DIR__ . '/data/providers/symfony-map-payload.php', self::requiresPackage('symfony/http-kernel', '>= 6.3')];
         yield 'provider-symfony-map-payload-type' => [__DIR__ . '/data/providers/symfony-map-payload-type.php', self::requiresPackage('symfony/http-kernel', '>= 7.1')];
         yield 'provider-symfony-scheduler' => [__DIR__ . '/data/providers/symfony-scheduler.php', self::requiresPackage('symfony/scheduler', '>= 6.3')];

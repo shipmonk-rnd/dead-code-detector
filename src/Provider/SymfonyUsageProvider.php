@@ -1627,15 +1627,26 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
     {
-        $attributes = $method->getDeclaringClass()->getAttributes('Symfony\Component\Validator\Constraints\Callback');
+        $declaringClassName = $method->getDeclaringClass()->getName();
 
-        foreach ($attributes as $attribute) {
-            $arguments = $attribute->getArguments();
+        if ($this->reflectionProvider->hasClass($declaringClassName)) {
+            foreach ($this->reflectionProvider->getClass($declaringClassName)->getAttributes() as $attribute) {
+                if ($attribute->getName() !== 'Symfony\Component\Validator\Constraints\Callback') {
+                    continue;
+                }
 
-            $callback = $arguments['callback'] ?? $arguments[0] ?? null;
+                // Type-level access never compiles argument values, so closure callbacks (PHP 8.5+) cause no error
+                $callbackType = $attribute->getArgumentTypes()['callback'] ?? null;
 
-            if (is_string($callback) && CaseInsensitiveName::equals($callback, $method->getName())) {
-                return true;
+                if ($callbackType === null) {
+                    continue;
+                }
+
+                foreach ($callbackType->getConstantStrings() as $constantString) {
+                    if (CaseInsensitiveName::equals($constantString->getValue(), $method->getName())) {
+                        return true;
+                    }
+                }
             }
         }
 
