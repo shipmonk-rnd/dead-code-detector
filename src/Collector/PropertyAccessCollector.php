@@ -10,6 +10,7 @@ use PhpParser\Node\Expr\Cast\Array_ as ArrayCast;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticPropertyFetch;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
@@ -106,7 +107,7 @@ final class PropertyAccessCollector implements Collector
         $callerType = $scope->getType($node->var);
 
         foreach ($propertyNames as $propertyName) {
-            $callsHook = !$this->isSelfReferenceInPropertyHook($scope, $propertyName);
+            $callsHook = !$this->isSelfReferenceInPropertyHook($node, $scope, $propertyName);
 
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
                 $this->registerUsage(
@@ -245,11 +246,16 @@ final class PropertyAccessCollector implements Collector
     }
 
     private function isSelfReferenceInPropertyHook(
+        PropertyFetch $fetch,
         Scope $scope,
         ?string $propertyName,
     ): bool
     {
         if ($propertyName === null) {
+            return false;
+        }
+
+        if (!$fetch->var instanceof Variable || $fetch->var->name !== 'this') { // backing store is accessible only via $this
             return false;
         }
 

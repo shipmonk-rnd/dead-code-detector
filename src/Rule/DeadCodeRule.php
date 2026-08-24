@@ -709,7 +709,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
     /**
      * @param non-empty-array<string, non-empty-list<ClassMemberUsage>> $stack callerKey => usages[]
-     * @param array<string, true> $visited
+     * @param array<string, bool> $visited memberKey => visited with transitive walk
      */
     private function markReachableAsWhite(
         array $stack,
@@ -726,18 +726,21 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             unset($this->blackMembers[$callerKey]);
         }
 
-        $visited[$callerKey] = true;
+        $visited[$callerKey] = $transitiveWalk || ($visited[$callerKey] ?? false);
 
         if (!$transitiveWalk) {
             return;
         }
 
         foreach ($callees as $calleeKey => $usages) {
-            if (isset($visited[$calleeKey])) {
+            $shouldPropagate = $this->shouldPropagate($usages);
+
+            // revisit a member reached only by non-propagating usages when a propagating usage arrives
+            if (isset($visited[$calleeKey]) && ($visited[$calleeKey] || !$shouldPropagate)) {
                 continue;
             }
 
-            $this->markReachableAsWhite(array_merge($stack, [$calleeKey => $usages]), $visited, $this->shouldPropagate($usages));
+            $this->markReachableAsWhite(array_merge($stack, [$calleeKey => $usages]), $visited, $shouldPropagate);
         }
     }
 
@@ -746,7 +749,13 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private function shouldPropagate(array $usages): bool
     {
-        return $usages[0]->isPropagating();
+        foreach ($usages as $usage) {
+            if ($usage->isPropagating()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
