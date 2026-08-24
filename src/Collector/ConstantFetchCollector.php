@@ -27,6 +27,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use ShipMonk\PHPStan\DeadCode\Visitor\PhpDocConstFetchCollectingVisitor;
 use function array_map;
 use function count;
@@ -102,7 +103,7 @@ final class ConstantFetchCollector implements Collector
         }
 
         foreach ($functionNames as $functionName) {
-            if ($functionName !== 'constant') {
+            if (!CaseInsensitiveName::equals($functionName, 'constant')) {
                 continue;
             }
 

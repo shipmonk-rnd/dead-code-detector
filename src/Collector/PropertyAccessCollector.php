@@ -30,11 +30,11 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 use function array_map;
 use function current;
-use function in_array;
 use function str_starts_with;
 use function strtolower;
 
@@ -389,7 +389,7 @@ final class PropertyAccessCollector implements Collector
         $firstArgType = $scope->getType(current($args)->value);
 
         foreach ($functionNames as $functionName) {
-            if (in_array($functionName, ['get_object_vars', 'get_mangled_object_vars'], true)) {
+            if (CaseInsensitiveName::isOneOf($functionName, ['get_object_vars', 'get_mangled_object_vars'])) {
                 $this->registerAllPropertyReadsForType($firstArgType, $node, $scope);
 
                 if ($this->getObjectClassReflections($firstArgType) === []) {
@@ -405,15 +405,15 @@ final class PropertyAccessCollector implements Collector
                 }
             }
 
-            if ($functionName === 'json_encode') {
+            if (CaseInsensitiveName::equals($functionName, 'json_encode')) {
                 $this->registerJsonEncodePropertyReads($firstArgType, $node, $scope);
             }
 
-            if ($functionName === 'serialize') {
+            if (CaseInsensitiveName::equals($functionName, 'serialize')) {
                 $this->registerSerializePropertyReads($firstArgType, $node, $scope);
             }
 
-            if ($functionName === 'array_column') {
+            if (CaseInsensitiveName::equals($functionName, 'array_column')) {
                 $this->registerArrayColumnPropertyReads($firstArgType, $args, $node, $scope);
             }
         }

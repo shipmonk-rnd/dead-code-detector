@@ -32,9 +32,28 @@ class Coord
     public function __clone() {}
 }
 
+class UppercaseCloneFn
+{
+    public function __construct() {}
+
+    public function __clone() {}
+}
+
+class UppercaseCloneString
+{
+    public function __construct() {}
+
+    public function __clone() {}
+}
+
 clone new CloneClass1();
 clone new ChildClass();
 
 clone(new Coord(), [ // PHP 8.5 clone with
     'y' => 1,
 ]);
+
+\CLONE(new UppercaseCloneFn()); // function names are case-insensitive
+
+$cloneFn = 'CLONE';
+$cloneFn(new UppercaseCloneString());
