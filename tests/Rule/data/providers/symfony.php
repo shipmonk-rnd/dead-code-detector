@@ -55,6 +55,21 @@ class CreateUserCommand extends Command {
     }
 }
 
+class LegacyNamedCommand extends Command { // no #[AsCommand], name passed to parent constructor
+
+    public function __construct() {
+        parent::__construct('app:legacy-named');
+    }
+
+    public function __invoke(): int {
+        return 0;
+    }
+
+    #[Interact]
+    public function askMissing() {
+    }
+}
+
 class FooBundle extends Bundle {
     public function __construct() {
     }

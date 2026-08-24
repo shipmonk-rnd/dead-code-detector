@@ -1626,8 +1626,12 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     {
         $class = $method->getDeclaringClass();
 
+        // Symfony scans for #[Interact] any invokable command, even without #[AsCommand]
         return $this->hasAttribute($method, 'Symfony\Component\Console\Attribute\Interact')
-            && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
+            && (
+                $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
+                || $class->isSubclassOf('Symfony\Component\Console\Command\Command')
+            );
     }
 
     private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
