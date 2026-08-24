@@ -929,6 +929,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-array-callable-dynamic-name' => [__DIR__ . '/data/methods/array-callable-dynamic-name.php', self::requiresPackage('phpstan/phpstan', '>= 2.1.54')]; // is_callable() narrowing of [$obj, $method] arrays exists since 2.1.54
         yield 'method-code' => [__DIR__ . '/data/methods/basic.php'];
         yield 'method-case-insensitive' => [__DIR__ . '/data/methods/case-insensitive.php'];
+        yield 'method-static-keyword-case' => [__DIR__ . '/data/methods/static-keyword-case.php'];
         yield 'method-ctor' => [__DIR__ . '/data/methods/ctor.php'];
         yield 'method-ctor-interface' => [__DIR__ . '/data/methods/ctor-interface.php'];
         yield 'method-ctor-private' => [__DIR__ . '/data/methods/ctor-private.php'];
@@ -1044,6 +1045,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         // constants
         yield 'const-basic' => [__DIR__ . '/data/constants/basic.php'];
+        yield 'const-static-keyword-case' => [__DIR__ . '/data/constants/static-keyword-case.php'];
         yield 'const-function' => [__DIR__ . '/data/constants/constant-function.php'];
         yield 'const-descendant-1' => [__DIR__ . '/data/constants/descendant-1.php'];
         yield 'const-descendant-2' => [__DIR__ . '/data/constants/descendant-2.php'];
@@ -1076,6 +1078,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         // properties
         yield 'property-basic' => [__DIR__ . '/data/properties/basic.php'];
+        yield 'property-static-keyword-case' => [__DIR__ . '/data/properties/static-keyword-case.php'];
         yield 'property-static' => [__DIR__ . '/data/properties/static.php'];
         yield 'property-traits' => [__DIR__ . '/data/properties/traits.php'];
         yield 'property-dynamic' => [__DIR__ . '/data/properties/dynamic.php'];

@@ -33,6 +33,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function array_map;
 use function count;
 use function current;
+use function strtolower;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -118,7 +119,7 @@ final class MethodCallCollector implements Collector
 
             } elseif ($methodCall->class instanceof Name) {
                 $callerType = $scope->resolveTypeByName($methodCall->class);
-                $possibleDescendantCall = $methodCall->class->toString() === 'static';
+                $possibleDescendantCall = strtolower($methodCall->class->toString()) === 'static';
 
             } else {
                 return;
@@ -155,7 +156,7 @@ final class MethodCallCollector implements Collector
 
         } else {
             $callerType = $scope->resolveTypeByName($staticCall->class);
-            $possibleDescendantCall = $staticCall->class->toString() === 'static';
+            $possibleDescendantCall = strtolower($staticCall->class->toString()) === 'static';
         }
 
         foreach ($methodNames as $methodName) {

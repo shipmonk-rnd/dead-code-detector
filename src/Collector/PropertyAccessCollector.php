@@ -36,6 +36,7 @@ use function array_map;
 use function current;
 use function in_array;
 use function str_starts_with;
+use function strtolower;
 
 /**
  * @implements Collector<Node, list<string>>
@@ -137,7 +138,7 @@ final class PropertyAccessCollector implements Collector
     ): void
     {
         $propertyNames = $this->getPropertyNames($node, $scope);
-        $possibleDescendant = $node->class instanceof Expr || $node->class->toString() === 'static';
+        $possibleDescendant = $node->class instanceof Expr || strtolower($node->class->toString()) === 'static';
 
         if ($node->class instanceof Expr) {
             $callerType = $scope->getType($node->class);
