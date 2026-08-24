@@ -10,7 +10,6 @@ use PhpParser\Node\Expr\Cast\Array_ as ArrayCast;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticPropertyFetch;
-use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
@@ -29,6 +28,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 use function array_map;
 use function current;
@@ -255,7 +255,11 @@ final class PropertyAccessCollector implements Collector
             return false;
         }
 
-        if (!$fetch->var instanceof Variable || $fetch->var->name !== 'this') { // backing store is accessible only via $this
+        if (!PropertyHookBackingValueVisitor::isBackingValueFetch($fetch, $propertyName)) {
+            return false;
+        }
+
+        if ($scope->isInAnonymousFunction()) { // closures are separate compilation units, their $this->prop invokes the hook
             return false;
         }
 
