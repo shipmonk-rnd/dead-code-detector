@@ -8,9 +8,11 @@ use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Cast\Array_ as ArrayCast;
 use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Expr\List_;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticPropertyFetch;
 use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\Foreach_;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassMethodNode;
@@ -84,6 +86,10 @@ final class PropertyAccessCollector implements Collector
 
         if ($node instanceof InClassMethodNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $this->registerPromotedPropertyWrites($node, $scope);
+        }
+
+        if ($node instanceof Foreach_) { // NodeScopeResolver never dispatches property fetches in foreach targets
+            $this->registerForeachTargetWrites($node, $scope);
         }
 
         if ($node instanceof ArrayCast) {
@@ -269,6 +275,38 @@ final class PropertyAccessCollector implements Collector
         }
 
         return $function->isMethodOrPropertyHook() && $function->getHookedPropertyName() === $propertyName;
+    }
+
+    private function registerForeachTargetWrites(
+        Foreach_ $node,
+        Scope $scope,
+    ): void
+    {
+        $targets = [];
+
+        if ($node->keyVar !== null) {
+            $targets[] = $node->keyVar;
+        }
+
+        if ($node->valueVar instanceof List_) { // foreach ($rows as [$this->first, $this->second])
+            foreach ($node->valueVar->items as $item) {
+                if ($item !== null) {
+                    $targets[] = $item->value;
+                }
+            }
+        } else {
+            $targets[] = $node->valueVar;
+        }
+
+        foreach ($targets as $target) {
+            if ($target instanceof PropertyFetch) {
+                $this->registerInstancePropertyAccess($target, $scope, AccessType::WRITE);
+            }
+
+            if ($target instanceof StaticPropertyFetch) {
+                $this->registerStaticPropertyAccess($target, $scope, AccessType::WRITE);
+            }
+        }
     }
 
     private function registerPromotedPropertyWrites(
