@@ -1,0 +1,4 @@
+ • Removed method Removal\MixedNamespaceDup::foo
+ • Removed method MixedNamespaceDup::bar
+
+Removed 2 dead members in 1 file.

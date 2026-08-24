@@ -1,0 +1,3 @@
+ • Removed property Removal\ClassWithPropertyGroup::deadGrouped
+
+Removed 1 dead member in 1 file.

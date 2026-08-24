@@ -1,0 +1,3 @@
+ • Removed method Removal\ClassWithAnonymousClass::foo
+
+Removed 1 dead member in 1 file.

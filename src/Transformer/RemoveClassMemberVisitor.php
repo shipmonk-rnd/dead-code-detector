@@ -6,25 +6,27 @@ use PhpParser\Node;
 use PhpParser\Node\Const_;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Param;
+use PhpParser\Node\PropertyItem;
 use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\EnumCase;
-use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Property;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use function array_filter;
+use function array_key_last;
+use function array_pop;
 use function is_string;
-use function ltrim;
 
 final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 {
 
-    private string $currentNamespace = '';
-
-    private string $currentClass = '';
+    /**
+     * @var list<string|null> fully qualified names filled by NameResolver; null stands for anonymous class
+     */
+    private array $currentClassStack = [];
 
     /**
      * @param array<string, array<value-of<MemberType>, array<string, mixed>>> $deadMembers className => [type => [memberName => mixed]]
@@ -37,11 +39,8 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 
     public function enterNode(Node $node): ?Node
     {
-        if ($node instanceof Namespace_ && $node->name !== null) {
-            $this->currentNamespace = $node->name->toString();
-
-        } elseif ($node instanceof ClassLike && $node->name !== null) {
-            $this->currentClass = $node->name->name;
+        if ($node instanceof ClassLike) {
+            $this->currentClassStack[] = $node->namespacedName?->toString();
         }
 
         return null;
@@ -49,13 +48,24 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 
     public function leaveNode(Node $node): ?int
     {
+        if ($node instanceof ClassLike) {
+            array_pop($this->currentClassStack);
+            return null;
+        }
+
+        $currentClass = $this->getCurrentClass();
+
+        if ($currentClass === null) {
+            return null;
+        }
+
         if ($node instanceof ClassMethod) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::METHOD->value][$node->name->name])) {
+            if (isset($this->deadMembers[$currentClass][MemberType::METHOD->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
 
             // Handle promoted properties in constructor parameters
-            $node->params = array_filter($node->params, function (Param $param): bool {
+            $node->params = array_filter($node->params, function (Param $param) use ($currentClass): bool {
                 if (!$param->isPromoted() || !$param->var instanceof Variable) {
                     return true;
                 }
@@ -66,58 +76,46 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
                     return true;
                 }
 
-                return !isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY->value][$paramName]);
+                return !isset($this->deadMembers[$currentClass][MemberType::PROPERTY->value][$paramName]);
             });
         }
 
-        if ($node instanceof ClassConst) {
-            $allDead = true;
-
-            foreach ($node->consts as $const) {
-                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$const->name->name])) {
-                    $allDead = false;
-                    break;
-                }
-            }
-
-            if ($allDead) {
-                return NodeTraverser::REMOVE_NODE;
-            }
+        if ($node instanceof ClassConst && $node->consts === []) {
+            return NodeTraverser::REMOVE_NODE;
         }
 
         if ($node instanceof Const_) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$node->name->name])) {
+            if (isset($this->deadMembers[$currentClass][MemberType::CONSTANT->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
 
         if ($node instanceof EnumCase) {
-            if (isset($this->deadMembers[$this->getCurrentClass()][MemberType::CONSTANT->value][$node->name->name])) {
+            if (isset($this->deadMembers[$currentClass][MemberType::CONSTANT->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
         }
 
-        if ($node instanceof Property) {
-            $allDead = true;
-
-            foreach ($node->props as $prop) {
-                if (!isset($this->deadMembers[$this->getCurrentClass()][MemberType::PROPERTY->value][$prop->name->name])) {
-                    $allDead = false;
-                    break;
-                }
-            }
-
-            if ($allDead) {
+        if ($node instanceof PropertyItem) {
+            if (isset($this->deadMembers[$currentClass][MemberType::PROPERTY->value][$node->name->name])) {
                 return NodeTraverser::REMOVE_NODE;
             }
+        }
+
+        if ($node instanceof Property && $node->props === []) {
+            return NodeTraverser::REMOVE_NODE;
         }
 
         return null;
     }
 
-    private function getCurrentClass(): string
+    /**
+     * Null when outside of any class; dead members inside anonymous classes are never removed
+     */
+    private function getCurrentClass(): ?string
     {
-        return ltrim($this->currentNamespace . '\\' . $this->currentClass, '\\');
+        $lastKey = array_key_last($this->currentClassStack);
+        return $lastKey === null ? null : $this->currentClassStack[$lastKey];
     }
 
 }
