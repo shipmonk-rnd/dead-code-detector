@@ -428,24 +428,34 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         foreach ($usedTraits as $traitName => $adaptations) {
             $traitMethods = $this->typeDefinitions[$traitName]['methods'] ?? [];
 
-            $excludedMethods = array_merge(
-                $overriddenMethods,
-                $adaptations['excluded'] ?? [],
+            // method names are case-insensitive in PHP, but adaptations are stored as written
+            $excludedMethods = array_map(
+                static fn (string $excludedMethod): string => strtolower($excludedMethod),
+                array_merge(
+                    $overriddenMethods,
+                    $adaptations['excluded'] ?? [],
+                ),
             );
+
+            $aliases = [];
+
+            foreach ($adaptations['aliases'] ?? [] as $sourceMethodName => $newMethodName) {
+                $aliases[strtolower($sourceMethodName)] = $newMethodName;
+            }
 
             foreach ($traitMethods as $traitMethod => $traitMethodData) {
                 if ($traitMethodData['abstract']) {
                     continue; // abstract trait methods are ignored, should correlate with isNeverReportedAsDead
                 }
 
-                $aliasMethodName = $adaptations['aliases'][$traitMethod] ?? null;
+                $aliasMethodName = $aliases[strtolower($traitMethod)] ?? null;
 
                 // both method names need to work
                 if ($aliasMethodName !== null) {
                     $this->traitMembers[MemberType::METHOD->value][$typeName][$traitName][$aliasMethodName] = $traitMethod;
                 }
 
-                if (in_array($traitMethod, $excludedMethods, true)) {
+                if (in_array(strtolower($traitMethod), $excludedMethods, true)) {
                     continue; // was replaced by insteadof
                 }
 
