@@ -201,14 +201,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     private function getUniqueEntityUsages(InClassNode $node): array
     {
         $repositoryClass = null;
-        $repositoryMethod = null;
+        $repositoryMethods = [];
 
         foreach ($node->getClassReflection()->getNativeReflection()->getAttributes() as $attribute) {
-            if ($attribute->getName() === 'Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity') {
+            if ($attribute->getName() === 'Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity') { // repeatable attribute, each can hold own repositoryMethod
                 $arguments = $attribute->getArguments();
 
                 if (isset($arguments['repositoryMethod']) && is_string($arguments['repositoryMethod'])) {
-                    $repositoryMethod = $arguments['repositoryMethod'];
+                    $repositoryMethods[] = $arguments['repositoryMethod'];
                 }
             }
 
@@ -221,8 +221,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
-        if ($repositoryClass !== null && $repositoryMethod !== null) {
-            $usage = new ClassMethodUsage(
+        if ($repositoryClass === null) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($repositoryMethods as $repositoryMethod) {
+            $usages[] = new ClassMethodUsage(
                 UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Used in #[UniqueEntity] attribute')),
                 new ClassMethodRef(
                     $repositoryClass,
@@ -230,10 +236,9 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     possibleDescendant: false,
                 ),
             );
-            return [$usage];
         }
 
-        return [];
+        return $usages;
     }
 
     /**
