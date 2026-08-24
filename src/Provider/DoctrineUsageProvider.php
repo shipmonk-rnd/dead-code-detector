@@ -24,6 +24,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use function is_array;
 use function is_string;
 use function str_starts_with;
 
@@ -304,16 +305,30 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            $listenerMethodName = $arguments['method'] ?? null;
+            // AutoconfigureTag(?string $name, array $attributes) nests the tag attributes in its second argument
+            $tagAttributes = $arguments[1] ?? $arguments['attributes'] ?? [];
 
-            // If no method is specified, the listener method name is inferred from the event name
-            if ($listenerMethodName === null) {
-                $eventName = $arguments['event'] ?? null;
+            if (!is_array($tagAttributes)) {
+                continue;
+            }
 
-                if (is_string($eventName) && CaseInsensitiveName::equals($eventName, $methodName)) {
+            $listenerMethodName = $tagAttributes['method'] ?? null;
+
+            if (is_string($listenerMethodName)) {
+                if (CaseInsensitiveName::equals($listenerMethodName, $methodName)) {
                     return true;
                 }
-            } elseif (is_string($listenerMethodName) && CaseInsensitiveName::equals($listenerMethodName, $methodName)) {
+
+                continue;
+            }
+
+            // With no method attribute, DoctrineBundle calls a method named after the event, or falls back to __invoke
+            $eventName = $tagAttributes['event'] ?? null;
+
+            if (
+                (is_string($eventName) && CaseInsensitiveName::equals($eventName, $methodName))
+                || CaseInsensitiveName::equals($methodName, '__invoke')
+            ) {
                 return true;
             }
         }
