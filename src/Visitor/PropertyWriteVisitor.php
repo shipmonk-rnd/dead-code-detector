@@ -96,18 +96,12 @@ final class PropertyWriteVisitor extends NodeVisitorAbstract
             }
         }
 
-        if ($expr instanceof List_) { // [$this->first, $this->last] =
+        if ($expr instanceof List_) { // [$this->first, [$this->last]] =
             foreach ($expr->items as $item) {
                 if ($item === null) {
                     continue;
                 }
-                if ($this->isFetch($item->value)) {
-                    $item->value->setAttribute(self::IS_PROPERTY_WRITE, true);
-
-                    if (!$this->hasUnusedResult()) {
-                        $item->value->setAttribute(self::IS_PROPERTY_WRITE_AND_READ, true);
-                    }
-                }
+                $this->markPropertyWrites($item->value);
             }
         }
 
