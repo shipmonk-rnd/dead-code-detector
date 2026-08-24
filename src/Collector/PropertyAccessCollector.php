@@ -288,15 +288,7 @@ final class PropertyAccessCollector implements Collector
             $targets[] = $node->keyVar;
         }
 
-        if ($node->valueVar instanceof List_) { // foreach ($rows as [$this->first, $this->second])
-            foreach ($node->valueVar->items as $item) {
-                if ($item !== null) {
-                    $targets[] = $item->value;
-                }
-            }
-        } else {
-            $targets[] = $node->valueVar;
-        }
+        $this->flattenForeachTarget($node->valueVar, $targets);
 
         foreach ($targets as $target) {
             if ($target instanceof PropertyFetch) {
@@ -307,6 +299,27 @@ final class PropertyAccessCollector implements Collector
                 $this->registerStaticPropertyAccess($target, $scope, AccessType::WRITE);
             }
         }
+    }
+
+    /**
+     * @param list<Expr> $targets
+     */
+    private function flattenForeachTarget(
+        Expr $target,
+        array &$targets,
+    ): void
+    {
+        if ($target instanceof List_) { // foreach ($rows as [$this->first, [$this->nested]])
+            foreach ($target->items as $item) {
+                if ($item !== null) {
+                    $this->flattenForeachTarget($item->value, $targets);
+                }
+            }
+
+            return;
+        }
+
+        $targets[] = $target;
     }
 
     private function registerPromotedPropertyWrites(
