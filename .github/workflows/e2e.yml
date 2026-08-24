@@ -36,9 +36,9 @@ jobs:
                     -
                         repo: spaze/michalspacek.cz
                         php: 8.5
-                        composer-working-directory: app/vendor-dev
+                        composer-working-directory: dev-tools
                         working-directory: app
-                        executable: vendor-dev/vendor/phpstan/phpstan/phpstan
+                        executable: ../dev-tools/vendor/phpstan/phpstan/phpstan
 
             fail-fast: false
         steps:
