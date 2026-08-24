@@ -736,13 +736,54 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     public function testFilterOutUnmatchedInlineIgnores(): void
     {
+        // partial analysis (file path in argv)
+        $receivedErrors = $this->runFilterOutUnmatchedInlineIgnoresFormatter(['phpstan', 'analyse', __DIR__ . '/data/partial-analysis/inline-ignore.php']);
+
+        self::assertCount(2, $receivedErrors);
+        self::assertSame('No error with identifier invalid.ignore is reported on line 5.', $receivedErrors[0]->getMessage());
+        self::assertSame('Unused Filtering\Example::FOO2', $receivedErrors[1]->getMessage());
+    }
+
+    /**
+     * @param list<string> $argv
+     */
+    #[DataProvider('provideFullAnalysisArgv')]
+    public function testKeepUnmatchedInlineIgnoresOnFullAnalysis(array $argv): void
+    {
+        $receivedErrors = $this->runFilterOutUnmatchedInlineIgnoresFormatter($argv);
+
+        $messages = array_map(
+            static fn (Error $error): string => $error->getMessage(),
+            $receivedErrors,
+        );
+
+        self::assertCount(3, $receivedErrors);
+        self::assertContains('No error with identifier shipmonk.deadMethod is reported on line 16.', $messages);
+    }
+
+    /**
+     * @return Traversable<string, array{0: list<string>}>
+     */
+    public static function provideFullAnalysisArgv(): Traversable
+    {
+        yield 'config option value' => [['phpstan', 'analyse', '-c', 'phpstan.php']];
+        yield 'config option with equals' => [['phpstan', 'analyse', '--configuration=phpstan.php']];
+        yield 'autoload file option value' => [['phpstan', 'analyse', '--autoload-file', 'bootstrap.php']];
+        yield 'php wrapper binary' => [['custom-phpstan.php', 'analyse']];
+    }
+
+    /**
+     * @param list<string> $argv
+     * @return list<Error>
+     */
+    private function runFilterOutUnmatchedInlineIgnoresFormatter(array $argv): array
+    {
         $file = __DIR__ . '/data/partial-analysis/inline-ignore.php';
 
         $originalArgv = $_SERVER['argv'] ?? [];
 
         try {
-            // simulate partial analysis (file path in argv)
-            $_SERVER['argv'] = ['phpstan', 'analyse', $file];
+            $_SERVER['argv'] = $argv;
 
             $analyserErrors = $this->gatherAnalyserErrors([$file]);
             $receivedErrors = null;
@@ -772,9 +813,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
 
             self::assertNotNull($receivedErrors);
-            self::assertCount(2, $receivedErrors);
-            self::assertSame('No error with identifier invalid.ignore is reported on line 5.', $receivedErrors[0]->getMessage());
-            self::assertSame('Unused Filtering\Example::FOO2', $receivedErrors[1]->getMessage());
+
+            return $receivedErrors;
 
         } finally {
             $_SERVER['argv'] = $originalArgv;

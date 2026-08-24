@@ -9,14 +9,32 @@ use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\MissingServiceException;
+use function array_slice;
+use function in_array;
 use function str_contains;
 use function str_ends_with;
+use function str_starts_with;
 
 /**
  * This formatter solves the following issue https://github.com/phpstan/phpstan/issues/12328
  */
 final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
 {
+
+    /**
+     * Options of the analyse command that consume the next argv token as their value.
+     * Symfony binds a space-separated value even to VALUE_OPTIONAL options.
+     */
+    private const OPTIONS_WITH_VALUE = [
+        '--configuration', '-c',
+        '--level', '-l',
+        '--autoload-file', '-a',
+        '--error-format',
+        '--generate-baseline', '-b',
+        '--memory-limit',
+        '--tmp-file',
+        '--instead-of',
+    ];
 
     private readonly ErrorFormatter $originalFormatter;
 
@@ -95,7 +113,19 @@ final class FilterOutUnmatchedInlineIgnoresFormatter implements ErrorFormatter
     {
         /** @var array<string> $argv */
         $argv = $_SERVER['argv'] ?? [];
-        foreach ($argv as $arg) {
+        $skipNext = false;
+
+        foreach (array_slice($argv, 1) as $arg) { // skip the binary name
+            if ($skipNext) {
+                $skipNext = false;
+                continue;
+            }
+
+            if (str_starts_with($arg, '-')) { // option or option=value, never an analysed path
+                $skipNext = in_array($arg, self::OPTIONS_WITH_VALUE, true);
+                continue;
+            }
+
             if (str_ends_with($arg, '.php')) {
                 return true;
             }
