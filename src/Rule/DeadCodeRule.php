@@ -736,8 +736,11 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             $shouldPropagate = $this->shouldPropagate($usages);
             $visitedWithPropagation = $visited[$calleeKey] ?? null; // null = not visited yet
 
-            $revisitAddsNothing = $visitedWithPropagation === true
-                || ($visitedWithPropagation === false && !$shouldPropagate);
+            $revisitAddsNothing = match ($visitedWithPropagation) {
+                null => false, // never visited: always enter
+                false => !$shouldPropagate, // visited weakly: only an upgrade adds something
+                true => true, // visited strongly: nothing left to mark
+            };
 
             if ($revisitAddsNothing) {
                 continue;
