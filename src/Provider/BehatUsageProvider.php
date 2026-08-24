@@ -10,10 +10,32 @@ use PHPStan\Node\InClassNode;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function str_contains;
+use function explode;
+use function preg_match;
+use function preg_replace;
 
 final class BehatUsageProvider implements MemberUsageProvider
 {
+
+    /**
+     * Copied from Behat\Behat\Context\Reader\AnnotatedContextReader::DOCLINE_TRIMMER_REGEX
+     */
+    private const DOCLINE_TRIMMER_REGEX = '/^\/\*\*\s*|^\s*\*\s*|\s*\*\/$|\s*$/';
+
+    /**
+     * Mirrors Behat\Behat\Definition\Context\Annotation\DefinitionAnnotationReader (step needs a pattern)
+     */
+    private const STEP_ANNOTATION_REGEX = '/^@(?:given|when|then)\s+.+$/i';
+
+    /**
+     * Mirrors Behat\Behat\Hook\Context\Annotation\HookAnnotationReader (arguments are optional)
+     */
+    private const HOOK_ANNOTATION_REGEX = '/^@(?:beforesuite|aftersuite|beforefeature|afterfeature|beforescenario|afterscenario|beforestep|afterstep)(?:\s+.+)?$/i';
+
+    /**
+     * Mirrors Behat\Behat\Transformation\Context\Annotation\TransformationAnnotationReader (any suffix matches)
+     */
+    private const TRANSFORM_ANNOTATION_REGEX = '/^@transform/i';
 
     private readonly bool $enabled;
 
@@ -55,18 +77,7 @@ final class BehatUsageProvider implements MemberUsageProvider
 
     private function isBehatContextMethod(ReflectionMethod $method): bool
     {
-        return $this->hasAnnotation($method, '@Given')
-            || $this->hasAnnotation($method, '@When')
-            || $this->hasAnnotation($method, '@Then')
-            || $this->hasAnnotation($method, '@BeforeScenario')
-            || $this->hasAnnotation($method, '@AfterScenario')
-            || $this->hasAnnotation($method, '@BeforeStep')
-            || $this->hasAnnotation($method, '@AfterStep')
-            || $this->hasAnnotation($method, '@BeforeSuite')
-            || $this->hasAnnotation($method, '@AfterSuite')
-            || $this->hasAnnotation($method, '@BeforeFeature')
-            || $this->hasAnnotation($method, '@AfterFeature')
-            || $this->hasAnnotation($method, '@Transform')
+        return $this->hasStepOrHookAnnotation($method)
             || $this->hasAttribute($method, 'Behat\Step\Given')
             || $this->hasAttribute($method, 'Behat\Step\When')
             || $this->hasAttribute($method, 'Behat\Step\Then')
@@ -81,16 +92,30 @@ final class BehatUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Behat\Transformation\Transform');
     }
 
-    private function hasAnnotation(
-        ReflectionMethod $method,
-        string $string,
-    ): bool
+    /**
+     * Mirrors line-based annotation parsing of Behat\Behat\Context\Reader\AnnotatedContextReader
+     */
+    private function hasStepOrHookAnnotation(ReflectionMethod $method): bool
     {
-        if ($method->getDocComment() === false) {
+        $docComment = $method->getDocComment();
+
+        if ($docComment === false) {
             return false;
         }
 
-        return str_contains($method->getDocComment(), $string);
+        foreach (explode("\n", $docComment) as $docLine) {
+            $trimmedLine = (string) preg_replace(self::DOCLINE_TRIMMER_REGEX, '', $docLine);
+
+            if (
+                preg_match(self::STEP_ANNOTATION_REGEX, $trimmedLine) === 1
+                || preg_match(self::HOOK_ANNOTATION_REGEX, $trimmedLine) === 1
+                || preg_match(self::TRANSFORM_ANNOTATION_REGEX, $trimmedLine) === 1
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function hasAttribute(

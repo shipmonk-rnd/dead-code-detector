@@ -116,6 +116,30 @@ class SomeTest extends TestCase
 
 }
 
+class AnnotationEdgeCaseTest extends TestCase
+{
+    /**
+     * @testdox Describes output only, does not mark a test
+     */
+    public function describedHelper(): void // error: Unused PhpUnit\AnnotationEdgeCaseTest::describedHelper
+    {
+    }
+
+    /**
+     * @testWith ["value"]
+     */
+    public function helperWithData(string $arg): void // error: Unused PhpUnit\AnnotationEdgeCaseTest::helperWithData
+    {
+    }
+
+    /**
+     * @test
+     */
+    public function realAnnotatedTest(): void
+    {
+    }
+}
+
 abstract class TestCaseBase extends TestCase
 {
     abstract public static function providerTest(): array;
