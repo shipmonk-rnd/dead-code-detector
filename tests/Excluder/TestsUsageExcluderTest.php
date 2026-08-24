@@ -24,4 +24,20 @@ final class TestsUsageExcluderTest extends PHPStanTestCase
         ], $devPathsPropertyReflection->getValue($excluder));
     }
 
+    public function testDevPathMatchesOnDirectoryBoundary(): void
+    {
+        $excluder = new TestsUsageExcluder(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            new ComposerIntrospector(),
+            true,
+            [__DIR__ . '/data/boundary/tests'],
+        );
+
+        $isWithinDevPaths = (new ReflectionClass(TestsUsageExcluder::class))->getMethod('isWithinDevPaths');
+
+        self::assertTrue($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/boundary/tests/Foo.php')));
+        self::assertTrue($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/boundary/tests')));
+        self::assertFalse($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/boundary/tests-helpers/Bar.php')));
+    }
+
 }
