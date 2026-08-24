@@ -84,7 +84,11 @@ final class TestsUsageExcluder implements MemberUsageExcluder
         }
 
         foreach ($this->devPaths as $devPath) {
-            if (str_starts_with($filePath, $devPath)) {
+            if (
+                $filePath === $devPath // devPath can be a file (autoload-dev files/classmap)
+                || str_starts_with($filePath, $devPath . '/')
+                || str_starts_with($filePath, $devPath . '\\')
+            ) {
                 return true;
             }
         }
