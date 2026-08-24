@@ -28,6 +28,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Visitor\PropertyHookBackingValueVisitor;
 use ShipMonk\PHPStan\DeadCode\Visitor\PropertyWriteVisitor;
 use function array_map;
 use function current;
@@ -106,7 +107,7 @@ final class PropertyAccessCollector implements Collector
         $callerType = $scope->getType($node->var);
 
         foreach ($propertyNames as $propertyName) {
-            $callsHook = !$this->isSelfReferenceInPropertyHook($scope, $propertyName);
+            $callsHook = !$this->isSelfReferenceInPropertyHook($node, $scope, $propertyName);
 
             foreach ($this->getDeclaringTypesWithProperty($propertyName, $callerType, null) as $propertyRef) {
                 $this->registerUsage(
@@ -245,11 +246,20 @@ final class PropertyAccessCollector implements Collector
     }
 
     private function isSelfReferenceInPropertyHook(
+        PropertyFetch $fetch,
         Scope $scope,
         ?string $propertyName,
     ): bool
     {
         if ($propertyName === null) {
+            return false;
+        }
+
+        if (!PropertyHookBackingValueVisitor::isBackingValueFetch($fetch, $propertyName)) {
+            return false;
+        }
+
+        if ($scope->isInAnonymousFunction()) { // closures are separate compilation units, their $this->prop invokes the hook
             return false;
         }
 

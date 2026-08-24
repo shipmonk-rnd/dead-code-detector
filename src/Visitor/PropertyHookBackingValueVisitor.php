@@ -37,18 +37,24 @@ final class PropertyHookBackingValueVisitor extends NodeVisitorAbstract
             return NodeVisitor::DONT_TRAVERSE_CHILDREN;
         }
 
-        if (
-            ($node instanceof PropertyFetch || $node instanceof NullsafePropertyFetch)
-            && $node->var instanceof Variable
-            && $node->var->name === 'this'
-            && !($node->name instanceof Expr)
-            && $node->name->toString() === $this->propertyName
-        ) {
+        if (self::isBackingValueFetch($node, $this->propertyName)) {
             $this->found = true;
             return NodeVisitor::STOP_TRAVERSAL;
         }
 
         return null;
+    }
+
+    public static function isBackingValueFetch(
+        Node $node,
+        string $propertyName,
+    ): bool
+    {
+        return ($node instanceof PropertyFetch || $node instanceof NullsafePropertyFetch)
+            && $node->var instanceof Variable
+            && $node->var->name === 'this'
+            && !($node->name instanceof Expr)
+            && $node->name->toString() === $propertyName;
     }
 
 }
