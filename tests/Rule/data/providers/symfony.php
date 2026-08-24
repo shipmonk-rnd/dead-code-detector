@@ -200,12 +200,22 @@ class ValidatedModel
 }
 
 
-#[UniqueEntity(repositoryMethod: 'findByUniqueName')]
+#[UniqueEntity(fields: ['name'], repositoryMethod: 'findByUniqueName')]
 #[Entity(repositoryClass: CompanyRepository::class)]
 class Company {}
 
 class CompanyRepository {
     public function findByUniqueName(): void {}
+}
+
+#[UniqueEntity(fields: ['email'], repositoryMethod: 'findByUniqueEmail')]
+#[UniqueEntity(fields: ['slug'], repositoryMethod: 'findByUniqueSlug')]
+#[Entity(repositoryClass: OrganizationRepository::class)]
+class Organization {}
+
+class OrganizationRepository {
+    public function findByUniqueEmail(): void {}
+    public function findByUniqueSlug(): void {}
 }
 
 class SomeController3 {
