@@ -6,6 +6,7 @@ use LogicException;
 use PhpParser\Lexer;
 use PhpParser\NodeTraverser as PhpTraverser;
 use PhpParser\NodeVisitor\CloningVisitor;
+use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\Parser;
 use PhpParser\Parser\Php8;
 use PhpParser\PrettyPrinter\Standard as PhpPrinter;
@@ -38,6 +39,7 @@ final class RemoveDeadCodeTransformer
         $this->cloningTraverser->addVisitor(new CloningVisitor());
 
         $this->removingTraverser = new PhpTraverser();
+        $this->removingTraverser->addVisitor(new NameResolver(null, ['replaceNodes' => false]));
         $this->removingTraverser->addVisitor(new RemoveClassMemberVisitor($deadMembersByClass));
 
         $this->phpPrinter = new PhpPrinter();

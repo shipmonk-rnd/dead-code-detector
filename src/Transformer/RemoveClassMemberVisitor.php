@@ -11,24 +11,20 @@ use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\EnumCase;
-use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Property;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use function array_filter;
+use function array_key_last;
 use function array_pop;
-use function end;
 use function is_string;
-use function ltrim;
 
 final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 {
 
-    private string $currentNamespace = '';
-
     /**
-     * @var list<string|null> null stands for anonymous class
+     * @var list<string|null> fully qualified names filled by NameResolver; null stands for anonymous class
      */
     private array $currentClassStack = [];
 
@@ -43,11 +39,8 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
 
     public function enterNode(Node $node): ?Node
     {
-        if ($node instanceof Namespace_) {
-            $this->currentNamespace = $node->name === null ? '' : $node->name->toString();
-
-        } elseif ($node instanceof ClassLike) {
-            $this->currentClassStack[] = $node->name === null ? null : $node->name->name;
+        if ($node instanceof ClassLike) {
+            $this->currentClassStack[] = $node->namespacedName?->toString();
         }
 
         return null;
@@ -116,16 +109,13 @@ final class RemoveClassMemberVisitor extends NodeVisitorAbstract
         return null;
     }
 
+    /**
+     * Null when outside of any class; dead members inside anonymous classes are never removed
+     */
     private function getCurrentClass(): ?string
     {
-        $stack = $this->currentClassStack;
-        $currentClassName = end($stack);
-
-        if ($currentClassName === false || $currentClassName === null) { // outside of any class; dead members inside anonymous classes are never removed
-            return null;
-        }
-
-        return ltrim($this->currentNamespace . '\\' . $currentClassName, '\\');
+        $lastKey = array_key_last($this->currentClassStack);
+        return $lastKey === null ? null : $this->currentClassStack[$lastKey];
     }
 
 }
