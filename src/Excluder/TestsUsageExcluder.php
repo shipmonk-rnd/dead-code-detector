@@ -45,7 +45,9 @@ final class TestsUsageExcluder implements MemberUsageExcluder
         $this->composerIntrospector = $composerIntrospector;
         $this->enabled = $enabled;
 
-        if ($devPaths !== null) {
+        if (!$enabled) {
+            $this->devPaths = [];
+        } elseif ($devPaths !== null) {
             $resolvedPaths = [];
 
             foreach ($devPaths as $devPath) {
@@ -185,7 +187,13 @@ final class TestsUsageExcluder implements MemberUsageExcluder
                     continue;
                 }
 
-                $result[] = $this->realpath($absolutePath);
+                $realPath = $this->tryRealpath($absolutePath);
+
+                if ($realPath === null) { // autoload-dev path may be absent (e.g. dist install with export-ignored tests)
+                    continue;
+                }
+
+                $result[] = $realPath;
             }
         }
 
@@ -194,17 +202,24 @@ final class TestsUsageExcluder implements MemberUsageExcluder
 
     private function realpath(string $path): string
     {
+        $realPath = $this->tryRealpath($path);
+
+        if ($realPath === null) {
+            throw new LogicException("Unable to realpath '$path'");
+        }
+
+        return $realPath;
+    }
+
+    private function tryRealpath(string $path): ?string
+    {
         if (str_starts_with($path, 'phar://')) {
             return $path;
         }
 
         $realPath = realpath($path);
 
-        if ($realPath === false) {
-            throw new LogicException("Unable to realpath '$path'");
-        }
-
-        return $realPath;
+        return $realPath === false ? null : $realPath;
     }
 
 }
