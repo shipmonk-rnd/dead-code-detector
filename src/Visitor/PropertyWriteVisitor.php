@@ -49,6 +49,11 @@ final class PropertyWriteVisitor extends NodeVisitorAbstract
             $this->markPropertyWrites($node->var);
         }
 
+        if ($node instanceof AssignRef && $this->isFetch($node->expr)) { // $ref = &$this->prop; any later access of $ref hits the property
+            $node->expr->setAttribute(self::IS_PROPERTY_WRITE, true);
+            $node->expr->setAttribute(self::IS_PROPERTY_WRITE_AND_READ, true);
+        }
+
         if (
             $node instanceof PostInc
             || $node instanceof PostDec
