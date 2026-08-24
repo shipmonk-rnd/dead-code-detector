@@ -726,7 +726,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             unset($this->blackMembers[$callerKey]);
         }
 
-        $visited[$callerKey] = $transitiveWalk || ($visited[$callerKey] ?? false);
+        $visited[$callerKey] = $transitiveWalk;
 
         if (!$transitiveWalk) {
             return;
