@@ -1180,6 +1180,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
         yield 'properties' => [__DIR__ . '/data/removing/properties.php'];
         yield 'promoted-properties' => [__DIR__ . '/data/removing/promoted-properties.php'];
+        yield 'anonymous-class' => [__DIR__ . '/data/removing/anonymous-class.php'];
+        yield 'global-constant' => [__DIR__ . '/data/removing/global-constant.php'];
+        yield 'mixed-namespaces' => [__DIR__ . '/data/removing/mixed-namespaces.php'];
+        yield 'property-group' => [__DIR__ . '/data/removing/property-group.php'];
     }
 
     private function getAutoremoveTransformedFilePath(string $file): string
