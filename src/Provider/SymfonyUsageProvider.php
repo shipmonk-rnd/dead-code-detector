@@ -1743,10 +1743,15 @@ final class SymfonyUsageProvider implements MemberUsageProvider
     {
         $methodName = $method->getName();
 
-        return CaseInsensitiveName::isOneOf($methodName, [
-            'onKernelResponse',
-            'onKernelException',
+        return CaseInsensitiveName::isOneOf($methodName, [ // conventional method names for all KernelEvents and ConsoleEvents
             'onKernelRequest',
+            'onKernelException',
+            'onKernelController',
+            'onKernelControllerArguments',
+            'onKernelView',
+            'onKernelResponse',
+            'onKernelFinishRequest',
+            'onKernelTerminate',
             'onConsoleError',
             'onConsoleCommand',
             'onConsoleSignal',
