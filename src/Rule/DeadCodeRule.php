@@ -734,9 +734,12 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         foreach ($callees as $calleeKey => $usages) {
             $shouldPropagate = $this->shouldPropagate($usages);
+            $visitedWithPropagation = $visited[$calleeKey] ?? null; // null = not visited yet
 
-            // revisit a member reached only by non-propagating usages when a propagating usage arrives
-            if (isset($visited[$calleeKey]) && ($visited[$calleeKey] || !$shouldPropagate)) {
+            $revisitAddsNothing = $visitedWithPropagation === true
+                || ($visitedWithPropagation === false && !$shouldPropagate);
+
+            if ($revisitAddsNothing) {
                 continue;
             }
 
