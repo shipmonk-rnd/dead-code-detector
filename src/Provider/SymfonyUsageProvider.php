@@ -752,11 +752,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $note = 'Console input DTO via #[MapInput]';
         $usages = [];
 
+        // MapInput::tryFrom() iterates getProperties()/getMethods(), so inherited members are mapped too
         foreach ($nativeReflection->getProperties() as $property) {
-            if ($property->getDeclaringClass()->getName() !== $dtoClassName) {
-                continue;
-            }
-
             $isInputProperty = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Argument')
                 || $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\Option');
             $nestedMapInput = $this->hasAttribute($property, 'Symfony\Component\Console\Attribute\MapInput');
@@ -782,14 +779,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         foreach ($nativeReflection->getMethods() as $dtoMethod) {
-            if ($dtoMethod->getDeclaringClass()->getName() !== $dtoClassName) {
-                continue;
-            }
-
             if ($this->hasAttribute($dtoMethod, 'Symfony\Component\Console\Attribute\Interact')) {
                 $usages[] = new ClassMethodUsage(
                     UsageOrigin::createVirtual($this, VirtualUsageData::withNote($note)),
-                    new ClassMethodRef($dtoClassName, $dtoMethod->getName(), possibleDescendant: false),
+                    new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
                 );
             }
         }

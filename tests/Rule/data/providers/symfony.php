@@ -300,6 +300,31 @@ class ImportCommand extends Command {
     }
 }
 
+abstract class BaseImportInput {
+    #[\Symfony\Component\Console\Attribute\Option]
+    public bool $dryRun = false;
+
+    public string $notAnInputInBase; // error: Property Symfony\BaseImportInput::$notAnInputInBase is never read // error: Property Symfony\BaseImportInput::$notAnInputInBase is never written
+
+    #[Interact]
+    public function askBase(): void {}
+}
+
+class ExtendedImportInput extends BaseImportInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $source;
+}
+
+#[AsCommand(name: 'app:import-extended')]
+class ExtendedImportCommand extends Command {
+    public function __invoke(
+        #[\Symfony\Component\Console\Attribute\MapInput] ExtendedImportInput $input,
+    ): int {
+        echo $input->source;
+        return 0;
+    }
+}
+
 class OrphanedInput {
     #[\Symfony\Component\Console\Attribute\Argument]
     public string $name; // error: Property Symfony\OrphanedInput::$name is never read // error: Property Symfony\OrphanedInput::$name is never written
