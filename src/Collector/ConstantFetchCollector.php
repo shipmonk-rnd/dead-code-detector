@@ -230,7 +230,7 @@ final class ConstantFetchCollector implements Collector
             $possibleDescendantFetch = null;
         } else {
             $ownerType = $scope->resolveTypeByName($node->class);
-            $possibleDescendantFetch = $node->class->toString() === 'static';
+            $possibleDescendantFetch = strtolower($node->class->toString()) === 'static';
         }
 
         $constantNames = $this->getConstantNames($node, $scope);
