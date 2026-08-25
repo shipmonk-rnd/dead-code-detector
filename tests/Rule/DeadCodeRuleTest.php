@@ -977,6 +977,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'method-trait-23' => [__DIR__ . '/data/methods/traits-23.php'];
         yield 'method-trait-24' => [__DIR__ . '/data/methods/traits-24.php'];
         yield 'method-trait-25' => [__DIR__ . '/data/methods/traits-25.php'];
+        yield 'method-trait-26' => [__DIR__ . '/data/methods/traits-26.php'];
+        yield 'method-trait-27' => [__DIR__ . '/data/methods/traits-27.php'];
         yield 'method-nullsafe' => [__DIR__ . '/data/methods/nullsafe.php'];
         yield 'method-parent-1' => [__DIR__ . '/data/methods/parent-1.php'];
         yield 'method-parent-2' => [__DIR__ . '/data/methods/parent-2.php'];
