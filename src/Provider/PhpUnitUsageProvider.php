@@ -16,13 +16,12 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function count;
 use function explode;
-use function in_array;
 use function is_string;
 use function ltrim;
-use function preg_match_all;
+use function preg_match;
+use function preg_quote;
 use function str_contains;
 use function str_starts_with;
-use function substr;
 
 final class PhpUnitUsageProvider implements MemberUsageProvider
 {
@@ -99,13 +98,13 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
     private function isTestCaseMethod(ReflectionMethod $method): bool
     {
         return str_starts_with($method->getName(), 'test')
-            || $this->hasAnnotation($method, 'test')
-            || $this->hasAnnotation($method, 'after')
-            || $this->hasAnnotation($method, 'afterClass')
-            || $this->hasAnnotation($method, 'before')
-            || $this->hasAnnotation($method, 'beforeClass')
-            || $this->hasAnnotation($method, 'postCondition')
-            || $this->hasAnnotation($method, 'preCondition')
+            || $this->hasAnnotation($method, '@test')
+            || $this->hasAnnotation($method, '@after')
+            || $this->hasAnnotation($method, '@afterClass')
+            || $this->hasAnnotation($method, '@before')
+            || $this->hasAnnotation($method, '@beforeClass')
+            || $this->hasAnnotation($method, '@postCondition')
+            || $this->hasAnnotation($method, '@preCondition')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Test')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\After')
             || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\AfterClass')
@@ -184,23 +183,15 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
 
     private function hasAnnotation(
         ReflectionMethod $method,
-        string $annotationName,
+        string $string,
     ): bool
     {
-        $docComment = $method->getDocComment();
-
-        if ($docComment === false) {
+        if ($method->getDocComment() === false) {
             return false;
         }
 
-        // mirrors PHPUnit\Metadata\Parser\Annotation\DocBlock::parseDocBlock, annotation names match exactly
-        $strippedDocComment = substr($docComment, 3, -2);
-
-        if (preg_match_all('/@(?P<name>[A-Za-z_-]+)(?:[ \t]+(?P<value>.*?))?[ \t]*\r?$/m', $strippedDocComment, $matches) === 0) {
-            return false;
-        }
-
-        return in_array($annotationName, $matches['name'], true);
+        // word boundary prevents e.g. @testdox or @testWith from matching @test
+        return preg_match('/' . preg_quote($string, '/') . '(?![a-zA-Z0-9_])/', $method->getDocComment()) === 1;
     }
 
     private function createUsage(

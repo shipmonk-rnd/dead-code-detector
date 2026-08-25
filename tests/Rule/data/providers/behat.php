@@ -137,30 +137,9 @@ class AnnotationEdgeCaseContext implements Context
     }
 
     /**
-     * @Given
-     */
-    public function stepWithoutPattern(): void // error: Unused BehatProvider\AnnotationEdgeCaseContext::stepWithoutPattern
-    {
-    }
-
-    /**
-     * @given lowercase annotation is a valid step
-     */
-    public function lowercaseStep(): void
-    {
-    }
-
-    /**
      * @BeforeScenarioSomething
      */
     public function notAHook(): void // error: Unused BehatProvider\AnnotationEdgeCaseContext::notAHook
-    {
-    }
-
-    /**
-     * @afterstep
-     */
-    public function lowercaseHook(): void
     {
     }
 
