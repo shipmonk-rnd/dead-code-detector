@@ -30,6 +30,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function array_map;
 use function count;
 use function current;
@@ -264,7 +265,7 @@ final class MethodCallCollector implements Collector
         }
 
         foreach ($functionNames as $functionName) {
-            if ($functionName !== 'clone') {
+            if (!CaseInsensitiveName::equals($functionName, 'clone')) {
                 continue;
             }
 

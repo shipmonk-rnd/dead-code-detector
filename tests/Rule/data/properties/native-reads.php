@@ -404,3 +404,53 @@ function testSerialize(): void
     $outerWithMagic = new SerializeOuterWithMagicNested();
     serialize($outerWithMagic);
 }
+
+// --- uppercase native function names (PHP resolves function names case-insensitively) ---
+
+class UppercaseGetObjectVars
+{
+    public string $prop;
+
+    public function __construct()
+    {
+        $this->prop = 'a';
+    }
+}
+
+class UppercaseJsonEncode
+{
+    public string $prop;
+
+    public function __construct()
+    {
+        $this->prop = 'a';
+    }
+}
+
+class UppercaseSerialize
+{
+    public string $prop;
+
+    public function __construct()
+    {
+        $this->prop = 'a';
+    }
+}
+
+class UppercaseArrayColumn
+{
+    public string $col;
+
+    public function __construct()
+    {
+        $this->col = 'a';
+    }
+}
+
+function testUppercaseNativeReads(): void
+{
+    GET_OBJECT_VARS(new UppercaseGetObjectVars());
+    JSON_ENCODE(new UppercaseJsonEncode());
+    SERIALIZE(new UppercaseSerialize());
+    ARRAY_COLUMN([new UppercaseArrayColumn()], 'col');
+}
