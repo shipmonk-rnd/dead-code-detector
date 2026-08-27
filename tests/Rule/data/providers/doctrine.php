@@ -166,6 +166,14 @@ class CustomEventAutoconfigureTagNamedArgs {
 
 }
 
+// Tags other than doctrine.event_listener are not doctrine listeners
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('kernel.event_listener', ['event' => 'myKernelEvent'])]
+class OtherTagAutoconfigureTag {
+
+    public function myKernelEvent(): void {} // error: Unused Doctrine\OtherTagAutoconfigureTag::myKernelEvent
+
+}
+
 // No method named after the event: Symfony falls back to __invoke
 #[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'myInvokedCustomEvent'])]
 class CustomEventAutoconfigureTagInvoke {
