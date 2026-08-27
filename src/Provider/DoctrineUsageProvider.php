@@ -30,12 +30,6 @@ use function str_starts_with;
 final class DoctrineUsageProvider implements MemberUsageProvider
 {
 
-    private const LISTENER_ATTRIBUTES = [
-        'Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener',
-        'Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener',
-        'Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag',
-    ];
-
     /**
      * @see \Doctrine\ORM\Mapping\Builder\EntityListenerBuilder::bindEntityListener()
      */
@@ -240,13 +234,20 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             || $this->hasAttribute($method, 'Doctrine\ORM\Mapping\PreUpdate');
     }
 
-    /**
-     * The attributes tell exactly which methods Doctrine calls, so the guess below must not add more.
-     */
     private function hasListenerAttribute(ReflectionClass $class): bool
     {
-        foreach (self::LISTENER_ATTRIBUTES as $attributeName) {
-            if ($class->getAttributes($attributeName) !== []) {
+        if (
+            $class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') !== []
+            || $class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener') !== []
+        ) {
+            return true;
+        }
+
+        // AutoconfigureTag adds any tag, only the doctrine.event_listener tag declares a doctrine listener
+        foreach ($class->getAttributes('Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag') as $attribute) {
+            $arguments = $attribute->getArguments();
+
+            if (($arguments[0] ?? $arguments['name'] ?? null) === 'doctrine.event_listener') {
                 return true;
             }
         }

@@ -142,6 +142,31 @@ class ListenerWithAttributeAndOtherEventNames {
 
 }
 
+// An unrelated tag does not declare a doctrine listener, so the guess still applies
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('container.hot_path')]
+class ListenerWithUnrelatedAutoconfigureTag {
+
+    public function onFlush(): void {}
+
+    public function deadCode(): void {} // error: Unused Doctrine\ListenerWithUnrelatedAutoconfigureTag::deadCode
+
+}
+
+// The subscriber tag is not the listener tag, so the guess still applies
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_subscriber')]
+class SubscriberWithDynamicEvents implements \Doctrine\Common\EventSubscriber {
+
+    /** @var list<string> */
+    private array $events = [];
+
+    public function getSubscribedEvents() {
+        return $this->events;
+    }
+
+    public function onFlush(): void {}
+
+}
+
 class MySubscriber implements \Doctrine\Common\EventSubscriber {
 
     public function getSubscribedEvents() {
