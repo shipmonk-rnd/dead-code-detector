@@ -61,6 +61,16 @@ class EntityListenerWithMethod {
 
 }
 
+// With no event argument, the method argument is ignored, EntityListenerBuilder binds by lifecycle event name
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(method: 'handleFlush', entity: MyEntity::class)]
+class EntityListenerMethodWithoutEvent {
+
+    public function prePersist(): void {}
+
+    public function handleFlush(): void {} // error: Unused Doctrine\EntityListenerMethodWithoutEvent::handleFlush
+
+}
+
 // No method that has the name of the event, DoctrineBundle falls back to __invoke
 #[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postLoad', entity: MyEntity::class)]
 class EntityListenerWithInvoke {
