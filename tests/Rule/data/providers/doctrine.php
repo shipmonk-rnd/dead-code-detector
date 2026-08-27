@@ -39,6 +39,58 @@ class MyListener {
 
 }
 
+// With no method argument, Doctrine calls the method that has the name of the event
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'preFlush', entity: MyEntity::class)]
+class EntityListenerWithoutMethod {
+
+    public function preFlush(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenerWithoutMethod::unusedMethod
+
+}
+
+// The method argument names the only bound method
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'preFlush', method: 'handleFlush', entity: MyEntity::class)]
+class EntityListenerWithMethod {
+
+    public function handleFlush(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenerWithMethod::unusedMethod
+
+}
+
+// No method that has the name of the event, DoctrineBundle falls back to __invoke
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postLoad', entity: MyEntity::class)]
+class EntityListenerWithInvoke {
+
+    public function __invoke(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenerWithInvoke::unusedMethod
+
+}
+
+// With no event argument, Doctrine binds every method that has the name of an entity lifecycle event
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(entity: MyEntity::class)]
+class EntityListenerWithoutEvent {
+
+    public function prePersist(): void {}
+
+    public function postLoad(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenerWithoutEvent::unusedMethod
+
+}
+
+// onFlush is not an entity lifecycle event, Doctrine never binds it on an entity listener
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(entity: MyEntity::class)]
+class EntityListenerNonLifecycleEvent {
+
+    public function postUpdate(): void {}
+
+    public function onFlush(): void {}
+
+}
+
 class FooRepository extends EntityRepository {
 
     public function __construct(
