@@ -31,7 +31,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 {
 
     /**
-     * @see \Doctrine\ORM\Mapping\Builder\EntityListenerBuilder::EVENTS
+     * @see \Doctrine\ORM\Mapping\Builder\EntityListenerBuilder::bindEntityListener()
      */
     private const ENTITY_LISTENER_EVENTS = [
         'preRemove',
@@ -274,6 +274,18 @@ final class DoctrineUsageProvider implements MemberUsageProvider
     {
         foreach ($class->getAttributes('Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener') as $attribute) {
             $arguments = $attribute->getArguments();
+            $eventName = $arguments['event'] ?? $arguments[0] ?? null;
+
+            // With no event argument, EntityListenerBuilder binds every method that has the name of an entity
+            // lifecycle event and ignores the method argument
+            if (!is_string($eventName)) {
+                if (CaseInsensitiveName::isOneOf($methodName, self::ENTITY_LISTENER_EVENTS)) {
+                    return true;
+                }
+
+                continue;
+            }
+
             $listenerMethodName = $arguments['method'] ?? $arguments[1] ?? null;
 
             if (is_string($listenerMethodName)) {
@@ -284,23 +296,12 @@ final class DoctrineUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            $eventName = $arguments['event'] ?? $arguments[0] ?? null;
-
             // With no method argument, Doctrine calls the method that has the name of the event
             // DoctrineBundle falls back to __invoke when no such method exists
-            if (is_string($eventName)) {
-                if (
-                    CaseInsensitiveName::equals($eventName, $methodName)
-                    || CaseInsensitiveName::equals($methodName, '__invoke')
-                ) {
-                    return true;
-                }
-
-                continue;
-            }
-
-            // With no event argument, Doctrine binds every method that has the name of an entity lifecycle event
-            if (CaseInsensitiveName::isOneOf($methodName, self::ENTITY_LISTENER_EVENTS)) {
+            if (
+                CaseInsensitiveName::equals($eventName, $methodName)
+                || CaseInsensitiveName::equals($methodName, '__invoke')
+            ) {
                 return true;
             }
         }
