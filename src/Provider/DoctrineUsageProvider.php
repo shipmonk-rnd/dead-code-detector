@@ -306,25 +306,11 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             }
 
             // AutoconfigureTag(?string $name, array $attributes) nests the tag attributes in its second argument
-            $tagAttributes = $arguments[1] ?? $arguments['attributes'] ?? [];
+            $tagAttributes = $arguments[1] ?? $arguments['attributes'] ?? null;
+            $eventName = is_array($tagAttributes) ? $tagAttributes['event'] ?? null : null;
 
-            if (!is_array($tagAttributes)) {
-                continue;
-            }
-
-            $listenerMethodName = $tagAttributes['method'] ?? null;
-
-            if (is_string($listenerMethodName)) {
-                if (CaseInsensitiveName::equals($listenerMethodName, $methodName)) {
-                    return true;
-                }
-
-                continue;
-            }
-
-            // With no method attribute, DoctrineBundle calls a method named after the event, or falls back to __invoke
-            $eventName = $tagAttributes['event'] ?? null;
-
+            // The doctrine.event_listener tag has no 'method' attribute
+            // Symfony looks for a method named after the event, or falls back to __invoke
             if (
                 (is_string($eventName) && CaseInsensitiveName::equals($eventName, $methodName))
                 || CaseInsensitiveName::equals($methodName, '__invoke')

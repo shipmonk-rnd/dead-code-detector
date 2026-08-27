@@ -107,12 +107,13 @@ class FixDoctrineMigrationTableSchemaWithAutoconfigureTag {
 
 }
 
-#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'postGenerateSchema', 'method' => 'onPostGenerateSchema'])]
-class FixDoctrineMigrationTableSchemaWithAutoconfigureTagAndMethod {
+// The doctrine.event_listener tag has no 'method' attribute, Symfony ignores such key
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'myTaggedCustomEvent', 'method' => 'ignoredMethod'])]
+class AutoconfigureTagWithUnsupportedMethodAttribute {
 
-    public function onPostGenerateSchema(): void {}
+    public function myTaggedCustomEvent(): void {}
 
-    public function unusedMethod(): void {} // error: Unused Doctrine\FixDoctrineMigrationTableSchemaWithAutoconfigureTagAndMethod::unusedMethod
+    public function ignoredMethod(): void {} // error: Unused Doctrine\AutoconfigureTagWithUnsupportedMethodAttribute::ignoredMethod
 
 }
 
@@ -133,13 +134,13 @@ class MultipleAsDoctrineListeners {
 }
 
 // Test multiple AutoconfigureTag attributes
-#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'postPersist'])]
-#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'postUpdate', 'method' => 'afterUpdate'])]
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'myFirstCustomEvent'])]
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'mySecondCustomEvent'])]
 class MultipleAutoconfigureTags {
 
-    public function postPersist(): void {}
+    public function myFirstCustomEvent(): void {}
 
-    public function afterUpdate(): void {}
+    public function mySecondCustomEvent(): void {}
 
     public function unusedMethod(): void {} // error: Unused Doctrine\MultipleAutoconfigureTags::unusedMethod
 
@@ -156,16 +157,16 @@ class CustomEventAutoconfigureTag {
 }
 
 // Named-argument form of the attributes array
-#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag(name: 'doctrine.event_listener', attributes: ['event' => 'myOtherCustomEvent', 'method' => 'handleCustom'])]
+#[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag(name: 'doctrine.event_listener', attributes: ['event' => 'myOtherCustomEvent'])]
 class CustomEventAutoconfigureTagNamedArgs {
 
-    public function handleCustom(): void {}
+    public function myOtherCustomEvent(): void {}
 
     public function unusedMethod(): void {} // error: Unused Doctrine\CustomEventAutoconfigureTagNamedArgs::unusedMethod
 
 }
 
-// No method attribute and no method named after the event: DoctrineBundle falls back to __invoke
+// No method named after the event: Symfony falls back to __invoke
 #[\Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag('doctrine.event_listener', ['event' => 'myInvokedCustomEvent'])]
 class CustomEventAutoconfigureTagInvoke {
 
