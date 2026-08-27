@@ -49,11 +49,13 @@ class EntityListenerWithoutMethod {
 
 }
 
-// The method argument names the only bound method
+// The method argument names the only bound method, the event name binds nothing
 #[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'preFlush', method: 'handleFlush', entity: MyEntity::class)]
 class EntityListenerWithMethod {
 
     public function handleFlush(): void {}
+
+    public function preFlush(): void {} // error: Unused Doctrine\EntityListenerWithMethod::preFlush
 
     public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenerWithMethod::unusedMethod
 
@@ -87,7 +89,7 @@ class EntityListenerNonLifecycleEvent {
 
     public function postUpdate(): void {}
 
-    public function onFlush(): void {}
+    public function onFlush(): void {} // error: Unused Doctrine\EntityListenerNonLifecycleEvent::onFlush
 
 }
 
@@ -102,6 +104,7 @@ class FooRepository extends EntityRepository {
 
 }
 
+// No listener attribute, the registration is invisible, so the event names stay used
 class OldListenerHeuristics {
 
     public function postUpdate(): void {}
@@ -116,6 +119,16 @@ class OldListenerHeuristics {
     {
 
     }
+
+}
+
+// The attribute tells exactly which methods Doctrine calls, so unrelated event names are dead
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener(event: 'onFlush')]
+class ListenerWithAttributeAndOtherEventNames {
+
+    public function onFlush(): void {}
+
+    public function postUpdate(): void {} // error: Unused Doctrine\ListenerWithAttributeAndOtherEventNames::postUpdate
 
 }
 

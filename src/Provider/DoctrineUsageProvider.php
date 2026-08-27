@@ -30,6 +30,12 @@ use function str_starts_with;
 final class DoctrineUsageProvider implements MemberUsageProvider
 {
 
+    private const LISTENER_ATTRIBUTES = [
+        'Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener',
+        'Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener',
+        'Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag',
+    ];
+
     /**
      * @see \Doctrine\ORM\Mapping\Builder\EntityListenerBuilder::EVENTS
      */
@@ -200,7 +206,7 @@ final class DoctrineUsageProvider implements MemberUsageProvider
             return 'Is part of AutoconfigureTag doctrine.event_listener methods';
         }
 
-        if ($this->isProbablyDoctrineListener($methodName)) {
+        if ($this->isProbablyDoctrineListener($methodName) && !$this->hasListenerAttribute($class)) {
             return 'Is probable listener method';
         }
 
@@ -235,6 +241,21 @@ final class DoctrineUsageProvider implements MemberUsageProvider
     }
 
     /**
+     * The attributes tell exactly which methods Doctrine calls, so the guess below must not add more.
+     */
+    private function hasListenerAttribute(ReflectionClass $class): bool
+    {
+        foreach (self::LISTENER_ATTRIBUTES as $attributeName) {
+            if ($class->getAttributes($attributeName) !== []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Used only for classes with no listener attribute, where the registration is invisible (DIC xml, addEventListener call).
      * Ideally, we would need to parse DIC xml to know this for sure just like phpstan-symfony does.
      * - see Doctrine\ORM\Events::* and Doctrine\ORM\Tools\ToolEvents::*
      */
