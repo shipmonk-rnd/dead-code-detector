@@ -7,6 +7,7 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\Node\InClassNode;
@@ -24,6 +25,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use function is_array;
 use function is_string;
 use function str_starts_with;
 
@@ -118,6 +120,43 @@ final class DoctrineUsageProvider implements MemberUsageProvider
 
             if ($usageNote !== null) {
                 $usages[] = $this->createMethodUsage($classReflection->getNativeMethod($method->getName()), $usageNote);
+            }
+        }
+
+        return [
+            ...$usages,
+            ...$this->getUsagesOfEntityListeners($nativeReflection),
+        ];
+    }
+
+    /**
+     * AttributeDriver binds the listed classes by the lifecycle event names when no method of them has a callback attribute.
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesOfEntityListeners(ReflectionClass|ReflectionEnum $class): array
+    {
+        $usages = [];
+
+        foreach ($class->getAttributes('Doctrine\ORM\Mapping\EntityListeners') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $listenerClassNames = $arguments[0] ?? $arguments['value'] ?? null;
+
+            if (!is_array($listenerClassNames)) {
+                continue;
+            }
+
+            foreach ($listenerClassNames as $listenerClassName) {
+                if (!is_string($listenerClassName)) {
+                    continue;
+                }
+
+                foreach (self::ENTITY_LISTENER_EVENTS as $eventName) {
+                    $usages[] = new ClassMethodUsage(
+                        UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Entity listener of ' . $class->getName())),
+                        new ClassMethodRef($listenerClassName, $eventName, possibleDescendant: false),
+                    );
+                }
             }
         }
 

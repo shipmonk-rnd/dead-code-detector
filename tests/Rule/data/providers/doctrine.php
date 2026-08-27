@@ -29,8 +29,8 @@ class MyEntity
 
 }
 
-#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postUpdate', method: 'afterUpdate')]
-#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postPersist')]
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postUpdate', method: 'afterUpdate', entity: MyEntity::class)]
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postPersist', entity: MyEntity::class)]
 class MyListener {
 
     public function afterUpdate(): void {}
@@ -139,6 +139,41 @@ class ListenerWithAttributeAndOtherEventNames {
     public function onFlush(): void {}
 
     public function postUpdate(): void {} // error: Unused Doctrine\ListenerWithAttributeAndOtherEventNames::postUpdate
+
+}
+
+// Positional arguments of AsEntityListener and AsDoctrineListener
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener('postLoad', 'handleLoad', entity: MyEntity::class)]
+class PositionalEntityListener {
+
+    public function handleLoad(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\PositionalEntityListener::unusedMethod
+
+}
+
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener('myPositionalEvent')]
+class PositionalDoctrineListener {
+
+    public function myPositionalEvent(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\PositionalDoctrineListener::unusedMethod
+
+}
+
+// EntityListeners binds the listener by the lifecycle event names, the attribute of the listener adds nothing
+#[\Doctrine\ORM\Mapping\Entity]
+#[\Doctrine\ORM\Mapping\EntityListeners([EntityListenersTarget::class])]
+class EntityWithListeners {}
+
+#[\Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener(event: 'postLoad', entity: EntityWithListeners::class)]
+class EntityListenersTarget {
+
+    public function postLoad(): void {}
+
+    public function prePersist(): void {}
+
+    public function unusedMethod(): void {} // error: Unused Doctrine\EntityListenersTarget::unusedMethod
 
 }
 
