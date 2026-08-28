@@ -191,7 +191,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
         }
 
         // word boundary prevents e.g. @testdox or @testWith from matching @test
-        return preg_match('/' . preg_quote($string, '/') . '(?![a-zA-Z0-9_])/', $method->getDocComment()) === 1;
+        return preg_match('/' . preg_quote($string, '/') . '\b/', $method->getDocComment()) === 1;
     }
 
     private function createUsage(
