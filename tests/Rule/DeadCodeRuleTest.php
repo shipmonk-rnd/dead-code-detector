@@ -827,16 +827,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused Grouping\Example::boo',
                     29,
+                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused\n" .
                     "• Thus Grouping\Example::bag is transitively unused\n" .
-                    "• Thus Grouping\Example::bar is transitively unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
+                    '• Thus Grouping\Example::bar is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::foo',
                     23,
-                    "• Thus Grouping\Example::bar is transitively unused\n" .
+                    "• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused\n" .
                     "• Thus Grouping\Example::bag is transitively unused\n" .
-                    '• Thus Grouping\Example::TRANSITIVELY_UNUSED_CONST is transitively unused',
+                    '• Thus Grouping\Example::bar is transitively unused',
                 ],
                 [
                     'Unused Grouping\Example::recur',
@@ -910,8 +910,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 [
                     'Unused GroupingProperty\Writer::__construct',
                     7,
-                    "• Thus GroupingProperty\Writer::\$data is transitively never written\n" .
-                    '• Thus GroupingProperty\Writer::$data is transitively never read',
+                    "• Thus GroupingProperty\Writer::\$data is transitively never read\n" .
+                    '• Thus GroupingProperty\Writer::$data is transitively never written',
                 ],
             ],
         ];
