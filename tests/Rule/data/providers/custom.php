@@ -17,7 +17,7 @@ class Methods
 
     public function method(): void {}
 
-    public function mixedTestThatExcludersCanExcludeProvidedUsage(): void {} // error: Unused CustomProvider\Methods::mixedTestThatExcludersCanExcludeProvidedUsage (all usages excluded by mixedPrefix excluder)
+    public function mixedTestThatExcludersCanExcludeProvidedUsage(): void {} // error: Unused CustomProvider\Methods::mixedTestThatExcludersCanExcludeProvidedUsage
 }
 
 class Constants
