@@ -10,8 +10,6 @@ use PHPStan\Node\InClassNode;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function preg_match;
-use function preg_quote;
 use function str_contains;
 
 final class BehatUsageProvider implements MemberUsageProvider
@@ -68,7 +66,7 @@ final class BehatUsageProvider implements MemberUsageProvider
             || $this->hasAnnotation($method, '@AfterSuite')
             || $this->hasAnnotation($method, '@BeforeFeature')
             || $this->hasAnnotation($method, '@AfterFeature')
-            || $this->hasTransformAnnotation($method)
+            || $this->hasAnnotation($method, '@Transform')
             || $this->hasAttribute($method, 'Behat\Step\Given')
             || $this->hasAttribute($method, 'Behat\Step\When')
             || $this->hasAttribute($method, 'Behat\Step\Then')
@@ -92,17 +90,7 @@ final class BehatUsageProvider implements MemberUsageProvider
             return false;
         }
 
-        // word boundary prevents e.g. @GivenSomething from matching @Given
-        return preg_match('/' . preg_quote($string, '/') . '(?![a-zA-Z0-9_])/', $method->getDocComment()) === 1;
-    }
-
-    private function hasTransformAnnotation(ReflectionMethod $method): bool
-    {
-        if ($method->getDocComment() === false) {
-            return false;
-        }
-
-        return str_contains($method->getDocComment(), '@Transform'); // Behat accepts any suffix after @Transform, prefix match is correct here
+        return str_contains($method->getDocComment(), $string);
     }
 
     private function hasAttribute(

@@ -127,31 +127,6 @@ class AnotherContext implements Context
     }
 }
 
-class AnnotationEdgeCaseContext implements Context
-{
-    /**
-     * @GivenSomething custom tag
-     */
-    public function notAStep(): void // error: Unused BehatProvider\AnnotationEdgeCaseContext::notAStep
-    {
-    }
-
-    /**
-     * @BeforeScenarioSomething
-     */
-    public function notAHook(): void // error: Unused BehatProvider\AnnotationEdgeCaseContext::notAHook
-    {
-    }
-
-    /**
-     * @Transformer :count
-     */
-    public function tolerantTransform(string $count): int // Behat transform regex tolerates any suffix after @transform
-    {
-        return (int) $count;
-    }
-}
-
 // Context using PHP 8 attributes
 class AttributeContext implements Context
 {
