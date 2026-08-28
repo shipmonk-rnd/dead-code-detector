@@ -45,6 +45,7 @@ use function array_values;
 use function in_array;
 use function ksort;
 use function serialize;
+use function sort;
 use function str_starts_with;
 use function strcasecmp;
 use function strtolower;
@@ -919,7 +920,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         $builder->metadata($metadata);
 
-        ksort($tips);
+        sort($tips);
 
         foreach ($tips as $tip) {
             $builder->addTip($tip);
