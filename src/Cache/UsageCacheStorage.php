@@ -6,12 +6,12 @@ use DirectoryIterator;
 use LogicException;
 use RuntimeException;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use function array_diff_key;
 use function array_keys;
 use function array_map;
 use function count;
 use function explode;
 use function fclose;
-use function fflush;
 use function fopen;
 use function fread;
 use function fseek;
@@ -28,10 +28,12 @@ use function mkdir;
 use function pack;
 use function rename;
 use function rmdir;
+use function stream_set_write_buffer;
 use function strlen;
 use function substr;
 use function unlink;
 use function unpack;
+use const SEEK_CUR;
 
 /**
  * Stores collector data outside PHPStan's result cache.
@@ -72,7 +74,7 @@ final class UsageCacheStorage
     /**
      * hash => [content offset within the bundle, content length]
      *
-     * @var array<string, array{int<0, max>, int<1, max>}>|null
+     * @var array<string, array{int<36, max>, int<1, max>}>|null
      */
     private ?array $entries = null;
 
@@ -117,6 +119,10 @@ final class UsageCacheStorage
             return $serialized;
         }
 
+        if ($this->entries !== null) {
+            throw new LogicException('DCD cache misuse: pack() called after unpack(); collectors always run before the rule.');
+        }
+
         $content = implode("\n", $serialized);
         $hash = md5($content);
         $record = $hash . pack('N', strlen($content)) . $content;
@@ -126,8 +132,6 @@ final class UsageCacheStorage
         if (fwrite($handle, $record) !== strlen($record)) {
             throw new LogicException("Failed to write DCD cache log in '{$this->cacheDir}'.");
         }
-
-        fflush($handle); // single-process analysis reads the log within the same process
 
         return [$hash];
     }
@@ -172,6 +176,9 @@ final class UsageCacheStorage
 
     /**
      * Drop entries not read by this run, then delete everything but the bundle in the cache directory.
+     *
+     * Intentionally not guarded by offloadCollectorData: with offloading disabled, nothing is read,
+     * so a leftover cache directory of previous runs gets emptied here.
      */
     public function gc(): void
     {
@@ -180,13 +187,7 @@ final class UsageCacheStorage
         }
 
         $entries = $this->loadEntries();
-        $garbage = 0;
-
-        foreach (array_keys($entries) as $hash) {
-            if (!isset($this->readHashes[$hash])) {
-                $garbage++;
-            }
-        }
+        $garbage = count(array_diff_key($entries, $this->readHashes));
 
         if ($garbage > count($entries) * self::GARBAGE_RATIO_LIMIT) {
             $this->compactBundle($entries);
@@ -201,9 +202,9 @@ final class UsageCacheStorage
      */
     private function getLogHandle()
     {
-        $pid = getmypid();
+        $pid = $this->getPid();
 
-        if ($this->logHandle !== null && $pid !== false && $this->logHandlePid === $pid) {
+        if ($this->logHandle !== null && $this->logHandlePid === $pid) {
             return $this->logHandle;
         }
 
@@ -213,15 +214,17 @@ final class UsageCacheStorage
             @mkdir($this->cacheDir, 0777, true);
         }
 
-        $path = $this->cacheDir . '/' . self::LOG_FILE_PREFIX . ($pid === false ? 0 : $pid) . '.bin';
+        $path = $this->cacheDir . '/' . self::LOG_FILE_PREFIX . $pid . '.bin';
         $handle = @fopen($path, 'ab');
 
         if ($handle === false) {
             throw new LogicException("Failed to write DCD cache log '{$path}'.");
         }
 
+        stream_set_write_buffer($handle, 0); // each record must be fully written once pack() returns
+
         $this->logHandle = $handle;
-        $this->logHandlePid = $pid === false ? null : $pid;
+        $this->logHandlePid = $pid;
 
         return $handle;
     }
@@ -230,7 +233,7 @@ final class UsageCacheStorage
      * Collectors always run before the rule, so all pack() calls of an analysis pass precede
      * the first unpack() and the merge sees all log records at once.
      *
-     * @return array<string, array{int<0, max>, int<1, max>}>
+     * @return array<string, array{int<36, max>, int<1, max>}>
      */
     private function loadEntries(): array
     {
@@ -245,37 +248,31 @@ final class UsageCacheStorage
         $handle = @fopen($this->getBundlePath(), 'rb');
 
         if ($handle !== false) {
-            [$records, $bundleLength] = $this->scanRecords($handle, $this->getFileSize($handle));
-
-            foreach ($records as [$hash, $offset, $length]) {
-                $entries[$hash] = [$offset, $length];
-            }
-
+            [$entries, $bundleLength] = $this->scanRecords($handle, $this->getFileSize($handle));
             fclose($handle);
         }
 
-        $this->mergeLogs($entries, $bundleLength);
+        $this->entries = $this->mergeLogs($entries, $bundleLength);
 
-        $this->entries = $entries;
-
-        return $entries;
+        return $this->entries;
     }
 
     /**
      * Append log records missing from the bundle to the bundle, then delete the logs.
      *
-     * @param array<string, array{int<0, max>, int<1, max>}> $entries
+     * @param array<string, array{int<36, max>, int<1, max>}> $entries
      * @param int<0, max> $bundleLength
+     * @return array<string, array{int<36, max>, int<1, max>}>
      */
     private function mergeLogs(
-        array &$entries,
+        array $entries,
         int $bundleLength,
-    ): void
+    ): array
     {
         $logPaths = glob($this->cacheDir . '/' . self::LOG_FILE_PREFIX . '*.bin');
 
         if ($logPaths === false) {
-            return;
+            return $entries;
         }
 
         $bundleHandle = null;
@@ -287,14 +284,30 @@ final class UsageCacheStorage
                 continue;
             }
 
-            [$logRecords] = $this->scanRecords($logHandle, $this->getFileSize($logHandle));
+            $logSize = $this->getFileSize($logHandle);
+            $position = 0;
 
-            foreach ($logRecords as [$hash, $offset, $length]) {
+            while ($logSize - $position >= self::RECORD_HEADER_SIZE) {
+                $header = fread($logHandle, self::RECORD_HEADER_SIZE);
+                $parsed = $this->parseRecordHeader($header);
+
+                if ($parsed === null) {
+                    break;
+                }
+
+                [$hash, $length] = $parsed;
+
+                if ($position + self::RECORD_HEADER_SIZE + $length > $logSize) {
+                    break;
+                }
+
+                $position += self::RECORD_HEADER_SIZE + $length;
+
                 if (isset($entries[$hash])) {
+                    fseek($logHandle, $length, SEEK_CUR);
                     continue;
                 }
 
-                fseek($logHandle, $offset);
                 $content = fread($logHandle, $length);
 
                 if ($content === false || strlen($content) !== $length) {
@@ -302,9 +315,8 @@ final class UsageCacheStorage
                 }
 
                 $bundleHandle ??= $this->openBundleForAppend($bundleLength);
-                $record = $hash . pack('N', $length) . $content;
 
-                if (fwrite($bundleHandle, $record) !== strlen($record)) {
+                if (fwrite($bundleHandle, $header . $content) !== self::RECORD_HEADER_SIZE + $length) {
                     ftruncate($bundleHandle, $bundleLength); // drop the partial record, keep the complete ones
                     fclose($bundleHandle);
                     fclose($logHandle);
@@ -313,7 +325,7 @@ final class UsageCacheStorage
                 }
 
                 $entries[$hash] = [$bundleLength + self::RECORD_HEADER_SIZE, $length];
-                $bundleLength += strlen($record);
+                $bundleLength += self::RECORD_HEADER_SIZE + $length;
             }
 
             fclose($logHandle);
@@ -323,6 +335,8 @@ final class UsageCacheStorage
         if ($bundleHandle !== null) {
             fclose($bundleHandle); // flush before readBundle() opens its own descriptor
         }
+
+        return $entries;
     }
 
     /**
@@ -349,7 +363,7 @@ final class UsageCacheStorage
      * (a killed process can leave one at the end of a file).
      *
      * @param resource $handle
-     * @return array{list<array{string, int<0, max>, int<1, max>}>, int<0, max>} [records as [hash, content offset, content length], count of valid bytes]
+     * @return array{array<string, array{int<36, max>, int<1, max>}>, int<0, max>} [hash => [content offset, content length], count of valid bytes]
      */
     private function scanRecords(
         $handle,
@@ -361,24 +375,42 @@ final class UsageCacheStorage
 
         while ($fileSize - $position >= self::RECORD_HEADER_SIZE) {
             fseek($handle, $position);
-            $header = fread($handle, self::RECORD_HEADER_SIZE);
+            $parsed = $this->parseRecordHeader(fread($handle, self::RECORD_HEADER_SIZE));
 
-            if ($header === false || strlen($header) !== self::RECORD_HEADER_SIZE) {
+            if ($parsed === null) {
                 break;
             }
 
-            $unpacked = unpack('N', $header, self::HASH_SIZE);
-            $length = $unpacked === false ? 0 : ($unpacked[1] ?? 0);
+            [$hash, $length] = $parsed;
 
-            if (!is_int($length) || $length < 1 || $position + self::RECORD_HEADER_SIZE + $length > $fileSize) {
+            if ($position + self::RECORD_HEADER_SIZE + $length > $fileSize) {
                 break;
             }
 
-            $records[] = [substr($header, 0, self::HASH_SIZE), $position + self::RECORD_HEADER_SIZE, $length];
+            $records[$hash] = [$position + self::RECORD_HEADER_SIZE, $length];
             $position += self::RECORD_HEADER_SIZE + $length;
         }
 
         return [$records, $position];
+    }
+
+    /**
+     * @return array{string, int<1, max>}|null [hash, content length]
+     */
+    private function parseRecordHeader(string|false $header): ?array
+    {
+        if ($header === false || strlen($header) !== self::RECORD_HEADER_SIZE) {
+            return null;
+        }
+
+        $unpacked = unpack('N', $header, self::HASH_SIZE);
+        $length = $unpacked === false ? 0 : ($unpacked[1] ?? 0);
+
+        if (!is_int($length) || $length < 1) {
+            return null;
+        }
+
+        return [substr($header, 0, self::HASH_SIZE), $length];
     }
 
     /**
@@ -390,9 +422,9 @@ final class UsageCacheStorage
         int $length,
     ): ?string
     {
-        $pid = getmypid();
+        $pid = $this->getPid();
 
-        if ($this->bundleHandle === null || $pid === false || $this->bundleHandlePid !== $pid) {
+        if ($this->bundleHandle === null || $this->bundleHandlePid !== $pid) {
             $this->closeBundleHandle(); // a forked child inherits the descriptor together with its file offset
 
             $handle = @fopen($this->getBundlePath(), 'rb');
@@ -402,11 +434,25 @@ final class UsageCacheStorage
             }
 
             $this->bundleHandle = $handle;
-            $this->bundleHandlePid = $pid === false ? null : $pid;
+            $this->bundleHandlePid = $pid;
         }
 
-        fseek($this->bundleHandle, $offset);
-        $content = fread($this->bundleHandle, $length);
+        return $this->readAt($this->bundleHandle, $offset, $length);
+    }
+
+    /**
+     * @param resource $handle
+     * @param int<0, max> $offset
+     * @param int<1, max> $length
+     */
+    private function readAt(
+        $handle,
+        int $offset,
+        int $length,
+    ): ?string
+    {
+        fseek($handle, $offset);
+        $content = fread($handle, $length);
 
         if ($content === false || strlen($content) !== $length) {
             return null;
@@ -419,15 +465,23 @@ final class UsageCacheStorage
      * Rewrite the bundle with the read entries only, laid out in read order:
      * the next run then reads the file front to back instead of seeking around.
      *
-     * @param array<string, array{int<0, max>, int<1, max>}> $entries
+     * @param array<string, array{int<36, max>, int<1, max>}> $entries
      */
     private function compactBundle(array $entries): void
     {
         $bundlePath = $this->getBundlePath();
         $tmpPath = $bundlePath . '.tmp';
+        $readHandle = @fopen($bundlePath, 'rb');
+
+        if ($readHandle === false) {
+            return;
+        }
+
         $tmpHandle = @fopen($tmpPath, 'wb');
 
         if ($tmpHandle === false) {
+            fclose($readHandle);
+
             return; // keep the uncompacted bundle
         }
 
@@ -438,15 +492,19 @@ final class UsageCacheStorage
                 continue;
             }
 
-            $content = $this->readBundle($entry[0], $entry[1]);
+            // the record starts one header before its content; copy it verbatim
+            $record = $this->readAt($readHandle, $entry[0] - self::RECORD_HEADER_SIZE, $entry[1] + self::RECORD_HEADER_SIZE);
 
-            if ($content === null || fwrite($tmpHandle, $hash . pack('N', $entry[1]) . $content) !== self::RECORD_HEADER_SIZE + $entry[1]) {
+            if ($record === null || fwrite($tmpHandle, $record) !== strlen($record)) {
+                fclose($readHandle);
                 fclose($tmpHandle);
                 @unlink($tmpPath);
+
                 return; // keep the uncompacted bundle
             }
         }
 
+        fclose($readHandle);
         fclose($tmpHandle);
         $this->closeBundleHandle(); // Windows cannot rename over an open file
 
@@ -528,6 +586,16 @@ final class UsageCacheStorage
     private function getBundlePath(): string
     {
         return $this->cacheDir . '/' . self::BUNDLE_FILE;
+    }
+
+    /**
+     * Real PIDs are never zero, so zero is a safe sentinel when getmypid() is unavailable.
+     */
+    private function getPid(): int
+    {
+        $pid = getmypid();
+
+        return $pid === false ? 0 : $pid;
     }
 
     /**

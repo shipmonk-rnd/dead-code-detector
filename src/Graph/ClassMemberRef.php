@@ -77,7 +77,9 @@ abstract class ClassMemberRef
     }
 
     /**
-     * Cheap identity for memoization; covers everything toKeys() derives its result from.
+     * Cheap full value identity of this ref plus the access type, used as a memoization key.
+     * The key prefixes encode member type, access type and the enum-case flag.
+     * New subclass state that influences member key computation must be reflected here.
      */
     public function toCacheKey(AccessType $accessType): string
     {

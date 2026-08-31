@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
 use LogicException;
+use Nette\Utils\FileSystem;
 use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
@@ -13,15 +14,12 @@ use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function file_get_contents;
 use function file_put_contents;
 use function filesize;
-use function is_dir;
 use function mkdir;
-use function rmdir;
 use function scandir;
 use function strlen;
 use function substr;
 use function sys_get_temp_dir;
 use function uniqid;
-use function unlink;
 use const FILE_APPEND;
 
 final class UsageCacheStorageTest extends TestCase
@@ -35,8 +33,8 @@ final class UsageCacheStorageTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->tmpDir !== null && is_dir($this->tmpDir)) {
-            $this->removeDir($this->tmpDir);
+        if ($this->tmpDir !== null) {
+            FileSystem::delete($this->tmpDir);
         }
     }
 
@@ -210,6 +208,19 @@ final class UsageCacheStorageTest extends TestCase
         self::assertCount(1, $freshCache->unpack($hash2[0], self::SCOPE_FILE));
     }
 
+    public function testPackAfterUnpackIsRefused(): void
+    {
+        $cache = new UsageCacheStorage($this->getTmpDir(), offloadCollectorData: true);
+
+        $hash = $cache->pack([$this->createUsage(10)], self::SCOPE_FILE);
+        $cache->unpack($hash[0], self::SCOPE_FILE);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('pack() called after unpack()');
+
+        $cache->pack([$this->createUsage(15)], self::SCOPE_FILE);
+    }
+
     public function testGcRemovesFilesOfOlderReleases(): void
     {
         $tmpDir = $this->getTmpDir();
@@ -265,31 +276,6 @@ final class UsageCacheStorageTest extends TestCase
         }
 
         return $result;
-    }
-
-    private function removeDir(string $dir): void
-    {
-        $items = scandir($dir);
-
-        if ($items === false) {
-            return;
-        }
-
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
-            }
-
-            $path = $dir . '/' . $item;
-
-            if (is_dir($path)) {
-                $this->removeDir($path);
-            } else {
-                unlink($path);
-            }
-        }
-
-        rmdir($dir);
     }
 
 }
