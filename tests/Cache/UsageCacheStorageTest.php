@@ -3,143 +3,293 @@
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
 use LogicException;
-use PHPStan\TrinaryLogic;
 use PHPUnit\Framework\TestCase;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
-use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
-use function getmypid;
+use function file_get_contents;
+use function file_put_contents;
+use function filesize;
+use function is_dir;
+use function mkdir;
+use function rmdir;
+use function scandir;
+use function strlen;
+use function substr;
 use function sys_get_temp_dir;
+use function uniqid;
+use function unlink;
+use const FILE_APPEND;
 
 final class UsageCacheStorageTest extends TestCase
 {
 
+    private const BUNDLE_FILE = 'bundle-v1.bin';
+
+    private const SCOPE_FILE = '/app/index.php';
+
+    private ?string $tmpDir = null;
+
+    protected function tearDown(): void
+    {
+        if ($this->tmpDir !== null && is_dir($this->tmpDir)) {
+            $this->removeDir($this->tmpDir);
+        }
+    }
+
     public function testWriteAndReadRoundTrip(): void
     {
-        $cache = new UsageCacheStorage(sys_get_temp_dir() . '/dcd-test', offloadCollectorData: true);
+        $cache = new UsageCacheStorage($this->getTmpDir(), offloadCollectorData: true);
 
-        $scopeFile = '/app/index.php';
-        $usages = $this->createSampleUsages();
-
-        $hashes = $cache->pack($usages, $scopeFile);
+        $usages = [$this->createUsage(10), $this->createUsage(15)];
+        $hashes = $cache->pack($usages, self::SCOPE_FILE);
 
         self::assertCount(1, $hashes);
 
-        $restored = $cache->unpack($hashes[0], $scopeFile);
+        $restored = $cache->unpack($hashes[0], self::SCOPE_FILE);
 
-        self::assertCount(2, $restored);
-        self::assertEquals($usages[0], $restored[0]);
-        self::assertEquals($usages[1], $restored[1]);
+        self::assertEquals($usages, $restored);
     }
 
     public function testWriteReturnsSameHashForSameData(): void
     {
-        $cache = new UsageCacheStorage(sys_get_temp_dir() . '/dcd-test', offloadCollectorData: true);
+        $cache = new UsageCacheStorage($this->getTmpDir(), offloadCollectorData: true);
 
-        $scopeFile = '/app/index.php';
-        $usages = $this->createSampleUsages();
+        $usages = [$this->createUsage(10)];
 
-        $hashes1 = $cache->pack($usages, $scopeFile);
-        $hashes2 = $cache->pack($usages, $scopeFile);
+        $hashes1 = $cache->pack($usages, self::SCOPE_FILE);
+        $hashes2 = $cache->pack($usages, self::SCOPE_FILE);
 
         self::assertSame($hashes1, $hashes2);
     }
 
     public function testReadMissingHashThrows(): void
     {
-        $cache = new UsageCacheStorage(sys_get_temp_dir() . '/dcd-test-missing', offloadCollectorData: true);
+        $cache = new UsageCacheStorage($this->getTmpDir(), offloadCollectorData: true);
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('DCD cache file not found');
+        $this->expectExceptionMessage('DCD cache entry not found');
 
-        $cache->unpack('nonexistenthash', '/app/index.php');
+        $cache->unpack('nonexistenthash', self::SCOPE_FILE);
     }
 
     public function testDisabledCachePassesDataThrough(): void
     {
-        $cache = new UsageCacheStorage(sys_get_temp_dir() . '/dcd-test-disabled', offloadCollectorData: false);
+        $cache = new UsageCacheStorage($this->getTmpDir(), offloadCollectorData: false);
 
-        $scopeFile = '/app/index.php';
-        $usages = $this->createSampleUsages();
-
-        $strings = $cache->pack($usages, $scopeFile);
+        $usages = [$this->createUsage(10), $this->createUsage(15)];
+        $strings = $cache->pack($usages, self::SCOPE_FILE);
 
         self::assertCount(2, $strings);
 
         $restored = [];
 
         foreach ($strings as $string) {
-            foreach ($cache->unpack($string, $scopeFile) as $usage) {
+            foreach ($cache->unpack($string, self::SCOPE_FILE) as $usage) {
                 $restored[] = $usage;
             }
         }
 
-        self::assertCount(2, $restored);
-        self::assertEquals($usages[0], $restored[0]);
-        self::assertEquals($usages[1], $restored[1]);
+        self::assertEquals($usages, $restored);
     }
 
     public function testSerializedUsageContainsNoNewline(): void
     {
-        $scopeFile = '/app/index.php';
+        $serialized = $this->createUsage(10)->serialize(self::SCOPE_FILE);
 
-        foreach ($this->createSampleUsages() as $usage) {
-            $serialized = $usage->serialize($scopeFile);
-            self::assertStringNotContainsString("\n", $serialized, 'Serialized usage must not contain newlines (used as separator in cache files)');
-        }
+        self::assertStringNotContainsString("\n", $serialized, 'Serialized usage must not contain newlines (used as separator in cache files)');
     }
 
-    public function testGcRemovesUnreadFiles(): void
+    public function testGcCompactsUnreadEntriesAway(): void
     {
-        $tmpDir = sys_get_temp_dir() . '/dcd-test-gc-' . getmypid();
+        $tmpDir = $this->getTmpDir();
         $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
 
-        $scopeFile = '/app/index.php';
-        $usages = $this->createSampleUsages();
+        $hash1 = $cache->pack([$this->createUsage(10)], self::SCOPE_FILE);
+        $hash2 = $cache->pack([$this->createUsage(15)], self::SCOPE_FILE);
 
-        $hash1 = $cache->pack([$usages[0]], $scopeFile);
-        $hash2 = $cache->pack([$usages[1]], $scopeFile);
-
-        // Only read hash1, so hash2 should be cleaned up
-        $cache->unpack($hash1[0], $scopeFile);
+        // only hash1 is read, so hash2 becomes garbage exceeding the compaction threshold
+        $cache->unpack($hash1[0], self::SCOPE_FILE);
         $cache->gc();
 
-        // hash1 should still be readable by a fresh instance
+        self::assertSame([self::BUNDLE_FILE], $this->listCacheDir($tmpDir));
+
+        // the compacted bundle is laid out in read order
+        $bundleContent = file_get_contents($tmpDir . '/dcd/' . self::BUNDLE_FILE);
+        self::assertNotFalse($bundleContent);
+        self::assertSame($hash1[0], substr($bundleContent, 0, 32));
+
         $freshCache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
-        $restored = $freshCache->unpack($hash1[0], $scopeFile);
+        $restored = $freshCache->unpack($hash1[0], self::SCOPE_FILE);
         self::assertCount(1, $restored);
 
-        // hash2 should be gone
         $this->expectException(LogicException::class);
-        $freshCache->unpack($hash2[0], $scopeFile);
+        $freshCache->unpack($hash2[0], self::SCOPE_FILE);
+    }
+
+    public function testMergesLogsOfMultipleInstances(): void
+    {
+        $tmpDir = $this->getTmpDir();
+
+        $workerA = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $workerB = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+
+        $usage1 = $this->createUsage(10);
+        $usage2 = $this->createUsage(15);
+
+        $hash1 = $workerA->pack([$usage1], self::SCOPE_FILE);
+        $hash2 = $workerB->pack([$usage2], self::SCOPE_FILE);
+        unset($workerA, $workerB);
+
+        $finalizer = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+
+        self::assertEquals([$usage1], $finalizer->unpack($hash1[0], self::SCOPE_FILE));
+        self::assertEquals([$usage2], $finalizer->unpack($hash2[0], self::SCOPE_FILE));
+
+        $finalizer->gc();
+
+        $freshCache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+
+        self::assertEquals([$usage1], $freshCache->unpack($hash1[0], self::SCOPE_FILE));
+        self::assertEquals([$usage2], $freshCache->unpack($hash2[0], self::SCOPE_FILE));
+        self::assertSame([self::BUNDLE_FILE], $this->listCacheDir($tmpDir));
+    }
+
+    public function testAppendsToBundleWithoutRewrite(): void
+    {
+        $tmpDir = $this->getTmpDir();
+        $bundlePath = $tmpDir . '/dcd/' . self::BUNDLE_FILE;
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash1 = $cache->pack([$this->createUsage(10)], self::SCOPE_FILE);
+        $cache->unpack($hash1[0], self::SCOPE_FILE);
+        $cache->gc();
+
+        $sizeAfterFirstRun = filesize($bundlePath);
+        self::assertNotFalse($sizeAfterFirstRun);
+
+        // second run reads everything and adds one entry: the bundle grows by exactly one record
+        $newContent = $this->createUsage(15)->serialize(self::SCOPE_FILE);
+
+        $nextRun = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash2 = $nextRun->pack([$this->createUsage(15)], self::SCOPE_FILE);
+        $nextRun->unpack($hash1[0], self::SCOPE_FILE);
+        $nextRun->unpack($hash2[0], self::SCOPE_FILE);
+        $nextRun->gc();
+
+        self::assertSame($sizeAfterFirstRun + 36 + strlen($newContent), filesize($bundlePath));
+        self::assertSame([self::BUNDLE_FILE], $this->listCacheDir($tmpDir));
+    }
+
+    public function testRecoversFromTruncatedBundleTail(): void
+    {
+        $tmpDir = $this->getTmpDir();
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash1 = $cache->pack([$this->createUsage(10)], self::SCOPE_FILE);
+        $cache->unpack($hash1[0], self::SCOPE_FILE);
+        $cache->gc();
+
+        // a killed process can leave an incomplete record at the end of the bundle
+        file_put_contents($tmpDir . '/dcd/' . self::BUNDLE_FILE, 'incomplete-record', FILE_APPEND);
+
+        $nextRun = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash2 = $nextRun->pack([$this->createUsage(15)], self::SCOPE_FILE);
+
+        self::assertCount(1, $nextRun->unpack($hash1[0], self::SCOPE_FILE));
+        self::assertCount(1, $nextRun->unpack($hash2[0], self::SCOPE_FILE));
+
+        $nextRun->gc();
+
+        $freshCache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+
+        self::assertCount(1, $freshCache->unpack($hash1[0], self::SCOPE_FILE));
+        self::assertCount(1, $freshCache->unpack($hash2[0], self::SCOPE_FILE));
+    }
+
+    public function testGcRemovesFilesOfOlderReleases(): void
+    {
+        $tmpDir = $this->getTmpDir();
+
+        // loose files of pre-bundle releases + bundle files of a hypothetical older format
+        mkdir($tmpDir . '/dcd/ab', 0777, true);
+        file_put_contents($tmpDir . '/dcd/ab/cdef0123.dat', 'legacy loose file');
+        file_put_contents($tmpDir . '/dcd/bundle.dat', 'legacy bundle');
+        file_put_contents($tmpDir . '/dcd/bundle.idx', 'legacy index');
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash = $cache->pack([$this->createUsage(10)], self::SCOPE_FILE);
+        $cache->unpack($hash[0], self::SCOPE_FILE);
+        $cache->gc();
+
+        self::assertSame([self::BUNDLE_FILE], $this->listCacheDir($tmpDir));
+    }
+
+    private function createUsage(int $line): CollectedUsage
+    {
+        return new CollectedUsage(
+            new ClassMethodUsage(
+                new UsageOrigin(className: 'App\Foo', memberName: 'bar', memberType: MemberType::METHOD, accessType: AccessType::READ, fileName: self::SCOPE_FILE, line: $line, provider: null, note: null),
+                new ClassMethodRef('App\Baz', 'qux', possibleDescendant: false),
+            ),
+            null,
+        );
+    }
+
+    private function getTmpDir(): string
+    {
+        if ($this->tmpDir === null) {
+            $this->tmpDir = sys_get_temp_dir() . '/dcd-test-' . uniqid();
+        }
+
+        return $this->tmpDir;
     }
 
     /**
-     * @return array{CollectedUsage, CollectedUsage}
+     * @return list<string>
      */
-    private function createSampleUsages(): array
+    private function listCacheDir(string $tmpDir): array
     {
-        return [
-            new CollectedUsage(
-                new ClassMethodUsage(
-                    new UsageOrigin(className: 'App\Foo', memberName: 'bar', memberType: MemberType::METHOD, accessType: AccessType::READ, fileName: '/app/index.php', line: 10, provider: null, note: null),
-                    new ClassMethodRef('App\Baz', 'qux', possibleDescendant: false),
-                ),
-                null,
-            ),
-            new CollectedUsage(
-                new ClassConstantUsage(
-                    new UsageOrigin(className: 'App\Foo', memberName: 'bar', memberType: MemberType::METHOD, accessType: AccessType::READ, fileName: '/app/index.php', line: 15, provider: null, note: null),
-                    new ClassConstantRef('App\Config', 'VERSION', possibleDescendant: false, isEnumCase: TrinaryLogic::createNo()),
-                ),
-                null,
-            ),
-        ];
+        $items = scandir($tmpDir . '/dcd');
+        self::assertNotFalse($items);
+
+        $result = [];
+
+        foreach ($items as $item) {
+            if ($item !== '.' && $item !== '..') {
+                $result[] = $item;
+            }
+        }
+
+        return $result;
+    }
+
+    private function removeDir(string $dir): void
+    {
+        $items = scandir($dir);
+
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $item;
+
+            if (is_dir($path)) {
+                $this->removeDir($path);
+            } else {
+                unlink($path);
+            }
+        }
+
+        rmdir($dir);
     }
 
 }
