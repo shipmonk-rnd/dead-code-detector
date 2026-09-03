@@ -143,6 +143,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.laravel.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\LaravelActionsUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.laravelActions.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\BladeUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -305,6 +312,8 @@ parameters:
                 enabled: null
             laravel:
                 enabled: null
+            laravelActions:
+                enabled: null
             blade:
                 enabled: null
                 deduplicateAcrossViews: true
@@ -404,6 +413,9 @@ parametersSchema:
                 enabled: schema(bool(), nullable())
             ])
             laravel: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            laravelActions: structure([
                 enabled: schema(bool(), nullable())
             ])
             blade: structure([
