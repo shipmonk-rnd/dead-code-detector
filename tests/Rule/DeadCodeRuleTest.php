@@ -56,6 +56,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ComposerUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\LaravelActionsUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
@@ -1030,6 +1031,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
         yield 'provider-laravel' => [__DIR__ . '/data/providers/laravel.php'];
+        yield 'provider-laravel-actions' => [__DIR__ . '/data/providers/laravel-actions.php'];
         yield 'provider-blade' => [__DIR__ . '/data/providers/blade.php'];
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-nette-container' => [__DIR__ . '/data/providers/nette-container.php'];
@@ -1262,6 +1264,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             ),
             new LaravelUsageProvider(
                 self::getContainer()->getByType(ReflectionProvider::class),
+                $this->providersEnabled,
+            ),
+            new LaravelActionsUsageProvider(
                 $this->providersEnabled,
             ),
             new BladeUsageProvider(

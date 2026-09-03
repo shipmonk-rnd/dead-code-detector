@@ -117,6 +117,7 @@ parameters:
 - Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()` with automatic policy class resolution
 - Real-time facades — `\Facades\...` static calls mapped to the underlying class
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
+- Actions ([`lorisleiva/laravel-actions`](https://github.com/lorisleiva/laravel-actions)) — `handle()` called via `run()`/`runIf()`/`runUnless()` on classes using `AsAction`/`AsObject`
 
 #### Eloquent:
 - Model methods — constructor, `boot`, `booted`, `casts`, `newFactory`, query scopes, relationships, attribute accessors (modern + legacy)
