@@ -85,7 +85,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
                 $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
             }
 
-            if ($this->isTestCaseMethod($method)) {
+            if ($this->isTestCaseMethod($methodName, $method)) {
                 $usages[] = $this->createUsage($className, $methodName, 'Test method');
             }
         }
@@ -93,9 +93,12 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
         return $usages;
     }
 
-    private function isTestCaseMethod(ReflectionMethod $method): bool
+    private function isTestCaseMethod(
+        string $methodName,
+        ReflectionMethod $method,
+    ): bool
     {
-        return str_starts_with($method->getName(), 'test')
+        return str_starts_with($methodName, 'test')
             || $this->hasAnnotation($method, '@test')
             || $this->hasAnnotation($method, '@after')
             || $this->hasAnnotation($method, '@afterClass')
