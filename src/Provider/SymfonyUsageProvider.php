@@ -947,13 +947,14 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
+            $dtoMethodName = $dtoMethod->getName();
             $usages[] = new ClassMethodUsage(
                 $origin,
-                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
+                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethodName, possibleDescendant: false),
             );
 
-            if ($dtoReflection->hasNativeMethod($dtoMethod->getName())) {
-                foreach ($dtoReflection->getNativeMethod($dtoMethod->getName())->getVariants() as $mutatorVariant) {
+            if ($dtoReflection->hasNativeMethod($dtoMethodName)) {
+                foreach ($dtoReflection->getNativeMethod($dtoMethodName)->getVariants() as $mutatorVariant) {
                     foreach ($mutatorVariant->getParameters() as $mutatorParameter) {
                         $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
                     }
@@ -1629,6 +1630,8 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $declaringClassName = $method->getDeclaringClass()->getName();
 
         if ($this->reflectionProvider->hasClass($declaringClassName)) {
+            $methodName = $method->getName();
+
             foreach ($this->reflectionProvider->getClass($declaringClassName)->getAttributes() as $attribute) {
                 if ($attribute->getName() !== 'Symfony\Component\Validator\Constraints\Callback') {
                     continue;
@@ -1642,7 +1645,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 }
 
                 foreach ($callbackType->getConstantStrings() as $constantString) {
-                    if (CaseInsensitiveName::equals($constantString->getValue(), $method->getName())) {
+                    if (CaseInsensitiveName::equals($constantString->getValue(), $methodName)) {
                         return true;
                     }
                 }
