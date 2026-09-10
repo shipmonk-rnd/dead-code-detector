@@ -23,7 +23,7 @@ use function is_string;
 use function str_starts_with;
 use function strlen;
 
-final class EloquentUsageProvider implements MemberUsageProvider
+final class EloquentUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private const OBSERVER_EVENT_METHODS = [
@@ -39,6 +39,11 @@ final class EloquentUsageProvider implements MemberUsageProvider
     )
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('illuminate/database');
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

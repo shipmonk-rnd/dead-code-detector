@@ -16,7 +16,7 @@ use function preg_match_all;
 use function str_contains;
 use function stripos;
 
-final class NetteTesterUsageProvider implements MemberUsageProvider
+final class NetteTesterUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -24,6 +24,11 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
     public function __construct(?bool $enabled)
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('nette/tester');
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

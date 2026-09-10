@@ -28,7 +28,7 @@ use function is_array;
 use function is_string;
 use function str_starts_with;
 
-final class DoctrineUsageProvider implements MemberUsageProvider
+final class DoctrineUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -36,6 +36,11 @@ final class DoctrineUsageProvider implements MemberUsageProvider
     public function __construct(?bool $enabled)
     {
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

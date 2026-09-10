@@ -35,13 +35,18 @@ use function array_values;
 use function count;
 use function explode;
 
-final class ReflectionUsageProvider implements MemberUsageProvider
+final class ReflectionUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     public function __construct(
         private readonly bool $enabled,
     )
     {
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

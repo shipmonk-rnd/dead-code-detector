@@ -15,7 +15,7 @@ use function strlen;
 use function substr;
 use function ucfirst;
 
-final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
+final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -31,6 +31,11 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         $this->enabled = $enabled;
         $this->vendorDirs = array_keys(ClassLoader::getRegisteredLoaders());
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData

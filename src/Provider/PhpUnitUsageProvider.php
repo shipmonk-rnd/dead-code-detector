@@ -21,7 +21,7 @@ use function ltrim;
 use function str_contains;
 use function str_starts_with;
 
-final class PhpUnitUsageProvider implements MemberUsageProvider
+final class PhpUnitUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -39,6 +39,11 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpunit/phpunit');
         $this->phpDocParser = $phpDocParser;
         $this->lexer = $lexer;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

@@ -14,7 +14,7 @@ use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 /**
  * See: https://php.net/manual/en/class.streamwrapper.php
  */
-final class StreamWrapperUsageProvider implements MemberUsageProvider
+final class StreamWrapperUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private const STREAM_WRAPPER_METHODS = [
@@ -47,6 +47,11 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider
         private readonly bool $enabled,
     )
     {
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

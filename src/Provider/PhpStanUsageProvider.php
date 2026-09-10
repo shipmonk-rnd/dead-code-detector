@@ -5,7 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 use PHPStan\DependencyInjection\Container;
 use ReflectionMethod;
 
-final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
+final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(
@@ -13,6 +13,11 @@ final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider
         private readonly Container $container,
     )
     {
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData

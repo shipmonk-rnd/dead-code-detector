@@ -24,13 +24,18 @@ use function array_filter;
 use function is_int;
 use function is_string;
 
-final class EnumUsageProvider implements MemberUsageProvider
+final class EnumUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     public function __construct(
         private readonly bool $enabled,
     )
     {
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

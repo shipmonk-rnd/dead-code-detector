@@ -67,7 +67,7 @@ use function strlen;
 use function substr;
 use function trim;
 
-final class SymfonyUsageProvider implements MemberUsageProvider
+final class SymfonyUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -1999,6 +1999,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         } catch (ParameterNotFoundException $e) {
             return null;
         }
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

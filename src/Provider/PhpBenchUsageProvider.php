@@ -28,7 +28,7 @@ use function str_ends_with;
 use function str_starts_with;
 use function trim;
 
-final class PhpBenchUsageProvider implements MemberUsageProvider
+final class PhpBenchUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -46,6 +46,11 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpbench/phpbench');
         $this->phpDocParser = $phpDocParser;
         $this->lexer = $lexer;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getUsages(

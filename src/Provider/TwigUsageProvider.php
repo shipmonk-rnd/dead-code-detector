@@ -31,7 +31,7 @@ use function explode;
 use function in_array;
 use function strtolower;
 
-final class TwigUsageProvider implements MemberUsageProvider
+final class TwigUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -49,6 +49,11 @@ final class TwigUsageProvider implements MemberUsageProvider
         $this->reflectionProvider = $reflectionProvider;
         $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isTwigInstalled();
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     private function isTwigInstalled(): bool

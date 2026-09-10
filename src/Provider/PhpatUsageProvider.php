@@ -16,7 +16,7 @@ use function str_starts_with;
  * Their constructors are already covered by PhpStanUsageProvider (registered DIC services),
  * so this provider only marks the invoked test methods as used.
  */
-final class PhpatUsageProvider extends ReflectionBasedMemberUsageProvider
+final class PhpatUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private const TEST_TAG = 'phpat.test';
@@ -39,6 +39,11 @@ final class PhpatUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('phpat/phpat');
         $this->container = $container;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData

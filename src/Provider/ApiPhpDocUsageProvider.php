@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function str_contains;
 use function str_starts_with;
 
-final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
+final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     /**
@@ -191,6 +191,11 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         return true;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

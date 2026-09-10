@@ -21,7 +21,7 @@ use function str_starts_with;
  *
  * @see https://getcomposer.org/doc/articles/scripts.md#defining-scripts
  */
-final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
+final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -35,6 +35,8 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
      */
     private array $scriptCalls = [];
 
+    private bool $enabled;
+
     public function __construct(
         ReflectionProvider $reflectionProvider,
         ComposerIntrospector $composerIntrospector,
@@ -44,6 +46,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->composerIntrospector = $composerIntrospector;
+        $this->enabled = $enabled;
         $this->loadScriptCallbacks($enabled, $composerJsonPath);
     }
 
@@ -138,6 +141,11 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider
         return !str_starts_with($listener, '@')
             && !str_contains($listener, ' ')
             && str_contains($listener, '::');
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }
