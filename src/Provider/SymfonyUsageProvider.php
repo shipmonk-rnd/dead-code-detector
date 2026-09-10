@@ -11,6 +11,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionAttribute as AdapterReflectionAttribute;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
@@ -107,6 +108,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      * @var array<string, array<string, string>>
      */
     private array $dicEnumCases = [];
+
+    /**
+     * @var array<string, bool>
+     */
+    private array $attributeClasses = [];
 
     /**
      * @param list<string> $containerXmlPaths
@@ -353,7 +359,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
-        foreach ($nativeReflection->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
+        foreach ($this->getAttributes($nativeReflection, 'Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
             $arguments = $attribute->getArguments();
 
             $constructor = $arguments['constructor'] ?? null;
@@ -385,7 +391,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            foreach ($property->getAttributes('Symfony\UX\LiveComponent\Attribute\LiveProp') as $livePropAttribute) {
+            foreach ($this->getAttributes($property, 'Symfony\UX\LiveComponent\Attribute\LiveProp') as $livePropAttribute) {
                 $livePropArguments = $livePropAttribute->getArguments();
 
                 $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
@@ -437,7 +443,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 }
             }
 
-            foreach ($property->getAttributes('Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') as $exposeAttribute) {
+            foreach ($this->getAttributes($property, 'Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') as $exposeAttribute) {
                 $exposeArguments = $exposeAttribute->getArguments();
                 $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
 
@@ -447,7 +453,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
         }
 
-        foreach ($nativeReflection->getAttributes('Symfony\UX\LiveComponent\Attribute\AsLiveComponent') as $liveComponentAttribute) {
+        foreach ($this->getAttributes($nativeReflection, 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent') as $liveComponentAttribute) {
             $liveComponentArguments = $liveComponentAttribute->getArguments();
             $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
 
@@ -457,7 +463,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         foreach (['Symfony\UX\TwigComponent\Attribute\AsTwigComponent', 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'] as $twigComponentAttributeClass) {
-            foreach ($nativeReflection->getAttributes($twigComponentAttributeClass) as $twigComponentAttribute) {
+            foreach ($this->getAttributes($nativeReflection, $twigComponentAttributeClass) as $twigComponentAttribute) {
                 $twigComponentArguments = $twigComponentAttribute->getArguments();
                 $template = $twigComponentArguments['template'] ?? $twigComponentArguments[1] ?? null;
 
@@ -1549,7 +1555,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $methodName = $method->getName();
 
         // Check if this method has the attribute directly (fallback to method name itself if no target specified)
-        foreach ($method->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+        foreach ($this->getAttributes($method, 'Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
             $arguments = $attribute->getArguments();
             $targetMethod = $arguments['method'] ?? $arguments[3] ?? $methodName;
 
@@ -1559,7 +1565,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         }
 
         // Check class-level attributes (fallback to __invoke if no target specified)
-        foreach ($class->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+        foreach ($this->getAttributes($class, 'Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
             $arguments = $attribute->getArguments();
             $targetMethod = $arguments['method'] ?? $arguments[3] ?? '__invoke';
 
@@ -1574,7 +1580,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            foreach ($otherMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+            foreach ($this->getAttributes($otherMethod, 'Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
                 $arguments = $attribute->getArguments();
                 $targetMethod = $arguments['method'] ?? $arguments[3] ?? null;
                 if (is_string($targetMethod) && CaseInsensitiveName::equals($methodName, $targetMethod)) {
@@ -1683,7 +1689,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             }
 
             // Class-level attribute with method parameter
-            foreach ($class->getAttributes($attributeClass) as $attribute) {
+            foreach ($this->getAttributes($class, $attributeClass) as $attribute) {
                 $arguments = $attribute->getArguments();
                 $targetMethod = $arguments['method'] ?? null;
 
@@ -1750,6 +1756,27 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             'onConsoleSignal',
             'onConsoleTerminate',
         ]);
+    }
+
+    private function isKnownAttribute(string $attributeClass): bool
+    {
+        return $this->attributeClasses[$attributeClass] ??= $this->reflectionProvider->hasClass($attributeClass);
+    }
+
+    /**
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
+     * @return list<AdapterReflectionAttribute>
+     */
+    private function getAttributes(
+        Reflector $classOrMethod,
+        string $attributeClass,
+    ): array
+    {
+        if (!$this->isKnownAttribute($attributeClass)) {
+            return [];
+        }
+
+        return $classOrMethod->getAttributes($attributeClass);
     }
 
     /**
