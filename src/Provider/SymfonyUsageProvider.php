@@ -334,8 +334,9 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if (isset($this->dicCalls[$className][$method->getName()])) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Called via DIC');
+            $methodName = $method->getName();
+            if (isset($this->dicCalls[$className][$methodName])) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via DIC');
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -345,7 +346,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             $note = $this->shouldMarkAsUsed($method);
 
             if ($note !== null) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), $note);
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), $note);
             }
         }
 
