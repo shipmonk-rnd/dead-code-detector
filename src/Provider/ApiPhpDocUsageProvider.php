@@ -54,7 +54,7 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
     /**
      * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
-    public function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
+    private function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
         $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
         $memberType = ReflectionHelper::getMemberType($member);
