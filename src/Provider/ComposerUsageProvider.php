@@ -35,7 +35,7 @@ final class ComposerUsageProvider extends ReflectionBasedMemberUsageProvider imp
      */
     private array $scriptCalls = [];
 
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct(
         ReflectionProvider $reflectionProvider,
