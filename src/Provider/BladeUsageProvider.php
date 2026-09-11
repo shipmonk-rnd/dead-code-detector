@@ -58,10 +58,6 @@ final class BladeUsageProvider implements MemberUsageProvider, ActivatableUsageP
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof FuncCall) {

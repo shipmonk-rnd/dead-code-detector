@@ -21,37 +21,21 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider impl
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($method);
     }
 
     protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($constant);
     }
 
     protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 

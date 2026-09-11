@@ -51,7 +51,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider, ActivatableUsag
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 

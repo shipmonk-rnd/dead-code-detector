@@ -58,7 +58,7 @@ final class PhpBenchUsageProvider implements MemberUsageProvider, ActivatableUsa
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 

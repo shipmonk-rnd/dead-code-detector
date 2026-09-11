@@ -43,10 +43,6 @@ final class EnumUsageProvider implements MemberUsageProvider, ActivatableUsagePr
         Scope $scope,
     ): array
     {
-        if ($this->enabled === false) {
-            return [];
-        }
-
         if ($node instanceof StaticCall || $node instanceof MethodCall) {
             return $this->getTryFromUsages($node, $scope);
         }

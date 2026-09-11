@@ -48,10 +48,6 @@ final class DoctrineUsageProvider implements MemberUsageProvider, ActivatableUsa
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption

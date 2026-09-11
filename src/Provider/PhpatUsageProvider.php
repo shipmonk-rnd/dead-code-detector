@@ -48,10 +48,6 @@ final class PhpatUsageProvider extends ReflectionBasedMemberUsageProvider implem
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         if (!$method->isPublic()) {
             return null;
         }

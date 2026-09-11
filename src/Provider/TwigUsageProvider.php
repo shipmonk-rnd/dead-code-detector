@@ -68,10 +68,6 @@ final class TwigUsageProvider implements MemberUsageProvider, ActivatableUsagePr
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption

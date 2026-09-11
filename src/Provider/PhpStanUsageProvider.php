@@ -22,10 +22,6 @@ final class PhpStanUsageProvider extends ReflectionBasedMemberUsageProvider impl
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->isConstructorCallInPhpStanDic($method);
     }
 

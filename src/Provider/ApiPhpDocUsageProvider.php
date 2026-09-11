@@ -28,27 +28,27 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider im
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($method) : null;
+        return $this->shouldMarkMemberAsUsed($method);
     }
 
     public function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($constant) : null;
+        return $this->shouldMarkMemberAsUsed($constant);
     }
 
     public function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
+        return $this->shouldMarkMemberAsUsed($enumCase);
     }
 
     public function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     /**

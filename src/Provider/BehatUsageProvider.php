@@ -27,7 +27,7 @@ final class BehatUsageProvider implements MemberUsageProvider, ActivatableUsageP
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 

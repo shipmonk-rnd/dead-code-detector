@@ -59,10 +59,6 @@ final class StreamWrapperUsageProvider implements MemberUsageProvider, Activatab
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         if (!$node instanceof FuncCall) {
             return [];
         }

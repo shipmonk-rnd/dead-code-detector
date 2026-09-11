@@ -54,10 +54,6 @@ final class ReflectionUsageProvider implements MemberUsageProvider, ActivatableU
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         if ($node instanceof MethodCall) {
             return $this->processMethodCall($node, $scope);
         }
