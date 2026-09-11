@@ -1789,6 +1789,10 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         int $flags = 0,
     ): bool
     {
+        if (!$this->isKnownAttribute($attributeClass)) {
+            return false;
+        }
+
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
             return true;
         }

@@ -55,6 +55,7 @@
         "symfony/ux-live-component": "^2.34",
         "symfony/ux-twig-component": "^2.34",
         "symfony/validator": "^5.4 || ^6.0 || ^7.0 || ^8.0",
+        "symfony/workflow": "^5.4 || ^6.0 || ^7.0 || ^8.0",
         "twig/twig": "^3.0"
     },
     "autoload": {
