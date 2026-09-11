@@ -348,7 +348,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             if ($note !== null) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), $note);
             }
+
+            $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $method, $methodName)];
         }
+
+        $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $nativeReflection, '__invoke')];
 
         foreach ($nativeReflection->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
             $arguments = $attribute->getArguments();
@@ -465,6 +469,32 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                         $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
                     }
                 }
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * Symfony registers one messenger.message_handler tag per #[AsMessageHandler] attribute.
+     * The tag's method defaults to __invoke for class attributes and to the annotated method for method attributes.
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getMessageHandlerUsages(
+        ClassReflection $classReflection,
+        ReflectionClass|ReflectionEnum|ReflectionMethod $classOrMethod,
+        string $defaultMethodName,
+    ): array
+    {
+        $usages = [];
+
+        foreach ($classOrMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $methodName = $arguments['method'] ?? $arguments[3] ?? $defaultMethodName;
+
+            if (is_string($methodName) && $classReflection->hasNativeMethod($methodName)) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Message handler method via #[AsMessageHandler] attribute');
             }
         }
 
@@ -1006,10 +1036,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return 'Constructor of an event listener class (required by DIC to invoke the listener)';
         }
 
-        if ($this->isMessageHandlerMethodWithAsMessageHandlerAttribute($method)) {
-            return 'Message handler method via #[AsMessageHandler] attribute';
-        }
-
         if ($this->isWorkflowEventListenerMethod($method)) {
             return 'Workflow event listener method via workflow attribute';
         }
@@ -1535,49 +1561,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         foreach ($class->getMethods() as $classMethod) {
             if ($this->hasAttribute($classMethod, 'Symfony\Component\EventDispatcher\Attribute\AsEventListener')) {
                 return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-        $methodName = $method->getName();
-
-        // Check if this method has the attribute directly (fallback to method name itself if no target specified)
-        foreach ($method->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $targetMethod = $arguments['method'] ?? $arguments[3] ?? $methodName;
-
-            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
-                return true;
-            }
-        }
-
-        // Check class-level attributes (fallback to __invoke if no target specified)
-        foreach ($class->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $targetMethod = $arguments['method'] ?? $arguments[3] ?? '__invoke';
-
-            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
-                return true;
-            }
-        }
-
-        // Check if any other method points to this method (only if explicitly specified)
-        foreach ($class->getMethods() as $otherMethod) {
-            if (CaseInsensitiveName::equals($otherMethod->getName(), $methodName)) {
-                continue;
-            }
-
-            foreach ($otherMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-                $arguments = $attribute->getArguments();
-                $targetMethod = $arguments['method'] ?? $arguments[3] ?? null;
-                if (is_string($targetMethod) && CaseInsensitiveName::equals($methodName, $targetMethod)) {
-                    return true;
-                }
             }
         }
 
