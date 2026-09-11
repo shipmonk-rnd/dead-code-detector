@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function str_contains;
 use function str_starts_with;
 
-final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
+final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     /**
@@ -28,27 +28,27 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($method) : null;
+        return $this->shouldMarkMemberAsUsed($method);
     }
 
     public function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($constant) : null;
+        return $this->shouldMarkMemberAsUsed($constant);
     }
 
     public function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
+        return $this->shouldMarkMemberAsUsed($enumCase);
     }
 
     public function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     /**
@@ -191,6 +191,11 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         return true;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

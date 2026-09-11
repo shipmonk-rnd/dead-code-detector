@@ -28,7 +28,7 @@ use function is_array;
 use function is_string;
 use function str_starts_with;
 
-final class DoctrineUsageProvider implements MemberUsageProvider
+final class DoctrineUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -38,15 +38,16 @@ final class DoctrineUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption

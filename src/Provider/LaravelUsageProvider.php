@@ -37,7 +37,7 @@ use function strrpos;
 use function substr;
 use function ucwords;
 
-final class LaravelUsageProvider implements MemberUsageProvider
+final class LaravelUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -50,15 +50,16 @@ final class LaravelUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('laravel/framework');
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption

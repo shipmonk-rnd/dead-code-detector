@@ -12,6 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
 use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
+use ShipMonk\PHPStan\DeadCode\Provider\ActivatableUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use function sprintf;
 
@@ -24,17 +25,32 @@ final class ProvidedUsagesCollector implements Collector
     use BufferedUsageCollector;
 
     /**
+     * @var list<MemberUsageProvider>
+     */
+    private readonly array $memberUsageProviders;
+
+    /**
      * @param list<MemberUsageProvider> $memberUsageProviders
      * @param list<MemberUsageExcluder> $memberUsageExcluders
      */
     public function __construct(
         UsageCacheStorage $usageCacheStorage,
         private readonly ReflectionProvider $reflectionProvider,
-        private readonly array $memberUsageProviders,
+        array $memberUsageProviders,
         private readonly array $memberUsageExcluders,
     )
     {
         $this->usageCacheStorage = $usageCacheStorage;
+
+        $enabledProviders = [];
+        foreach ($memberUsageProviders as $provider) {
+            if ($provider instanceof ActivatableUsageProvider && !$provider->isEnabled()) {
+                continue;
+            }
+
+            $enabledProviders[] = $provider;
+        }
+        $this->memberUsageProviders = $enabledProviders;
     }
 
     public function getNodeType(): string

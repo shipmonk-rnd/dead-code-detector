@@ -29,7 +29,7 @@ use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
 
-final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
+final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -71,12 +71,13 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         }
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
         $className = $class->getName();

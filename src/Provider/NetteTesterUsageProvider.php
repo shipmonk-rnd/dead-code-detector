@@ -16,7 +16,7 @@ use function preg_match_all;
 use function str_contains;
 use function stripos;
 
-final class NetteTesterUsageProvider implements MemberUsageProvider
+final class NetteTesterUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -26,12 +26,17 @@ final class NetteTesterUsageProvider implements MemberUsageProvider
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('nette/tester');
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 

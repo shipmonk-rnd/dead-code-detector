@@ -67,7 +67,7 @@ use function strlen;
 use function substr;
 use function trim;
 
-final class SymfonyUsageProvider implements MemberUsageProvider
+final class SymfonyUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -151,10 +151,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -1999,6 +1995,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         } catch (ParameterNotFoundException $e) {
             return null;
         }
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }
