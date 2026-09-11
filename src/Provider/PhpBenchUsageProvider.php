@@ -28,7 +28,7 @@ use function str_ends_with;
 use function str_starts_with;
 use function trim;
 
-final class PhpBenchUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class PhpBenchUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;

@@ -24,7 +24,7 @@ use function array_filter;
 use function is_int;
 use function is_string;
 
-final class EnumUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class EnumUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(

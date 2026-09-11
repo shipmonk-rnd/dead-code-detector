@@ -28,7 +28,7 @@ use function is_array;
 use function is_string;
 use function str_starts_with;
 
-final class DoctrineUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class DoctrineUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;

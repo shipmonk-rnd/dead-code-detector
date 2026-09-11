@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function str_contains;
 
-final class BehatUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class BehatUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;

@@ -21,7 +21,7 @@ use function ltrim;
 use function str_contains;
 use function str_starts_with;
 
-final class PhpUnitUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class PhpUnitUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;

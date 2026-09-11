@@ -31,7 +31,7 @@ use function explode;
 use function in_array;
 use function strtolower;
 
-final class TwigUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class TwigUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;

@@ -2,7 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-interface ActivatableUsageProvider
+interface ActivatableUsageProvider extends MemberUsageProvider
 {
 
     public function isEnabled(): bool;

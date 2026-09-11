@@ -23,7 +23,7 @@ use function is_string;
 use function str_starts_with;
 use function strlen;
 
-final class EloquentUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class EloquentUsageProvider implements ActivatableUsageProvider
 {
 
     private const OBSERVER_EVENT_METHODS = [

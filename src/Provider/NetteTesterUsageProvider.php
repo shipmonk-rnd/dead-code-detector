@@ -16,7 +16,7 @@ use function preg_match_all;
 use function str_contains;
 use function stripos;
 
-final class NetteTesterUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class NetteTesterUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;

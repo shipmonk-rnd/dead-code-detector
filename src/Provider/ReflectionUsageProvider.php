@@ -35,7 +35,7 @@ use function array_values;
 use function count;
 use function explode;
 
-final class ReflectionUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class ReflectionUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(

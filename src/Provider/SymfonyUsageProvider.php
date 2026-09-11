@@ -67,7 +67,7 @@ use function strlen;
 use function substr;
 use function trim;
 
-final class SymfonyUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class SymfonyUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;

@@ -22,7 +22,7 @@ use function strpos;
 use function strtolower;
 use function substr;
 
-final class BladeUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class BladeUsageProvider implements ActivatableUsageProvider
 {
 
     private const VIEW_FACADE_METHODS = [

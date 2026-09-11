@@ -37,7 +37,7 @@ use function strrpos;
 use function substr;
 use function ucwords;
 
-final class LaravelUsageProvider implements MemberUsageProvider, ActivatableUsageProvider
+final class LaravelUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
