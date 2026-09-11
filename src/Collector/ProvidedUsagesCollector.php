@@ -44,10 +44,8 @@ final class ProvidedUsagesCollector implements Collector
 
         $enabledProviders = [];
         foreach ($memberUsageProviders as $provider) {
-            if ($provider instanceof ActivatableUsageProvider) {
-                if (!$provider->isEnabled()) {
-                    continue;
-                }
+            if ($provider instanceof ActivatableUsageProvider && !$provider->isEnabled()) {
+                continue;
             }
 
             $enabledProviders[] = $provider;
