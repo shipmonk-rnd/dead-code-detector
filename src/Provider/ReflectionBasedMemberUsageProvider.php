@@ -79,11 +79,12 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function getMethodUsages(ClassReflection $classReflection): array
     {
         $nativeClassReflection = $classReflection->getNativeReflection();
+        $className = $nativeClassReflection->getName();
 
         $usages = [];
 
         foreach ($nativeClassReflection->getMethods() as $nativeMethodReflection) {
-            if ($nativeMethodReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
+            if ($nativeMethodReflection->getDeclaringClass()->getName() !== $className) {
                 continue; // skip methods from ancestors
             }
 
@@ -103,11 +104,12 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function getConstantUsages(ClassReflection $classReflection): array
     {
         $nativeClassReflection = $classReflection->getNativeReflection();
+        $className = $nativeClassReflection->getName();
 
         $usages = [];
 
         foreach ($nativeClassReflection->getReflectionConstants() as $nativeConstantReflection) {
-            if ($nativeConstantReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
+            if ($nativeConstantReflection->getDeclaringClass()->getName() !== $className) {
                 continue; // skip constants from ancestors
             }
 
@@ -155,11 +157,12 @@ abstract class ReflectionBasedMemberUsageProvider implements MemberUsageProvider
     private function getPropertyUsages(ClassReflection $classReflection): array
     {
         $nativeClassReflection = $classReflection->getNativeReflection();
+        $className = $nativeClassReflection->getName();
 
         $usages = [];
 
         foreach ($nativeClassReflection->getProperties() as $nativePropertyReflection) {
-            if ($nativePropertyReflection->getDeclaringClass()->getName() !== $nativeClassReflection->getName()) {
+            if ($nativePropertyReflection->getDeclaringClass()->getName() !== $className) {
                 continue; // skip properties from ancestors
             }
 
