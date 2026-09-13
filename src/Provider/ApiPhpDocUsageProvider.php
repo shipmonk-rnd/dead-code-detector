@@ -57,23 +57,22 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider im
     private function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
         $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
-        $memberType = ReflectionHelper::getMemberType($member);
-        $memberName = $member->getName();
 
         if ($this->isApiMember($reflectionClass, $member)) {
             return VirtualUsageData::withNote("Class {$reflectionClass->getName()} is public @api");
         }
 
+        $memberType = ReflectionHelper::getMemberType($member);
         do {
             foreach ($reflectionClass->getInterfaces() as $interface) {
                 if ($this->isApiMember($interface, $member)) {
-                    return VirtualUsageData::withNote("Interface $memberType {$interface->getName()}::{$memberName} is public @api");
+                    return VirtualUsageData::withNote("Interface $memberType {$interface->getName()}::{$member->getName()} is public @api");
                 }
             }
 
             foreach ($reflectionClass->getParents() as $parent) {
                 if ($this->isApiMember($parent, $member)) {
-                    return VirtualUsageData::withNote("Class $memberType {$parent->getName()}::{$memberName} is public @api");
+                    return VirtualUsageData::withNote("Class $memberType {$parent->getName()}::{$member->getName()} is public @api");
                 }
             }
 
