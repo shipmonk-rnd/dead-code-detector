@@ -285,8 +285,8 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                     );
                 }
 
-                // ['eventName' => ['methodName', $priority]]
                 foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    // ['eventName' => ['methodName', $priority]]
                     foreach ($subscriberMethodArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                         $usages[] = new ClassMethodUsage(
                             $usageOrigin,
@@ -297,10 +297,8 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                             ),
                         );
                     }
-                }
 
-                // ['eventName' => [['methodName', $priority], ['methodName', $priority]]]
-                foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    // ['eventName' => [['methodName', $priority], ['methodName', $priority]]]
                     foreach ($subscriberMethodArray->getIterableValueType()->getConstantArrays() as $innerArray) {
                         foreach ($innerArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                             $usages[] = new ClassMethodUsage(
@@ -386,80 +384,89 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
-            foreach ($property->getAttributes('Symfony\UX\LiveComponent\Attribute\LiveProp') as $livePropAttribute) {
-                $livePropArguments = $livePropAttribute->getArguments();
+            foreach ($property->getAttributes() as $propertyAttribute) {
+                if ($propertyAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\LiveProp') {
+                    $livePropArguments = $propertyAttribute->getArguments();
 
-                $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
+                    $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
 
-                if (is_string($hydrateWith)) {
-                    $hydrateMethodName = trim($hydrateWith, '()');
+                    if (is_string($hydrateWith)) {
+                        $hydrateMethodName = trim($hydrateWith, '()');
 
-                    if ($classReflection->hasNativeMethod($hydrateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($hydrateMethodName), 'Called via #[LiveProp(hydrateWith)] attribute');
-                    }
-                }
-
-                $dehydrateWith = $livePropArguments['dehydrateWith'] ?? null;
-
-                if (is_string($dehydrateWith)) {
-                    $dehydrateMethodName = trim($dehydrateWith, '()');
-
-                    if ($classReflection->hasNativeMethod($dehydrateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($dehydrateMethodName), 'Called via #[LiveProp(dehydrateWith)] attribute');
-                    }
-                }
-
-                $onUpdated = $livePropArguments['onUpdated'] ?? null;
-
-                if (is_string($onUpdated) && $classReflection->hasNativeMethod($onUpdated)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdated), 'Called via #[LiveProp(onUpdated)] attribute');
-                } elseif (is_array($onUpdated)) {
-                    foreach ($onUpdated as $onUpdatedMethod) {
-                        if (is_string($onUpdatedMethod) && $classReflection->hasNativeMethod($onUpdatedMethod)) {
-                            $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdatedMethod), 'Called via #[LiveProp(onUpdated)] attribute');
+                        if ($classReflection->hasNativeMethod($hydrateMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($hydrateMethodName), 'Called via #[LiveProp(hydrateWith)] attribute');
                         }
                     }
+
+                    $dehydrateWith = $livePropArguments['dehydrateWith'] ?? null;
+
+                    if (is_string($dehydrateWith)) {
+                        $dehydrateMethodName = trim($dehydrateWith, '()');
+
+                        if ($classReflection->hasNativeMethod($dehydrateMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($dehydrateMethodName), 'Called via #[LiveProp(dehydrateWith)] attribute');
+                        }
+                    }
+
+                    $onUpdated = $livePropArguments['onUpdated'] ?? null;
+
+                    if (is_string($onUpdated) && $classReflection->hasNativeMethod($onUpdated)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdated), 'Called via #[LiveProp(onUpdated)] attribute');
+                    } elseif (is_array($onUpdated)) {
+                        foreach ($onUpdated as $onUpdatedMethod) {
+                            if (is_string($onUpdatedMethod) && $classReflection->hasNativeMethod($onUpdatedMethod)) {
+                                $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdatedMethod), 'Called via #[LiveProp(onUpdated)] attribute');
+                            }
+                        }
+                    }
+
+                    $modifier = $livePropArguments['modifier'] ?? null;
+
+                    if (is_string($modifier) && $classReflection->hasNativeMethod($modifier)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($modifier), 'Called via #[LiveProp(modifier)] attribute');
+                    }
+
+                    $fieldName = $livePropArguments['fieldName'] ?? null;
+
+                    if (is_string($fieldName) && str_ends_with($fieldName, '()')) {
+                        $fieldMethodName = trim($fieldName, '()');
+
+                        if ($classReflection->hasNativeMethod($fieldMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($fieldMethodName), 'Called via #[LiveProp(fieldName)] attribute');
+                        }
+                    }
+
+                    continue;
                 }
 
-                $modifier = $livePropArguments['modifier'] ?? null;
+                if ($propertyAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') {
+                    $exposeArguments = $propertyAttribute->getArguments();
+                    $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
 
-                if (is_string($modifier) && $classReflection->hasNativeMethod($modifier)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($modifier), 'Called via #[LiveProp(modifier)] attribute');
-                }
-
-                $fieldName = $livePropArguments['fieldName'] ?? null;
-
-                if (is_string($fieldName) && str_ends_with($fieldName, '()')) {
-                    $fieldMethodName = trim($fieldName, '()');
-
-                    if ($classReflection->hasNativeMethod($fieldMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($fieldMethodName), 'Called via #[LiveProp(fieldName)] attribute');
+                    if (is_string($getter) && $classReflection->hasNativeMethod($getter)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($getter), 'Called via #[ExposeInTemplate(getter)] attribute');
                     }
                 }
             }
+        }
 
-            foreach ($property->getAttributes('Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') as $exposeAttribute) {
-                $exposeArguments = $exposeAttribute->getArguments();
-                $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
+        foreach ($nativeReflection->getAttributes() as $nativeAttribute) {
+            if ($nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent') {
+                $liveComponentArguments = $nativeAttribute->getArguments();
+                $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
 
-                if (is_string($getter) && $classReflection->hasNativeMethod($getter)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($getter), 'Called via #[ExposeInTemplate(getter)] attribute');
+                if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
                 }
+
+                continue;
             }
-        }
 
-        foreach ($nativeReflection->getAttributes('Symfony\UX\LiveComponent\Attribute\AsLiveComponent') as $liveComponentAttribute) {
-            $liveComponentArguments = $liveComponentAttribute->getArguments();
-            $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
-
-            if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
-            }
-        }
-
-        foreach (['Symfony\UX\TwigComponent\Attribute\AsTwigComponent', 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'] as $twigComponentAttributeClass) {
-            foreach ($nativeReflection->getAttributes($twigComponentAttributeClass) as $twigComponentAttribute) {
-                $twigComponentArguments = $twigComponentAttribute->getArguments();
+            if (
+                $nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'
+                || $nativeAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent'
+            ) {
+                $twigComponentArguments = $nativeAttribute->getArguments();
                 $template = $twigComponentArguments['template'] ?? $twigComponentArguments[1] ?? null;
 
                 if ($template instanceof FromMethod) {
@@ -1121,7 +1128,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return [];
         }
 
-        return $this->emitPropertyAccessorUsages($node, $scope, $dataClassName);
+        return $this->emitPropertyAccessorUsages($dataClassName);
     }
 
     /**
@@ -1253,8 +1260,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
      * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function emitPropertyAccessorUsages(
-        Node $node,
-        Scope $scope,
         string $dataClassName,
     ): array
     {
