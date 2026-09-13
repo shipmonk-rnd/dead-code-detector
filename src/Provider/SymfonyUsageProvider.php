@@ -539,7 +539,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
 
-        if (!$this->hasAttribute($nativeReflection, 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF)) {
+        if (!$this->hasAttributeInstanceOf($nativeReflection, 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent')) {
             return [];
         }
 
@@ -1592,8 +1592,8 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
     private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
-        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method, 'Symfony\Component\Routing\Attribute\Route')
+            || $this->hasAttributeInstanceOf($method, 'Symfony\Component\Routing\Annotation\Route');
     }
 
     private function isMethodWithInteractAttribute(ReflectionMethod $method): bool
@@ -1689,7 +1689,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return false;
         }
 
-        return $this->hasAttribute($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent');
     }
 
     private function isTwigComponentHookMethod(ReflectionMethod $method): bool
@@ -1705,7 +1705,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
     private function isLiveComponentActionMethod(ReflectionMethod $method): bool
     {
-        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction');
     }
 
     private function isLiveComponentLifecycleMethod(ReflectionMethod $method): bool
@@ -1737,12 +1737,21 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
     /**
      * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
-     * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(
         Reflector $classOrMethod,
         string $attributeClass,
-        int $flags = 0,
+    ): bool
+    {
+        return $classOrMethod->getAttributes($attributeClass) !== [];
+    }
+
+    /**
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
+     */
+    private function hasAttributeInstanceOf(
+        Reflector $classOrMethod,
+        string $attributeClass,
     ): bool
     {
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
@@ -1751,7 +1760,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
         try {
             /** @throws IdentifierNotFound */
-            return $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+            return $classOrMethod->getAttributes($attributeClass, ReflectionAttribute::IS_INSTANCEOF) !== [];
         } catch (IdentifierNotFound $e) {
             return false; // prevent https://github.com/phpstan/phpstan/issues/9618
         }
