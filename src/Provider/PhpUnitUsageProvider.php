@@ -16,6 +16,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function count;
 use function explode;
+use function in_array;
 use function is_string;
 use function ltrim;
 use function str_contains;
@@ -67,9 +68,8 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
             $methodName = $method->getName();
 
-            $externalDataProviderMethods = $this->getExternalDataProvidersFromAttributes($method);
             $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
-            $localDataProviderMethods = $this->getDataProvidersFromAttributes($method);
+            [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
 
             foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
                 $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
@@ -104,20 +104,24 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
     ): bool
     {
         return str_starts_with($methodName, 'test')
-            || $this->hasAnnotation($method, '@test')
-            || $this->hasAnnotation($method, '@after')
-            || $this->hasAnnotation($method, '@afterClass')
-            || $this->hasAnnotation($method, '@before')
-            || $this->hasAnnotation($method, '@beforeClass')
-            || $this->hasAnnotation($method, '@postCondition')
-            || $this->hasAnnotation($method, '@preCondition')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Test')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\After')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\AfterClass')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Before')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\BeforeClass')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PostCondition')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PreCondition');
+            || $this->hasAnyAnnotation($method, [
+                '@test',
+                '@after',
+                '@afterClass',
+                '@before',
+                '@beforeClass',
+                '@postCondition',
+                '@preCondition',
+            ])
+            || $this->hasAnyAttribute($method, [
+                'PHPUnit\Framework\Attributes\Test',
+                'PHPUnit\Framework\Attributes\After',
+                'PHPUnit\Framework\Attributes\AfterClass',
+                'PHPUnit\Framework\Attributes\Before',
+                'PHPUnit\Framework\Attributes\BeforeClass',
+                'PHPUnit\Framework\Attributes\PostCondition',
+                'PHPUnit\Framework\Attributes\PreCondition',
+            ]);
     }
 
     /**
@@ -143,60 +147,74 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * @return list<string>
+     * @return array{list<string>, list<array{string, string}>}
      */
     private function getDataProvidersFromAttributes(ReflectionMethod $method): array
     {
-        $result = [];
+        $externalDataProviderMethods = [];
+        $localDataProviderMethods = [];
 
-        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
-            $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
+        foreach ($method->getAttributes() as $providerAttributeReflection) {
+            if ($providerAttributeReflection->getName() === 'PHPUnit\Framework\Attributes\DataProviderExternal') {
+                $className = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['className'] ?? null;
+                $methodName = $providerAttributeReflection->getArguments()[1] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
 
-            if (is_string($methodName)) {
-                $result[] = $methodName;
+                if (is_string($className) && is_string($methodName)) {
+                    $externalDataProviderMethods[] = [$className, $methodName];
+                }
+
+                continue;
+            }
+
+            if ($providerAttributeReflection->getName() === 'PHPUnit\Framework\Attributes\DataProvider') {
+                $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
+
+                if (is_string($methodName)) {
+                    $localDataProviderMethods[] = $methodName;
+                }
             }
         }
 
-        return $result;
+        return [$localDataProviderMethods, $externalDataProviderMethods];
     }
 
     /**
-     * @return list<array{string, string}>
+     * @param array<string> $attributeClasses
      */
-    private function getExternalDataProvidersFromAttributes(ReflectionMethod $method): array
+    private function hasAnyAttribute(
+        ReflectionMethod $method,
+        array $attributeClasses,
+    ): bool
     {
-        $result = [];
-
-        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProviderExternal') as $providerAttributeReflection) {
-            $className = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['className'] ?? null;
-            $methodName = $providerAttributeReflection->getArguments()[1] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
-
-            if (is_string($className) && is_string($methodName)) {
-                $result[] = [$className, $methodName];
+        foreach ($method->getAttributes() as $attribute) {
+            if (in_array($attribute->getName(), $attributeClasses, true)) {
+                return true;
             }
         }
 
-        return $result;
+        return false;
     }
 
-    private function hasAttribute(
+    /**
+     * @param array<string> $strings
+     */
+    private function hasAnyAnnotation(
         ReflectionMethod $method,
-        string $attributeClass,
+        array $strings,
     ): bool
     {
-        return $method->getAttributes($attributeClass) !== [];
-    }
-
-    private function hasAnnotation(
-        ReflectionMethod $method,
-        string $string,
-    ): bool
-    {
-        if ($method->getDocComment() === false) {
+        $docComment = $method->getDocComment();
+        if ($docComment === false) {
             return false;
         }
 
-        return str_contains($method->getDocComment(), $string);
+        foreach ($strings as $string) {
+            if (str_contains($docComment, $string)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function createUsage(
