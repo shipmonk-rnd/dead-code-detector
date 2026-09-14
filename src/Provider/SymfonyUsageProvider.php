@@ -451,30 +451,30 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         }
 
         foreach ($nativeReflection->getAttributes() as $nativeAttribute) {
-            if ($nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent') {
-                $liveComponentArguments = $nativeAttribute->getArguments();
-                $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
+            $isLiveComponent = $nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent';
+            $isTwigComponent = $nativeAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent';
+
+            if (!$isLiveComponent && !$isTwigComponent) {
+                continue;
+            }
+
+            $componentArguments = $nativeAttribute->getArguments();
+
+            if ($isLiveComponent) {
+                $defaultAction = $componentArguments['defaultAction'] ?? null;
 
                 if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
                     $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
                 }
-
-                continue;
             }
 
-            if (
-                $nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'
-                || $nativeAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent'
-            ) {
-                $twigComponentArguments = $nativeAttribute->getArguments();
-                $template = $twigComponentArguments['template'] ?? $twigComponentArguments[1] ?? null;
+            $template = $componentArguments['template'] ?? $componentArguments[1] ?? null;
 
-                if ($template instanceof FromMethod) {
-                    $templateMethodName = $template->method;
+            if ($template instanceof FromMethod) {
+                $templateMethodName = $template->method;
 
-                    if ($classReflection->hasNativeMethod($templateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
-                    }
+                if ($classReflection->hasNativeMethod($templateMethodName)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
                 }
             }
         }
