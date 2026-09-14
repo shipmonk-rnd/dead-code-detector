@@ -130,7 +130,7 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
         }
 
         if (
-            CaseInsensitiveName::startsWith($methodName, 'inject')
+            str_starts_with($methodName, 'inject')
             && $reflection->is(Presenter::class)
         ) {
             return VirtualUsageData::withNote('Presenter inject method');
