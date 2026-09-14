@@ -102,34 +102,36 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
     ): ?VirtualUsageData
     {
         if (
-            $reflection->is(SignalReceiver::class)
-            && CaseInsensitiveName::startsWith($methodName, 'handle')
+            CaseInsensitiveName::startsWith($methodName, 'handle')
+            && $reflection->is(SignalReceiver::class)
         ) {
             return VirtualUsageData::withNote('Signal handler method');
         }
 
         if (
-            $reflection->is(Container::class)
-            && CaseInsensitiveName::startsWith($methodName, 'createComponent')
+            CaseInsensitiveName::startsWith($methodName, 'createComponent')
+            && $reflection->is(Container::class)
         ) {
             return VirtualUsageData::withNote('Component factory method');
         }
 
         if (
-            $reflection->is(Control::class)
-            && CaseInsensitiveName::startsWith($methodName, 'render')
+            CaseInsensitiveName::startsWith($methodName, 'render')
+            && $reflection->is(Control::class)
         ) {
             return VirtualUsageData::withNote('Render method');
         }
 
         if (
-            $reflection->is(Presenter::class) && CaseInsensitiveName::startsWith($methodName, 'action')
+            CaseInsensitiveName::startsWith($methodName, 'action')
+            && $reflection->is(Presenter::class)
         ) {
             return VirtualUsageData::withNote('Presenter action method');
         }
 
         if (
-            $reflection->is(Presenter::class) && str_starts_with($methodName, 'inject')
+            CaseInsensitiveName::startsWith($methodName, 'inject')
+            && $reflection->is(Presenter::class)
         ) {
             return VirtualUsageData::withNote('Presenter inject method');
         }
