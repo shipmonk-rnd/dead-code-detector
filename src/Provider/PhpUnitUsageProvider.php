@@ -66,6 +66,10 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
         $className = $classReflection->getName();
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if (!$method->isPublic()) {
+                continue;
+            }
+
             if ($method->getDeclaringClass()->getName() !== $className) {
                 continue; // inherited test methods are emitted for their declaring class
             }
