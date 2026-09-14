@@ -150,3 +150,40 @@ final class TestProviderInParent extends TestCaseParent
     {
     }
 }
+
+abstract class OverridableProviderBase extends TestCase
+{
+    /**
+     * @dataProvider provideOverridable
+     */
+    public function testWithOverridableProvider(string $arg): void
+    {
+    }
+
+    public static function provideOverridable(): array
+    {
+        return [];
+    }
+}
+
+final class OverridingProviderChild extends OverridableProviderBase
+{
+    public static function provideOverridable(): array
+    {
+        return [['child']];
+    }
+}
+
+abstract class TestInParentBase extends TestCase
+{
+    public function testDeclaredInParent(): void
+    {
+    }
+}
+
+final class TestInParentChild extends TestInParentBase
+{
+    public function testDeclaredInParent(): void
+    {
+    }
+}

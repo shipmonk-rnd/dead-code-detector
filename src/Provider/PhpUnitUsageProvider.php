@@ -66,13 +66,17 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
         $className = $classReflection->getName();
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() !== $className) {
+                continue; // inherited test methods are emitted for their declaring class
+            }
+
             $methodName = $method->getName();
 
             $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
             [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
 
             foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
-                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
+                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName", possibleDescendant: false);
             }
 
             foreach ($annotationDataProviders as $dataProvider) {
@@ -80,18 +84,18 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
 
                 if (count($parts) === 2) {
                     $providerClassName = ltrim($parts[0], '\\');
-                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName");
+                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName", possibleDescendant: false);
                 } else {
-                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
                 }
             }
 
             foreach ($localDataProviderMethods as $dataProvider) {
-                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
             }
 
             if ($this->isTestCaseMethod($methodName, $method)) {
-                $usages[] = $this->createUsage($className, $methodName, 'Test method');
+                $usages[] = $this->createUsage($className, $methodName, 'Test method', possibleDescendant: false);
             }
         }
 
@@ -217,10 +221,15 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
         return false;
     }
 
+    /**
+     * PHPUnit resolves data providers on the concrete test class, so a provider referenced
+     * from an inherited test method may be implemented in a descendant.
+     */
     private function createUsage(
         string $className,
         string $methodName,
         string $reason,
+        bool $possibleDescendant,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -228,7 +237,7 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                possibleDescendant: false,
+                $possibleDescendant,
             ),
         );
     }
