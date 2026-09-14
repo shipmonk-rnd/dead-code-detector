@@ -76,6 +76,10 @@ final class PhpBenchUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
+            if ($method->getDeclaringClass()->getName() !== $className) {
+                continue; // inherited test methods are emitted for their declaring class
+            }
+
             $methodName = $method->getName();
 
             $paramProviderMethods = array_merge(
