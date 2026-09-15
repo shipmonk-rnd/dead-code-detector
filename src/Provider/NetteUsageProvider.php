@@ -179,7 +179,7 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
         }
 
         preg_match_all(
-            '~^  [ \t*]*  @property(|-read|-write|-deprecated)  [ \t]+  [^\s$]+  [ \t]+  \$  (\w+)  ()~mx',
+            '~^  [ \t*]*  @property(|-read|-write|-deprecated)  [ \t]+  (?:(?!@)[^\s$*]+[\s*]+)++  \$  (\w+)  ()~mx',
             (string) $rc->getDocComment(),
             $matches,
             PREG_SET_ORDER,

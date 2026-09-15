@@ -35,6 +35,11 @@ final class PagePresenter extends Presenter
 /**
  * @property float $radius
  * @property-read bool $visible
+ * @property array<string, string> $labels
+ * @property array{
+ *     x: float,
+ *     y: float,
+ * } $center
  */
 class Circle
 {
@@ -56,9 +61,35 @@ class Circle
     {
         return $this->radius > 0;
     }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getLabels(): array
+    {
+        return [];
+    }
+
+    /**
+     * @param array<string, string> $labels
+     */
+    protected function setLabels(array $labels): void
+    {
+    }
+
+    /**
+     * @return array{x: float, y: float}
+     */
+    protected function getCenter(): array
+    {
+        return ['x' => 0.0, 'y' => 0.0];
+    }
 }
 
 $circle = new Circle;
 $circle->radius = 10; // actually calls setRadius(10)
 echo $circle->radius; // calls getRadius()
 echo $circle->visible; // calls isVisible()
+$circle->labels = ['color' => 'red']; // calls setLabels()
+print_r($circle->labels); // calls getLabels()
+echo $circle->center['x']; // calls getCenter()
