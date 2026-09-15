@@ -76,7 +76,12 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
 
             $methodName = $method->getName();
 
-            if ($this->isTestCaseMethod($methodName, $method)) {
+            $isTestCaseMethod = $this->isTestCaseMethod($methodName, $method);
+            if ($isTestCaseMethod === null) {
+                continue;
+            }
+
+            if ($isTestCaseMethod === true) {
                 $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
                 [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
 
@@ -98,9 +103,9 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
                 foreach ($localDataProviderMethods as $dataProvider) {
                     $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
                 }
-
-                $usages[] = $this->createUsage($className, $methodName, 'Test method', possibleDescendant: false);
             }
+
+            $usages[] = $this->createUsage($className, $methodName, 'Test method', possibleDescendant: false);
         }
 
         return $usages;
@@ -109,27 +114,41 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
     private function isTestCaseMethod(
         string $methodName,
         ReflectionMethod $method,
-    ): bool
+    ): ?bool
     {
-        return str_starts_with($methodName, 'test')
-            || $this->hasAnyAnnotation($method, [
-                '@test',
-                '@after',
-                '@afterClass',
-                '@before',
-                '@beforeClass',
-                '@postCondition',
-                '@preCondition',
-            ])
-            || $this->hasAnyAttribute($method, [
-                'PHPUnit\Framework\Attributes\Test',
-                'PHPUnit\Framework\Attributes\After',
-                'PHPUnit\Framework\Attributes\AfterClass',
-                'PHPUnit\Framework\Attributes\Before',
-                'PHPUnit\Framework\Attributes\BeforeClass',
-                'PHPUnit\Framework\Attributes\PostCondition',
-                'PHPUnit\Framework\Attributes\PreCondition',
-            ]);
+        if (str_starts_with($methodName, 'test')) {
+            return true;
+        }
+
+        $annotation = $this->getAnyAnnotation($method, [
+            '@test',
+            '@after',
+            '@afterClass',
+            '@before',
+            '@beforeClass',
+            '@postCondition',
+            '@preCondition',
+        ]);
+
+        if ($annotation !== null) {
+            return $annotation === '@test';
+        }
+
+        $attribute = $this->getAnyAttribute($method, [
+            'PHPUnit\Framework\Attributes\Test',
+            'PHPUnit\Framework\Attributes\After',
+            'PHPUnit\Framework\Attributes\AfterClass',
+            'PHPUnit\Framework\Attributes\Before',
+            'PHPUnit\Framework\Attributes\BeforeClass',
+            'PHPUnit\Framework\Attributes\PostCondition',
+            'PHPUnit\Framework\Attributes\PreCondition',
+        ]);
+
+        if ($attribute !== null) {
+            return $attribute === 'PHPUnit\Framework\Attributes\Test';
+        }
+
+        return null;
     }
 
     /**
@@ -189,40 +208,41 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
     /**
      * @param array<string> $attributeClasses
      */
-    private function hasAnyAttribute(
+    private function getAnyAttribute(
         ReflectionMethod $method,
         array $attributeClasses,
-    ): bool
+    ): ?string
     {
         foreach ($method->getAttributes() as $attribute) {
-            if (in_array($attribute->getName(), $attributeClasses, true)) {
-                return true;
+            $name = $attribute->getName();
+            if (in_array($name, $attributeClasses, true)) {
+                return $name;
             }
         }
 
-        return false;
+        return null;
     }
 
     /**
      * @param array<string> $strings
      */
-    private function hasAnyAnnotation(
+    private function getAnyAnnotation(
         ReflectionMethod $method,
         array $strings,
-    ): bool
+    ): ?string
     {
         $docComment = $method->getDocComment();
         if ($docComment === false) {
-            return false;
+            return null;
         }
 
         foreach ($strings as $string) {
             if (str_contains($docComment, $string)) {
-                return true;
+                return $string;
             }
         }
 
-        return false;
+        return null;
     }
 
     /**
