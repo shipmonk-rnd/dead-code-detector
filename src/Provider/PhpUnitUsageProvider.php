@@ -66,7 +66,7 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
         $className = $classReflection->getName();
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
-            if (!$method->isPublic()) {
+            if ($method->isPrivate()) {
                 continue;
             }
 

@@ -187,3 +187,15 @@ final class TestInParentChild extends TestInParentBase
     {
     }
 }
+
+final class ProtectedHookTest extends TestCase
+{
+    #[Before]
+    protected function protectedBefore(): void
+    {
+    }
+
+    public function testSomething(): void
+    {
+    }
+}
