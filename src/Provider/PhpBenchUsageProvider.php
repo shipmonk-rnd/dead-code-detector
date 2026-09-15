@@ -72,6 +72,14 @@ final class PhpBenchUsageProvider implements ActivatableUsageProvider
         $usages = [];
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if (!$method->isPublic()) {
+                continue;
+            }
+
+            if ($method->getDeclaringClass()->getName() !== $className) {
+                continue; // inherited test methods are emitted for their declaring class
+            }
+
             $methodName = $method->getName();
 
             $paramProviderMethods = array_merge(
