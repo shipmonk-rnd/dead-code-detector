@@ -9,7 +9,6 @@ use function fopen;
 use function fread;
 use function fseek;
 use function fwrite;
-use function getmypid;
 use function hrtime;
 use function md5;
 use function rename;
@@ -22,6 +21,9 @@ use function unlink;
  * The single data file that holds all merged records: a 4 byte magic, a 16 byte generation
  * that the index must repeat, then the records back to back. Records carry no framing of
  * their own; the index is the only map.
+ *
+ * Only the main PHPStan process reads it, in the finalizer after all workers are done.
+ * Forked workers just write loose files, so the read handle is never shared across processes.
  */
 final class BundleFile
 {
@@ -34,8 +36,6 @@ final class BundleFile
      * @var resource|null
      */
     private $readHandle = null;
-
-    private ?int $readHandlePid = null;
 
     public function __construct(
         private readonly string $path,
@@ -140,7 +140,6 @@ final class BundleFile
         if ($this->readHandle !== null) {
             fclose($this->readHandle);
             $this->readHandle = null;
-            $this->readHandlePid = null;
         }
     }
 
@@ -194,15 +193,7 @@ final class BundleFile
      */
     private function readHandle()
     {
-        $pid = getmypid();
-
-        if ($pid === false) {
-            throw new LogicException('Cannot determine the current process id.');
-        }
-
-        // a forked child inherits the parent descriptor together with its file
-        // offset, so it must open its own instead of seeking in a shared one
-        if ($this->readHandle !== null && $this->readHandlePid === $pid) {
+        if ($this->readHandle !== null) {
             return $this->readHandle;
         }
 
@@ -213,7 +204,6 @@ final class BundleFile
         }
 
         $this->readHandle = $handle;
-        $this->readHandlePid = $pid;
 
         return $handle;
     }
