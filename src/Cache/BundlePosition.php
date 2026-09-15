@@ -2,6 +2,8 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
+use LogicException;
+
 /**
  * Where one record lives inside bundle.dat.
  *
@@ -16,7 +18,7 @@ final class BundlePosition
     public const MAX_LENGTH = (1 << self::LENGTH_BITS) - 1;
 
     /**
-     * @param int<0, self::MAX_LENGTH> $length
+     * @param int<1, self::MAX_LENGTH> $length
      */
     public function __construct(
         public readonly int $offset,
@@ -27,7 +29,13 @@ final class BundlePosition
 
     public static function fromInt(int $packed): self
     {
-        return new self($packed >> self::LENGTH_BITS, $packed & self::MAX_LENGTH);
+        $length = $packed & self::MAX_LENGTH;
+
+        if ($length === 0) {
+            throw new LogicException('DCD usage cache index holds a zero-length record. Clear the PHPStan result cache and re-run the analysis.');
+        }
+
+        return new self($packed >> self::LENGTH_BITS, $length);
     }
 
     public function toInt(): int
