@@ -76,29 +76,29 @@ final class PhpUnitUsageProvider implements ActivatableUsageProvider
 
             $methodName = $method->getName();
 
-            $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
-            [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
+            if ($this->isTestCaseMethod($methodName, $method)) {
+                $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
+                [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
 
-            foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
-                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName", possibleDescendant: false);
-            }
+                foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
+                    $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName", possibleDescendant: false);
+                }
 
-            foreach ($annotationDataProviders as $dataProvider) {
-                $parts = explode('::', $dataProvider, 2);
+                foreach ($annotationDataProviders as $dataProvider) {
+                    $parts = explode('::', $dataProvider, 2);
 
-                if (count($parts) === 2) {
-                    $providerClassName = ltrim($parts[0], '\\');
-                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName", possibleDescendant: false);
-                } else {
+                    if (count($parts) === 2) {
+                        $providerClassName = ltrim($parts[0], '\\');
+                        $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName", possibleDescendant: false);
+                    } else {
+                        $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
+                    }
+                }
+
+                foreach ($localDataProviderMethods as $dataProvider) {
                     $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
                 }
-            }
 
-            foreach ($localDataProviderMethods as $dataProvider) {
-                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
-            }
-
-            if ($this->isTestCaseMethod($methodName, $method)) {
                 $usages[] = $this->createUsage($className, $methodName, 'Test method', possibleDescendant: false);
             }
         }
