@@ -2,7 +2,9 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
+use LogicException;
 use function count;
+use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function intdiv;
@@ -17,13 +19,18 @@ use const LOCK_EX;
 /**
  * Maps record hashes to their positions in bundle.dat.
  *
- * On disk: 4 byte magic, then all 32 char hashes back to back, then all positions as
- * packed 64bit ints. Two flat blocks decode with one str_split() and one unpack().
+ * On disk: 4 byte magic, 16 byte generation shared with the data file, then all 32 char
+ * hashes back to back, then all positions as packed 64bit ints. The two flat blocks decode
+ * with one str_split() and one unpack().
  */
 final class BundleIndex
 {
 
-    private const MAGIC = 'DCD1';
+    private const MAGIC = 'DCD2';
+
+    public const GENERATION_SIZE = 16;
+
+    private const HEADER_SIZE = 4 + self::GENERATION_SIZE;
 
     private const HASH_SIZE = 32;
 
@@ -33,6 +40,7 @@ final class BundleIndex
      * @param array<string, int> $positions hash => packed position, in bundle order
      */
     private function __construct(
+        private readonly ?string $generation,
         private readonly array $positions,
     )
     {
@@ -40,41 +48,58 @@ final class BundleIndex
 
     public static function empty(): self
     {
-        return new self([]);
+        return new self(null, []);
     }
 
     /**
      * @param array<string, int> $positions hash => packed position, in bundle order
      */
-    public static function fromPackedPositions(array $positions): self
+    public static function fromPackedPositions(
+        string $generation,
+        array $positions,
+    ): self
     {
-        return new self($positions);
+        return new self($generation, $positions);
     }
 
     /**
-     * A missing or corrupt index yields an empty one, so every read falls back to loose files.
+     * A missing index is the normal state before the first gc(); anything unreadable is not.
      */
     public static function load(string $path): self
     {
-        $raw = @file_get_contents($path);
-
-        if ($raw === false || substr($raw, 0, strlen(self::MAGIC)) !== self::MAGIC) {
+        if (!file_exists($path)) {
             return self::empty();
         }
 
-        $body = strlen($raw) - strlen(self::MAGIC);
+        $raw = file_get_contents($path);
+
+        if ($raw === false) {
+            throw new LogicException("Failed to read DCD usage cache index '{$path}'.");
+        }
+
+        if (substr($raw, 0, 4) !== self::MAGIC) {
+            throw self::corrupt($path, 'unexpected header');
+        }
+
+        $body = strlen($raw) - self::HEADER_SIZE;
         $entrySize = self::HASH_SIZE + self::POSITION_SIZE;
 
-        if ($body % $entrySize !== 0 || $body === 0) {
-            return self::empty();
+        if ($body < 0 || $body % $entrySize !== 0) {
+            throw self::corrupt($path, 'truncated');
         }
 
+        $generation = substr($raw, 4, self::GENERATION_SIZE);
         $entries = intdiv($body, $entrySize);
-        $hashes = str_split(substr($raw, strlen(self::MAGIC), $entries * self::HASH_SIZE), self::HASH_SIZE);
-        $packed = unpack('J*', substr($raw, strlen(self::MAGIC) + $entries * self::HASH_SIZE));
+
+        if ($entries === 0) {
+            return new self($generation, []);
+        }
+
+        $hashes = str_split(substr($raw, self::HEADER_SIZE, $entries * self::HASH_SIZE), self::HASH_SIZE);
+        $packed = unpack('J*', substr($raw, self::HEADER_SIZE + $entries * self::HASH_SIZE));
 
         if ($packed === false) {
-            return self::empty();
+            throw self::corrupt($path, 'unreadable positions');
         }
 
         $positions = [];
@@ -84,17 +109,21 @@ final class BundleIndex
             $position = $packed[$i++] ?? null;
 
             if (!is_int($position)) {
-                return self::empty();
+                throw self::corrupt($path, 'position count does not match hash count');
             }
 
             $positions[$hash] = $position;
         }
 
-        return new self($positions);
+        return new self($generation, $positions);
     }
 
     public function save(string $path): void
     {
+        if ($this->generation === null) {
+            throw new LogicException('An empty DCD usage cache index has no generation and cannot be saved.');
+        }
+
         $hashes = '';
         $packed = '';
 
@@ -103,12 +132,28 @@ final class BundleIndex
             $packed .= pack('J', $position);
         }
 
-        @file_put_contents($path, self::MAGIC . $hashes . $packed, LOCK_EX);
+        if (file_put_contents($path, self::MAGIC . $this->generation . $hashes . $packed, LOCK_EX) === false) {
+            throw new LogicException("Failed to write DCD usage cache index '{$path}'.");
+        }
     }
 
     public function withAppended(self $other): self
     {
-        return new self($this->positions + $other->positions);
+        if ($this->generation !== $other->generation) {
+            throw new LogicException('Cannot merge DCD usage cache indexes of different bundle generations.');
+        }
+
+        return new self($this->generation, $this->positions + $other->positions);
+    }
+
+    public function isEmpty(): bool
+    {
+        return $this->positions === [];
+    }
+
+    public function getGeneration(): ?string
+    {
+        return $this->generation;
     }
 
     public function has(string $hash): bool
@@ -143,6 +188,14 @@ final class BundleIndex
         }
 
         return $garbage / count($this->positions);
+    }
+
+    private static function corrupt(
+        string $path,
+        string $reason,
+    ): LogicException
+    {
+        return new LogicException("DCD usage cache index '{$path}' is corrupt ({$reason}). Clear the PHPStan result cache and re-run the analysis.");
     }
 
 }

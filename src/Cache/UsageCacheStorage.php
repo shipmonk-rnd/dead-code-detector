@@ -94,7 +94,10 @@ final class UsageCacheStorage
 
         $this->readHashes[$data] = true;
 
-        $content = $this->readRecord($data) ?? $this->looseFiles->read($data);
+        $position = $this->index()->get($data);
+        $content = $position === null
+            ? $this->looseFiles->read($data)
+            : $this->bundle->read($position);
 
         if ($content === null) {
             throw new LogicException(
@@ -131,12 +134,14 @@ final class UsageCacheStorage
             $unbundled[$hash] = true;
         }
 
-        $newIndex = null;
+        $needsRewrite = $index->isEmpty() || $index->garbageRatio($this->readHashes) > self::GARBAGE_RATIO_LIMIT;
 
-        if ($index->garbageRatio($this->readHashes) > self::GARBAGE_RATIO_LIMIT || ($unbundled !== [] && $this->bundle->isEmpty())) {
+        if ($needsRewrite) {
             $newIndex = $this->bundle->rewrite($this->survivingRecords($index, $unbundled));
         } elseif ($unbundled !== []) {
             $newIndex = $this->bundle->append($this->looseRecords($unbundled), $index);
+        } else {
+            $newIndex = null;
         }
 
         if ($newIndex !== null) {
@@ -154,16 +159,22 @@ final class UsageCacheStorage
         $this->index = null;
     }
 
-    private function readRecord(string $hash): ?string
-    {
-        $position = $this->index()->get($hash);
-
-        return $position === null ? null : $this->bundle->read($position);
-    }
-
     private function index(): BundleIndex
     {
-        return $this->index ??= BundleIndex::load($this->cacheDir . '/' . self::BUNDLE_INDEX_FILE);
+        if ($this->index !== null) {
+            return $this->index;
+        }
+
+        $index = BundleIndex::load($this->cacheDir . '/' . self::BUNDLE_INDEX_FILE);
+
+        if (!$index->isEmpty() && $index->getGeneration() !== $this->bundle->getGeneration()) {
+            throw new LogicException(
+                "DCD usage cache index in '{$this->cacheDir}' belongs to a different bundle generation. "
+                . 'Please clear the PHPStan result cache and re-run the analysis.',
+            );
+        }
+
+        return $this->index = $index;
     }
 
     /**
@@ -178,11 +189,18 @@ final class UsageCacheStorage
     ): iterable
     {
         foreach ($this->readHashes as $hash => $unused) {
-            $content = isset($unbundled[$hash]) ? $this->looseFiles->read($hash) : $this->readRecordFrom($index, $hash);
-
-            if ($content !== null) {
-                yield $hash => $content;
+            if (isset($unbundled[$hash])) {
+                yield $hash => $this->requireLooseRecord($hash);
+                continue;
             }
+
+            $position = $index->get($hash);
+
+            if ($position === null) {
+                continue; // an oversized record read from its loose file, stays loose
+            }
+
+            yield $hash => $this->bundle->read($position);
         }
     }
 
@@ -193,22 +211,25 @@ final class UsageCacheStorage
     private function looseRecords(array $hashes): iterable
     {
         foreach ($hashes as $hash => $unused) {
-            $content = $this->looseFiles->read($hash);
-
-            if ($content !== null) {
-                yield $hash => $content;
-            }
+            yield $hash => $this->requireLooseRecord($hash);
         }
     }
 
-    private function readRecordFrom(
-        BundleIndex $index,
-        string $hash,
-    ): ?string
+    /**
+     * The file was listed by this very gc() run, so it can only be gone if another process removed it.
+     */
+    private function requireLooseRecord(string $hash): string
     {
-        $position = $index->get($hash);
+        $content = $this->looseFiles->read($hash);
 
-        return $position === null ? null : $this->bundle->read($position);
+        if ($content === null) {
+            throw new LogicException(
+                "DCD cache file '{$this->looseFiles->path($hash)}' disappeared during gc. "
+                . 'Is another PHPStan process sharing the same tmpDir?',
+            );
+        }
+
+        return $content;
     }
 
 }

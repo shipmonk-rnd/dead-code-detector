@@ -11,6 +11,7 @@ use function file_put_contents;
 use function is_dir;
 use function mkdir;
 use function rmdir;
+use function scandir;
 use function substr;
 use function unlink;
 
@@ -43,27 +44,37 @@ final class LooseFileStore
             return;
         }
 
-        $dir = $this->cacheDir . '/' . substr($hash, 0, 2);
-
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
-        }
+        $this->ensureDirectory($this->cacheDir . '/' . substr($hash, 0, 2));
 
         if (file_put_contents($path, $content) === false) {
-            throw new LogicException("Failed to write DCD cache file: {$path}");
+            throw new LogicException("Failed to write DCD cache file '{$path}'.");
         }
     }
 
     public function read(string $hash): ?string
     {
-        $content = @file_get_contents($this->path($hash));
+        $path = $this->path($hash);
 
-        return $content === false ? null : $content;
+        if (!file_exists($path)) {
+            return null;
+        }
+
+        $content = file_get_contents($path);
+
+        if ($content === false) {
+            throw new LogicException("Failed to read DCD cache file '{$path}'.");
+        }
+
+        return $content;
     }
 
     public function remove(string $hash): void
     {
-        @unlink($this->path($hash));
+        $path = $this->path($hash);
+
+        if (!unlink($path)) {
+            throw new LogicException("Failed to delete DCD cache file '{$path}'.");
+        }
     }
 
     /**
@@ -74,13 +85,7 @@ final class LooseFileStore
         $hashes = [];
 
         foreach ($this->subdirectories() as $subdir) {
-            try {
-                $files = new DirectoryIterator($subdir->getPathname());
-            } catch (RuntimeException $e) {
-                continue;
-            }
-
-            foreach ($files as $file) {
+            foreach ($this->iterate($subdir->getPathname()) as $file) {
                 if ($file->isDot() || $file->isDir()) {
                     continue;
                 }
@@ -92,10 +97,35 @@ final class LooseFileStore
         return $hashes;
     }
 
+    /**
+     * A subdirectory stays when it still holds a record too large for the bundle.
+     */
     public function removeEmptyDirectories(): void
     {
         foreach ($this->subdirectories() as $subdir) {
-            @rmdir($subdir->getPathname());
+            $path = $subdir->getPathname();
+
+            if (scandir($path) !== ['.', '..']) {
+                continue;
+            }
+
+            if (!rmdir($path)) {
+                throw new LogicException("Failed to delete DCD cache directory '{$path}'.");
+            }
+        }
+    }
+
+    /**
+     * Parallel workers race for the same directory, so a failed mkdir is fine as long as it exists afterwards.
+     */
+    private function ensureDirectory(string $dir): void
+    {
+        if (is_dir($dir)) {
+            return;
+        }
+
+        if (!@mkdir($dir, 0777, true) && !is_dir($dir)) {
+            throw new LogicException("Failed to create DCD cache directory '{$dir}'.");
         }
     }
 
@@ -104,15 +134,9 @@ final class LooseFileStore
      */
     private function subdirectories(): array
     {
-        try {
-            $entries = new DirectoryIterator($this->cacheDir);
-        } catch (RuntimeException $e) {
-            return [];
-        }
-
         $subdirs = [];
 
-        foreach ($entries as $entry) {
+        foreach ($this->iterate($this->cacheDir) as $entry) {
             if ($entry->isDot() || !$entry->isDir()) {
                 continue;
             }
@@ -121,6 +145,15 @@ final class LooseFileStore
         }
 
         return $subdirs;
+    }
+
+    private function iterate(string $dir): DirectoryIterator
+    {
+        try {
+            return new DirectoryIterator($dir);
+        } catch (RuntimeException $e) {
+            throw new LogicException("Failed to list DCD cache directory '{$dir}'. Is another PHPStan process sharing the same tmpDir?", 0, $e);
+        }
     }
 
 }

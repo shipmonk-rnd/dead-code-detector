@@ -2,25 +2,33 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
-use function clearstatcache;
+use LogicException;
 use function fclose;
-use function file_exists;
 use function filesize;
 use function fopen;
 use function fread;
 use function fseek;
 use function fwrite;
 use function getmypid;
+use function hrtime;
+use function md5;
 use function rename;
 use function strlen;
+use function substr;
+use function uniqid;
 use function unlink;
 
 /**
- * The single data file that holds all merged records. Records are addressed by
- * BundlePosition and carry no framing of their own; the index is the only map.
+ * The single data file that holds all merged records: a 4 byte magic, a 16 byte generation
+ * that the index must repeat, then the records back to back. Records carry no framing of
+ * their own; the index is the only map.
  */
 final class BundleFile
 {
+
+    private const MAGIC = 'DCDB';
+
+    private const HEADER_SIZE = 4 + BundleIndex::GENERATION_SIZE;
 
     /**
      * @var resource|null
@@ -35,110 +43,96 @@ final class BundleFile
     {
     }
 
-    public function isEmpty(): bool
-    {
-        clearstatcache(true, $this->path);
-
-        if (!file_exists($this->path)) {
-            return true;
-        }
-
-        $size = filesize($this->path);
-
-        return $size === false || $size === 0;
-    }
-
     /**
-     * Returns null when the bundle is missing or shorter than the index claims,
-     * so that the caller can fall back to the loose file.
+     * Reads the generation from the file header; this is what ties the file to its index.
      */
-    public function read(BundlePosition $position): ?string
+    public function getGeneration(): string
     {
         $handle = $this->readHandle();
+        fseek($handle, 0);
+        $header = fread($handle, self::HEADER_SIZE);
 
-        if ($handle === null) {
-            return null;
+        if ($header === false || strlen($header) !== self::HEADER_SIZE || substr($header, 0, 4) !== self::MAGIC) {
+            throw $this->corrupt('unexpected header');
         }
 
-        if ($position->length === 0) {
-            return '';
-        }
+        return substr($header, 4);
+    }
 
+    public function read(BundlePosition $position): string
+    {
+        $handle = $this->readHandle();
         fseek($handle, $position->offset);
         $content = fread($handle, $position->length);
 
         if ($content === false || strlen($content) !== $position->length) {
-            return null;
+            throw $this->corrupt("record at offset {$position->offset} is shorter than the index claims");
         }
 
         return $content;
     }
 
     /**
-     * Writes the records to a temporary file and swaps it in atomically. Returns the index of
-     * the new bundle, or null when nothing was written and the old bundle stays in place.
+     * Writes a fresh file under a new generation and swaps it in atomically.
      *
      * @param iterable<string, string> $records hash => content, in the order they should be laid out
      */
-    public function rewrite(iterable $records): ?BundleIndex
+    public function rewrite(iterable $records): BundleIndex
     {
         $tmpPath = $this->path . '.tmp';
-        $handle = @fopen($tmpPath, 'wb');
+        $handle = fopen($tmpPath, 'wb');
 
         if ($handle === false) {
-            return null;
+            throw new LogicException("Failed to create DCD usage cache bundle '{$tmpPath}'.");
         }
 
-        $positions = $this->writeRecords($handle, $records, 0);
+        $generation = md5(uniqid('', true) . hrtime(true), binary: true);
+        $this->write($handle, self::MAGIC . $generation);
+        $positions = $this->writeRecords($handle, $records, self::HEADER_SIZE);
         fclose($handle);
-
-        if ($positions === null) {
-            @unlink($tmpPath);
-            return null;
-        }
-
         $this->close();
 
-        if (!@rename($tmpPath, $this->path)) {
-            @unlink($tmpPath);
-            return null;
+        if (!rename($tmpPath, $this->path)) {
+            unlink($tmpPath);
+
+            throw new LogicException("Failed to replace DCD usage cache bundle '{$this->path}'.");
         }
 
-        return BundleIndex::fromPackedPositions($positions);
+        return BundleIndex::fromPackedPositions($generation, $positions);
     }
 
     /**
-     * Appends the records after the existing ones. Returns the extended index, or null when
-     * nothing could be appended.
+     * Appends the records after the existing ones and returns the extended index.
      *
      * @param iterable<string, string> $records hash => content
      */
     public function append(
         iterable $records,
         BundleIndex $existing,
-    ): ?BundleIndex
+    ): BundleIndex
     {
-        clearstatcache(true, $this->path);
+        $generation = $existing->getGeneration();
+
+        if ($generation === null || $generation !== $this->getGeneration()) {
+            throw $this->corrupt('index belongs to a different bundle generation');
+        }
+
         $offset = filesize($this->path);
 
         if ($offset === false) {
-            return null;
+            throw new LogicException("Failed to stat DCD usage cache bundle '{$this->path}'.");
         }
 
-        $handle = @fopen($this->path, 'ab');
+        $handle = fopen($this->path, 'ab');
 
         if ($handle === false) {
-            return null;
+            throw new LogicException("Failed to open DCD usage cache bundle '{$this->path}' for appending.");
         }
 
         $positions = $this->writeRecords($handle, $records, $offset);
         fclose($handle);
 
-        if ($positions === null || $positions === []) {
-            return null;
-        }
-
-        return $existing->withAppended(BundleIndex::fromPackedPositions($positions));
+        return $existing->withAppended(BundleIndex::fromPackedPositions($generation, $positions));
     }
 
     public function close(): void
@@ -153,27 +147,28 @@ final class BundleFile
     /**
      * @param resource $handle
      * @param iterable<string, string> $records hash => content
-     * @return array<string, int>|null hash => packed position, null when a write failed
+     * @return array<string, int> hash => packed position; oversized records are left out and stay loose
      */
     private function writeRecords(
         $handle,
         iterable $records,
         int $offset,
-    ): ?array
+    ): array
     {
         $positions = [];
 
         foreach ($records as $hash => $content) {
             $length = strlen($content);
 
+            if ($length === 0) {
+                throw new LogicException("DCD usage cache record '{$hash}' is empty.");
+            }
+
             if ($length > BundlePosition::MAX_LENGTH) {
-                continue; // stays a loose file
+                continue;
             }
 
-            if (fwrite($handle, $content) === false) {
-                return null;
-            }
-
+            $this->write($handle, $content);
             $positions[$hash] = (new BundlePosition($offset, $length))->toInt();
             $offset += $length;
         }
@@ -182,28 +177,50 @@ final class BundleFile
     }
 
     /**
-     * @return resource|null
+     * @param resource $handle
+     */
+    private function write(
+        $handle,
+        string $bytes,
+    ): void
+    {
+        if (fwrite($handle, $bytes) !== strlen($bytes)) {
+            throw new LogicException("Failed to write DCD usage cache bundle '{$this->path}'.");
+        }
+    }
+
+    /**
+     * @return resource
      */
     private function readHandle()
     {
         $pid = getmypid();
 
+        if ($pid === false) {
+            throw new LogicException('Cannot determine the current process id.');
+        }
+
         // a forked child inherits the parent descriptor together with its file
         // offset, so it must open its own instead of seeking in a shared one
-        if ($this->readHandle !== null && $pid !== false && $this->readHandlePid === $pid) {
+        if ($this->readHandle !== null && $this->readHandlePid === $pid) {
             return $this->readHandle;
         }
 
-        $handle = @fopen($this->path, 'rb');
+        $handle = fopen($this->path, 'rb');
 
         if ($handle === false) {
-            return null;
+            throw new LogicException("Failed to open DCD usage cache bundle '{$this->path}'.");
         }
 
         $this->readHandle = $handle;
-        $this->readHandlePid = $pid === false ? null : $pid;
+        $this->readHandlePid = $pid;
 
         return $handle;
+    }
+
+    private function corrupt(string $reason): LogicException
+    {
+        return new LogicException("DCD usage cache bundle '{$this->path}' is corrupt ({$reason}). Clear the PHPStan result cache and re-run the analysis.");
     }
 
 }
