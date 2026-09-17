@@ -49,6 +49,17 @@ final class TestsUsageExcluder implements MemberUsageExcluder
             $resolvedPaths = [];
 
             foreach ($devPaths as $devPath) {
+                if (str_contains($devPath, '*')) {
+                    $globPaths = $this->resolveGlobPaths($devPath);
+
+                    if ($globPaths === []) {
+                        throw new LogicException("No paths matched devPath glob '$devPath'");
+                    }
+
+                    $resolvedPaths = [...$resolvedPaths, ...$globPaths];
+                    continue;
+                }
+
                 $resolvedPaths[] = $this->realpath($devPath);
             }
 
@@ -176,14 +187,8 @@ final class TestsUsageExcluder implements MemberUsageExcluder
                 }
 
                 if (str_contains($path, '*')) { // https://getcomposer.org/doc/04-schema.md#classmap
-                    $globPaths = glob($absolutePath);
-
-                    if ($globPaths === false) {
-                        continue;
-                    }
-
-                    foreach ($globPaths as $globPath) {
-                        $result[] = $this->realpath($globPath);
+                    foreach ($this->resolveGlobPaths($absolutePath) as $resolvedGlobPath) {
+                        $result[] = $resolvedGlobPath;
                     }
 
                     continue;
@@ -191,6 +196,26 @@ final class TestsUsageExcluder implements MemberUsageExcluder
 
                 $result[] = $this->realpath($absolutePath);
             }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveGlobPaths(string $globPattern): array
+    {
+        $globPaths = glob($globPattern);
+
+        if ($globPaths === false) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($globPaths as $globPath) {
+            $result[] = $this->realpath($globPath);
         }
 
         return $result;
