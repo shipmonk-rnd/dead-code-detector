@@ -773,7 +773,8 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
         $jobMethods = [
             '__construct', 'handle', 'failed', 'middleware', 'retryUntil',
-            'uniqueId', 'tags', 'backoff', 'uniqueVia', 'displayName',
+            'uniqueId', 'uniqueFor', 'tags', 'backoff', 'uniqueVia', 'displayName',
+            'messageGroup', 'deduplicationId',
         ];
 
         if (CaseInsensitiveName::isOneOf($method->getName(), $jobMethods)) {
@@ -946,7 +947,11 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
             return null;
         }
 
-        $broadcastMethods = ['broadcastWith', 'broadcastAs', 'broadcastWhen'];
+        $broadcastMethods = [
+            'broadcastWith', 'broadcastAs', 'broadcastWhen', 'broadcastQueue',
+            'shouldBroadcastNow', 'middleware', 'failed',
+            'uniqueId', 'uniqueFor', 'uniqueVia',
+        ];
 
         if (CaseInsensitiveName::isOneOf($method->getName(), $broadcastMethods)) {
             return 'Laravel broadcast event method';
