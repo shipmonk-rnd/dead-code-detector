@@ -705,9 +705,7 @@ class OrderShipped implements ShouldBroadcast
     }
 }
 
-// Convention methods are routinely extracted into a trait, which can never satisfy the ShouldBroadcast
-// gate itself. No widening is needed: the usage is emitted for the using class and DeadCodeRule maps it
-// back to the trait declaration.
+// Convention methods declared in a trait, not on the ShouldBroadcast class itself
 
 trait BroadcastsTasks
 {
