@@ -50,10 +50,13 @@ final class TestsUsageExcluder implements MemberUsageExcluder
 
             foreach ($devPaths as $devPath) {
                 if (str_contains($devPath, '*')) {
-                    foreach ($this->resolveGlobPaths($devPath) as $resolvedGlobPath) {
-                        $resolvedPaths[] = $resolvedGlobPath;
+                    $globPaths = $this->resolveGlobPaths($devPath);
+
+                    if ($globPaths === []) {
+                        throw new LogicException("No paths matched devPath glob '$devPath'");
                     }
 
+                    $resolvedPaths = [...$resolvedPaths, ...$globPaths];
                     continue;
                 }
 

@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Excluder;
 
+use LogicException;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\PHPStanTestCase;
 use ReflectionClass;
@@ -74,19 +75,17 @@ final class TestsUsageExcluderTest extends PHPStanTestCase
         self::assertFalse($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/glob/feature-a/src/Baz.php')));
     }
 
-    public function testExplicitDevPathGlobPatternWithNoMatchesDoesNotThrow(): void
+    public function testExplicitDevPathGlobPatternWithNoMatchesThrows(): void
     {
-        $excluder = new TestsUsageExcluder(
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage("No paths matched devPath glob '" . __DIR__ . "/data/glob/*/nonexistent'");
+
+        new TestsUsageExcluder(
             self::getContainer()->getByType(ReflectionProvider::class),
             new ComposerIntrospector(),
             true,
             [__DIR__ . '/data/glob/*/nonexistent'],
         );
-
-        $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
-        $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');
-
-        self::assertSame([], $devPathsPropertyReflection->getValue($excluder));
     }
 
 }
