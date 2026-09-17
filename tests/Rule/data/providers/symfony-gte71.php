@@ -241,3 +241,20 @@ class AutowireCallableService {
     public function __invoke(): void {}
     public function dead(): void {} // error: Unused Symfony\AutowireCallableService::dead
 }
+
+// Test AsMessageHandler pointing to a method inherited from parent class
+abstract class MessageHandlerParent
+{
+    public function inheritedHandler(): void
+    {
+    }
+
+    public function deadMethod(): void // error: Unused Symfony\MessageHandlerParent::deadMethod
+    {
+    }
+}
+
+#[AsMessageHandler(method: 'inheritedHandler')]
+class MessageHandlerWithInheritedMethod extends MessageHandlerParent
+{
+}

@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function str_contains;
 
-final class BehatUsageProvider implements MemberUsageProvider
+final class BehatUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -27,7 +27,7 @@ final class BehatUsageProvider implements MemberUsageProvider
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 
@@ -115,6 +115,11 @@ final class BehatUsageProvider implements MemberUsageProvider
                 possibleDescendant: false,
             ),
         );
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

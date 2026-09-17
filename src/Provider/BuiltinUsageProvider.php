@@ -10,7 +10,7 @@ use Reflector;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function ucfirst;
 
-final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
+final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(
@@ -21,37 +21,21 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($method);
     }
 
     protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($constant);
     }
 
     protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 
@@ -116,6 +100,11 @@ final class BuiltinUsageProvider extends ReflectionBasedMemberUsageProvider
     {
         $memberString = ucfirst(ReflectionHelper::getMemberType($member));
         return VirtualUsageData::withNote("$memberString overrides builtin one, thus is assumed to be used by some PHP code.");
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

@@ -35,7 +35,7 @@ use function array_values;
 use function count;
 use function explode;
 
-final class ReflectionUsageProvider implements MemberUsageProvider
+final class ReflectionUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(
@@ -44,15 +44,16 @@ final class ReflectionUsageProvider implements MemberUsageProvider
     {
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         if ($node instanceof MethodCall) {
             return $this->processMethodCall($node, $scope);
         }

@@ -12,7 +12,7 @@ use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function str_contains;
 use function str_starts_with;
 
-final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
+final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     /**
@@ -28,52 +28,51 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
 
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($method) : null;
+        return $this->shouldMarkMemberAsUsed($method);
     }
 
     public function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($constant) : null;
+        return $this->shouldMarkMemberAsUsed($constant);
     }
 
     public function shouldMarkEnumCaseAsUsed(ReflectionEnumUnitCase $enumCase): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($enumCase) : null;
+        return $this->shouldMarkMemberAsUsed($enumCase);
     }
 
     public function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        return $this->enabled ? $this->shouldMarkMemberAsUsed($property) : null;
+        return $this->shouldMarkMemberAsUsed($property);
     }
 
     /**
      * @param ReflectionClassConstant|ReflectionMethod|ReflectionProperty $member
      */
-    public function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
+    private function shouldMarkMemberAsUsed(object $member): ?VirtualUsageData
     {
         $reflectionClass = $this->reflectionProvider->getClass($member->getDeclaringClass()->getName());
-        $memberType = ReflectionHelper::getMemberType($member);
-        $memberName = $member->getName();
 
         if ($this->isApiMember($reflectionClass, $member)) {
             return VirtualUsageData::withNote("Class {$reflectionClass->getName()} is public @api");
         }
 
+        $memberType = ReflectionHelper::getMemberType($member);
         do {
             foreach ($reflectionClass->getInterfaces() as $interface) {
                 if ($this->isApiMember($interface, $member)) {
-                    return VirtualUsageData::withNote("Interface $memberType {$interface->getName()}::{$memberName} is public @api");
+                    return VirtualUsageData::withNote("Interface $memberType {$interface->getName()}::{$member->getName()} is public @api");
                 }
             }
 
             foreach ($reflectionClass->getParents() as $parent) {
                 if ($this->isApiMember($parent, $member)) {
-                    return VirtualUsageData::withNote("Class $memberType {$parent->getName()}::{$memberName} is public @api");
+                    return VirtualUsageData::withNote("Class $memberType {$parent->getName()}::{$member->getName()} is public @api");
                 }
             }
 
@@ -191,6 +190,11 @@ final class ApiPhpDocUsageProvider extends ReflectionBasedMemberUsageProvider
         }
 
         return true;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

@@ -29,7 +29,7 @@ use function substr;
 use function ucfirst;
 use const PREG_SET_ORDER;
 
-final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
+final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -71,12 +71,13 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
         }
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         $methodName = $method->getName();
         $class = $method->getDeclaringClass();
         $className = $class->getName();
@@ -101,34 +102,36 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider
     ): ?VirtualUsageData
     {
         if (
-            $reflection->is(SignalReceiver::class)
-            && CaseInsensitiveName::startsWith($methodName, 'handle')
+            CaseInsensitiveName::startsWith($methodName, 'handle')
+            && $reflection->is(SignalReceiver::class)
         ) {
             return VirtualUsageData::withNote('Signal handler method');
         }
 
         if (
-            $reflection->is(Container::class)
-            && CaseInsensitiveName::startsWith($methodName, 'createComponent')
+            CaseInsensitiveName::startsWith($methodName, 'createComponent')
+            && $reflection->is(Container::class)
         ) {
             return VirtualUsageData::withNote('Component factory method');
         }
 
         if (
-            $reflection->is(Control::class)
-            && CaseInsensitiveName::startsWith($methodName, 'render')
+            CaseInsensitiveName::startsWith($methodName, 'render')
+            && $reflection->is(Control::class)
         ) {
             return VirtualUsageData::withNote('Render method');
         }
 
         if (
-            $reflection->is(Presenter::class) && CaseInsensitiveName::startsWith($methodName, 'action')
+            CaseInsensitiveName::startsWith($methodName, 'action')
+            && $reflection->is(Presenter::class)
         ) {
             return VirtualUsageData::withNote('Presenter action method');
         }
 
         if (
-            $reflection->is(Presenter::class) && str_starts_with($methodName, 'inject')
+            str_starts_with($methodName, 'inject')
+            && $reflection->is(Presenter::class)
         ) {
             return VirtualUsageData::withNote('Presenter inject method');
         }

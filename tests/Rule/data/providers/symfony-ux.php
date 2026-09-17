@@ -130,3 +130,16 @@ class DynamicTemplateComponent
 
     private function reallyDead(): void {} // error: Unused SymfonyUx\DynamicTemplateComponent::reallyDead
 }
+
+#[AsLiveComponent(template: new \Symfony\UX\TwigComponent\Attribute\FromMethod('getTemplatePath'))]
+class DynamicTemplateLiveComponent
+{
+    public function __construct() {}
+
+    private function getTemplatePath(): string
+    {
+        return 'components/dynamic-live.html.twig';
+    }
+
+    private function reallyDead(): void {} // error: Unused SymfonyUx\DynamicTemplateLiveComponent::reallyDead
+}

@@ -24,7 +24,7 @@ use function array_filter;
 use function is_int;
 use function is_string;
 
-final class EnumUsageProvider implements MemberUsageProvider
+final class EnumUsageProvider implements ActivatableUsageProvider
 {
 
     public function __construct(
@@ -33,15 +33,16 @@ final class EnumUsageProvider implements MemberUsageProvider
     {
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if ($this->enabled === false) {
-            return [];
-        }
-
         if ($node instanceof StaticCall || $node instanceof MethodCall) {
             return $this->getTryFromUsages($node, $scope);
         }

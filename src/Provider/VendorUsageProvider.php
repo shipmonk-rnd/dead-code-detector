@@ -15,7 +15,7 @@ use function strlen;
 use function substr;
 use function ucfirst;
 
-final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
+final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -33,39 +33,28 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider
         $this->vendorDirs = array_keys(ClassLoader::getRegisteredLoaders());
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($method);
     }
 
     protected function shouldMarkConstantAsUsed(ReflectionClassConstant $constant): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($constant);
     }
 
     protected function shouldMarkPropertyAsRead(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 
     protected function shouldMarkPropertyAsWritten(ReflectionProperty $property): ?VirtualUsageData
     {
-        if (!$this->enabled) {
-            return null;
-        }
-
         return $this->shouldMarkMemberAsUsed($property);
     }
 

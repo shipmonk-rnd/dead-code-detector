@@ -16,12 +16,13 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use function count;
 use function explode;
+use function in_array;
 use function is_string;
 use function ltrim;
 use function str_contains;
 use function str_starts_with;
 
-final class PhpUnitUsageProvider implements MemberUsageProvider
+final class PhpUnitUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -41,12 +42,17 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
         $this->lexer = $lexer;
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 
@@ -60,14 +66,17 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
         $className = $classReflection->getName();
 
         foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() !== $className) {
+                continue; // inherited test methods are emitted for their declaring class
+            }
+
             $methodName = $method->getName();
 
-            $externalDataProviderMethods = $this->getExternalDataProvidersFromAttributes($method);
             $annotationDataProviders = $this->getDataProvidersFromAnnotations($method->getDocComment());
-            $localDataProviderMethods = $this->getDataProvidersFromAttributes($method);
+            [$localDataProviderMethods, $externalDataProviderMethods] = $this->getDataProvidersFromAttributes($method);
 
             foreach ($externalDataProviderMethods as [$externalClassName, $externalMethodName]) {
-                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName");
+                $usages[] = $this->createUsage($externalClassName, $externalMethodName, "External data provider method, used by $className::$methodName", possibleDescendant: false);
             }
 
             foreach ($annotationDataProviders as $dataProvider) {
@@ -75,41 +84,48 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
 
                 if (count($parts) === 2) {
                     $providerClassName = ltrim($parts[0], '\\');
-                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName");
+                    $usages[] = $this->createUsage($providerClassName, $parts[1], "External data provider method (annotation), used by $className::$methodName", possibleDescendant: false);
                 } else {
-                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                    $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
                 }
             }
 
             foreach ($localDataProviderMethods as $dataProvider) {
-                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName");
+                $usages[] = $this->createUsage($className, $dataProvider, "Data provider method, used by $methodName", possibleDescendant: true);
             }
 
-            if ($this->isTestCaseMethod($method)) {
-                $usages[] = $this->createUsage($className, $methodName, 'Test method');
+            if ($this->isTestCaseMethod($methodName, $method)) {
+                $usages[] = $this->createUsage($className, $methodName, 'Test method', possibleDescendant: false);
             }
         }
 
         return $usages;
     }
 
-    private function isTestCaseMethod(ReflectionMethod $method): bool
+    private function isTestCaseMethod(
+        string $methodName,
+        ReflectionMethod $method,
+    ): bool
     {
-        return str_starts_with($method->getName(), 'test')
-            || $this->hasAnnotation($method, '@test')
-            || $this->hasAnnotation($method, '@after')
-            || $this->hasAnnotation($method, '@afterClass')
-            || $this->hasAnnotation($method, '@before')
-            || $this->hasAnnotation($method, '@beforeClass')
-            || $this->hasAnnotation($method, '@postCondition')
-            || $this->hasAnnotation($method, '@preCondition')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Test')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\After')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\AfterClass')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\Before')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\BeforeClass')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PostCondition')
-            || $this->hasAttribute($method, 'PHPUnit\Framework\Attributes\PreCondition');
+        return str_starts_with($methodName, 'test')
+            || $this->hasAnyAnnotation($method, [
+                '@test',
+                '@after',
+                '@afterClass',
+                '@before',
+                '@beforeClass',
+                '@postCondition',
+                '@preCondition',
+            ])
+            || $this->hasAnyAttribute($method, [
+                'PHPUnit\Framework\Attributes\Test',
+                'PHPUnit\Framework\Attributes\After',
+                'PHPUnit\Framework\Attributes\AfterClass',
+                'PHPUnit\Framework\Attributes\Before',
+                'PHPUnit\Framework\Attributes\BeforeClass',
+                'PHPUnit\Framework\Attributes\PostCondition',
+                'PHPUnit\Framework\Attributes\PreCondition',
+            ]);
     }
 
     /**
@@ -135,66 +151,85 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
     }
 
     /**
-     * @return list<string>
+     * @return array{list<string>, list<array{string, string}>}
      */
     private function getDataProvidersFromAttributes(ReflectionMethod $method): array
     {
-        $result = [];
+        $externalDataProviderMethods = [];
+        $localDataProviderMethods = [];
 
-        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProvider') as $providerAttributeReflection) {
-            $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
+        foreach ($method->getAttributes() as $providerAttributeReflection) {
+            if ($providerAttributeReflection->getName() === 'PHPUnit\Framework\Attributes\DataProviderExternal') {
+                $className = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['className'] ?? null;
+                $methodName = $providerAttributeReflection->getArguments()[1] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
 
-            if (is_string($methodName)) {
-                $result[] = $methodName;
+                if (is_string($className) && is_string($methodName)) {
+                    $externalDataProviderMethods[] = [$className, $methodName];
+                }
+
+                continue;
+            }
+
+            if ($providerAttributeReflection->getName() === 'PHPUnit\Framework\Attributes\DataProvider') {
+                $methodName = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
+
+                if (is_string($methodName)) {
+                    $localDataProviderMethods[] = $methodName;
+                }
             }
         }
 
-        return $result;
+        return [$localDataProviderMethods, $externalDataProviderMethods];
     }
 
     /**
-     * @return list<array{string, string}>
+     * @param array<string> $attributeClasses
      */
-    private function getExternalDataProvidersFromAttributes(ReflectionMethod $method): array
+    private function hasAnyAttribute(
+        ReflectionMethod $method,
+        array $attributeClasses,
+    ): bool
     {
-        $result = [];
-
-        foreach ($method->getAttributes('PHPUnit\Framework\Attributes\DataProviderExternal') as $providerAttributeReflection) {
-            $className = $providerAttributeReflection->getArguments()[0] ?? $providerAttributeReflection->getArguments()['className'] ?? null;
-            $methodName = $providerAttributeReflection->getArguments()[1] ?? $providerAttributeReflection->getArguments()['methodName'] ?? null;
-
-            if (is_string($className) && is_string($methodName)) {
-                $result[] = [$className, $methodName];
+        foreach ($method->getAttributes() as $attribute) {
+            if (in_array($attribute->getName(), $attributeClasses, true)) {
+                return true;
             }
         }
 
-        return $result;
+        return false;
     }
 
-    private function hasAttribute(
+    /**
+     * @param array<string> $strings
+     */
+    private function hasAnyAnnotation(
         ReflectionMethod $method,
-        string $attributeClass,
+        array $strings,
     ): bool
     {
-        return $method->getAttributes($attributeClass) !== [];
-    }
-
-    private function hasAnnotation(
-        ReflectionMethod $method,
-        string $string,
-    ): bool
-    {
-        if ($method->getDocComment() === false) {
+        $docComment = $method->getDocComment();
+        if ($docComment === false) {
             return false;
         }
 
-        return str_contains($method->getDocComment(), $string);
+        foreach ($strings as $string) {
+            if (str_contains($docComment, $string)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
+    /**
+     * PHPUnit resolves data providers on the concrete test class, so a provider referenced
+     * from an inherited test method may be implemented in a descendant.
+     */
     private function createUsage(
         string $className,
         string $methodName,
         string $reason,
+        bool $possibleDescendant,
     ): ClassMethodUsage
     {
         return new ClassMethodUsage(
@@ -202,7 +237,7 @@ final class PhpUnitUsageProvider implements MemberUsageProvider
             new ClassMethodRef(
                 $className,
                 $methodName,
-                possibleDescendant: false,
+                $possibleDescendant,
             ),
         );
     }

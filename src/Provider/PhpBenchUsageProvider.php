@@ -28,7 +28,7 @@ use function str_ends_with;
 use function str_starts_with;
 use function trim;
 
-final class PhpBenchUsageProvider implements MemberUsageProvider
+final class PhpBenchUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
@@ -48,12 +48,17 @@ final class PhpBenchUsageProvider implements MemberUsageProvider
         $this->lexer = $lexer;
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
     public function getUsages(
         Node $node,
         Scope $scope,
     ): array
     {
-        if (!$this->enabled || !$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+        if (!$node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             return [];
         }
 

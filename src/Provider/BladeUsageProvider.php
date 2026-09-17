@@ -22,7 +22,7 @@ use function strpos;
 use function strtolower;
 use function substr;
 
-final class BladeUsageProvider implements MemberUsageProvider
+final class BladeUsageProvider implements ActivatableUsageProvider
 {
 
     private const VIEW_FACADE_METHODS = [
@@ -58,10 +58,6 @@ final class BladeUsageProvider implements MemberUsageProvider
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof FuncCall) {
@@ -324,6 +320,11 @@ final class BladeUsageProvider implements MemberUsageProvider
         }
 
         return "{$scope->getClassReflection()->getName()}::{$functionName}({$node->getStartLine()})";
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }

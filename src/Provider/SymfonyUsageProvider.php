@@ -67,7 +67,7 @@ use function strlen;
 use function substr;
 use function trim;
 
-final class SymfonyUsageProvider implements MemberUsageProvider
+final class SymfonyUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly ReflectionProvider $reflectionProvider;
@@ -151,10 +151,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         Scope $scope,
     ): array
     {
-        if (!$this->enabled) {
-            return [];
-        }
-
         $usages = [];
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
@@ -289,8 +285,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                     );
                 }
 
-                // ['eventName' => ['methodName', $priority]]
                 foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    // ['eventName' => ['methodName', $priority]]
                     foreach ($subscriberMethodArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                         $usages[] = new ClassMethodUsage(
                             $usageOrigin,
@@ -301,10 +297,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                             ),
                         );
                     }
-                }
 
-                // ['eventName' => [['methodName', $priority], ['methodName', $priority]]]
-                foreach ($eventConfig->getConstantArrays() as $subscriberMethodArray) {
+                    // ['eventName' => [['methodName', $priority], ['methodName', $priority]]]
                     foreach ($subscriberMethodArray->getIterableValueType()->getConstantArrays() as $innerArray) {
                         foreach ($innerArray->getFirstIterableValueType()->getConstantStrings() as $subscriberMethodString) {
                             $usages[] = new ClassMethodUsage(
@@ -338,8 +332,9 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
-            if (isset($this->dicCalls[$className][$method->getName()])) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Called via DIC');
+            $methodName = $method->getName();
+            if (isset($this->dicCalls[$className][$methodName])) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via DIC');
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -349,9 +344,13 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             $note = $this->shouldMarkAsUsed($method);
 
             if ($note !== null) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), $note);
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), $note);
             }
+
+            $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $method, $methodName)];
         }
+
+        $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $nativeReflection, '__invoke')];
 
         foreach ($nativeReflection->getAttributes('Symfony\Component\DependencyInjection\Attribute\Autoconfigure') as $attribute) {
             $arguments = $attribute->getArguments();
@@ -385,89 +384,124 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
-            foreach ($property->getAttributes('Symfony\UX\LiveComponent\Attribute\LiveProp') as $livePropAttribute) {
-                $livePropArguments = $livePropAttribute->getArguments();
+            foreach ($property->getAttributes() as $propertyAttribute) {
+                if ($propertyAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\LiveProp') {
+                    $livePropArguments = $propertyAttribute->getArguments();
 
-                $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
+                    $hydrateWith = $livePropArguments['hydrateWith'] ?? null;
 
-                if (is_string($hydrateWith)) {
-                    $hydrateMethodName = trim($hydrateWith, '()');
+                    if (is_string($hydrateWith)) {
+                        $hydrateMethodName = trim($hydrateWith, '()');
 
-                    if ($classReflection->hasNativeMethod($hydrateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($hydrateMethodName), 'Called via #[LiveProp(hydrateWith)] attribute');
-                    }
-                }
-
-                $dehydrateWith = $livePropArguments['dehydrateWith'] ?? null;
-
-                if (is_string($dehydrateWith)) {
-                    $dehydrateMethodName = trim($dehydrateWith, '()');
-
-                    if ($classReflection->hasNativeMethod($dehydrateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($dehydrateMethodName), 'Called via #[LiveProp(dehydrateWith)] attribute');
-                    }
-                }
-
-                $onUpdated = $livePropArguments['onUpdated'] ?? null;
-
-                if (is_string($onUpdated) && $classReflection->hasNativeMethod($onUpdated)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdated), 'Called via #[LiveProp(onUpdated)] attribute');
-                } elseif (is_array($onUpdated)) {
-                    foreach ($onUpdated as $onUpdatedMethod) {
-                        if (is_string($onUpdatedMethod) && $classReflection->hasNativeMethod($onUpdatedMethod)) {
-                            $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdatedMethod), 'Called via #[LiveProp(onUpdated)] attribute');
+                        if ($classReflection->hasNativeMethod($hydrateMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($hydrateMethodName), 'Called via #[LiveProp(hydrateWith)] attribute');
                         }
                     }
-                }
 
-                $modifier = $livePropArguments['modifier'] ?? null;
+                    $dehydrateWith = $livePropArguments['dehydrateWith'] ?? null;
 
-                if (is_string($modifier) && $classReflection->hasNativeMethod($modifier)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($modifier), 'Called via #[LiveProp(modifier)] attribute');
-                }
+                    if (is_string($dehydrateWith)) {
+                        $dehydrateMethodName = trim($dehydrateWith, '()');
 
-                $fieldName = $livePropArguments['fieldName'] ?? null;
-
-                if (is_string($fieldName) && str_ends_with($fieldName, '()')) {
-                    $fieldMethodName = trim($fieldName, '()');
-
-                    if ($classReflection->hasNativeMethod($fieldMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($fieldMethodName), 'Called via #[LiveProp(fieldName)] attribute');
+                        if ($classReflection->hasNativeMethod($dehydrateMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($dehydrateMethodName), 'Called via #[LiveProp(dehydrateWith)] attribute');
+                        }
                     }
+
+                    $onUpdated = $livePropArguments['onUpdated'] ?? null;
+
+                    if (is_string($onUpdated) && $classReflection->hasNativeMethod($onUpdated)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdated), 'Called via #[LiveProp(onUpdated)] attribute');
+                    } elseif (is_array($onUpdated)) {
+                        foreach ($onUpdated as $onUpdatedMethod) {
+                            if (is_string($onUpdatedMethod) && $classReflection->hasNativeMethod($onUpdatedMethod)) {
+                                $usages[] = $this->createUsage($classReflection->getNativeMethod($onUpdatedMethod), 'Called via #[LiveProp(onUpdated)] attribute');
+                            }
+                        }
+                    }
+
+                    $modifier = $livePropArguments['modifier'] ?? null;
+
+                    if (is_string($modifier) && $classReflection->hasNativeMethod($modifier)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($modifier), 'Called via #[LiveProp(modifier)] attribute');
+                    }
+
+                    $fieldName = $livePropArguments['fieldName'] ?? null;
+
+                    if (is_string($fieldName) && str_ends_with($fieldName, '()')) {
+                        $fieldMethodName = trim($fieldName, '()');
+
+                        if ($classReflection->hasNativeMethod($fieldMethodName)) {
+                            $usages[] = $this->createUsage($classReflection->getNativeMethod($fieldMethodName), 'Called via #[LiveProp(fieldName)] attribute');
+                        }
+                    }
+
+                    continue;
                 }
-            }
 
-            foreach ($property->getAttributes('Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') as $exposeAttribute) {
-                $exposeArguments = $exposeAttribute->getArguments();
-                $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
+                if ($propertyAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\ExposeInTemplate') {
+                    $exposeArguments = $propertyAttribute->getArguments();
+                    $getter = $exposeArguments['getter'] ?? $exposeArguments[1] ?? null;
 
-                if (is_string($getter) && $classReflection->hasNativeMethod($getter)) {
-                    $usages[] = $this->createUsage($classReflection->getNativeMethod($getter), 'Called via #[ExposeInTemplate(getter)] attribute');
+                    if (is_string($getter) && $classReflection->hasNativeMethod($getter)) {
+                        $usages[] = $this->createUsage($classReflection->getNativeMethod($getter), 'Called via #[ExposeInTemplate(getter)] attribute');
+                    }
                 }
             }
         }
 
-        foreach ($nativeReflection->getAttributes('Symfony\UX\LiveComponent\Attribute\AsLiveComponent') as $liveComponentAttribute) {
-            $liveComponentArguments = $liveComponentAttribute->getArguments();
-            $defaultAction = $liveComponentArguments['defaultAction'] ?? null;
+        foreach ($nativeReflection->getAttributes() as $nativeAttribute) {
+            $isLiveComponent = $nativeAttribute->getName() === 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent';
+            $isTwigComponent = $nativeAttribute->getName() === 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent';
 
-            if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
-                $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
+            if (!$isLiveComponent && !$isTwigComponent) {
+                continue;
+            }
+
+            $componentArguments = $nativeAttribute->getArguments();
+
+            if ($isLiveComponent) {
+                $defaultAction = $componentArguments['defaultAction'] ?? null;
+
+                if (is_string($defaultAction) && $classReflection->hasNativeMethod($defaultAction)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($defaultAction), 'Default action method via #[AsLiveComponent(defaultAction)] attribute');
+                }
+            }
+
+            $template = $componentArguments['template'] ?? $componentArguments[1] ?? null;
+
+            if ($template instanceof FromMethod) {
+                $templateMethodName = $template->method;
+
+                if ($classReflection->hasNativeMethod($templateMethodName)) {
+                    $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
+                }
             }
         }
 
-        foreach (['Symfony\UX\TwigComponent\Attribute\AsTwigComponent', 'Symfony\UX\LiveComponent\Attribute\AsLiveComponent'] as $twigComponentAttributeClass) {
-            foreach ($nativeReflection->getAttributes($twigComponentAttributeClass) as $twigComponentAttribute) {
-                $twigComponentArguments = $twigComponentAttribute->getArguments();
-                $template = $twigComponentArguments['template'] ?? $twigComponentArguments[1] ?? null;
+        return $usages;
+    }
 
-                if ($template instanceof FromMethod) {
-                    $templateMethodName = $template->method;
+    /**
+     * Symfony registers one messenger.message_handler tag per #[AsMessageHandler] attribute.
+     * The tag's method defaults to __invoke for class attributes and to the annotated method for method attributes.
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getMessageHandlerUsages(
+        ClassReflection $classReflection,
+        ReflectionClass|ReflectionEnum|ReflectionMethod $classOrMethod,
+        string $defaultMethodName,
+    ): array
+    {
+        $usages = [];
 
-                    if ($classReflection->hasNativeMethod($templateMethodName)) {
-                        $usages[] = $this->createUsage($classReflection->getNativeMethod($templateMethodName), 'Twig component template method via FromMethod');
-                    }
-                }
+        foreach ($classOrMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
+            $arguments = $attribute->getArguments();
+            $methodName = $arguments['method'] ?? $arguments[3] ?? $defaultMethodName;
+
+            if (is_string($methodName) && $classReflection->hasNativeMethod($methodName)) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Message handler method via #[AsMessageHandler] attribute');
             }
         }
 
@@ -512,7 +546,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
 
-        if (!$this->hasAttribute($nativeReflection, 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF)) {
+        if (!$this->hasAttributeInstanceOf($nativeReflection, 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent')) {
             return [];
         }
 
@@ -950,13 +984,14 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 continue;
             }
 
+            $dtoMethodName = $dtoMethod->getName();
             $usages[] = new ClassMethodUsage(
                 $origin,
-                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethod->getName(), possibleDescendant: false),
+                new ClassMethodRef($dtoMethod->getDeclaringClass()->getName(), $dtoMethodName, possibleDescendant: false),
             );
 
-            if ($dtoReflection->hasNativeMethod($dtoMethod->getName())) {
-                foreach ($dtoReflection->getNativeMethod($dtoMethod->getName())->getVariants() as $mutatorVariant) {
+            if ($dtoReflection->hasNativeMethod($dtoMethodName)) {
+                foreach ($dtoReflection->getNativeMethod($dtoMethodName)->getVariants() as $mutatorVariant) {
                     foreach ($mutatorVariant->getParameters() as $mutatorParameter) {
                         $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
                     }
@@ -1006,10 +1041,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         if ($this->isConstructorOfAnEventListenerClass($method)) {
             return 'Constructor of an event listener class (required by DIC to invoke the listener)';
-        }
-
-        if ($this->isMessageHandlerMethodWithAsMessageHandlerAttribute($method)) {
-            return 'Message handler method via #[AsMessageHandler] attribute';
         }
 
         if ($this->isWorkflowEventListenerMethod($method)) {
@@ -1097,7 +1128,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return [];
         }
 
-        return $this->emitPropertyAccessorUsages($node, $scope, $dataClassName);
+        return $this->emitPropertyAccessorUsages($dataClassName);
     }
 
     /**
@@ -1229,8 +1260,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
      * @return list<ClassMethodUsage|ClassPropertyUsage>
      */
     private function emitPropertyAccessorUsages(
-        Node $node,
-        Scope $scope,
         string $dataClassName,
     ): array
     {
@@ -1543,49 +1572,6 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         return false;
     }
 
-    private function isMessageHandlerMethodWithAsMessageHandlerAttribute(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-        $methodName = $method->getName();
-
-        // Check if this method has the attribute directly (fallback to method name itself if no target specified)
-        foreach ($method->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $targetMethod = $arguments['method'] ?? $arguments[3] ?? $methodName;
-
-            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
-                return true;
-            }
-        }
-
-        // Check class-level attributes (fallback to __invoke if no target specified)
-        foreach ($class->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-            $arguments = $attribute->getArguments();
-            $targetMethod = $arguments['method'] ?? $arguments[3] ?? '__invoke';
-
-            if (is_string($targetMethod) && CaseInsensitiveName::equals($targetMethod, $methodName)) {
-                return true;
-            }
-        }
-
-        // Check if any other method points to this method (only if explicitly specified)
-        foreach ($class->getMethods() as $otherMethod) {
-            if (CaseInsensitiveName::equals($otherMethod->getName(), $methodName)) {
-                continue;
-            }
-
-            foreach ($otherMethod->getAttributes('Symfony\Component\Messenger\Attribute\AsMessageHandler') as $attribute) {
-                $arguments = $attribute->getArguments();
-                $targetMethod = $arguments['method'] ?? $arguments[3] ?? null;
-                if (is_string($targetMethod) && CaseInsensitiveName::equals($methodName, $targetMethod)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     private function isWorkflowEventListenerMethod(ReflectionMethod $method): bool
     {
         return $this->hasAttribute($method, 'Symfony\Component\Workflow\Attribute\AsAnnounceListener')
@@ -1611,8 +1597,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
     {
-        return $this->hasAttribute($method, 'Symfony\Component\Routing\Attribute\Route', ReflectionAttribute::IS_INSTANCEOF)
-            || $this->hasAttribute($method, 'Symfony\Component\Routing\Annotation\Route', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method, 'Symfony\Component\Routing\Attribute\Route')
+            || $this->hasAttributeInstanceOf($method, 'Symfony\Component\Routing\Annotation\Route');
     }
 
     private function isMethodWithInteractAttribute(ReflectionMethod $method): bool
@@ -1632,6 +1618,8 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         $declaringClassName = $method->getDeclaringClass()->getName();
 
         if ($this->reflectionProvider->hasClass($declaringClassName)) {
+            $methodName = $method->getName();
+
             foreach ($this->reflectionProvider->getClass($declaringClassName)->getAttributes() as $attribute) {
                 if ($attribute->getName() !== 'Symfony\Component\Validator\Constraints\Callback') {
                     continue;
@@ -1645,7 +1633,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
                 }
 
                 foreach ($callbackType->getConstantStrings() as $constantString) {
-                    if (CaseInsensitiveName::equals($constantString->getValue(), $method->getName())) {
+                    if (CaseInsensitiveName::equals($constantString->getValue(), $methodName)) {
                         return true;
                     }
                 }
@@ -1706,7 +1694,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
             return false;
         }
 
-        return $this->hasAttribute($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method->getDeclaringClass(), 'Symfony\UX\TwigComponent\Attribute\AsTwigComponent');
     }
 
     private function isTwigComponentHookMethod(ReflectionMethod $method): bool
@@ -1722,7 +1710,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     private function isLiveComponentActionMethod(ReflectionMethod $method): bool
     {
-        return $this->hasAttribute($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction', ReflectionAttribute::IS_INSTANCEOF);
+        return $this->hasAttributeInstanceOf($method, 'Symfony\UX\LiveComponent\Attribute\LiveAction');
     }
 
     private function isLiveComponentLifecycleMethod(ReflectionMethod $method): bool
@@ -1754,12 +1742,21 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
     /**
      * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
-     * @param ReflectionAttribute::IS_*|0 $flags
      */
     private function hasAttribute(
         Reflector $classOrMethod,
         string $attributeClass,
-        int $flags = 0,
+    ): bool
+    {
+        return $classOrMethod->getAttributes($attributeClass) !== [];
+    }
+
+    /**
+     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
+     */
+    private function hasAttributeInstanceOf(
+        Reflector $classOrMethod,
+        string $attributeClass,
     ): bool
     {
         if ($classOrMethod->getAttributes($attributeClass) !== []) {
@@ -1768,7 +1765,7 @@ final class SymfonyUsageProvider implements MemberUsageProvider
 
         try {
             /** @throws IdentifierNotFound */
-            return $classOrMethod->getAttributes($attributeClass, $flags) !== [];
+            return $classOrMethod->getAttributes($attributeClass, ReflectionAttribute::IS_INSTANCEOF) !== [];
         } catch (IdentifierNotFound $e) {
             return false; // prevent https://github.com/phpstan/phpstan/issues/9618
         }
@@ -1999,6 +1996,11 @@ final class SymfonyUsageProvider implements MemberUsageProvider
         } catch (ParameterNotFoundException $e) {
             return null;
         }
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
 }
