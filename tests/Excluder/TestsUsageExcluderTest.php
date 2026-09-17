@@ -40,4 +40,53 @@ final class TestsUsageExcluderTest extends PHPStanTestCase
         self::assertFalse($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/boundary/tests-helpers/Bar.php')));
     }
 
+    public function testExplicitDevPathGlobPatternIsExpanded(): void
+    {
+        $excluder = new TestsUsageExcluder(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            new ComposerIntrospector(),
+            true,
+            [__DIR__ . '/data/glob/*/tests'],
+        );
+
+        $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
+        $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');
+
+        self::assertEqualsCanonicalizing([
+            realpath(__DIR__ . '/data/glob/feature-a/tests'),
+            realpath(__DIR__ . '/data/glob/feature-b/tests'),
+        ], $devPathsPropertyReflection->getValue($excluder));
+    }
+
+    public function testExplicitDevPathGlobPatternExcludesMemberUsedOnlyInMatchedPaths(): void
+    {
+        $excluder = new TestsUsageExcluder(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            new ComposerIntrospector(),
+            true,
+            [__DIR__ . '/data/glob/*/tests'],
+        );
+
+        $isWithinDevPaths = (new ReflectionClass(TestsUsageExcluder::class))->getMethod('isWithinDevPaths');
+
+        self::assertTrue($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/glob/feature-a/tests/Foo.php')));
+        self::assertTrue($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/glob/feature-b/tests/Bar.php')));
+        self::assertFalse($isWithinDevPaths->invoke($excluder, realpath(__DIR__ . '/data/glob/feature-a/src/Baz.php')));
+    }
+
+    public function testExplicitDevPathGlobPatternWithNoMatchesDoesNotThrow(): void
+    {
+        $excluder = new TestsUsageExcluder(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            new ComposerIntrospector(),
+            true,
+            [__DIR__ . '/data/glob/*/nonexistent'],
+        );
+
+        $excluderReflection = new ReflectionClass(TestsUsageExcluder::class);
+        $devPathsPropertyReflection = $excluderReflection->getProperty('devPaths');
+
+        self::assertSame([], $devPathsPropertyReflection->getValue($excluder));
+    }
+
 }
