@@ -356,6 +356,21 @@ class SendEmailJob implements ShouldQueue
         return '';
     }
 
+    public function uniqueFor(): int
+    {
+        return 0;
+    }
+
+    public function messageGroup(): string
+    {
+        return '';
+    }
+
+    public function deduplicationId(string $payload, string $queue): string
+    {
+        return '';
+    }
+
     private function notAJobMethod(): void // error: Unused Laravel\SendEmailJob::notAJobMethod
     {
     }
@@ -650,8 +665,76 @@ class OrderShipped implements ShouldBroadcast
         return true;
     }
 
+    public function broadcastQueue(): string
+    {
+        return '';
+    }
+
+    public function shouldBroadcastNow(): bool
+    {
+        return false;
+    }
+
+    /** @return list<object> */
+    public function middleware(): array
+    {
+        return [];
+    }
+
+    public function failed(): void
+    {
+    }
+
+    public function uniqueId(): string
+    {
+        return '';
+    }
+
+    public function uniqueFor(): int
+    {
+        return 0;
+    }
+
+    public function uniqueVia(): object
+    {
+        return new \stdClass();
+    }
+
     private function helperMethod(): void // error: Unused Laravel\OrderShipped::helperMethod
     {
+    }
+}
+
+// Convention methods are routinely extracted into a trait, which can never satisfy the ShouldBroadcast
+// gate itself. No widening is needed: the usage is emitted for the using class and DeadCodeRule maps it
+// back to the trait declaration.
+
+trait BroadcastsTasks
+{
+    public function broadcastQueue(): string
+    {
+        return 'notifications';
+    }
+
+    /** @return array<string, mixed> */
+    public function broadcastWith(): array
+    {
+        return [];
+    }
+
+    private function traitHelperMethod(): void // error: Unused Laravel\BroadcastsTasks::traitHelperMethod
+    {
+    }
+}
+
+class TaskFinished implements ShouldBroadcast
+{
+    use BroadcastsTasks;
+
+    /** @return list<string> */
+    public function broadcastOn(): array
+    {
+        return [];
     }
 }
 
