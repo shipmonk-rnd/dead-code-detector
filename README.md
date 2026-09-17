@@ -181,7 +181,7 @@ parameters:
         usageExcluders:
             tests:
                 enabled: true
-                devPaths: # optional, autodetects from autoload-dev sections of composer.json when omitted; entries may contain * globs (like Composer classmap paths); a glob that matches nothing is an error
+                devPaths: # optional, autodetects from autoload-dev sections of composer.json when omitted; entries may contain * globs (like Composer classmap paths)
                     - %currentWorkingDirectory%/tests
 ```
 
