@@ -110,3 +110,50 @@ class NotBenchmark
     }
 
 }
+
+abstract class AbstractOverridableBench
+{
+
+    #[ParamProviders('provideOverridable')]
+    #[BeforeMethods('beforeOverridable')]
+    public function benchInherited(array $params): void
+    {
+    }
+
+    public function provideOverridable(): array
+    {
+        return [];
+    }
+
+    public function beforeOverridable(): void
+    {
+    }
+
+}
+
+final class OverridingBench extends AbstractOverridableBench
+{
+
+    public function provideOverridable(): array
+    {
+        return [['child']];
+    }
+
+    public function beforeOverridable(): void
+    {
+    }
+
+}
+
+abstract class BenchmarkBase
+{
+
+    public function benchDeclaredInBase(): void
+    {
+    }
+
+}
+
+final class ChildOfBaseBench extends BenchmarkBase
+{
+}
