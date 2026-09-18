@@ -111,6 +111,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
     private bool $providersEnabled = true;
 
+    private bool $twigSkipVoidMethods = false;
+
     private bool $detectDeadMethods = true;
 
     private bool $detectDeadConstants = true;
@@ -572,6 +574,16 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         ]);
     }
 
+    public function testTwigSkipVoidMethods(): void
+    {
+        $this->twigSkipVoidMethods = true;
+        $this->analyse([__DIR__ . '/data/providers/twig-void-methods.php'], [
+            ['Unused TwigVoidMethods\ViewModel::setName', 16],
+            ['Unused TwigVoidMethods\NestedViewModel::reset', 25],
+            ['Unused TwigVoidMethods\NestedViewModel::clear', 30],
+        ]);
+    }
+
     public function testConstantDetectionCanBeDisabled(): void
     {
         $this->detectDeadConstants = false;
@@ -1022,6 +1034,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-symfony-form' => [__DIR__ . '/data/providers/symfony-form.php', self::requiresPackage('symfony/form', '>= 5.4')];
         yield 'provider-twig' => [__DIR__ . '/data/providers/twig.php'];
         yield 'provider-twig-template' => [__DIR__ . '/data/providers/twig-template.php'];
+        yield 'provider-twig-void-methods' => [__DIR__ . '/data/providers/twig-void-methods.php'];
         yield 'provider-phpunit' => [__DIR__ . '/data/providers/phpunit.php'];
         yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php'];
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
@@ -1218,6 +1231,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             self::createReflectionProvider(),
             [
                 __DIR__ . '/data/providers/twig-template.php',
+                __DIR__ . '/data/providers/twig-void-methods.php',
                 __DIR__ . '/data/providers/blade.php',
                 __DIR__ . '/data/providers/symfony-ux.php',
             ],
@@ -1300,6 +1314,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 self::createReflectionProvider(),
                 $templateViewDataTraverser,
                 $this->providersEnabled,
+                $this->twigSkipVoidMethods,
             ),
             new ApiPhpDocUsageProvider(
                 self::createReflectionProvider(),

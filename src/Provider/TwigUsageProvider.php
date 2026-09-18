@@ -40,15 +40,19 @@ final class TwigUsageProvider implements ActivatableUsageProvider
 
     private readonly bool $enabled;
 
+    private readonly bool $skipVoidMethods;
+
     public function __construct(
         ReflectionProvider $reflectionProvider,
         TemplateViewDataTraverser $traverser,
         ?bool $enabled,
+        bool $skipVoidMethods,
     )
     {
         $this->reflectionProvider = $reflectionProvider;
         $this->traverser = $traverser;
         $this->enabled = $enabled ?? $this->isTwigInstalled();
+        $this->skipVoidMethods = $skipVoidMethods;
     }
 
     public function isEnabled(): bool
@@ -289,7 +293,7 @@ final class TwigUsageProvider implements ActivatableUsageProvider
         $referencedClassNames = $scope->getType($node->expr)->getReferencedClasses();
         $rootContext = $this->getRootContext($node, $scope);
 
-        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this);
+        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this, skipVoidMethods: $this->skipVoidMethods);
     }
 
     /**
@@ -321,7 +325,7 @@ final class TwigUsageProvider implements ActivatableUsageProvider
         $referencedClassNames = $scope->getType($parametersArg->value)->getReferencedClasses();
         $rootContext = $this->getRootContext($node, $scope);
 
-        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this);
+        return $this->traverser->getUsages($referencedClassNames, $rootContext, $this, skipVoidMethods: $this->skipVoidMethods);
     }
 
     private function getParametersArgIndex(

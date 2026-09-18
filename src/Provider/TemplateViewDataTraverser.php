@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
@@ -49,6 +50,9 @@ final class TemplateViewDataTraverser
      * When $deduplicateAcrossViews is true, each class is emitted at most once across the whole analysis run
      * (correct for dead-code detection but loses per-call-site diagnostic precision).
      *
+     * When $skipVoidMethods is true, methods with void return type (native or phpdoc) are not marked as used
+     * (templates render values, a void method has nothing to render).
+     *
      * @param list<string> $referencedClassNames
      * @param non-empty-string $rootContext
      * @return list<ClassMemberUsage>
@@ -58,6 +62,7 @@ final class TemplateViewDataTraverser
         string $rootContext,
         MemberUsageProvider $provider,
         bool $deduplicateAcrossViews = false,
+        bool $skipVoidMethods = false,
     ): array
     {
         $usages = [];
@@ -66,7 +71,7 @@ final class TemplateViewDataTraverser
         foreach ($referencedClassNames as $className) {
             $usages = [
                 ...$usages,
-                ...$this->traverseClassNameRecursively($className, $visited, $rootContext, $provider, $deduplicateAcrossViews),
+                ...$this->traverseClassNameRecursively($className, $visited, $rootContext, $provider, $deduplicateAcrossViews, $skipVoidMethods),
             ];
         }
 
@@ -84,6 +89,7 @@ final class TemplateViewDataTraverser
         string $context,
         MemberUsageProvider $provider,
         bool $deduplicateAcrossViews,
+        bool $skipVoidMethods,
     ): array
     {
         if (isset($visited[$className])) {
@@ -110,7 +116,7 @@ final class TemplateViewDataTraverser
             $this->seenClasses[$className] = true;
         }
 
-        return $this->getPublicMembersUsages($classReflection, $visited, $context, $provider, $deduplicateAcrossViews);
+        return $this->getPublicMembersUsages($classReflection, $visited, $context, $provider, $deduplicateAcrossViews, $skipVoidMethods);
     }
 
     /**
@@ -124,6 +130,7 @@ final class TemplateViewDataTraverser
         string $context,
         MemberUsageProvider $provider,
         bool $deduplicateAcrossViews,
+        bool $skipVoidMethods,
     ): array
     {
         $usages = [];
@@ -149,6 +156,12 @@ final class TemplateViewDataTraverser
                 continue;
             }
 
+            $extendedMethodReflection = $classReflection->getNativeMethod($method->getName());
+
+            if ($skipVoidMethods && $this->hasVoidReturnType($extendedMethodReflection)) {
+                continue;
+            }
+
             // Mark method as used
             $usages[] = new ClassMethodUsage(
                 UsageOrigin::createVirtual($provider, VirtualUsageData::withNote($context)),
@@ -156,7 +169,6 @@ final class TemplateViewDataTraverser
             );
 
             // Traverse method return type
-            $extendedMethodReflection = $classReflection->getNativeMethod($method->getName());
             $newContext = "{$context} -> {$shortClassName}::{$method->getName()}";
 
             foreach ($extendedMethodReflection->getVariants() as $variant) {
@@ -169,6 +181,7 @@ final class TemplateViewDataTraverser
                             $newContext,
                             $provider,
                             $deduplicateAcrossViews,
+                            $skipVoidMethods,
                         ),
                     ];
                 }
@@ -206,12 +219,24 @@ final class TemplateViewDataTraverser
                         $newContext,
                         $provider,
                         $deduplicateAcrossViews,
+                        $skipVoidMethods,
                     ),
                 ];
             }
         }
 
         return $usages;
+    }
+
+    private function hasVoidReturnType(ExtendedMethodReflection $method): bool
+    {
+        foreach ($method->getVariants() as $variant) {
+            if (!$variant->getReturnType()->isVoid()->yes()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function shouldSkipClass(ClassReflection $classReflection): bool

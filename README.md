@@ -128,6 +128,7 @@ parameters:
   - Passed to `$controller->render('my.twig', ['param' => $viewModel])`,
   - Returned from `#[Template]` controller methods
   - Rendered via `Twig\Environment::render()` and similar
+  - Set `shipmonkDeadCode.usageProviders.twig.skipVoidMethods: true` to stop marking `void` methods (e.g. setters) as used; templates rarely call those, grep your templates for `{% do %}` and void method names before enabling
 - `#[AsTwigFilter]`, `#[AsTwigFunction]`, `#[AsTwigTest]`
 - `new TwigFilter(..., callback)`, `new TwigFunction(..., callback)`, `new TwigTest(..., callback)`
 
