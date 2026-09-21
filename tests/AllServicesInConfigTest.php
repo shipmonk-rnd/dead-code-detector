@@ -11,6 +11,7 @@ use ReflectionClass;
 use ShipMonk\PHPStan\DeadCode\Cache\BundleFile;
 use ShipMonk\PHPStan\DeadCode\Cache\BundleIndex;
 use ShipMonk\PHPStan\DeadCode\Cache\BundlePosition;
+use ShipMonk\PHPStan\DeadCode\Cache\CorruptUsageCacheException;
 use ShipMonk\PHPStan\DeadCode\Cache\LooseFileStore;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
@@ -58,6 +59,7 @@ final class AllServicesInConfigTest extends PHPStanTestCase
             BundleFile::class,
             BundleIndex::class,
             BundlePosition::class,
+            CorruptUsageCacheException::class,
             LooseFileStore::class,
             VirtualUsageData::class,
             UsageOrigin::class,

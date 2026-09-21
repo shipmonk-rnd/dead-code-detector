@@ -4,6 +4,7 @@ namespace ShipMonk\PHPStan\DeadCode\Cache;
 
 use LogicException;
 use function fclose;
+use function file_exists;
 use function filesize;
 use function fopen;
 use function fread;
@@ -45,6 +46,8 @@ final class BundleFile
 
     /**
      * Reads the generation from the file header; this is what ties the file to its index.
+     *
+     * @throws CorruptUsageCacheException
      */
     public function getGeneration(): string
     {
@@ -59,6 +62,9 @@ final class BundleFile
         return substr($header, 4);
     }
 
+    /**
+     * @throws CorruptUsageCacheException
+     */
     public function read(BundlePosition $position): string
     {
         $handle = $this->readHandle();
@@ -105,6 +111,8 @@ final class BundleFile
      * Appends the records after the existing ones and returns the extended index.
      *
      * @param iterable<string, string> $records hash => content
+     *
+     * @throws CorruptUsageCacheException
      */
     public function append(
         iterable $records,
@@ -190,11 +198,17 @@ final class BundleFile
 
     /**
      * @return resource
+     *
+     * @throws CorruptUsageCacheException
      */
     private function readHandle()
     {
         if ($this->readHandle !== null) {
             return $this->readHandle;
+        }
+
+        if (!file_exists($this->path)) {
+            throw $this->corrupt('data file is missing');
         }
 
         $handle = fopen($this->path, 'rb');
@@ -208,9 +222,9 @@ final class BundleFile
         return $handle;
     }
 
-    private function corrupt(string $reason): LogicException
+    private function corrupt(string $reason): CorruptUsageCacheException
     {
-        return new LogicException("DCD usage cache bundle '{$this->path}' is corrupt ({$reason}). Clear the PHPStan result cache and re-run the analysis.");
+        return new CorruptUsageCacheException("DCD usage cache bundle '{$this->path}' is corrupt ({$reason}).");
     }
 
 }

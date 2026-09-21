@@ -63,7 +63,11 @@ final class BundleIndex
     }
 
     /**
-     * A missing index is the normal state before the first gc(); anything unreadable is not.
+     * A missing index is the normal state before the first gc(). A foreign magic means another
+     * version of this extension wrote the file, so it is ignored and gc() rebuilds the bundle
+     * from the loose files. Only a file with our magic and a broken body is corrupt.
+     *
+     * @throws CorruptUsageCacheException
      */
     public static function load(string $path): self
     {
@@ -78,7 +82,7 @@ final class BundleIndex
         }
 
         if (substr($raw, 0, 4) !== self::MAGIC) {
-            throw self::corrupt($path, 'unexpected header');
+            return self::empty();
         }
 
         $body = strlen($raw) - self::HEADER_SIZE;
@@ -161,6 +165,9 @@ final class BundleIndex
         return isset($this->positions[$hash]);
     }
 
+    /**
+     * @throws CorruptUsageCacheException
+     */
     public function get(string $hash): ?BundlePosition
     {
         $position = $this->positions[$hash] ?? null;
@@ -193,9 +200,9 @@ final class BundleIndex
     private static function corrupt(
         string $path,
         string $reason,
-    ): LogicException
+    ): CorruptUsageCacheException
     {
-        return new LogicException("DCD usage cache index '{$path}' is corrupt ({$reason}). Clear the PHPStan result cache and re-run the analysis.");
+        return new CorruptUsageCacheException("DCD usage cache index '{$path}' is corrupt ({$reason}).");
     }
 
 }

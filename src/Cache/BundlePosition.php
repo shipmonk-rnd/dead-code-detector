@@ -2,8 +2,6 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
-use LogicException;
-
 /**
  * Where one record lives inside bundle.dat.
  *
@@ -27,12 +25,15 @@ final class BundlePosition
     {
     }
 
+    /**
+     * @throws CorruptUsageCacheException
+     */
     public static function fromInt(int $packed): self
     {
         $length = $packed & self::MAX_LENGTH;
 
         if ($length === 0) {
-            throw new LogicException('DCD usage cache index holds a zero-length record. Clear the PHPStan result cache and re-run the analysis.');
+            throw new CorruptUsageCacheException('DCD usage cache index holds a zero-length record.');
         }
 
         return new self($packed >> self::LENGTH_BITS, $length);

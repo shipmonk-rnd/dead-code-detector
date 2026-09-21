@@ -5,10 +5,13 @@ namespace ShipMonk\PHPStan\DeadCode\Cache;
 use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
+use function date;
 use function explode;
+use function file_exists;
 use function implode;
 use function is_dir;
 use function md5;
+use function rename;
 
 /**
  * Workers pack() usages into loose files. The finalizer unpack()s them, preferring the
@@ -20,6 +23,8 @@ final class UsageCacheStorage
     private const BUNDLE_DATA_FILE = 'bundle.dat';
 
     private const BUNDLE_INDEX_FILE = 'bundle.idx';
+
+    private const ISSUES_URL = 'https://github.com/shipmonk-rnd/dead-code-detector/issues';
 
     /**
      * Rewriting the whole bundle only pays off once enough of it became garbage.
@@ -94,10 +99,14 @@ final class UsageCacheStorage
 
         $this->readHashes[$data] = true;
 
-        $position = $this->index()->get($data);
-        $content = $position === null
-            ? $this->looseFiles->read($data)
-            : $this->bundle->read($position);
+        try {
+            $position = $this->index()->get($data);
+            $content = $position === null
+                ? $this->looseFiles->read($data)
+                : $this->bundle->read($position);
+        } catch (CorruptUsageCacheException $e) {
+            throw $this->quarantine($e);
+        }
 
         if ($content === null) {
             throw new LogicException(
@@ -122,6 +131,18 @@ final class UsageCacheStorage
             return;
         }
 
+        try {
+            $this->foldIntoBundle();
+        } catch (CorruptUsageCacheException $e) {
+            throw $this->quarantine($e);
+        }
+    }
+
+    /**
+     * @throws CorruptUsageCacheException
+     */
+    private function foldIntoBundle(): void
+    {
         $index = $this->index();
         $unbundled = [];
 
@@ -159,6 +180,9 @@ final class UsageCacheStorage
         $this->index = null;
     }
 
+    /**
+     * @throws CorruptUsageCacheException
+     */
     private function index(): BundleIndex
     {
         if ($this->index !== null) {
@@ -168,13 +192,47 @@ final class UsageCacheStorage
         $index = BundleIndex::load($this->cacheDir . '/' . self::BUNDLE_INDEX_FILE);
 
         if (!$index->isEmpty() && $index->getGeneration() !== $this->bundle->getGeneration()) {
-            throw new LogicException(
-                "DCD usage cache index in '{$this->cacheDir}' belongs to a different bundle generation. "
-                . 'Please clear the PHPStan result cache and re-run the analysis.',
-            );
+            throw new CorruptUsageCacheException("DCD usage cache index in '{$this->cacheDir}' belongs to a different bundle generation.");
         }
 
         return $this->index = $index;
+    }
+
+    /**
+     * The files are kept under a new name so that they can be attached to a bug report;
+     * without them the corruption cannot be reproduced upstream.
+     */
+    private function quarantine(CorruptUsageCacheException $e): LogicException
+    {
+        $this->bundle->close();
+        $this->index = null;
+
+        $suffix = '.corrupt-' . date('Ymd-His');
+        $kept = [];
+
+        foreach ([self::BUNDLE_DATA_FILE, self::BUNDLE_INDEX_FILE] as $file) {
+            $path = $this->cacheDir . '/' . $file;
+
+            if (!file_exists($path)) {
+                continue;
+            }
+
+            if (!rename($path, $path . $suffix)) {
+                throw new LogicException("Failed to move corrupt DCD usage cache file '{$path}' aside.", 0, $e);
+            }
+
+            $kept[] = $path . $suffix;
+        }
+
+        $report = $kept === []
+            ? ''
+            : ' The files were moved to ' . implode(' and ', $kept) . ', please attach them to a bug report at ' . self::ISSUES_URL . '.';
+
+        return new LogicException(
+            $e->getMessage() . $report . ' Clear the PHPStan result cache and re-run the analysis.',
+            0,
+            $e,
+        );
     }
 
     /**
@@ -182,6 +240,8 @@ final class UsageCacheStorage
      *
      * @param array<string, true> $unbundled hashes that exist only as loose files
      * @return iterable<string, string> hash => content
+     *
+     * @throws CorruptUsageCacheException
      */
     private function survivingRecords(
         BundleIndex $index,
