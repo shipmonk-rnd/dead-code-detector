@@ -89,7 +89,7 @@ final class BundleIndex
         $entrySize = self::HASH_SIZE + self::POSITION_SIZE;
 
         if ($body < 0 || $body % $entrySize !== 0) {
-            throw self::corrupt($path, 'truncated');
+            throw CorruptUsageCacheException::index($path, 'truncated');
         }
 
         $generation = substr($raw, 4, self::GENERATION_SIZE);
@@ -103,7 +103,7 @@ final class BundleIndex
         $packed = unpack('J*', substr($raw, self::HEADER_SIZE + $entries * self::HASH_SIZE));
 
         if ($packed === false) {
-            throw self::corrupt($path, 'unreadable positions');
+            throw CorruptUsageCacheException::index($path, 'unreadable positions');
         }
 
         $positions = [];
@@ -113,7 +113,7 @@ final class BundleIndex
             $position = $packed[$i++] ?? null;
 
             if (!is_int($position)) {
-                throw self::corrupt($path, 'position count does not match hash count');
+                throw CorruptUsageCacheException::index($path, 'position count does not match hash count');
             }
 
             $positions[$hash] = $position;
@@ -195,14 +195,6 @@ final class BundleIndex
         }
 
         return $garbage / count($this->positions);
-    }
-
-    private static function corrupt(
-        string $path,
-        string $reason,
-    ): CorruptUsageCacheException
-    {
-        return new CorruptUsageCacheException("DCD usage cache index '{$path}' is corrupt ({$reason}).");
     }
 
 }

@@ -11,4 +11,20 @@ use LogicException;
 final class CorruptUsageCacheException extends LogicException
 {
 
+    public static function index(
+        string $path,
+        string $reason,
+    ): self
+    {
+        return new self("DCD usage cache index '{$path}' is corrupt ({$reason}).");
+    }
+
+    public static function bundle(
+        string $path,
+        string $reason,
+    ): self
+    {
+        return new self("DCD usage cache bundle '{$path}' is corrupt ({$reason}).");
+    }
+
 }

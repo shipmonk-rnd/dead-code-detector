@@ -56,7 +56,7 @@ final class BundleFile
         $header = fread($handle, self::HEADER_SIZE);
 
         if ($header === false || strlen($header) !== self::HEADER_SIZE || substr($header, 0, 4) !== self::MAGIC) {
-            throw $this->corrupt('unexpected header');
+            throw CorruptUsageCacheException::bundle($this->path, 'unexpected header');
         }
 
         return substr($header, 4);
@@ -72,7 +72,7 @@ final class BundleFile
         $content = fread($handle, $position->length);
 
         if ($content === false || strlen($content) !== $position->length) {
-            throw $this->corrupt("record at offset {$position->offset} is shorter than the index claims");
+            throw CorruptUsageCacheException::bundle($this->path, "record at offset {$position->offset} is shorter than the index claims");
         }
 
         return $content;
@@ -122,7 +122,7 @@ final class BundleFile
         $generation = $existing->getGeneration();
 
         if ($generation === null || $generation !== $this->getGeneration()) {
-            throw $this->corrupt('index belongs to a different bundle generation');
+            throw CorruptUsageCacheException::bundle($this->path, 'index belongs to a different bundle generation');
         }
 
         $offset = filesize($this->path);
@@ -208,7 +208,7 @@ final class BundleFile
         }
 
         if (!file_exists($this->path)) {
-            throw $this->corrupt('data file is missing');
+            throw CorruptUsageCacheException::bundle($this->path, 'data file is missing');
         }
 
         $handle = fopen($this->path, 'rb');
@@ -220,11 +220,6 @@ final class BundleFile
         $this->readHandle = $handle;
 
         return $handle;
-    }
-
-    private function corrupt(string $reason): CorruptUsageCacheException
-    {
-        return new CorruptUsageCacheException("DCD usage cache bundle '{$this->path}' is corrupt ({$reason}).");
     }
 
 }
