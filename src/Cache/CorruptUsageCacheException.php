@@ -5,8 +5,8 @@ namespace ShipMonk\PHPStan\DeadCode\Cache;
 use LogicException;
 
 /**
- * On-disk state that normal operation cannot produce. UsageCacheStorage moves the
- * offending files aside before it propagates the failure.
+ * On-disk state that normal operation cannot produce. UsageCacheStorage discards the
+ * bundle before it propagates the failure.
  */
 final class CorruptUsageCacheException extends LogicException
 {

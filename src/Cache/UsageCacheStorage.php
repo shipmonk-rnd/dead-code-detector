@@ -5,13 +5,12 @@ namespace ShipMonk\PHPStan\DeadCode\Cache;
 use LogicException;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
-use function date;
 use function explode;
 use function file_exists;
 use function implode;
 use function is_dir;
 use function md5;
-use function rename;
+use function unlink;
 
 /**
  * Workers pack() usages into loose files. The finalizer unpack()s them, preferring the
@@ -23,8 +22,6 @@ final class UsageCacheStorage
     private const BUNDLE_DATA_FILE = 'bundle.dat';
 
     private const BUNDLE_INDEX_FILE = 'bundle.idx';
-
-    private const ISSUES_URL = 'https://github.com/shipmonk-rnd/dead-code-detector/issues';
 
     /**
      * Rewriting the whole bundle only pays off once enough of it became garbage.
@@ -105,7 +102,7 @@ final class UsageCacheStorage
                 ? $this->looseFiles->read($data)
                 : $this->bundle->read($position);
         } catch (CorruptUsageCacheException $e) {
-            throw $this->quarantine($e);
+            throw $this->discard($e);
         }
 
         if ($content === null) {
@@ -134,7 +131,7 @@ final class UsageCacheStorage
         try {
             $this->foldIntoBundle();
         } catch (CorruptUsageCacheException $e) {
-            throw $this->quarantine($e);
+            throw $this->discard($e);
         }
     }
 
@@ -199,37 +196,24 @@ final class UsageCacheStorage
     }
 
     /**
-     * The files are kept under a new name so that they can be attached to a bug report;
-     * without them the corruption cannot be reproduced upstream.
+     * The next run then starts without a bundle and reads the loose files that a result
+     * cache clear makes the collectors write again.
      */
-    private function quarantine(CorruptUsageCacheException $e): LogicException
+    private function discard(CorruptUsageCacheException $e): LogicException
     {
         $this->bundle->close();
         $this->index = null;
 
-        $suffix = '.corrupt-' . date('Ymd-His');
-        $kept = [];
-
         foreach ([self::BUNDLE_DATA_FILE, self::BUNDLE_INDEX_FILE] as $file) {
             $path = $this->cacheDir . '/' . $file;
 
-            if (!file_exists($path)) {
-                continue;
+            if (file_exists($path) && !unlink($path)) {
+                throw new LogicException("Failed to delete corrupt DCD usage cache file '{$path}'.", 0, $e);
             }
-
-            if (!rename($path, $path . $suffix)) {
-                throw new LogicException("Failed to move corrupt DCD usage cache file '{$path}' aside.", 0, $e);
-            }
-
-            $kept[] = $path . $suffix;
         }
 
-        $report = $kept === []
-            ? ''
-            : ' The files were moved to ' . implode(' and ', $kept) . ', please attach them to a bug report at ' . self::ISSUES_URL . '.';
-
         return new LogicException(
-            $e->getMessage() . $report . ' Clear the PHPStan result cache and re-run the analysis.',
+            $e->getMessage() . ' The bundle was discarded. Clear the PHPStan result cache and re-run the analysis.',
             0,
             $e,
         );
