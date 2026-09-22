@@ -55,6 +55,13 @@ class CreateUserCommand extends Command {
     }
 }
 
+class UserCommands {
+
+    #[AsCommand(name: 'app:update-user')]
+    public function update() {
+    }
+}
+
 class LegacyNamedCommand extends Command { // no #[AsCommand], name passed to parent constructor
 
     public function __construct() {
