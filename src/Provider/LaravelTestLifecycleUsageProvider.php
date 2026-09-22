@@ -21,8 +21,6 @@ use function substr;
 final class LaravelTestLifecycleUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
 {
 
-    private const TEST_CASE_CLASS = 'Illuminate\Foundation\Testing\TestCase';
-
     /**
      * Vendor-declared ones, such as mockConsoleOutput or defaultHeaders, are left to VendorUsageProvider.
      *
@@ -43,9 +41,7 @@ final class LaravelTestLifecycleUsageProvider extends ReflectionBasedMemberUsage
 
     private readonly bool $enabled;
 
-    public function __construct(
-        ?bool $enabled,
-    )
+    public function __construct(?bool $enabled)
     {
         $this->enabled = $enabled ?? InstalledVersions::isInstalled('laravel/framework');
     }
@@ -57,21 +53,26 @@ final class LaravelTestLifecycleUsageProvider extends ReflectionBasedMemberUsage
 
     protected function shouldMarkMethodAsUsed(ReflectionMethod $method): ?VirtualUsageData
     {
-        $declaringClass = $method->getDeclaringClass();
-
-        if (!$declaringClass->isSubclassOf(self::TEST_CASE_CLASS)) {
-            return null;
-        }
-
         $traitName = $this->getHookedTraitName($method->getName());
 
         if ($traitName === null) {
             return null;
         }
 
+        $declaringClass = $method->getDeclaringClass();
+
+        if (!$declaringClass->isSubclassOf('Illuminate\Foundation\Testing\TestCase')) {
+            return null;
+        }
+
+        if ($declaringClass->isAbstract()) {
+            // the trait can be used by a subclass, where class_uses_recursive() would still find it
+            return VirtualUsageData::withNote('Possible Laravel test lifecycle hook in abstract test case');
+        }
+
         foreach ($this->getTraitNames($declaringClass) as $usedTraitName) {
             if (CaseInsensitiveName::equals($traitName, $this->getClassBasename($usedTraitName))) {
-                return VirtualUsageData::withNote('Laravel test lifecycle hook, called for each used trait by setUpTraits()');
+                return VirtualUsageData::withNote('Laravel test lifecycle hook');
             }
         }
 
@@ -84,11 +85,11 @@ final class LaravelTestLifecycleUsageProvider extends ReflectionBasedMemberUsage
             return null; // property names are case-sensitive, unlike the method names above
         }
 
-        if (!$property->getDeclaringClass()->isSubclassOf(self::TEST_CASE_CLASS)) {
+        if (!$property->getDeclaringClass()->isSubclassOf('Illuminate\Foundation\Testing\TestCase')) {
             return null;
         }
 
-        return VirtualUsageData::withNote('Laravel test database setting, read through property_exists()');
+        return VirtualUsageData::withNote('Laravel test database setting read via property_exists()');
     }
 
     private function getHookedTraitName(string $methodName): ?string
