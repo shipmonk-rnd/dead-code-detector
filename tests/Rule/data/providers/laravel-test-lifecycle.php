@@ -62,6 +62,59 @@ class InheritedTraitTest extends BaseTest
     }
 }
 
+// --- Hooks of an abstract base class, whose subclass is the one using the trait ---
+
+abstract class AbstractBillingTest extends TestCase
+{
+    public function setUpInteractsWithBilling(): void
+    {
+    }
+
+    public function createApplication(): \Illuminate\Foundation\Application
+    {
+        return new \Illuminate\Foundation\Application();
+    }
+}
+
+class ConcreteBillingTest extends AbstractBillingTest
+{
+    use InteractsWithBilling;
+}
+
+// --- Hooks may be declared in a trait, and traits of traits count too ---
+
+trait InteractsWithInvoicing
+{
+}
+
+trait UsesInvoicing
+{
+    use InteractsWithInvoicing;
+}
+
+trait BillingHooks
+{
+    public function setUpInteractsWithBilling(): void
+    {
+    }
+}
+
+class TraitHookTest extends TestCase
+{
+    use BillingHooks;
+    use InteractsWithBilling;
+    use UsesInvoicing;
+
+    public function tearDownInteractsWithInvoicing(): void // nested trait, as class_uses_recursive() walks those too
+    {
+    }
+
+    public function createApplication(): \Illuminate\Foundation\Application
+    {
+        return new \Illuminate\Foundation\Application();
+    }
+}
+
 // --- Not a Laravel test case, so setUpTraits() never runs ---
 
 class NotATestCase
@@ -94,6 +147,9 @@ class DatabaseSettingsTest extends TestCase
     protected array $exceptTables = ['migrations'];
 
     protected array $connectionsToTruncate = ['mysql'];
+
+    // property names are case-sensitive, unlike the hook methods above
+    protected bool $Seed = true; // error: Property LaravelTestLifecycle\DatabaseSettingsTest::$Seed is never read
 
     protected string $notReadByLaravel = ''; // error: Property LaravelTestLifecycle\DatabaseSettingsTest::$notReadByLaravel is never read
 
