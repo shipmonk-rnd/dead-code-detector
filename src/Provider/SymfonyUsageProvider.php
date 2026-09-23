@@ -1590,7 +1590,22 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     private function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
-        return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
+        return $method->isConstructor()
+            && (
+                $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
+                || $this->hasMethodWithAsCommandAttribute($class)
+            );
+    }
+
+    private function hasMethodWithAsCommandAttribute(ReflectionClass $class): bool
+    {
+        foreach ($class->getMethods() as $method) {
+            if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
@@ -1619,6 +1634,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             && (
                 $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
                 || $class->isSubclassOf('Symfony\Component\Console\Command\Command')
+                || $this->hasMethodWithAsCommandAttribute($class)
             );
     }
 

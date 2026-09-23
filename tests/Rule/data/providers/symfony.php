@@ -57,9 +57,25 @@ class CreateUserCommand extends Command {
 
 class UserCommands {
 
+    public function __construct() {}
+
     #[AsCommand(name: 'app:update-user')]
     public function update() {
     }
+
+    #[Interact]
+    public function askUser() {
+    }
+
+    public function dead() {} // error: Unused Symfony\UserCommands::dead
+}
+
+class NotACommand {
+
+    public function __construct() {} // error: Unused Symfony\NotACommand::__construct
+
+    #[Interact]
+    public function askUser() {} // error: Unused Symfony\NotACommand::askUser
 }
 
 class LegacyNamedCommand extends Command { // no #[AsCommand], name passed to parent constructor
