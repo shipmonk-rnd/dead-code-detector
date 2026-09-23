@@ -60,6 +60,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\PatchlevelEventSourcingUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpatUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpBenchUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\PhpStanUsageProvider;
@@ -1034,6 +1035,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-nette-container' => [__DIR__ . '/data/providers/nette-container.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
+        yield 'provider-patchlevel-event-sourcing' => [__DIR__ . '/data/providers/patchlevel-event-sourcing.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
         yield 'provider-composer' => [__DIR__ . '/data/providers/composer.php'];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php'];
@@ -1299,6 +1301,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             new TwigUsageProvider(
                 self::createReflectionProvider(),
                 $templateViewDataTraverser,
+                $this->providersEnabled,
+            ),
+            new PatchlevelEventSourcingUsageProvider(
                 $this->providersEnabled,
             ),
             new ApiPhpDocUsageProvider(

@@ -166,6 +166,13 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.netteTester.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\PatchlevelEventSourcingUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.patchlevelEventSourcing.enabled%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -313,6 +320,8 @@ parameters:
                 containerNeonPaths: []
             netteTester:
                 enabled: null
+            patchlevelEventSourcing:
+                enabled: null
             streamWrapper:
                 enabled: true
             composer:
@@ -415,6 +424,9 @@ parametersSchema:
                 containerNeonPaths: listOf(string())
             ])
             netteTester: structure([
+                enabled: schema(bool(), nullable())
+            ])
+            patchlevelEventSourcing: structure([
                 enabled: schema(bool(), nullable())
             ])
             streamWrapper: structure([

@@ -131,6 +131,11 @@ parameters:
 - `#[AsTwigFilter]`, `#[AsTwigFunction]`, `#[AsTwigTest]`
 - `new TwigFilter(..., callback)`, `new TwigFunction(..., callback)`, `new TwigTest(..., callback)`
 
+#### Patchlevel Event Sourcing:
+- `#[Apply]` attributes
+- `#[Handle]`, `#[Answer]`, `#[Subscribe]` attributes
+- Subscribers — `#[Subscriber]` + `#[Setup]`, `#[Teardown]`, `#[Cleanup]`, `#[OnFailed]` attributes
+
 All those libraries are autoenabled when found within your composer dependencies.
 If you want to force enable/disable some of them, you can:
 
