@@ -330,6 +330,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $className = $classReflection->getName();
 
         $usages = [];
+        $hasMethodCommand = false;
 
         foreach ($nativeReflection->getMethods() as $method) {
             $methodName = $method->getName();
@@ -347,7 +348,16 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), $note);
             }
 
+            if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand')) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Method has #[AsCommand] attribute');
+                $hasMethodCommand = true;
+            }
+
             $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $method, $methodName)];
+        }
+
+        if ($hasMethodCommand) {
+            $usages = [...$usages, ...$this->getMethodCommandServiceUsages($classReflection)];
         }
 
         $usages = [...$usages, ...$this->getMessageHandlerUsages($classReflection, $nativeReflection, '__invoke')];
@@ -1063,10 +1073,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return 'Class has scheduler attribute';
         }
 
-        if ($this->isMethodWithAsCommandAttribute($method)) {
-            return 'Method has #[AsCommand] attribute';
-        }
-
         if ($this->isSchedulerTaskMethod($method)) {
             return 'Scheduler task method via scheduler attribute';
         }
@@ -1590,22 +1596,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     private function isConstructorWithAsCommandAttribute(ReflectionMethod $method): bool
     {
         $class = $method->getDeclaringClass();
-        return $method->isConstructor()
-            && (
-                $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
-                || $this->hasMethodWithAsCommandAttribute($class)
-            );
-    }
-
-    private function hasMethodWithAsCommandAttribute(ReflectionClass $class): bool
-    {
-        foreach ($class->getMethods() as $method) {
-            if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand')) {
-                return true;
-            }
-        }
-
-        return false;
+        return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
     private function isConstructorWithAsControllerAttribute(ReflectionMethod $method): bool
@@ -1614,9 +1605,27 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
     }
 
-    private function isMethodWithAsCommandAttribute(ReflectionMethod $method): bool
+    /**
+     * Symfony registers a class with a method-level #[AsCommand] as a service
+     * and scans all its methods for #[Interact] (see InvokableCommand::collectInteractions).
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getMethodCommandServiceUsages(ClassReflection $classReflection): array
     {
-        return $this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand');
+        $usages = [];
+
+        if ($classReflection->hasNativeMethod('__construct')) {
+            $usages[] = $this->createUsage($classReflection->getNativeMethod('__construct'), 'Constructor of a class with method-level #[AsCommand] (created by DIC)');
+        }
+
+        foreach ($classReflection->getNativeReflection()->getMethods() as $method) {
+            if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\Interact')) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Interact method of a class with method-level #[AsCommand]');
+            }
+        }
+
+        return $usages;
     }
 
     private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
@@ -1634,7 +1643,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             && (
                 $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
                 || $class->isSubclassOf('Symfony\Component\Console\Command\Command')
-                || $this->hasMethodWithAsCommandAttribute($class)
             );
     }
 

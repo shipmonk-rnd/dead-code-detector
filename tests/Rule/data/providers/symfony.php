@@ -70,6 +70,20 @@ class UserCommands {
     public function dead() {} // error: Unused Symfony\UserCommands::dead
 }
 
+abstract class MethodCommandsParent {
+
+    public function __construct() {}
+
+    #[Interact]
+    public function askParent() {}
+}
+
+class ChildMethodCommands extends MethodCommandsParent {
+
+    #[AsCommand(name: 'app:child')]
+    public function run() {}
+}
+
 class NotACommand {
 
     public function __construct() {} // error: Unused Symfony\NotACommand::__construct
