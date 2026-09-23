@@ -60,6 +60,59 @@ class UserCommands {
     #[AsCommand(name: 'app:update-user')]
     public function update() {
     }
+
+    #[AsCommand(name: 'app:user-mode')]
+    public function mode(MethodCommandMode $mode): int {
+        return 0;
+    }
+
+    #[AsCommand(name: 'app:user-import')]
+    public function import(
+        #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandInput $input,
+    ): int {
+        return 0;
+    }
+
+    public function notACommand(MethodCommandUnusedMode $mode, #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandUnusedInput $input): void {} // error: Unused Symfony\UserCommands::notACommand
+}
+
+enum MethodCommandMode: string {
+    case Dry = 'dry';
+    case Wet = 'wet';
+}
+
+enum MethodCommandUnusedMode: string {
+    case A = 'a'; // error: Unused Symfony\MethodCommandUnusedMode::A
+}
+
+class MethodCommandInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file;
+
+    #[Interact]
+    public function askFile(): void {}
+}
+
+class MethodCommandUnusedInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file; // error: Property Symfony\MethodCommandUnusedInput::$file is never read // error: Property Symfony\MethodCommandUnusedInput::$file is never written
+
+    #[Interact]
+    public function askFile(): void {} // error: Unused Symfony\MethodCommandUnusedInput::askFile
+}
+
+abstract class InheritedInvokeParent {
+    public function __invoke(InheritedInvokeMode $mode): int {
+        return 0;
+    }
+}
+
+#[AsCommand('app:inherited-invoke')]
+class InheritedInvokeCommand extends InheritedInvokeParent {
+}
+
+enum InheritedInvokeMode: string {
+    case On = 'on';
 }
 
 class LegacyNamedCommand extends Command { // no #[AsCommand], name passed to parent constructor

@@ -719,16 +719,16 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
      */
     private function getMapInputUsages(InClassMethodNode $node): array
     {
-        if (!CaseInsensitiveName::equals($node->getMethodReflection()->getName(), '__invoke')) {
-            return [];
+        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+        $methodName = $node->getMethodReflection()->getName();
+
+        try {
+            $nativeMethod = $nativeReflection->getMethod($methodName);
+        } catch (ReflectionException $e) {
+            throw new LogicException("Method $methodName must exist as it is analysed right now. Should never happen.", 0, $e);
         }
 
-        $nativeReflection = $node->getClassReflection()->getNativeReflection();
-
-        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
-            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
-
-        if (!$isCommand) {
+        if (!$this->isCommandMethod($nativeReflection, $nativeMethod)) {
             return [];
         }
 
@@ -1932,67 +1932,72 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return [];
         }
 
-        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
-            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
-
-        if (!$isCommand) {
-            return [];
-        }
-
-        $invokeMethod = null;
-
-        foreach ($nativeReflection->getMethods() as $method) {
-            if (CaseInsensitiveName::equals($method->getName(), '__invoke')) {
-                $invokeMethod = $method;
-                break;
-            }
-        }
-
-        if ($invokeMethod === null) {
-            return [];
-        }
-
         $usages = [];
 
-        foreach ($invokeMethod->getParameters() as $parameter) {
-            $type = $parameter->getType();
-
-            if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+        foreach ($nativeReflection->getMethods() as $method) {
+            if (!$this->isCommandMethod($nativeReflection, $method)) {
                 continue;
             }
 
-            $typeName = $type->getName();
+            foreach ($method->getParameters() as $parameter) {
+                $type = $parameter->getType();
 
-            if (!$this->reflectionProvider->hasClass($typeName)) {
-                continue;
-            }
+                if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+                    continue;
+                }
 
-            $enumReflection = $this->reflectionProvider->getClass($typeName);
+                $typeName = $type->getName();
 
-            if (!$enumReflection->isBackedEnum()) {
-                continue;
-            }
+                if (!$this->reflectionProvider->hasClass($typeName)) {
+                    continue;
+                }
 
-            $nativeEnumReflection = $enumReflection->getNativeReflection();
+                $enumReflection = $this->reflectionProvider->getClass($typeName);
 
-            if (!$nativeEnumReflection instanceof ReflectionEnum) {
-                continue;
-            }
+                if (!$enumReflection->isBackedEnum()) {
+                    continue;
+                }
 
-            foreach ($nativeEnumReflection->getCases() as $case) {
-                $usages[] = new ClassConstantUsage(
-                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Invokable command parameter in ' . $nativeReflection->getShortName())),
-                    new ClassConstantRef(
-                        $typeName,
-                        $case->getName(),
-                        possibleDescendant: false,
-                        isEnumCase: TrinaryLogic::createYes(),
-                    ),
-                );
+                $nativeEnumReflection = $enumReflection->getNativeReflection();
+
+                if (!$nativeEnumReflection instanceof ReflectionEnum) {
+                    continue;
+                }
+
+                foreach ($nativeEnumReflection->getCases() as $case) {
+                    $usages[] = new ClassConstantUsage(
+                        UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Invokable command parameter in ' . $nativeReflection->getShortName())),
+                        new ClassConstantRef(
+                            $typeName,
+                            $case->getName(),
+                            possibleDescendant: false,
+                            isEnumCase: TrinaryLogic::createYes(),
+                        ),
+                    );
+                }
             }
         }
 
         return $usages;
+    }
+
+    /**
+     * Symfony passes this method to InvokableCommand, which resolves its parameters from the console input.
+     */
+    private function isCommandMethod(
+        ReflectionClass|ReflectionEnum $class,
+        ReflectionMethod $method,
+    ): bool
+    {
+        if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand')) {
+            return true;
+        }
+
+        return CaseInsensitiveName::equals($method->getName(), '__invoke')
+            && (
+                $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
+                || $class->isSubclassOf('Symfony\Component\Console\Command\Command')
+            );
     }
 
     private function getContainerXmlPath(Container $container): ?string
