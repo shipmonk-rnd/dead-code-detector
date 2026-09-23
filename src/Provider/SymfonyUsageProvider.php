@@ -1063,6 +1063,10 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return 'Class has scheduler attribute';
         }
 
+        if ($this->isMethodWithAsCommandAttribute($method)) {
+            return 'Method has #[AsCommand] attribute';
+        }
+
         if ($this->isSchedulerTaskMethod($method)) {
             return 'Scheduler task method via scheduler attribute';
         }
@@ -1593,6 +1597,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     {
         $class = $method->getDeclaringClass();
         return $method->isConstructor() && $this->hasAttribute($class, 'Symfony\Component\HttpKernel\Attribute\AsController');
+    }
+
+    private function isMethodWithAsCommandAttribute(ReflectionMethod $method): bool
+    {
+        return $this->hasAttribute($method, 'Symfony\Component\Console\Attribute\AsCommand');
     }
 
     private function isMethodWithRouteAttribute(ReflectionMethod $method): bool
