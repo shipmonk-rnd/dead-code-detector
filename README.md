@@ -547,6 +547,16 @@ parameters:
 - Autofix coding-style by `composer fix:cs`
 - All functionality must be tested
 
+### Which libraries we support
+
+DCD has built-in support only for **core** libraries:
+
+- Frameworks, for example Symfony, Laravel and Nette.
+- First-party packages of a framework. These are packages that the framework publishes under its own Packagist vendor name, for example `symfony/*`, `illuminate/*` and `nette/*`.
+- Standalone libraries and tools that do not build on a framework, if they have millions of installs on Packagist. For example Doctrine, Twig, PHPUnit and phpat.
+
+For other libraries, write a [custom usage provider](#customization) or publish it as a PHPStan extension.
+
 ## Supported PHP versions
 - `0.x` — PHP 7.4 - 8.5
 - `1.x` — PHP 8.1+
