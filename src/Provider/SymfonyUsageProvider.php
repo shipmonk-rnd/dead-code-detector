@@ -14,6 +14,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionParameter;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
@@ -160,7 +161,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 ...$this->getMethodUsagesFromReflection($node),
                 ...$this->getPropertyUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
-                ...$this->getInvokableCommandEnumUsages($node),
+                ...$this->getInvokableCommandParameterUsages($node),
                 ...$this->getTwigComponentTemplateUsages($node),
             ];
         }
@@ -735,18 +736,15 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             }
         }
 
-        if (!$isMethodCommand && !$this->isInvokableCommandMethod($node)) {
+        if (!$isMethodCommand) {
             return [];
         }
 
         $usages = [];
 
         foreach ($parameters as $parameter) {
-            // enum parameters of __invoke are emitted per class, as __invoke may be inherited
-            if ($isMethodCommand) {
-                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
-                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
-                }
+            foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
+                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
             }
 
             $isMapInput = false;
@@ -774,18 +772,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
-    }
-
-    private function isInvokableCommandMethod(InClassMethodNode $node): bool
-    {
-        if (!CaseInsensitiveName::equals($node->getMethodReflection()->getName(), '__invoke')) {
-            return false;
-        }
-
-        $nativeReflection = $node->getClassReflection()->getNativeReflection();
-
-        return $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
-            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
     }
 
     /**
@@ -1776,7 +1762,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
+     * @param ReflectionClass|ReflectionMethod|ReflectionParameter|ReflectionProperty|ReflectionEnum $classOrMethod
      */
     private function hasAttribute(
         Reflector $classOrMethod,
@@ -1947,9 +1933,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * @return list<ClassConstantUsage>
+     * Resolved per command class, as __invoke may be inherited from a class that is not a command.
+     *
+     * @return list<ClassConstantUsage|ClassMethodUsage|ClassPropertyUsage>
      */
-    private function getInvokableCommandEnumUsages(InClassNode $node): array
+    private function getInvokableCommandParameterUsages(InClassNode $node): array
     {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
@@ -1988,6 +1976,10 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             }
 
             $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+
+            if ($this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\MapInput')) {
+                $usages = [...$usages, ...$this->collectMapInputDtoUsages($type->getName())];
+            }
         }
 
         return $usages;

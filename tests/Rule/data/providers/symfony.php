@@ -385,6 +385,39 @@ class ExtendedImportCommand extends Command {
     }
 }
 
+class InheritedInvokeInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file;
+
+    #[Interact]
+    public function askFile(): void {}
+}
+
+abstract class InheritedInvokeMapInputParent {
+    public function __invoke(
+        #[\Symfony\Component\Console\Attribute\MapInput] InheritedInvokeInput $input,
+    ): int {
+        return 0;
+    }
+}
+
+#[AsCommand(name: 'app:import-inherited')]
+class InheritedInvokeMapInputCommand extends InheritedInvokeMapInputParent {
+}
+
+class NotACommandInvokeInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file; // error: Property Symfony\NotACommandInvokeInput::$file is never read // error: Property Symfony\NotACommandInvokeInput::$file is never written
+}
+
+abstract class NotACommandInvokeParent {
+    public function __invoke(
+        #[\Symfony\Component\Console\Attribute\MapInput] NotACommandInvokeInput $input,
+    ): int {
+        return 0;
+    }
+}
+
 class OrphanedInput {
     #[\Symfony\Component\Console\Attribute\Argument]
     public string $name; // error: Property Symfony\OrphanedInput::$name is never read // error: Property Symfony\OrphanedInput::$name is never written
