@@ -14,6 +14,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionEnum;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
+use PHPStan\BetterReflection\Reflection\Adapter\ReflectionParameter;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
 use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\DependencyInjection\Container;
@@ -742,19 +743,21 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $usages = [];
 
         foreach ($parameters as $parameter) {
-            // enum parameters of __invoke are emitted per class, as __invoke may be inherited
-            if ($isMethodCommand) {
-                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
-                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
-                }
-            }
-
+            $isInputValue = false;
             $isMapInput = false;
 
             foreach ($parameter->getAttributes() as $attributeReflection) {
-                if ($attributeReflection->getName() === 'Symfony\Component\Console\Attribute\MapInput') {
-                    $isMapInput = true;
-                    break;
+                $attributeName = $attributeReflection->getName();
+                $isInputValue = $isInputValue
+                    || $attributeName === 'Symfony\Component\Console\Attribute\Argument'
+                    || $attributeName === 'Symfony\Component\Console\Attribute\Option';
+                $isMapInput = $isMapInput || $attributeName === 'Symfony\Component\Console\Attribute\MapInput';
+            }
+
+            // enum parameters of __invoke are emitted per class, as __invoke may be inherited
+            if ($isMethodCommand && $isInputValue) {
+                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
+                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
                 }
             }
 
@@ -1776,7 +1779,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * @param ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionEnum $classOrMethod
+     * @param ReflectionClass|ReflectionMethod|ReflectionParameter|ReflectionProperty|ReflectionEnum $classOrMethod
      */
     private function hasAttribute(
         Reflector $classOrMethod,
@@ -1987,7 +1990,12 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
-            $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+            $isInputValue = $this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\Argument')
+                || $this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\Option');
+
+            if ($isInputValue) {
+                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+            }
         }
 
         return $usages;
