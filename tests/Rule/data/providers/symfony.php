@@ -62,7 +62,7 @@ class UserCommands {
     }
 
     #[AsCommand(name: 'app:user-mode')]
-    public function mode(MethodCommandMode $mode): int {
+    public function mode(#[\Symfony\Component\Console\Attribute\Argument] MethodCommandMode $mode): int {
         return 0;
     }
 
@@ -73,12 +73,22 @@ class UserCommands {
         return 0;
     }
 
+    #[AsCommand(name: 'app:user-default-mode')]
+    public function defaultMode(MethodCommandDefaultMode $mode = MethodCommandDefaultMode::Used): int { // no #[Argument], only the default value is passed
+        return 0;
+    }
+
     public function notACommand(MethodCommandUnusedMode $mode, #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandUnusedInput $input): void {} // error: Unused Symfony\UserCommands::notACommand
 }
 
 enum MethodCommandMode: string {
     case Dry = 'dry';
     case Wet = 'wet';
+}
+
+enum MethodCommandDefaultMode: string {
+    case Used = 'used';
+    case Unused = 'unused'; // error: Unused Symfony\MethodCommandDefaultMode::Unused
 }
 
 enum MethodCommandUnusedMode: string {
@@ -102,7 +112,7 @@ class MethodCommandUnusedInput {
 }
 
 abstract class InheritedInvokeParent {
-    public function __invoke(InheritedInvokeMode $mode): int {
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Argument] InheritedInvokeMode $mode): int {
         return 0;
     }
 }
@@ -195,7 +205,7 @@ enum InvokableCommandModeViaExtend: string {
 #[AsCommand('app:invokable')]
 class InvokableCommand
 {
-    public function __invoke(InvokableCommandMode $mode): int
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Argument] InvokableCommandMode $mode): int
     {
         InvokableCommandUnused::A;
         return 0;
@@ -204,7 +214,20 @@ class InvokableCommand
 
 class InvokableCommandViaExtend extends Command
 {
-    public function __invoke(InvokableCommandModeViaExtend $mode): int
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Option] InvokableCommandModeViaExtend $mode = InvokableCommandModeViaExtend::Fast): int
+    {
+        return 0;
+    }
+}
+
+enum InvokableCommandNullableMode: string {
+    case A = 'a'; // error: Unused Symfony\InvokableCommandNullableMode::A
+}
+
+#[AsCommand('app:invokable-nullable')]
+class InvokableCommandWithoutArgument
+{
+    public function __invoke(?InvokableCommandNullableMode $mode): int // no #[Argument], always null
     {
         return 0;
     }
