@@ -161,7 +161,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 ...$this->getMethodUsagesFromReflection($node),
                 ...$this->getPropertyUsagesFromReflection($node),
                 ...$this->getConstantUsages($node->getClassReflection()),
-                ...$this->getInvokableCommandParameterUsages($node),
+                ...$this->getInvokableCommandUsages($node),
                 ...$this->getTwigComponentTemplateUsages($node),
             ];
         }
@@ -759,42 +759,16 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return [];
         }
 
-        $usages = [];
+        $nativeClassReflection = $node->getClassReflection()->getNativeReflection();
+        $methodName = $methodReflection->getName();
 
-        foreach ($parameters as $parameter) {
-            $isInputValue = false;
-            $isMapInput = false;
-
-            foreach ($parameter->getAttributes() as $attributeReflection) {
-                $attributeName = $attributeReflection->getName();
-                $isInputValue = $isInputValue
-                    || $attributeName === 'Symfony\Component\Console\Attribute\Argument'
-                    || $attributeName === 'Symfony\Component\Console\Attribute\Option';
-                $isMapInput = $isMapInput || $attributeName === 'Symfony\Component\Console\Attribute\MapInput';
-            }
-
-            if ($isInputValue) {
-                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
-                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
-                }
-            }
-
-            if (!$isMapInput) {
-                continue;
-            }
-
-            $parameterType = $parameter->getType();
-
-            if (!$parameterType->isObject()->yes()) {
-                continue;
-            }
-
-            foreach ($parameterType->getObjectClassNames() as $dtoClassName) {
-                $usages = [...$usages, ...$this->collectMapInputDtoUsages($dtoClassName)];
-            }
+        try {
+            $nativeMethod = $nativeClassReflection->getMethod($methodName);
+        } catch (ReflectionException $e) {
+            throw new LogicException("Method $methodName must exist as it was returned from InClassMethodNode. Should never happen.", 0, $e);
         }
 
-        return $usages;
+        return $this->getCommandCodeParameterUsages($nativeMethod, $nativeClassReflection->getShortName());
     }
 
     /**
@@ -1112,10 +1086,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
         if ($this->isMethodWithCallbackConstraintAttribute($method)) {
             return 'Callback constraint method via #[Assert\Callback] attribute';
-        }
-
-        if ($this->isMethodWithInteractAttribute($method)) {
-            return 'Interact method via #[Interact] attribute';
         }
 
         if ($this->isProbablySymfonyListener($method)) {
@@ -1647,18 +1617,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             || $this->hasAttributeInstanceOf($method, 'Symfony\Component\Routing\Annotation\Route');
     }
 
-    private function isMethodWithInteractAttribute(ReflectionMethod $method): bool
-    {
-        $class = $method->getDeclaringClass();
-
-        // Symfony scans for #[Interact] any invokable command, even without #[AsCommand]
-        return $this->hasAttribute($method, 'Symfony\Component\Console\Attribute\Interact')
-            && (
-                $this->hasAttribute($class, 'Symfony\Component\Console\Attribute\AsCommand')
-                || $class->isSubclassOf('Symfony\Component\Console\Command\Command')
-            );
-    }
-
     private function isMethodWithCallbackConstraintAttribute(ReflectionMethod $method): bool
     {
         $declaringClassName = $method->getDeclaringClass()->getName();
@@ -1971,11 +1929,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * Resolved per command class, as __invoke may be inherited from a class that is not a command.
+     * Resolved per command class, as __invoke and #[Interact] methods may be inherited from a class that is not a command.
      *
      * @return list<ClassConstantUsage|ClassMethodUsage|ClassPropertyUsage>
      */
-    private function getInvokableCommandParameterUsages(InClassNode $node): array
+    private function getInvokableCommandUsages(InClassNode $node): array
     {
         $classReflection = $node->getClassReflection();
         $nativeReflection = $classReflection->getNativeReflection();
@@ -1991,22 +1949,33 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             return [];
         }
 
-        $invokeMethod = null;
+        $usages = [];
 
         foreach ($nativeReflection->getMethods() as $method) {
             if (CaseInsensitiveName::equals($method->getName(), '__invoke')) {
-                $invokeMethod = $method;
-                break;
+                $usages = [...$usages, ...$this->getCommandCodeParameterUsages($method, $nativeReflection->getShortName())];
+            }
+
+            // not limited to __invoke: a Command subclass can pass any closure to setCode(), which is bound to the command
+            if ($this->hasAttribute($method, 'Symfony\Component\Console\Attribute\Interact')) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($method->getName()), 'Interact method via #[Interact] attribute');
             }
         }
 
-        if ($invokeMethod === null) {
-            return [];
-        }
+        return $usages;
+    }
 
+    /**
+     * @return list<ClassConstantUsage|ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function getCommandCodeParameterUsages(
+        ReflectionMethod $method,
+        string $commandShortName,
+    ): array
+    {
         $usages = [];
 
-        foreach ($invokeMethod->getParameters() as $parameter) {
+        foreach ($method->getParameters() as $parameter) {
             $type = $parameter->getType();
 
             if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
@@ -2017,7 +1986,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 || $this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\Option');
 
             if ($isInputValue) {
-                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $commandShortName)];
             }
 
             if ($this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\MapInput')) {
