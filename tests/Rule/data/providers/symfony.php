@@ -78,6 +78,13 @@ class UserCommands {
         return 0;
     }
 
+    #[AsCommand(name: 'app:user-import-optional')]
+    public function importOptional(
+        #[\Symfony\Component\Console\Attribute\MapInput] ?MethodCommandOptionalInput $input,
+    ): int {
+        return 0;
+    }
+
     public function notACommand(MethodCommandUnusedMode $mode, #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandUnusedInput $input): void {} // error: Unused Symfony\UserCommands::notACommand
 }
 
@@ -101,6 +108,11 @@ class MethodCommandInput {
 
     #[Interact]
     public function askFile(): void {}
+}
+
+class MethodCommandOptionalInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file;
 }
 
 class MethodCommandUnusedInput {
@@ -439,6 +451,24 @@ abstract class NotACommandInvokeParent {
     ): int {
         return 0;
     }
+}
+
+abstract class InheritedInteractParent {
+    public function __invoke(): int {
+        return 0;
+    }
+
+    #[Interact]
+    public function askInherited(): void {}
+}
+
+#[AsCommand('app:inherited-interact')]
+class InheritedInteractCommand extends InheritedInteractParent {
+}
+
+abstract class NotACommandInteractParent {
+    #[Interact]
+    public function askNothing(): void {} // error: Unused Symfony\NotACommandInteractParent::askNothing
 }
 
 class OrphanedInput {
