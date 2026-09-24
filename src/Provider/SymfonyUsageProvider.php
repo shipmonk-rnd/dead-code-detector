@@ -743,16 +743,20 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         $usages = [];
 
         foreach ($parameters as $parameter) {
-            foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
-                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
-            }
-
+            $isInputValue = false;
             $isMapInput = false;
 
             foreach ($parameter->getAttributes() as $attributeReflection) {
-                if ($attributeReflection->getName() === 'Symfony\Component\Console\Attribute\MapInput') {
-                    $isMapInput = true;
-                    break;
+                $attributeName = $attributeReflection->getName();
+                $isInputValue = $isInputValue
+                    || $attributeName === 'Symfony\Component\Console\Attribute\Argument'
+                    || $attributeName === 'Symfony\Component\Console\Attribute\Option';
+                $isMapInput = $isMapInput || $attributeName === 'Symfony\Component\Console\Attribute\MapInput';
+            }
+
+            if ($isInputValue) {
+                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
+                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
                 }
             }
 
@@ -1975,7 +1979,12 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
-            $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+            $isInputValue = $this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\Argument')
+                || $this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\Option');
+
+            if ($isInputValue) {
+                $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+            }
 
             if ($this->hasAttribute($parameter, 'Symfony\Component\Console\Attribute\MapInput')) {
                 $usages = [...$usages, ...$this->collectMapInputDtoUsages($type->getName())];
