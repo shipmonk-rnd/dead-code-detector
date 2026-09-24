@@ -169,7 +169,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getMethodUsagesFromAttributeReflection($node, $scope),
-                ...$this->getMapInputUsages($node),
+                ...$this->getCommandParameterUsages($node),
                 ...$this->getMapPayloadUsages($node),
             ];
         }
@@ -715,26 +715,40 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     * @return list<ClassConstantUsage|ClassMethodUsage|ClassPropertyUsage>
      */
-    private function getMapInputUsages(InClassMethodNode $node): array
+    private function getCommandParameterUsages(InClassMethodNode $node): array
     {
-        if (!CaseInsensitiveName::equals($node->getMethodReflection()->getName(), '__invoke')) {
+        $methodReflection = $node->getMethodReflection();
+        $parameters = $methodReflection->getParameters();
+
+        if ($parameters === []) {
             return [];
         }
 
-        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+        $isMethodCommand = false;
 
-        $isCommand = $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
-            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
+        foreach ($methodReflection->getAttributes() as $attributeReflection) {
+            if ($attributeReflection->getName() === 'Symfony\Component\Console\Attribute\AsCommand') {
+                $isMethodCommand = true;
+                break;
+            }
+        }
 
-        if (!$isCommand) {
+        if (!$isMethodCommand && !$this->isInvokableCommandMethod($node)) {
             return [];
         }
 
         $usages = [];
 
-        foreach ($node->getMethodReflection()->getParameters() as $parameter) {
+        foreach ($parameters as $parameter) {
+            // enum parameters of __invoke are emitted per class, as __invoke may be inherited
+            if ($isMethodCommand) {
+                foreach ($parameter->getType()->getObjectClassNames() as $parameterClassName) {
+                    $usages = [...$usages, ...$this->getBackedEnumCaseUsages($parameterClassName, $node->getClassReflection()->getNativeReflection()->getShortName())];
+                }
+            }
+
             $isMapInput = false;
 
             foreach ($parameter->getAttributes() as $attributeReflection) {
@@ -760,6 +774,18 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    private function isInvokableCommandMethod(InClassMethodNode $node): bool
+    {
+        if (!CaseInsensitiveName::equals($node->getMethodReflection()->getName(), '__invoke')) {
+            return false;
+        }
+
+        $nativeReflection = $node->getClassReflection()->getNativeReflection();
+
+        return $this->hasAttribute($nativeReflection, 'Symfony\Component\Console\Attribute\AsCommand')
+            || $nativeReflection->isSubclassOf('Symfony\Component\Console\Command\Command');
     }
 
     /**
@@ -1961,35 +1987,48 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 continue;
             }
 
-            $typeName = $type->getName();
+            $usages = [...$usages, ...$this->getBackedEnumCaseUsages($type->getName(), $nativeReflection->getShortName())];
+        }
 
-            if (!$this->reflectionProvider->hasClass($typeName)) {
-                continue;
-            }
+        return $usages;
+    }
 
-            $enumReflection = $this->reflectionProvider->getClass($typeName);
+    /**
+     * @return list<ClassConstantUsage>
+     */
+    private function getBackedEnumCaseUsages(
+        string $typeName,
+        string $commandShortName,
+    ): array
+    {
+        if (!$this->reflectionProvider->hasClass($typeName)) {
+            return [];
+        }
 
-            if (!$enumReflection->isBackedEnum()) {
-                continue;
-            }
+        $enumReflection = $this->reflectionProvider->getClass($typeName);
 
-            $nativeEnumReflection = $enumReflection->getNativeReflection();
+        if (!$enumReflection->isBackedEnum()) {
+            return [];
+        }
 
-            if (!$nativeEnumReflection instanceof ReflectionEnum) {
-                continue;
-            }
+        $nativeEnumReflection = $enumReflection->getNativeReflection();
 
-            foreach ($nativeEnumReflection->getCases() as $case) {
-                $usages[] = new ClassConstantUsage(
-                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Invokable command parameter in ' . $nativeReflection->getShortName())),
-                    new ClassConstantRef(
-                        $typeName,
-                        $case->getName(),
-                        possibleDescendant: false,
-                        isEnumCase: TrinaryLogic::createYes(),
-                    ),
-                );
-            }
+        if (!$nativeEnumReflection instanceof ReflectionEnum) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($nativeEnumReflection->getCases() as $case) {
+            $usages[] = new ClassConstantUsage(
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Invokable command parameter in ' . $commandShortName)),
+                new ClassConstantRef(
+                    $typeName,
+                    $case->getName(),
+                    possibleDescendant: false,
+                    isEnumCase: TrinaryLogic::createYes(),
+                ),
+            );
         }
 
         return $usages;
