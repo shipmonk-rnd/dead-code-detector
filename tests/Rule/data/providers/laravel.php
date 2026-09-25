@@ -158,6 +158,21 @@ class LeadingBackslashInvokableController extends Controller
     }
 }
 
+class OptionsRouteController extends Controller
+{
+    public function index(): void
+    {
+    }
+
+    public function preflight(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\OptionsRouteController::unusedAction
+    {
+    }
+}
+
 class RouterInstanceController extends Controller
 {
     public function __construct()
@@ -975,6 +990,7 @@ function registerRoutes(): void
     Route::patch('/users/{id}', [UserController::class, 'show']);
     Route::delete('/users/{id}', [UserController::class, 'index']);
     Route::any('/any', [UserController::class, 'show']);
+    Route::options('/options', [OptionsRouteController::class, 'index']);
     Route::match(['GET', 'POST'], '/match', [UserController::class, 'index']);
     Route::match(['GET'], '/match-invokable', MatchInvokableController::class);
     Route::get('/invokable', InvokableController::class);
@@ -1009,6 +1025,7 @@ function registerRoutesOnRouterInstance(Router $router): void
 function registerRoutesOnRegistrar(Registrar $registrar, CustomRouter $customRouter, NotARouter $notARouter): void
 {
     $registrar->put('/instance', [RouterInstanceController::class, 'update']);
+    $registrar->options('/instance', 'Laravel\OptionsRouteController@preflight');
     $customRouter->delete('/instance', 'Laravel\RouterInstanceController@destroy');
     $notARouter->get('/instance', 'Laravel\RouterInstanceController@unusedAction');
 }
