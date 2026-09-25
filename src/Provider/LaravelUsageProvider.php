@@ -223,7 +223,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any'])) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any'])) {
             foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
@@ -445,7 +445,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
         $methodName = $node->name->name;
 
-        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any', 'match', 'resource', 'apiResource'])) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any', 'match', 'resource', 'apiResource'])) {
             if (!(new ObjectType('Illuminate\Contracts\Routing\Registrar'))->isSuperTypeOf($scope->getType($node->var))->yes()) {
                 return [];
             }
