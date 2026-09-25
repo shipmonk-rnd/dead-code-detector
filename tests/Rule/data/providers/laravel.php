@@ -124,6 +124,40 @@ class StringRouteController extends Controller
     }
 }
 
+class LeadingBackslashController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function index(): void
+    {
+    }
+
+    public function store(): void
+    {
+    }
+
+    public function update(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\LeadingBackslashController::unusedAction
+    {
+    }
+}
+
+class LeadingBackslashInvokableController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(): void
+    {
+    }
+}
+
 class RouterInstanceController extends Controller
 {
     public function __construct()
@@ -955,6 +989,12 @@ function registerRoutes(): void
     // Array syntax with 'uses' key
     Route::get('/uses', ['as' => 'uses.index', 'uses' => 'Laravel\UsesActionController@index']);
     Route::get('/uses-invokable', ['uses' => 'Laravel\UsesInvokableController']);
+
+    // Fully qualified class names with a leading backslash
+    Route::get('/backslash', '\Laravel\LeadingBackslashController@index');
+    Route::post('/backslash', ['\Laravel\LeadingBackslashController', 'store']);
+    Route::put('/backslash', ['uses' => '\Laravel\LeadingBackslashController@update']);
+    Route::get('/backslash-invokable', '\Laravel\LeadingBackslashInvokableController');
 }
 
 function registerRoutesOnRouterInstance(Router $router): void

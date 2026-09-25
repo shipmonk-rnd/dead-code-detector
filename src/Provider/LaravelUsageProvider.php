@@ -28,6 +28,7 @@ use function count;
 use function explode;
 use function implode;
 use function lcfirst;
+use function ltrim;
 use function str_contains;
 use function str_ends_with;
 use function str_replace;
@@ -207,6 +208,8 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
     /**
      * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Routing\Route::getController() trims the leading backslash of the controller class
      */
     private function getUsagesFromRouteCall(
         StaticCall|MethodCall $node,
@@ -225,7 +228,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -235,7 +238,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -245,7 +248,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -256,7 +259,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -266,7 +269,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -276,7 +279,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -289,7 +292,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ($resourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -302,7 +305,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ($apiResourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
