@@ -17,6 +17,7 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\ObjectType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -26,7 +27,6 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
-use function in_array;
 use function lcfirst;
 use function str_contains;
 use function str_ends_with;
@@ -443,7 +443,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         $methodName = $node->name->name;
 
         if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any', 'match', 'resource', 'apiResource'])) {
-            if (!in_array('Illuminate\Routing\Router', $scope->getType($node->var)->getObjectClassNames(), true)) {
+            if (!(new ObjectType('Illuminate\Contracts\Routing\Registrar'))->isSuperTypeOf($scope->getType($node->var))->yes()) {
                 return [];
             }
 

@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Contracts\Validation\Rule as ValidationRuleOld;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
@@ -137,7 +138,26 @@ class RouterInstanceController extends Controller
     {
     }
 
+    public function update(): void
+    {
+    }
+
+    public function destroy(): void
+    {
+    }
+
     public function unusedAction(): void // error: Unused Laravel\RouterInstanceController::unusedAction
+    {
+    }
+}
+
+class CustomRouter extends Router
+{
+}
+
+class NotARouter
+{
+    public function get(string $uri, string $action): void
     {
     }
 }
@@ -944,6 +964,13 @@ function registerRoutesOnRouterInstance(Router $router): void
         $router->post('/instance', 'Laravel\RouterInstanceController@store');
         $router->post('/uses', ['as' => 'uses.store', 'uses' => 'Laravel\UsesActionController@store']);
     });
+}
+
+function registerRoutesOnRegistrar(Registrar $registrar, CustomRouter $customRouter, NotARouter $notARouter): void
+{
+    $registrar->put('/instance', [RouterInstanceController::class, 'update']);
+    $customRouter->delete('/instance', 'Laravel\RouterInstanceController@destroy');
+    $notARouter->get('/instance', 'Laravel\RouterInstanceController@unusedAction');
 }
 
 function registerEvents(): void
