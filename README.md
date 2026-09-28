@@ -117,6 +117,7 @@ parameters:
 - Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()` with automatic policy class resolution
 - Real-time facades — `\Facades\...` static calls mapped to the underlying class
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
+- Test cases — `setUp{Trait}`/`tearDown{Trait}` hooks called by `setUpTraits()`, database settings read via `property_exists()` (`connectionsToTransact`, `seeder`, ...)
 
 #### Eloquent:
 - Model methods — constructor, `boot`, `booted`, `casts`, `newFactory`, query scopes, relationships, attribute accessors (modern + legacy)
