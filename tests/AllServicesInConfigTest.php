@@ -8,6 +8,11 @@ use PHPStan\Testing\PHPStanTestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionClass;
+use ShipMonk\PHPStan\DeadCode\Cache\BundleFile;
+use ShipMonk\PHPStan\DeadCode\Cache\BundleIndex;
+use ShipMonk\PHPStan\DeadCode\Cache\BundlePosition;
+use ShipMonk\PHPStan\DeadCode\Cache\CorruptUsageCacheException;
+use ShipMonk\PHPStan\DeadCode\Cache\LooseFileStore;
 use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -51,6 +56,11 @@ final class AllServicesInConfigTest extends PHPStanTestCase
         $directory = __DIR__ . '/../src';
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
         $excluded = [
+            BundleFile::class,
+            BundleIndex::class,
+            BundlePosition::class,
+            CorruptUsageCacheException::class,
+            LooseFileStore::class,
             VirtualUsageData::class,
             UsageOrigin::class,
             ClassMethodUsage::class,
