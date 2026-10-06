@@ -1228,9 +1228,6 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         // FormFactoryInterface::createBuilder($type, $data, $options) — data at [1], options at [2]
         // FormFactoryInterface::createNamedBuilder($name, $type, $data, $options) — data at [2], options at [3]
 
-        $dataArgIndex = null;
-        $optionsArgIndex = null;
-
         if (CaseInsensitiveName::equals($methodName, 'createFormBuilder') && $this->isAbstractControllerType($callerType)) {
             $dataArgIndex = 0;
             $optionsArgIndex = 1;
