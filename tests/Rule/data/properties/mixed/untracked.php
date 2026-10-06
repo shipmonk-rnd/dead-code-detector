@@ -5,9 +5,9 @@ namespace DeadPropertyMixed2;
 
 class Clazz {
 
-    public string $prop1; // error: Property DeadPropertyMixed2\Clazz::$prop1 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Clazz::$prop1 is never written
-    public string $prop2; // error: Property DeadPropertyMixed2\Clazz::$prop2 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Clazz::$prop2 is never written
-    public string $prop3; // error: Property DeadPropertyMixed2\Clazz::$prop3 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Clazz::$prop3 is never written
+    public string $prop1; // error: Property DeadPropertyMixed2\Clazz::$prop1 is never read // error: Property DeadPropertyMixed2\Clazz::$prop1 is never written
+    public string $prop2; // error: Property DeadPropertyMixed2\Clazz::$prop2 is never read // error: Property DeadPropertyMixed2\Clazz::$prop2 is never written
+    public string $prop3; // error: Property DeadPropertyMixed2\Clazz::$prop3 is never read // error: Property DeadPropertyMixed2\Clazz::$prop3 is never written
     public string $prop4; // error: Property DeadPropertyMixed2\Clazz::$prop4 is never read // error: Property DeadPropertyMixed2\Clazz::$prop4 is never written
     public string $prop5; // error: Property DeadPropertyMixed2\Clazz::$prop5 is never written
     public string $prop6; // error: Property DeadPropertyMixed2\Clazz::$prop6 is never read // error: Property DeadPropertyMixed2\Clazz::$prop6 is never written
@@ -22,9 +22,9 @@ interface IFace {
 
 class Implementor implements IFace {
 
-    public string $prop1; // error: Property DeadPropertyMixed2\Implementor::$prop1 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Implementor::$prop1 is never written
-    public string $prop2; // error: Property DeadPropertyMixed2\Implementor::$prop2 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Implementor::$prop2 is never written
-    public string $prop3; // error: Property DeadPropertyMixed2\Implementor::$prop3 is never read (all usages excluded by usageOverMixed excluder) // error: Property DeadPropertyMixed2\Implementor::$prop3 is never written
+    public string $prop1; // error: Property DeadPropertyMixed2\Implementor::$prop1 is never read // error: Property DeadPropertyMixed2\Implementor::$prop1 is never written
+    public string $prop2; // error: Property DeadPropertyMixed2\Implementor::$prop2 is never read // error: Property DeadPropertyMixed2\Implementor::$prop2 is never written
+    public string $prop3; // error: Property DeadPropertyMixed2\Implementor::$prop3 is never read // error: Property DeadPropertyMixed2\Implementor::$prop3 is never written
     public string $prop4; // error: Property DeadPropertyMixed2\Implementor::$prop4 is never written
     public string $prop5; // error: Property DeadPropertyMixed2\Implementor::$prop5 is never read // error: Property DeadPropertyMixed2\Implementor::$prop5 is never written
     public string $prop6; // error: Property DeadPropertyMixed2\Implementor::$prop6 is never written
