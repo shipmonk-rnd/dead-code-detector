@@ -71,7 +71,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
         /** @var array<string, array<string, true>> $dicCalls */
         $dicCalls = $dicCallsReflection->getValue($provider);
 
-        self::assertNotEmpty($dicCalls);
+        self::assertNotSame([], $dicCalls);
     }
 
     public function testEmptyContainerXmlPathsFallsBackToContainer(): void
@@ -86,7 +86,7 @@ final class SymfonyUsageProviderTest extends PHPStanTestCase
         /** @var array<string, array<string, true>> $dicCalls */
         $dicCalls = $dicCallsReflection->getValue($provider);
 
-        self::assertEmpty($dicCalls);
+        self::assertSame([], $dicCalls);
     }
 
 }
