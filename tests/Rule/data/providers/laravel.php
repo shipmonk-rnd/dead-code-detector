@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Manager;
+use Illuminate\Support\MultipleInstanceManager;
 use Illuminate\Support\ServiceProvider;
 
 // --- Controllers (AST-based via Route:: calls) ---
@@ -975,6 +977,104 @@ class InvalidOrderError extends \Error
 
     private function helperMethod(): void // error: Unused Laravel\InvalidOrderError::helperMethod
     {
+    }
+}
+
+// --- Managers ---
+
+class PaymentManager extends Manager
+{
+    public function getDefaultDriver(): string
+    {
+        return 'stripe';
+    }
+
+    protected function createStripeDriver(): object
+    {
+        return new \stdClass();
+    }
+
+    public function createBankTransferDriver(): object
+    {
+        return new \stdClass();
+    }
+
+    public function createDriverFactory(): object // error: Unused Laravel\PaymentManager::createDriverFactory
+    {
+        return new \stdClass();
+    }
+
+    public function buildStripeDriver(): object // error: Unused Laravel\PaymentManager::buildStripeDriver
+    {
+        return new \stdClass();
+    }
+}
+
+class StorageManager extends MultipleInstanceManager
+{
+    public function getDefaultInstance(): string
+    {
+        return 'local';
+    }
+
+    public function setDefaultInstance($name): void
+    {
+    }
+
+    public function getInstanceConfig($name): array
+    {
+        return [];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    protected function createLocalDriver(array $config): object
+    {
+        return new \stdClass();
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    protected function createLocalStore(array $config): object // error: Unused Laravel\StorageManager::createLocalStore
+    {
+        return new \stdClass();
+    }
+}
+
+class StoreManager extends MultipleInstanceManager
+{
+    protected $driverKey = 'store';
+
+    public function getDefaultInstance(): string
+    {
+        return 'memory';
+    }
+
+    public function setDefaultInstance($name): void
+    {
+    }
+
+    public function getInstanceConfig($name): array
+    {
+        return [];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    protected function createMemoryStore(array $config): object
+    {
+        return new \stdClass();
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    protected function createMemoryDriver(array $config): object // error: Unused Laravel\StoreManager::createMemoryDriver
+    {
+        return new \stdClass();
     }
 }
 

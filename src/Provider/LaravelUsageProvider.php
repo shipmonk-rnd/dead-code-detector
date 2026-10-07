@@ -27,6 +27,7 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
+use function is_string;
 use function lcfirst;
 use function ltrim;
 use function str_contains;
@@ -766,7 +767,8 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
             ?? $this->isJsonResourceMethod($method, $classReflection)
             ?? $this->isNotifiableMethod($method, $classReflection)
             ?? $this->isEventListenerMethod($method, $classReflection)
-            ?? $this->isExceptionMethod($method, $classReflection);
+            ?? $this->isExceptionMethod($method, $classReflection)
+            ?? $this->isManagerDriverMethod($method, $classReflection);
     }
 
     private function isCommandMethod(
@@ -1062,6 +1064,44 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
         if ($method->isPublic() && CaseInsensitiveName::isOneOf($methodName, $exceptionMethods)) {
             return 'Laravel exception method';
+        }
+
+        return null;
+    }
+
+    /**
+     * @see \Illuminate\Support\Manager::createDriver()
+     * @see \Illuminate\Support\MultipleInstanceManager::resolve()
+     */
+    private function isManagerDriverMethod(
+        ReflectionMethod $method,
+        ClassReflection $classReflection,
+    ): ?string
+    {
+        if ($classReflection->is('Illuminate\Support\Manager')) {
+            $suffix = 'Driver';
+
+        } elseif ($classReflection->is('Illuminate\Support\MultipleInstanceManager')) {
+            $driverKey = $classReflection->getNativeReflection()->getDefaultProperties()['driverKey'] ?? 'driver';
+
+            if (!is_string($driverKey)) {
+                return null;
+            }
+
+            $suffix = $driverKey;
+
+        } else {
+            return null;
+        }
+
+        $methodName = $method->getName();
+
+        if (
+            strlen($methodName) > strlen('create' . $suffix)
+            && CaseInsensitiveName::startsWith($methodName, 'create')
+            && CaseInsensitiveName::endsWith($methodName, $suffix)
+        ) {
+            return 'Laravel manager driver creator';
         }
 
         return null;
