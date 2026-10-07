@@ -27,6 +27,7 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
+use function is_string;
 use function lcfirst;
 use function ltrim;
 use function str_contains;
@@ -41,6 +42,10 @@ use function ucwords;
 
 final class LaravelUsageProvider implements ActivatableUsageProvider
 {
+
+    private const DEFAULT_POLICY_METHODS = [
+        'before', 'viewAny', 'view', 'create', 'update', 'delete', 'restore', 'forceDelete',
+    ];
 
     private readonly bool $enabled;
 
@@ -66,6 +71,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [...$usages, ...$this->getMethodUsagesFromReflection($node)];
+            $usages = [...$usages, ...$this->getPolicyUsagesFromUsePolicyAttribute($node)];
         }
 
         if ($node instanceof StaticCall) {
@@ -546,10 +552,19 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
     /**
      * @return list<string>
      *
+     * @see \Illuminate\Auth\Access\Gate::getPolicyFor() prefers the #[UsePolicy] attribute over the guessed names
      * @see \Illuminate\Auth\Access\Gate::guessPolicyName()
      */
     private function resolvePolicyClassNames(string $modelClassName): array
     {
+        if ($this->reflectionProvider->hasClass($modelClassName)) {
+            $attributePolicyClassName = $this->getPolicyClassNameFromAttribute($this->reflectionProvider->getClass($modelClassName));
+
+            if ($attributePolicyClassName !== null) {
+                return [$attributePolicyClassName];
+            }
+        }
+
         $lastSeparator = strrpos($modelClassName, '\\');
 
         if ($lastSeparator === false) {
@@ -583,6 +598,46 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         return $result;
+    }
+
+    /**
+     * @see \Illuminate\Auth\Access\Gate::getPolicyFromAttribute()
+     */
+    private function getPolicyClassNameFromAttribute(ClassReflection $classReflection): ?string
+    {
+        $attributes = $classReflection->getNativeReflection()->getAttributes('Illuminate\Database\Eloquent\Attributes\UsePolicy');
+
+        if ($attributes === []) {
+            return null;
+        }
+
+        $arguments = $attributes[0]->getArguments();
+        $policyClassName = $arguments[0] ?? $arguments['class'] ?? null;
+
+        return is_string($policyClassName) ? $policyClassName : null;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     */
+    private function getPolicyUsagesFromUsePolicyAttribute(InClassNode $node): array
+    {
+        $policyClassName = $this->getPolicyClassNameFromAttribute($node->getClassReflection());
+
+        if ($policyClassName === null) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach (self::DEFAULT_POLICY_METHODS as $method) {
+            $usages[] = new ClassMethodUsage(
+                UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Laravel policy method via #[UsePolicy]')),
+                new ClassMethodRef($policyClassName, $method, possibleDescendant: false),
+            );
+        }
+
+        return $usages;
     }
 
     /**
@@ -935,11 +990,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
             return null;
         }
 
-        $policyMethods = [
-            'before', 'viewAny', 'view', 'create', 'update', 'delete', 'restore', 'forceDelete',
-        ];
-
-        if (CaseInsensitiveName::isOneOf($method->getName(), $policyMethods)) {
+        if (CaseInsensitiveName::isOneOf($method->getName(), self::DEFAULT_POLICY_METHODS)) {
             return 'Laravel policy method';
         }
 
