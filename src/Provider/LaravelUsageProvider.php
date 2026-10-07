@@ -1082,13 +1082,19 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
             $suffix = 'Driver';
 
         } elseif ($classReflection->is('Illuminate\Support\MultipleInstanceManager')) {
-            $driverKey = $classReflection->getNativeReflection()->getDefaultProperties()['driverKey'] ?? 'driver';
+            $managerReflection = $classReflection->getAncestorWithClassName('Illuminate\Support\MultipleInstanceManager');
+            $suffix = 'Driver';
 
-            if (!is_string($driverKey)) {
-                return null;
+            // the $driverKey property exists since laravel/framework 11.13
+            if ($managerReflection !== null && $managerReflection->hasNativeProperty('driverKey')) {
+                $driverKey = $classReflection->getNativeReflection()->getDefaultProperties()['driverKey'] ?? null;
+
+                if (!is_string($driverKey)) {
+                    return null;
+                }
+
+                $suffix = $driverKey;
             }
-
-            $suffix = $driverKey;
 
         } else {
             return null;
