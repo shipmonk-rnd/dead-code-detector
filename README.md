@@ -119,7 +119,7 @@ parameters:
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
 
 #### Eloquent:
-- Model methods — constructor, `boot`, `booted`, `casts`, `newFactory`, query scopes, relationships, attribute accessors (modern + legacy)
+- Model methods — constructor, `boot`, `booted`, `casts`, `newFactory`, query scopes, relationships (also those without a declared return type), attribute accessors (modern + legacy)
 - Observers — `Model::observe()` + `#[ObservedBy]` attribute
 - Factories (`definition`, `configure`), seeders (`run`), migrations (`up`, `down`)
 
