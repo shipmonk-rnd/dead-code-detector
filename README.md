@@ -114,7 +114,8 @@ parameters:
 - Route registration — `Route::get/post/put/...()`, `resource()`, `apiResource()` with callable, string (`Controller@method`), and invokable syntax
 - Event listeners — `Event::listen()`, `Event::subscribe()`, auto-discovered listeners (`handle*`/`__invoke` with typed first param)
 - Scheduled jobs — `Schedule::job()`
-- Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()` with automatic policy class resolution
+- Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()`, `$user->can()`, `Gate::allows()` and similar with automatic policy class resolution
+- Route authorization — `->can('create', Post::class)` and `can:create,App\Models\Post` middleware
 - Real-time facades — `\Facades\...` static calls mapped to the underlying class
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
 
