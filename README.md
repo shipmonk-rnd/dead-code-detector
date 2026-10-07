@@ -116,6 +116,7 @@ parameters:
 - Scheduled jobs — `Schedule::job()`
 - Gates & policies — `Gate::define()`, `Gate::policy()`, `$this->authorize()` with automatic policy class resolution
 - Real-time facades — `\Facades\...` static calls mapped to the underlying class
+- Manager drivers — `create{Name}Driver` methods of `Manager` and `MultipleInstanceManager` subclasses
 - Console commands, jobs, service providers, middleware, notifications, form requests, mailables, broadcast events, JSON resources, notifiable routing
 
 #### Eloquent:
