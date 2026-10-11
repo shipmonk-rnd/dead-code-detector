@@ -355,6 +355,10 @@ final class DebugUsagePrinter
         array $alternativeKeys,
     ): void
     {
+        if ($this->debugMembers === []) {
+            return;
+        }
+
         if ($alternativeKeys === []) {
             // this can happen for references outside analysed files
             $originalRef = $collectedUsage->getUsage()->getMemberRef();

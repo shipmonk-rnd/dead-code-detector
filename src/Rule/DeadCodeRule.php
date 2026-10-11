@@ -44,7 +44,6 @@ use function array_unique;
 use function array_values;
 use function in_array;
 use function ksort;
-use function serialize;
 use function sort;
 use function str_starts_with;
 use function strcasecmp;
@@ -556,7 +555,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             throw new LogicException('Those were eliminated above, should never happen');
         }
 
-        $cacheKey = serialize([$member, $accessType]);
+        $cacheKey = $member->toCacheKey($accessType);
 
         if (isset($this->memberAlternativesCache[$cacheKey])) {
             return $this->memberAlternativesCache[$cacheKey];

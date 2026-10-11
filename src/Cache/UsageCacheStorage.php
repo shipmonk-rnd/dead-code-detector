@@ -2,30 +2,45 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Cache;
 
-use DirectoryIterator;
 use LogicException;
-use RuntimeException;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
 use function explode;
 use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
 use function implode;
 use function is_dir;
 use function md5;
-use function mkdir;
-use function substr;
 use function unlink;
 
+/**
+ * Workers pack() usages into loose files. The finalizer unpack()s them, preferring the
+ * bundle, and gc() then folds everything this run read into the bundle for the next run.
+ */
 final class UsageCacheStorage
 {
+
+    private const BUNDLE_DATA_FILE = 'bundle.dat';
+
+    private const BUNDLE_INDEX_FILE = 'bundle.idx';
+
+    /**
+     * Rewriting the whole bundle only pays off once enough of it became garbage.
+     */
+    private const GARBAGE_RATIO_LIMIT = 0.2;
 
     private readonly string $cacheDir;
 
     private readonly bool $offloadCollectorData;
 
+    private readonly LooseFileStore $looseFiles;
+
+    private readonly BundleFile $bundle;
+
+    private ?BundleIndex $index = null;
+
     /**
+     * Insertion ordered, so it doubles as the read order for laying out the next bundle.
+     *
      * @var array<string, true>
      */
     private array $readHashes = [];
@@ -37,6 +52,8 @@ final class UsageCacheStorage
     {
         $this->cacheDir = $tmpDir . '/dcd';
         $this->offloadCollectorData = $offloadCollectorData;
+        $this->looseFiles = new LooseFileStore($this->cacheDir);
+        $this->bundle = new BundleFile($this->cacheDir . '/' . self::BUNDLE_DATA_FILE);
     }
 
     /**
@@ -60,14 +77,7 @@ final class UsageCacheStorage
         $content = implode("\n", $serialized);
         $hash = md5($content);
 
-        $filePath = $this->getFilePath($hash);
-
-        if (!file_exists($filePath)) {
-            $this->ensureDirectoryExists($hash);
-            if (file_put_contents($filePath, $content) === false) {
-                throw new LogicException("Failed to write DCD cache file: {$filePath}");
-            }
-        }
+        $this->looseFiles->write($hash, $content);
 
         return [$hash];
     }
@@ -86,19 +96,20 @@ final class UsageCacheStorage
 
         $this->readHashes[$data] = true;
 
-        $filePath = $this->getFilePath($data);
-
-        if (!file_exists($filePath)) {
-            throw new LogicException(
-                "DCD cache file not found for hash '{$data}' at '{$filePath}'. "
-                . 'Please clear the PHPStan result cache and re-run the analysis.',
-            );
+        try {
+            $position = $this->index()->get($data);
+            $content = $position === null
+                ? $this->looseFiles->read($data)
+                : $this->bundle->read($position);
+        } catch (CorruptUsageCacheException $e) {
+            throw $this->discard($e);
         }
 
-        $content = file_get_contents($filePath);
-
-        if ($content === false) {
-            throw new LogicException("Could not read DCD cache file: {$filePath}");
+        if ($content === null) {
+            throw new LogicException(
+                "DCD cache file not found for hash '{$data}' at '{$this->looseFiles->path($data)}'. "
+                . 'Please clear the PHPStan result cache and re-run the analysis.',
+            );
         }
 
         return array_map(
@@ -108,7 +119,8 @@ final class UsageCacheStorage
     }
 
     /**
-     * Delete all files in cacheDir that were not read by this cache instance
+     * Delete everything that was not read by this run, then merge what survived into the
+     * bundle so that the next run does not have to open one file per hash.
      */
     public function gc(): void
     {
@@ -117,50 +129,151 @@ final class UsageCacheStorage
         }
 
         try {
-            $subdirs = new DirectoryIterator($this->cacheDir);
-        } catch (RuntimeException $e) {
-            return;
-        }
-
-        foreach ($subdirs as $subdir) {
-            if ($subdir->isDot() || !$subdir->isDir()) {
-                continue;
-            }
-
-            try {
-                $files = new DirectoryIterator($subdir->getPathname());
-            } catch (RuntimeException $e) {
-                continue;
-            }
-
-            foreach ($files as $file) {
-                if ($file->isDot() || $file->isDir()) {
-                    continue;
-                }
-
-                $hash = $subdir->getFilename() . $file->getBasename('.dat');
-
-                if (!isset($this->readHashes[$hash])) {
-                    @unlink($file->getPathname());
-                }
-            }
+            $this->foldIntoBundle();
+        } catch (CorruptUsageCacheException $e) {
+            throw $this->discard($e);
         }
     }
 
-    private function getFilePath(string $hash): string
+    /**
+     * @throws CorruptUsageCacheException
+     */
+    private function foldIntoBundle(): void
     {
-        $prefix = substr($hash, 0, 2);
+        $index = $this->index();
+        $unbundled = [];
 
-        return $this->cacheDir . '/' . $prefix . '/' . substr($hash, 2) . '.dat';
+        foreach ($this->looseFiles->findAll() as $hash) {
+            if (!isset($this->readHashes[$hash]) || $index->has($hash)) {
+                $this->looseFiles->remove($hash);
+                continue;
+            }
+
+            $unbundled[$hash] = true;
+        }
+
+        $needsRewrite = $index->isEmpty() || $index->garbageRatio($this->readHashes) > self::GARBAGE_RATIO_LIMIT;
+
+        if ($needsRewrite) {
+            $newIndex = $this->bundle->rewrite($this->survivingRecords($index, $unbundled));
+        } elseif ($unbundled !== []) {
+            $newIndex = $this->bundle->append($this->looseRecords($unbundled), $index);
+        } else {
+            $newIndex = null;
+        }
+
+        if ($newIndex !== null) {
+            $newIndex->save($this->cacheDir . '/' . self::BUNDLE_INDEX_FILE);
+
+            foreach ($unbundled as $hash => $unused) {
+                if ($newIndex->has($hash)) {
+                    $this->looseFiles->remove($hash);
+                }
+            }
+        }
+
+        $this->looseFiles->removeEmptyDirectories();
+        $this->bundle->close();
+        $this->index = null;
     }
 
-    private function ensureDirectoryExists(string $hash): void
+    /**
+     * @throws CorruptUsageCacheException
+     */
+    private function index(): BundleIndex
     {
-        $dir = $this->cacheDir . '/' . substr($hash, 0, 2);
-
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
+        if ($this->index !== null) {
+            return $this->index;
         }
+
+        $index = BundleIndex::load($this->cacheDir . '/' . self::BUNDLE_INDEX_FILE);
+
+        if (!$index->isEmpty() && $index->getGeneration() !== $this->bundle->getGeneration()) {
+            throw new CorruptUsageCacheException("DCD usage cache index in '{$this->cacheDir}' belongs to a different bundle generation.");
+        }
+
+        return $this->index = $index;
+    }
+
+    /**
+     * The next run then starts without a bundle and reads the loose files that a result
+     * cache clear makes the collectors write again.
+     */
+    private function discard(CorruptUsageCacheException $e): LogicException
+    {
+        $this->bundle->close();
+        $this->index = null;
+
+        foreach ([self::BUNDLE_DATA_FILE, self::BUNDLE_INDEX_FILE] as $file) {
+            $path = $this->cacheDir . '/' . $file;
+
+            if (file_exists($path) && !unlink($path)) {
+                throw new LogicException("Failed to delete corrupt DCD usage cache file '{$path}'.", 0, $e);
+            }
+        }
+
+        return new LogicException(
+            $e->getMessage() . ' The bundle was discarded. Clear the PHPStan result cache and re-run the analysis.',
+            0,
+            $e,
+        );
+    }
+
+    /**
+     * Everything this run read, in read order, so that the next run reads the bundle front to back.
+     *
+     * @param array<string, true> $unbundled hashes that exist only as loose files
+     * @return iterable<string, string> hash => content
+     *
+     * @throws CorruptUsageCacheException
+     */
+    private function survivingRecords(
+        BundleIndex $index,
+        array $unbundled,
+    ): iterable
+    {
+        foreach ($this->readHashes as $hash => $unused) {
+            if (isset($unbundled[$hash])) {
+                yield $hash => $this->requireLooseRecord($hash);
+                continue;
+            }
+
+            $position = $index->get($hash);
+
+            if ($position === null) {
+                continue; // an oversized record read from its loose file, stays loose
+            }
+
+            yield $hash => $this->bundle->read($position);
+        }
+    }
+
+    /**
+     * @param array<string, true> $hashes
+     * @return iterable<string, string> hash => content
+     */
+    private function looseRecords(array $hashes): iterable
+    {
+        foreach ($hashes as $hash => $unused) {
+            yield $hash => $this->requireLooseRecord($hash);
+        }
+    }
+
+    /**
+     * The file was listed by this very gc() run, so it can only be gone if another process removed it.
+     */
+    private function requireLooseRecord(string $hash): string
+    {
+        $content = $this->looseFiles->read($hash);
+
+        if ($content === null) {
+            throw new LogicException(
+                "DCD cache file '{$this->looseFiles->path($hash)}' disappeared during gc. "
+                . 'Is another PHPStan process sharing the same tmpDir?',
+            );
+        }
+
+        return $content;
     }
 
 }

@@ -5,6 +5,7 @@ namespace ShipMonk\PHPStan\DeadCode\Graph;
 use LogicException;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use function implode;
 
 /**
  * @template-covariant C of string|null
@@ -73,6 +74,16 @@ abstract class ClassMemberRef
             $result[] = "$prefix/$this->className::$this->memberName";
         }
         return $result;
+    }
+
+    /**
+     * Cheap identity for memoization; covers everything toKeys() derives its result from.
+     */
+    public function toCacheKey(AccessType $accessType): string
+    {
+        return implode(',', $this->getKeyPrefixes($accessType))
+            . ($this->possibleDescendant ? '/1/' : '/0/')
+            . ($this->className ?? '?') . '::' . ($this->memberName ?? '?');
     }
 
     /**
