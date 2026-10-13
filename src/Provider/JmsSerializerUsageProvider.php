@@ -255,7 +255,7 @@ final class JmsSerializerUsageProvider implements ActivatableUsageProvider
         $usages = [];
 
         foreach ($class->getMethods() as $method) {
-            if ($method->getDeclaringClass()->getName() !== $className) {
+            if ($method->getAttributes() === [] || $method->getDeclaringClass()->getName() !== $className) {
                 continue;
             }
 
@@ -267,9 +267,15 @@ final class JmsSerializerUsageProvider implements ActivatableUsageProvider
             }
         }
 
+        $hasClassAccessType = $this->hasAttribute($class, AccessType::class);
+
         foreach ($class->getProperties() as $property) {
             if ($property->getDeclaringClass()->getName() !== $className) {
                 continue;
+            }
+
+            if (!$hasClassAccessType && $property->getAttributes() === []) {
+                continue; // no accessor without an attribute; skips most properties of the codebase cheaply
             }
 
             if (!$this->isExposed($class, $property, isVirtual: false)) {
