@@ -116,6 +116,7 @@ final class UnsavedResultCacheTest extends TestCase
     public function testNextRunWorksAfterRunThatDoesNotSaveResultCache(
         ?string $callerContent,
         array $extraArguments,
+        bool $neverSavesResultCache,
     ): void
     {
         $resultCachePath = $this->projectDir . '/tmp/resultCache.php';
@@ -133,7 +134,10 @@ final class UnsavedResultCacheTest extends TestCase
         }
 
         $this->runPhpStan($extraArguments);
-        self::assertSame($resultCacheHash, md5_file($resultCachePath), 'The second run must not save the result cache');
+
+        if ($neverSavesResultCache) {
+            self::assertSame($resultCacheHash, md5_file($resultCachePath), 'The second run must not save the result cache');
+        }
 
         $this->writeFile('src/Caller.php', self::CALLER);
 
@@ -141,12 +145,13 @@ final class UnsavedResultCacheTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{?string, list<string>}>
+     * @return iterable<string, array{?string, list<string>, bool}>
      */
     public static function provideRunsThatDoNotSaveResultCache(): iterable
     {
-        yield 'editor mode' => [null, ['--tmp-file', 'edited/Caller.php', '--instead-of', 'src/Caller.php']];
-        yield 'syntax error' => [str_replace('->used();', '->used(', self::CALLER), []];
+        yield 'editor mode' => [null, ['--tmp-file', 'edited/Caller.php', '--instead-of', 'src/Caller.php'], true];
+        // PHPStan 2.3.1 and later save the result cache when an analysed file has a parse error
+        yield 'syntax error' => [str_replace('->used();', '->used(', self::CALLER), [], false];
     }
 
     /**

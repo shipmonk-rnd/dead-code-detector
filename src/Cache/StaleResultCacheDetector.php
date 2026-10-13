@@ -14,7 +14,7 @@ use function rename;
 
 /**
  * PHPStan does not tell extensions if it saved the result cache.
- * It does not save it in editor mode or when an analysed file has a syntax error, for example.
+ * It does not save it in editor mode or when a file has a non-ignorable error, for example.
  * The result cache on disk is then stale: it still references usage cache files of an older run.
  */
 final class StaleResultCacheDetector
