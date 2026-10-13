@@ -259,6 +259,17 @@ class DicClass4 {
     public function __construct() {}
 }
 
+class DicDoctrineListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {}
+    public function notAnEvent(): void {} // error: Unused Symfony\DicDoctrineListener::notAnEvent
+}
+
+class DicOtherTagListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {} // error: Unused Symfony\DicOtherTagListener::preSoftDelete
+}
+
 class DicErroredService {
     public function __construct(string $name) {} // error: Unused Symfony\DicErroredService::__construct
 }

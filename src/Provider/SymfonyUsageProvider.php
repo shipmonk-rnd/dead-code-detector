@@ -1469,6 +1469,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                     if ($tagName !== null) {
                         $this->dicTaggedClasses[$tagName][] = $class;
                     }
+
+                    // Doctrine calls the method that has the name of the event, see ContainerAwareEventManager::getMethod()
+                    if ($tagName === 'doctrine.event_listener' && isset($tagAttributes->event)) {
+                        $this->dicCalls[$class][(string) $tagAttributes->event] = true;
+                    }
                 }
             }
 
