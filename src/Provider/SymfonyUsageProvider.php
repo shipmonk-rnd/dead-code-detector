@@ -65,6 +65,7 @@ use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
+use function strtolower;
 use function substr;
 use function trim;
 
@@ -94,6 +95,13 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
      * @var array<string, list<string>>
      */
     private array $dicTaggedClasses = [];
+
+    /**
+     * class => [lowercased method => tag]
+     *
+     * @var array<string, array<string, string>>
+     */
+    private array $dicDoctrineListenerMethods = [];
 
     /**
      * class => [constant => config file]
@@ -336,6 +344,12 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             $methodName = $method->getName();
             if (isset($this->dicCalls[$className][$methodName])) {
                 $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), 'Called via DIC');
+            }
+
+            $doctrineListenerTag = $this->dicDoctrineListenerMethods[$className][strtolower($methodName)] ?? null;
+
+            if ($doctrineListenerTag !== null) {
+                $usages[] = $this->createUsage($classReflection->getNativeMethod($methodName), "Listener method of $doctrineListenerTag tag in DIC");
             }
 
             if ($method->getDeclaringClass()->getName() !== $nativeReflection->getName()) {
@@ -1468,6 +1482,11 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
 
                     if ($tagName !== null) {
                         $this->dicTaggedClasses[$tagName][] = $class;
+                        $doctrineListenerMethod = $this->getDoctrineListenerMethod($tagName, $tagAttributes);
+
+                        if ($doctrineListenerMethod !== null) {
+                            $this->dicDoctrineListenerMethods[$class][strtolower($doctrineListenerMethod)] = $tagName;
+                        }
                     }
                 }
             }
@@ -1489,6 +1508,37 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 }
             }
         }
+    }
+
+    /**
+     * XmlDumper writes a null tag attribute as an empty string.
+     * The __invoke fallback of Doctrine needs no usage, because __invoke is never reported as dead.
+     *
+     * @see \Symfony\Bridge\Doctrine\ContainerAwareEventManager::getMethod()
+     * @see \Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\EntityListenerPass::attachToListener()
+     */
+    private function getDoctrineListenerMethod(
+        string $tagName,
+        SimpleXMLElement $tagAttributes,
+    ): ?string
+    {
+        $event = (string) $tagAttributes->event;
+
+        if ($event === '') {
+            return null;
+        }
+
+        if ($tagName === 'doctrine.event_listener' || $tagName === 'doctrine_mongodb.odm.event_listener') {
+            return $event;
+        }
+
+        if ($tagName === 'doctrine.orm.entity_listener' && (string) $tagAttributes->entity !== '') {
+            $method = (string) $tagAttributes->method;
+
+            return $method !== '' ? $method : $event;
+        }
+
+        return null;
     }
 
     private function isServiceNotInstantiatedByContainer(

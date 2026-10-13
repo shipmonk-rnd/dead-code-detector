@@ -74,6 +74,7 @@ parameters:
 
 #### Doctrine:
 - `#[AsEntityListener]`, `#[AsDoctrineListener]` attribute
+- `doctrine.event_listener` and `doctrine.orm.entity_listener` tags in the Symfony container XML
 - `Doctrine\ORM\Events::*` events, `Doctrine\Common\EventSubscriber` methods
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
