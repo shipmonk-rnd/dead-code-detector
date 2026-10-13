@@ -56,6 +56,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\ComposerUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\JmsSerializerUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
@@ -1026,6 +1027,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php'];
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
+        yield 'provider-jms-serializer' => [__DIR__ . '/data/providers/jms-serializer.php'];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
@@ -1247,6 +1249,9 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
             ),
             new DoctrineUsageProvider(
+                $this->providersEnabled,
+            ),
+            new JmsSerializerUsageProvider(
                 $this->providersEnabled,
             ),
             new PhpStanUsageProvider(

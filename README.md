@@ -79,6 +79,12 @@ parameters:
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 - enums in `#[Column(enumType: UserStatus::class)]`
 
+#### JMS Serializer:
+- `EventSubscriberInterface::getSubscribedEvents` and `SubscribingHandlerInterface::getSubscribingMethods`, including the default method names
+- callback attributes `#[PreSerialize]`, `#[PostSerialize]`, `#[PostDeserialize]`
+- `#[VirtualProperty]` methods
+- getters and setters of `#[Accessor]` and `#[AccessType(type: 'public_method')]`
+
 #### PHPUnit:
 - **data provider methods**
 - `testXxx` methods
