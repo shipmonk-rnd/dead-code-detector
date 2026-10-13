@@ -66,6 +66,7 @@ parameters:
 - `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]`
 - `#[AutoconfigureTag('doctrine.event_listener')]`, `#[Autoconfigure(constructor:)]`, `#[Autoconfigure(calls:)]`, `#[AutowireCallable]`
 - `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
+- implicit `getDefaultPriority` of services in `#[AutowireIterator]` and `#[TaggedIterator]`
 - Workflow event listener attributes: `#[AsAnnounceListener]`, ...
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc
