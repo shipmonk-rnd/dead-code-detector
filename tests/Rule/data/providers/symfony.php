@@ -259,6 +259,41 @@ class DicClass4 {
     public function __construct() {}
 }
 
+class DicDoctrineListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {}
+    public function POSTSOFTDELETE(): void {} // PHP calls methods case-insensitively
+    public function notAnEvent(): void {} // error: Unused Symfony\DicDoctrineListener::notAnEvent
+}
+
+class DicDoctrineListenerParent {
+    public function preSoftDelete(): void {}
+}
+
+class DicDoctrineListenerChild extends DicDoctrineListenerParent {
+    public function __construct() {}
+}
+
+class DicDoctrineOdmListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {}
+    public function notAnEvent(): void {} // error: Unused Symfony\DicDoctrineOdmListener::notAnEvent
+}
+
+class DicDoctrineEntityListener {
+    public function __construct() {}
+    public function onCompanyChange(): void {}
+    public function customEvent(): void {}
+    public function methodWithoutEvent(): void {} // error: Unused Symfony\DicDoctrineEntityListener::methodWithoutEvent
+    public function methodWithoutEntity(): void {} // error: Unused Symfony\DicDoctrineEntityListener::methodWithoutEntity
+    public function eventWithoutEntity(): void {} // error: Unused Symfony\DicDoctrineEntityListener::eventWithoutEntity
+}
+
+class DicOtherTagListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {} // error: Unused Symfony\DicOtherTagListener::preSoftDelete
+}
+
 class DicErroredService {
     public function __construct(string $name) {} // error: Unused Symfony\DicErroredService::__construct
 }
