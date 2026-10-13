@@ -334,6 +334,59 @@ interface TaggedInterface {
     public function getKey(): string;
 }
 
+class SomeController4 {
+
+    #[Route('/tagged-implicit', name: 'tagged-implicit')]
+    public function getAction(
+        #[TaggedIterator(ImplicitTaggedInterface::class)]
+        $iterator,
+        #[TaggedLocator('app.legacy_located')]
+        $locator
+    ): void {
+    }
+
+}
+
+interface ImplicitTaggedInterface {}
+
+class ImplicitTaggedService implements ImplicitTaggedInterface {
+    public static function getDefaultPriority(): int { return 1; }
+    public static function getDefaultName(): string { return 'a'; } // error: Unused Symfony\ImplicitTaggedService::getDefaultName
+}
+
+class LegacyLocatedService {
+    public static function getDefaultLegacyLocatedName(): string { return 'a'; }
+    public static function getDefaultLegacyLocatedPriority(): int { return 1; }
+    public static function getDefaultPriority(): int { return 1; } // error: Unused Symfony\LegacyLocatedService::getDefaultPriority
+}
+
+class XmlIteratorConsumer {
+    public function __construct(iterable $iterated) {}
+    public function setIndexed(iterable $indexed, iterable $explicit): void {}
+}
+
+class XmlIteratedService {
+    public static function getDefaultPriority(): int { return 1; }
+    public static function getDefaultKeyName(): string { return 'a'; } // error: Unused Symfony\XmlIteratedService::getDefaultKeyName
+}
+
+class XmlIndexedService {
+    public static function getDefaultKeyName(): string { return 'a'; }
+    public static function getDefaultKeyPriority(): int { return 1; }
+    public static function getDefaultPriority(): int { return 1; } // error: Unused Symfony\XmlIndexedService::getDefaultPriority
+}
+
+class XmlExplicitService {
+    public static function getXmlIndex(): string { return 'a'; }
+    public static function getXmlPriority(): int { return 1; }
+    public static function getDefaultKeyName(): string { return 'a'; } // error: Unused Symfony\XmlExplicitService::getDefaultKeyName
+    public static function getDefaultKeyPriority(): int { return 1; } // error: Unused Symfony\XmlExplicitService::getDefaultKeyPriority
+}
+
+class XmlNotIteratedService {
+    public static function getDefaultPriority(): int { return 1; } // error: Unused Symfony\XmlNotIteratedService::getDefaultPriority
+}
+
 #[Autoconfigure(constructor: 'create')]
 class AutoconfiguredFactory {
     public static function create(): self {
