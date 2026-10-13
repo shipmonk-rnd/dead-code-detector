@@ -14,6 +14,11 @@ services:
             tmpDir: %tmpDir%
             offloadCollectorData: %shipmonkDeadCode.cache.offloadCollectorData%
     -
+        class: ShipMonk\PHPStan\DeadCode\Cache\StaleResultCacheDetector
+        arguments:
+            tmpDir: %tmpDir%
+            resultCachePath: %resultCachePath%
+    -
         class: ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy

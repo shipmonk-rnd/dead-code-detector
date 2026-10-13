@@ -109,6 +109,7 @@ final class UsageCacheStorage
 
     /**
      * Delete all files in cacheDir that were not read by this cache instance
+     * A stale result cache can still reference such files, see StaleResultCacheDetector
      */
     public function gc(): void
     {

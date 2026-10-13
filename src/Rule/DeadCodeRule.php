@@ -12,6 +12,7 @@ use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\TrinaryLogic;
+use ShipMonk\PHPStan\DeadCode\Cache\StaleResultCacheDetector;
 use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -136,6 +137,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
     public function __construct(
         private readonly DebugUsagePrinter $debugUsagePrinter,
         UsageCacheStorage $usageCacheStorage,
+        private readonly StaleResultCacheDetector $staleResultCacheDetector,
         private readonly ClassHierarchy $classHierarchy,
         private readonly bool $detectDeadMethods,
         private readonly bool $detectDeadConstants,
@@ -164,6 +166,9 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         Scope $scope,
     ): array
     {
+        // before any return: each run must record the state of the result cache
+        $canResultCacheBeStale = $this->staleResultCacheDetector->canResultCacheBeStale();
+
         if ($node->isOnlyFilesAnalysis()) {
             return [];
         }
@@ -204,7 +209,9 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
             }
         }
 
-        $this->usageCacheStorage->gc();
+        if (!$canResultCacheBeStale) {
+            $this->usageCacheStorage->gc();
+        }
 
         foreach ($classDefinitionData as $file => $data) {
             foreach ($data as $typeData) {
