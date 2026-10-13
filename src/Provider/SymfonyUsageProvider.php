@@ -637,7 +637,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 ) {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['tag']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
+                    if (!isset($arguments['tag'])) {
                         continue;
                     }
 
@@ -670,6 +670,25 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                                 new ClassMethodRef(
                                     $className,
                                     $method[0]->getValue(),
+                                    possibleDescendant: true,
+                                ),
+                            );
+                        }
+                    }
+
+                    // PriorityTaggedServiceTrait::findAndSortTaggedServices() calls getDefaultPriority() then.
+                    // An index attribute changes that name, and a locator always has an index attribute.
+                    if (
+                        !isset($arguments['defaultPriorityMethod'])
+                        && !isset($arguments['indexAttribute'])
+                        && $attributeReflection->getName() !== 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
+                    ) {
+                        foreach ($classNames as $className) {
+                            $usages[] = new ClassMethodUsage(
+                                $usageOrigin,
+                                new ClassMethodRef(
+                                    $className,
+                                    'getDefaultPriority',
                                     possibleDescendant: true,
                                 ),
                             );
