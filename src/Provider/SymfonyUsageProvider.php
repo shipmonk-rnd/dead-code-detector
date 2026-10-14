@@ -59,14 +59,18 @@ use function in_array;
 use function is_array;
 use function is_dir;
 use function is_string;
+use function preg_match;
 use function preg_match_all;
+use function preg_replace;
 use function simplexml_load_string;
 use function sprintf;
 use function str_ends_with;
+use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function substr;
 use function trim;
+use function ucwords;
 
 final class SymfonyUsageProvider implements ActivatableUsageProvider
 {
@@ -590,45 +594,34 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 if ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireLocator') {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['services']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
+                    if (!isset($arguments['services'])) {
                         continue;
                     }
 
                     if ($arguments['services']->isArray()->yes()) {
-                        $resolvedClassNames = [];
+                        foreach (['defaultIndexMethod', 'defaultPriorityMethod'] as $methodName) {
+                            $method = $this->getConstantStringArgument($arguments, $methodName);
 
-                        foreach ($arguments['services']->getIterableValueType()->getConstantStrings() as $className) {
-                            $resolvedClassNames[] = $className->getValue();
+                            if ($method === null) {
+                                continue;
+                            }
+
+                            foreach ($arguments['services']->getIterableValueType()->getConstantStrings() as $className) {
+                                $usages[] = new ClassMethodUsage(
+                                    $usageOrigin,
+                                    new ClassMethodRef(
+                                        $className->getValue(),
+                                        $method,
+                                        possibleDescendant: true,
+                                    ),
+                                );
+                            }
                         }
                     } else {
-                        $resolvedClassNames = $this->resolveTaggedClassNames($arguments['services']->getConstantStrings());
-                    }
-
-                    if ($resolvedClassNames === []) {
-                        continue;
-                    }
-
-                    foreach (['defaultIndexMethod', 'defaultPriorityMethod'] as $methodName) {
-                        if (!isset($arguments[$methodName])) {
-                            continue;
-                        }
-
-                        $method = $arguments[$methodName]->getConstantStrings();
-
-                        if (!isset($method[0])) {
-                            continue;
-                        }
-
-                        foreach ($resolvedClassNames as $className) {
-                            $usages[] = new ClassMethodUsage(
-                                $usageOrigin,
-                                new ClassMethodRef(
-                                    $className,
-                                    $method[0]->getValue(),
-                                    possibleDescendant: true,
-                                ),
-                            );
-                        }
+                        $usages = [
+                            ...$usages,
+                            ...$this->getTaggedServiceDefaultMethodUsages($usageOrigin, $arguments['services'], $arguments, true),
+                        ];
                     }
                 } elseif (
                     $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireIterator'
@@ -637,44 +630,19 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 ) {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['tag']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
+                    if (!isset($arguments['tag'])) {
                         continue;
                     }
 
-                    $tagValues = $arguments['tag']->getConstantStrings();
-
-                    if ($tagValues === []) {
-                        continue;
-                    }
-
-                    $classNames = $this->resolveTaggedClassNames($tagValues);
-
-                    if ($classNames === []) {
-                        continue;
-                    }
-
-                    foreach (['defaultIndexMethod', 'defaultPriorityMethod'] as $methodName) {
-                        if (!isset($arguments[$methodName])) {
-                            continue;
-                        }
-
-                        $method = $arguments[$methodName]->getConstantStrings();
-
-                        if (!isset($method[0])) {
-                            continue;
-                        }
-
-                        foreach ($classNames as $className) {
-                            $usages[] = new ClassMethodUsage(
-                                $usageOrigin,
-                                new ClassMethodRef(
-                                    $className,
-                                    $method[0]->getValue(),
-                                    possibleDescendant: true,
-                                ),
-                            );
-                        }
-                    }
+                    $usages = [
+                        ...$usages,
+                        ...$this->getTaggedServiceDefaultMethodUsages(
+                            $usageOrigin,
+                            $arguments['tag'],
+                            $arguments,
+                            $attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator',
+                        ),
+                    ];
                 } elseif ($attributeReflection->getName() === 'Symfony\Component\DependencyInjection\Attribute\AutowireCallable') {
                     $arguments = $attributeReflection->getArgumentTypes();
 
@@ -713,6 +681,99 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @param array<string, Type> $arguments
+     * @return list<ClassMethodUsage>
+     */
+    private function getTaggedServiceDefaultMethodUsages(
+        UsageOrigin $usageOrigin,
+        Type $tagType,
+        array $arguments,
+        bool $needsIndexes,
+    ): array
+    {
+        $usages = [];
+
+        foreach ($tagType->getConstantStrings() as $tag) {
+            $methodNames = $this->getTaggedServiceDefaultMethodNames(
+                $tag->getValue(),
+                $this->getConstantStringArgument($arguments, 'indexAttribute'),
+                $this->getConstantStringArgument($arguments, 'defaultIndexMethod'),
+                $this->getConstantStringArgument($arguments, 'defaultPriorityMethod'),
+                $needsIndexes,
+            );
+
+            foreach ($this->resolveTaggedClassNames([$tag]) as $className) {
+                foreach ($methodNames as $methodName) {
+                    $usages[] = new ClassMethodUsage(
+                        $usageOrigin,
+                        new ClassMethodRef(
+                            $className,
+                            $methodName,
+                            possibleDescendant: true,
+                        ),
+                    );
+                }
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * Static methods that the container calls on each tagged service when its tag has no priority or no index attribute.
+     * Mirrors TaggedIteratorArgument::__construct() and PriorityTaggedServiceTrait::findAndSortTaggedServices().
+     *
+     * @return list<string>
+     */
+    private function getTaggedServiceDefaultMethodNames(
+        string $tag,
+        ?string $indexAttribute,
+        ?string $defaultIndexMethod,
+        ?string $defaultPriorityMethod,
+        bool $needsIndexes,
+    ): array
+    {
+        if ($indexAttribute === null && $needsIndexes) {
+            $indexAttribute = preg_match('/[^.]++$/', $tag, $matches) === 1 ? $matches[0] : $tag;
+        }
+
+        if ($indexAttribute === null) {
+            $defaultPriorityMethod ??= 'getDefaultPriority';
+        } else {
+            $words = preg_replace('/[^a-zA-Z0-9\x7f-\xff]++/', ' ', $indexAttribute);
+
+            if ($words === null) {
+                throw new LogicException(sprintf('Cannot build default method names for index attribute "%s"', $indexAttribute));
+            }
+
+            $prefix = 'getDefault' . str_replace(' ', '', ucwords($words));
+            $defaultIndexMethod ??= $prefix . 'Name';
+            $defaultPriorityMethod ??= $prefix . 'Priority';
+        }
+
+        return $defaultIndexMethod === null
+            ? [$defaultPriorityMethod]
+            : [$defaultIndexMethod, $defaultPriorityMethod];
+    }
+
+    /**
+     * @param array<string, Type> $arguments
+     */
+    private function getConstantStringArgument(
+        array $arguments,
+        string $name,
+    ): ?string
+    {
+        if (!isset($arguments[$name])) {
+            return null;
+        }
+
+        $constantStrings = $arguments[$name]->getConstantStrings();
+
+        return isset($constantStrings[0]) ? $constantStrings[0]->getValue() : null;
     }
 
     /**
@@ -1434,6 +1495,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
         }
 
         $serviceMap = $this->buildXmlServiceMap($xml->services->service);
+        $taggedIteratorMethods = $this->getDefaultMethodsOfTaggedIterators($xml, $containerXmlPath);
 
         foreach ($xml->services->service as $serviceDefinition) {
             /** @var SimpleXMLElement $serviceAttributes */
@@ -1466,8 +1528,14 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                     $tagAttributes = $tagDefinition->attributes();
                     $tagName = $tagAttributes->name !== null ? (string) $tagAttributes->name : null;
 
-                    if ($tagName !== null) {
-                        $this->dicTaggedClasses[$tagName][] = $class;
+                    if ($tagName === null) {
+                        continue;
+                    }
+
+                    $this->dicTaggedClasses[$tagName][] = $class;
+
+                    foreach ($taggedIteratorMethods[$tagName] ?? [] as $method) {
+                        $this->dicCalls[$class][$method] = true;
                     }
 
                     // Doctrine calls the method that has the name of the event, see ContainerAwareEventManager::getMethod()
@@ -1494,6 +1562,44 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 }
             }
         }
+    }
+
+    /**
+     * The dumped container keeps the tagged iterators of all config formats and attributes.
+     * It does not keep the tagged locators. The container replaces them with a service reference before the dump.
+     *
+     * @return array<string, list<string>> tag => methods
+     */
+    private function getDefaultMethodsOfTaggedIterators(
+        SimpleXMLElement $xml,
+        string $containerXmlPath,
+    ): array
+    {
+        $taggedIterators = $xml->xpath('//*[@type="tagged_iterator"]');
+
+        if (!is_array($taggedIterators)) {
+            throw new LogicException(sprintf('Cannot search for tagged iterators in %s', $containerXmlPath));
+        }
+
+        $methods = [];
+
+        foreach ($taggedIterators as $taggedIterator) {
+            /** @var SimpleXMLElement $attributes */
+            $attributes = $taggedIterator->attributes();
+            $tag = (string) $attributes->tag;
+            $methods[$tag] = [
+                ...$methods[$tag] ?? [],
+                ...$this->getTaggedServiceDefaultMethodNames(
+                    $tag,
+                    isset($attributes->{'index-by'}) ? (string) $attributes->{'index-by'} : null,
+                    isset($attributes->{'default-index-method'}) ? (string) $attributes->{'default-index-method'} : null,
+                    isset($attributes->{'default-priority-method'}) ? (string) $attributes->{'default-priority-method'} : null,
+                    false,
+                ),
+            ];
+        }
+
+        return $methods;
     }
 
     private function isServiceNotInstantiatedByContainer(
