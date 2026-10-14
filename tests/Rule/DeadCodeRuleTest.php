@@ -30,6 +30,7 @@ use ReflectionClassConstant;
 use ReflectionEnumUnitCase;
 use ReflectionMethod;
 use ReflectionProperty;
+use ShipMonk\PHPStan\DeadCode\Cache\StaleResultCacheDetector;
 use ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage;
 use ShipMonk\PHPStan\DeadCode\Collector\ClassDefinitionCollector;
 use ShipMonk\PHPStan\DeadCode\Collector\ConstantFetchCollector;
@@ -143,6 +144,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                     ['enabled' => false, 'deduplicateAcrossViews' => false],
                 ),
                 $this->getUsageCacheStorage(),
+                new StaleResultCacheDetector(__DIR__ . '/../../cache', __DIR__ . '/../../cache/resultCache.php'),
                 new ClassHierarchy(),
                 $this->detectDeadMethods,
                 $this->detectDeadConstants,
