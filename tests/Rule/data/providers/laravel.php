@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Contracts\Validation\Rule as ValidationRuleOld;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Http\FormRequest;
@@ -1085,6 +1086,26 @@ function testCanAndGateMethods(Post $post, Song $song, User $user): void
     Gate::authorize('feature', $song);     // SongPolicy::feature
 }
 
+// --- Policies bound by the #[UsePolicy] attribute ---
+
+#[UsePolicy(\Laravel\Billing\InvoiceAccess::class)]
+class Invoice extends Model
+{
+}
+
+// The attribute has priority over the policy that the naming convention gives (Laravel\Policies\ReceiptPolicy)
+#[UsePolicy(class: \Laravel\Billing\ReceiptAccess::class)]
+class Receipt extends Model
+{
+}
+
+function testUsePolicyAttribute(User $user, Invoice $invoice, Receipt $receipt): void
+{
+    $user->can('refund', $invoice);            // InvoiceAccess::refund
+    Gate::allows('send-reminder', $invoice);   // InvoiceAccess::sendReminder
+    $user->can('download', $receipt);          // ReceiptAccess::download
+}
+
 // --- Controller using authorize() ---
 
 class SongController extends Controller
@@ -1269,5 +1290,60 @@ class LicenseChecker
 
     private function helperMethod(): void // error: Unused Laravel\Policies\LicenseChecker::helperMethod
     {
+    }
+}
+
+class ReceiptPolicy
+{
+    public function download(object $user, object $receipt): bool // error: Unused Laravel\Policies\ReceiptPolicy::download
+    {
+        return true;
+    }
+}
+
+// =====================
+// Policy Classes bound by the #[UsePolicy] attribute (outside of the convention namespace)
+// =====================
+
+namespace Laravel\Billing;
+
+class InvoiceAccess
+{
+    public function before(object $user, string $ability): ?bool
+    {
+        return null;
+    }
+
+    public function view(object $user, object $invoice): bool
+    {
+        return true;
+    }
+
+    public function refund(object $user, object $invoice): bool
+    {
+        return true;
+    }
+
+    public function sendReminder(object $user, object $invoice): bool
+    {
+        return true;
+    }
+
+    public function unusedAbility(object $user, object $invoice): bool // error: Unused Laravel\Billing\InvoiceAccess::unusedAbility
+    {
+        return true;
+    }
+}
+
+class ReceiptAccess
+{
+    public function download(object $user, object $receipt): bool
+    {
+        return true;
+    }
+
+    public function unusedAbility(object $user, object $receipt): bool // error: Unused Laravel\Billing\ReceiptAccess::unusedAbility
+    {
+        return true;
     }
 }
