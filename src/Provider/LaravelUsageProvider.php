@@ -16,8 +16,10 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -27,6 +29,7 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
+use function in_array;
 use function lcfirst;
 use function ltrim;
 use function str_contains;
@@ -37,6 +40,7 @@ use function strlen;
 use function strpos;
 use function strrpos;
 use function substr;
+use function trim;
 use function ucwords;
 
 final class LaravelUsageProvider implements ActivatableUsageProvider
@@ -123,6 +127,11 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         foreach ($classNames as $className) {
             if ($className === 'Illuminate\Support\Facades\Route' || $className === 'Illuminate\Routing\Router') {
                 $usages = [...$usages, ...$this->getUsagesFromRouteCall($node, $scope)];
+                $usages = [...$usages, ...$this->getUsagesFromRouteAuthorizationCall($node, $scope)];
+            }
+
+            if ($className === 'Illuminate\Auth\Middleware\Authorize') {
+                $usages = [...$usages, ...$this->getUsagesFromAuthorizeUsingCall($node, $scope)];
             }
 
             if ($className === 'Illuminate\Support\Facades\Event' || $className === 'Illuminate\Events\Dispatcher') {
@@ -387,7 +396,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
      * @return list<ClassMethodUsage>
      */
     private function getUsagesFromGateCall(
-        StaticCall $node,
+        StaticCall|MethodCall $node,
         Scope $scope,
     ): array
     {
@@ -424,7 +433,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
             }
         }
 
-        if (CaseInsensitiveName::isOneOf($methodName, ['allows', 'denies', 'check', 'any', 'none', 'authorize'])) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['allows', 'denies', 'check', 'any', 'none', 'authorize', 'inspect', 'raw'])) {
             $usages = [...$usages, ...$this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node)];
         }
 
@@ -444,20 +453,27 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         $methodName = $node->name->name;
+        $callerType = $scope->getType($node->var);
+
+        if ((new ObjectType('Illuminate\Contracts\Auth\Access\Gate'))->isSuperTypeOf($callerType)->yes()) {
+            return $this->getUsagesFromGateCall($node, $scope);
+        }
 
         if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any', 'match', 'resource', 'apiResource'])) {
-            if (!(new ObjectType('Illuminate\Contracts\Routing\Registrar'))->isSuperTypeOf($scope->getType($node->var))->yes()) {
+            if (!(new ObjectType('Illuminate\Contracts\Routing\Registrar'))->isSuperTypeOf($callerType)->yes()) {
                 return [];
             }
 
             return $this->getUsagesFromRouteCall($node, $scope);
         }
 
-        if (!CaseInsensitiveName::isOneOf($methodName, ['authorize', 'can', 'cannot', 'cant'])) {
-            return [];
+        if ($this->isRouteDefinitionType($callerType)) {
+            return $this->getUsagesFromRouteAuthorizationCall($node, $scope);
         }
 
-        $callerType = $scope->getType($node->var);
+        if (!CaseInsensitiveName::isOneOf($methodName, ['authorize', 'can', 'canAny', 'cannot', 'cant'])) {
+            return [];
+        }
 
         foreach ($callerType->getObjectClassNames() as $callerClassName) {
             if (!$this->reflectionProvider->hasClass($callerClassName)) {
@@ -487,9 +503,113 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         return [];
     }
 
+    private function isRouteDefinitionType(Type $type): bool
+    {
+        foreach (['Illuminate\Routing\Route', 'Illuminate\Routing\RouteRegistrar', 'Illuminate\Routing\Router'] as $className) {
+            if ((new ObjectType($className))->isSuperTypeOf($type)->yes()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Routing\Route::can() adds the "can" middleware
+     * @see \Illuminate\Routing\RouteRegistrar::__call() stores "can" and "middleware" as route attributes
+     */
+    private function getUsagesFromRouteAuthorizationCall(
+        StaticCall|MethodCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        if (CaseInsensitiveName::equals($node->name->name, 'can')) {
+            return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
+        }
+
+        if (CaseInsensitiveName::equals($node->name->name, 'middleware')) {
+            return $this->getUsagesFromMiddlewareArgs($node->getArgs(), $scope, $node);
+        }
+
+        return [];
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Auth\Middleware\Authorize::using()
+     */
+    private function getUsagesFromAuthorizeUsingCall(
+        StaticCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier || !CaseInsensitiveName::equals($node->name->name, 'using')) {
+            return [];
+        }
+
+        return $this->getUsagesFromAbilityArgs($node->getArgs(), $scope, $node);
+    }
+
+    /**
+     * Detects "can:ability,App\Models\Post" middleware definitions.
+     * A model that is not a class name is a route parameter, so its policy is not known here.
+     *
+     * @param Arg[] $args
+     * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Auth\Middleware\Authorize::getModel()
+     */
+    private function getUsagesFromMiddlewareArgs(
+        array $args,
+        Scope $scope,
+        Node $node,
+    ): array
+    {
+        $usages = [];
+
+        foreach ($args as $arg) {
+            foreach ($this->getConstantStringsIncludingArrayValues($scope->getType($arg->value)) as $middleware) {
+                $middlewareParts = explode(':', $middleware, 2);
+
+                if (count($middlewareParts) !== 2 || !in_array($middlewareParts[0], ['can', 'Illuminate\Auth\Middleware\Authorize'], true)) {
+                    continue;
+                }
+
+                $parameters = explode(',', $middlewareParts[1]);
+                $modelClassName = trim($parameters[1] ?? '');
+
+                if (!str_contains($modelClassName, '\\')) {
+                    continue;
+                }
+
+                $usages = [
+                    ...$usages,
+                    ...$this->createPolicyUsages(
+                        [$this->kebabToCamelCase($parameters[0])],
+                        $this->resolvePolicyClassNames($modelClassName),
+                        $node,
+                        $scope,
+                    ),
+                ];
+            }
+        }
+
+        return $usages;
+    }
+
     /**
      * @param Arg[] $args
      * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Auth\Access\Gate::raw() wraps the arguments to an array
+     * @see \Illuminate\Auth\Access\Gate::resolveAuthCallback() resolves the policy by the first argument
      */
     private function getUsagesFromAbilityArgs(
         array $args,
@@ -500,35 +620,51 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         $abilityArg = $args[0] ?? null;
         $modelArg = $args[1] ?? null;
 
-        if ($abilityArg === null) {
+        if ($abilityArg === null || $modelArg === null) {
             return [];
         }
 
-        $abilityType = $scope->getType($abilityArg->value);
-        $abilityNames = [];
+        $abilityNames = array_map(
+            fn (string $ability): string => $this->kebabToCamelCase($ability),
+            $this->getConstantStringsIncludingArrayValues($scope->getType($abilityArg->value)),
+        );
 
-        foreach ($abilityType->getConstantStrings() as $stringType) {
-            $abilityNames[] = $this->kebabToCamelCase($stringType->getValue());
-        }
+        $modelType = $scope->getType($modelArg->value);
+        $modelTypes = [$modelType];
 
-        if ($abilityNames === []) {
-            return [];
+        foreach ($modelType->getConstantArrays() as $arrayType) {
+            if ($arrayType->hasOffsetValueType(new ConstantIntegerType(0))->yes()) {
+                $modelTypes[] = $arrayType->getOffsetValueType(new ConstantIntegerType(0));
+            }
         }
 
         $policyClassNames = [];
 
-        if ($modelArg !== null) {
-            $modelType = $scope->getType($modelArg->value);
-
-            foreach ($modelType->getObjectClassNames() as $modelClassName) {
+        foreach ($modelTypes as $type) {
+            foreach ($type->getObjectClassNames() as $modelClassName) {
                 $policyClassNames = [...$policyClassNames, ...$this->resolvePolicyClassNames($modelClassName)];
             }
 
-            foreach ($modelType->getConstantStrings() as $modelStringType) {
+            foreach ($type->getConstantStrings() as $modelStringType) {
                 $policyClassNames = [...$policyClassNames, ...$this->resolvePolicyClassNames($modelStringType->getValue())];
             }
         }
 
+        return $this->createPolicyUsages($abilityNames, $policyClassNames, $node, $scope);
+    }
+
+    /**
+     * @param list<string> $abilityNames
+     * @param list<string> $policyClassNames
+     * @return list<ClassMethodUsage>
+     */
+    private function createPolicyUsages(
+        array $abilityNames,
+        array $policyClassNames,
+        Node $node,
+        Scope $scope,
+    ): array
+    {
         $usages = [];
 
         foreach ($policyClassNames as $policyClassName) {
@@ -541,6 +677,25 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getConstantStringsIncludingArrayValues(Type $type): array
+    {
+        $stringTypes = $type->getConstantStrings();
+
+        foreach ($type->getConstantArrays() as $arrayType) {
+            foreach ($arrayType->getValueTypes() as $valueType) {
+                $stringTypes = [...$stringTypes, ...$valueType->getConstantStrings()];
+            }
+        }
+
+        return array_map(
+            static fn (ConstantStringType $stringType): string => $stringType->getValue(),
+            $stringTypes,
+        );
     }
 
     /**
