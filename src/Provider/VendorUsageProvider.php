@@ -11,8 +11,6 @@ use Reflector;
 use ShipMonk\PHPStan\DeadCode\Reflection\ReflectionHelper;
 use function array_keys;
 use function str_starts_with;
-use function strlen;
-use function substr;
 use function ucfirst;
 
 final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider implements ActivatableUsageProvider
@@ -120,11 +118,8 @@ final class VendorUsageProvider extends ReflectionBasedMemberUsageProvider imple
             return false;
         }
 
-        $pharPrefix = 'phar://';
-
-        if (str_starts_with($filePath, $pharPrefix)) {
-            /** @var string $filePath Cannot resolve to false */
-            $filePath = substr($filePath, strlen($pharPrefix));
+        if (str_starts_with($filePath, 'phar://')) {
+            return true; // e.g. phpstan.phar, which does not have to be located in vendor
         }
 
         foreach ($this->vendorDirs as $vendorDir) {

@@ -150,7 +150,7 @@ parameters:
   - e.g. `$reflection->getConstructor()`, `$reflection->getConstant('NAME')`, `$reflection->getMethods()`, `$reflection->getCases()`...
 
 #### Vendor:
-- Any overridden method that originates in `vendor` is not reported as dead
+- Any overridden method that originates in `vendor` or in a PHAR (e.g. `phpstan.phar` placed outside of `vendor`) is not reported as dead
   - e.g. implementing `Psr\Log\LoggerInterface::log` is automatically considered used
 
 #### Builtin:
