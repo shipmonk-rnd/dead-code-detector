@@ -214,6 +214,14 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         $this->doTestDead($files, $requirementsMet);
     }
 
+    public function testVendorInPharOutsideVendorDir(): void
+    {
+        // e.g. phpstan.phar used from a location outside vendor
+        require_once __DIR__ . '/data/providers/vendor-phar/library.phar';
+
+        $this->analyzeFiles([__DIR__ . '/data/providers/vendor-phar.php']);
+    }
+
     /**
      * Ensure we test real PHP code
      * - mainly targets invalid class/trait/iface compositions

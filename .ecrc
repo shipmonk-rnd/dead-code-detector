@@ -1,5 +1,6 @@
 {
     "Exclude": [
-        "output.txt$"
+        "output.txt$",
+        "\\.phar$"
     ]
 }
