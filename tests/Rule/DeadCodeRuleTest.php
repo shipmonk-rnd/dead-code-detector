@@ -11,6 +11,7 @@ use PharData;
 use PhpatProvider\RegisteredArchitectureTest;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
+use PHPStan\Analyser\InternalError;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
@@ -46,6 +47,7 @@ use ShipMonk\PHPStan\DeadCode\Excluder\MemberUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\MixedUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Excluder\TestsUsageExcluder;
 use ShipMonk\PHPStan\DeadCode\Formatter\FilterOutUnmatchedInlineIgnoresFormatter;
+use ShipMonk\PHPStan\DeadCode\Formatter\RemoveDeadCodeFormatter;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
@@ -80,6 +82,7 @@ use function array_filter;
 use function array_map;
 use function array_merge;
 use function basename;
+use function copy;
 use function count;
 use function dirname;
 use function file_get_contents;
@@ -787,6 +790,58 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         }
 
         self::assertSame(file_get_contents($this->getAutoremoveTransformedFilePath($file)), $code);
+    }
+
+    public function testRemoveDeadCodeFormatter(): void
+    {
+        $tmpFile = sys_get_temp_dir() . '/dcd-formatter-' . uniqid() . '/sample.php';
+        mkdir(dirname($tmpFile));
+        copy(__DIR__ . '/data/removing/sample.php', $tmpFile);
+
+        $writtenOutput = '';
+        $output = $this->createOutput();
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
+        $formatter = new RemoveDeadCodeFormatter($this->getPatcher(), $this->createOutputEnhancer());
+        $exitCode = $formatter->formatErrors($this->createAnalysisResult(parent::gatherAnalyserErrors([$tmpFile])), $output);
+        $fixedCode = file_get_contents($tmpFile);
+        unlink($tmpFile);
+        rmdir(dirname($tmpFile));
+
+        self::assertSame(0, $exitCode);
+        self::assertStringMatchesFormat(
+            <<<'TXT'
+            ! Excluded usage at %ssample.php:55 left intact
+
+            Removed dead code of 8 errors in 1 file.
+            Skipped 1 conflicting fix, run vendor/bin/phpstan analyse --fix to apply them in further rounds.
+
+            TXT,
+            $this->trimFgColors($writtenOutput),
+        );
+        self::assertStringNotContainsString('DEAD_CONST = 2', (string) $fixedCode);
+        self::assertStringContainsString('const DEAD_IFACE_CONST', (string) $fixedCode); // conflicting fix left for the next round
+    }
+
+    public function testRemoveDeadCodeFormatterRefusesInternalErrors(): void
+    {
+        $writtenOutput = '';
+        $output = $this->createOutput();
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
+        $formatter = new RemoveDeadCodeFormatter($this->getPatcher(), $this->createOutputEnhancer());
+        $analysisResult = new AnalysisResult([], [], [new InternalError('Boom', 'analysing', [], null, false)], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor, phpstanApi.constructor
+
+        self::assertSame(1, $formatter->formatErrors($analysisResult, $output));
+        self::assertSame("<error>Boom</error>\n\nFix listed internal errors first.\n", $writtenOutput);
     }
 
     public function testFilterOutUnmatchedInlineIgnores(): void
