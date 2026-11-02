@@ -59,6 +59,7 @@ use function in_array;
 use function is_array;
 use function is_dir;
 use function is_string;
+use function lcfirst;
 use function preg_match_all;
 use function simplexml_load_string;
 use function sprintf;
@@ -67,6 +68,7 @@ use function str_starts_with;
 use function strlen;
 use function substr;
 use function trim;
+use function ucfirst;
 
 final class SymfonyUsageProvider implements ActivatableUsageProvider
 {
@@ -985,6 +987,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             foreach ($dtoReflection->getConstructor()->getVariants() as $constructorVariant) {
                 foreach ($constructorVariant->getParameters() as $constructorParameter) {
                     $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($constructorParameter->getType(), $visited)];
+                    $usages = [...$usages, ...$this->collectAttributePayloadDtoUsages($dtoReflection, $constructorParameter->getName(), $visited)];
                 }
             }
         }
@@ -1025,6 +1028,57 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                         $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($mutatorParameter->getType(), $visited)];
                     }
                 }
+            }
+
+            if (str_starts_with($dtoMethodName, 'set')) {
+                $usages = [...$usages, ...$this->collectAttributePayloadDtoUsages($dtoReflection, lcfirst(substr($dtoMethodName, 3)), $visited)];
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * PropertyInfo types a writable attribute also by the PhpDoc of its property (of any visibility) and of its accessor,
+     * so a nested DTO declared only there (e.g. `@return list<ItemDto>` on a getter) is denormalized as well.
+     *
+     * @param array<string, true> $visited
+     * @return list<ClassMethodUsage|ClassPropertyUsage>
+     */
+    private function collectAttributePayloadDtoUsages(
+        ClassReflection $dtoReflection,
+        string $attributeName,
+        array &$visited,
+    ): array
+    {
+        $usages = [];
+
+        if ($dtoReflection->hasNativeProperty($attributeName)) {
+            $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($dtoReflection->getNativeProperty($attributeName)->getReadableType(), $visited)];
+        }
+
+        // Mirrors ReflectionExtractor::$defaultAccessorPrefixes; PhpStanExtractor and PhpDocExtractor skip accessors with required parameters
+        foreach (['get', 'is', 'has', 'can'] as $accessorPrefix) {
+            $accessorName = $accessorPrefix . ucfirst($attributeName);
+
+            if (!$dtoReflection->hasNativeMethod($accessorName)) {
+                continue;
+            }
+
+            $accessor = $dtoReflection->getNativeMethod($accessorName);
+
+            if ($accessor->isStatic()) {
+                continue;
+            }
+
+            foreach ($accessor->getVariants() as $accessorVariant) {
+                foreach ($accessorVariant->getParameters() as $accessorParameter) {
+                    if (!$accessorParameter->isOptional()) {
+                        continue 2;
+                    }
+                }
+
+                $usages = [...$usages, ...$this->collectNestedPayloadDtoUsages($accessorVariant->getReturnType(), $visited)];
             }
         }
 

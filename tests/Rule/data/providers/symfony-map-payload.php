@@ -268,3 +268,126 @@ class CollectionController {
         print_r($dto->getTags());
     }
 }
+
+class InvoiceLineDto {
+    public function setSku(string $sku): void {} // typed only by InvoiceDto::getLines() @return
+}
+
+class InvoiceSummaryDto {
+    public function setText(string $text): void {} // error: Unused SymfonyMapPayload\InvoiceSummaryDto::setText
+}
+
+class InvoiceDto {
+    private array $lines = [];
+
+    public function setLines(array $lines): void
+    {
+        $this->lines = $lines;
+    }
+
+    /** @return list<InvoiceLineDto> */
+    public function getLines(): array
+    {
+        return $this->lines;
+    }
+
+    public function getSummary(): InvoiceSummaryDto // read-only attribute, never denormalized
+    {
+        return new InvoiceSummaryDto();
+    }
+}
+
+class InvoiceController {
+    #[Route('/api/invoices', methods: ['POST'])]
+    public function create(
+        #[MapRequestPayload] InvoiceDto $dto,
+    ): void {
+        print_r($dto->getLines());
+        print_r($dto->getSummary());
+    }
+}
+
+class LabelDto {
+    public function setText(string $text): void {} // typed only by LabelledDto::$labels @var
+}
+
+class LabelledDto {
+    /** @var list<LabelDto> */
+    private array $labels = [];
+
+    public function setLabels(array $labels): void
+    {
+        $this->labels = $labels;
+    }
+
+    public function hasLabels(): bool
+    {
+        return $this->labels !== [];
+    }
+}
+
+class LabelledController {
+    #[Route('/api/labelled', methods: ['POST'])]
+    public function create(
+        #[MapRequestPayload] LabelledDto $dto,
+    ): void {
+        echo $dto->hasLabels();
+    }
+}
+
+class SegmentDto {
+    public function setName(string $name): void {} // typed only by RouteDto::$segments @var
+}
+
+class RouteDto {
+    /** @var list<SegmentDto> */
+    public readonly array $segments;
+
+    public function __construct(array $segments)
+    {
+        $this->segments = $segments;
+    }
+}
+
+class RouteController {
+    #[Route('/api/routes', methods: ['POST'])]
+    public function create(
+        #[MapRequestPayload] RouteDto $dto,
+    ): void {
+        print_r($dto->segments);
+    }
+}
+
+class LayoutDto {
+    public function setColumns(int $columns): void {} // error: Unused SymfonyMapPayload\LayoutDto::setColumns
+}
+
+class PaletteDto {
+    public function setPrimary(string $primary): void {} // error: Unused SymfonyMapPayload\PaletteDto::setPrimary
+}
+
+class ThemeDto {
+    public function setLayout(string $layout): void {}
+
+    public function getLayout(string $breakpoint): LayoutDto // PropertyInfo ignores accessors with required parameters
+    {
+        return new LayoutDto();
+    }
+
+    public function setPalette(string $palette): void {}
+
+    public static function getPalette(): PaletteDto // PropertyInfo ignores static accessors
+    {
+        return new PaletteDto();
+    }
+}
+
+class ThemeController {
+    #[Route('/api/themes', methods: ['POST'])]
+    public function create(
+        #[MapRequestPayload] ThemeDto $dto,
+    ): void {
+        print_r($dto->getLayout('wide'));
+        print_r(ThemeDto::getPalette());
+    }
+}
