@@ -345,6 +345,44 @@ interface TaggedInterface {
     public function getKey(): string;
 }
 
+class SomeController4 {
+
+    #[Route('/implicit-priority', name: 'implicit_priority')]
+    public function getAction(
+        #[TaggedIterator(ImplicitPriorityInterface::class)]
+        $iterator,
+        #[TaggedIterator(IndexedPriorityInterface::class, indexAttribute: 'key')]
+        $indexedIterator,
+        #[TaggedLocator(LocatorPriorityInterface::class)]
+        $locator
+    ): void {
+    }
+
+}
+
+interface ImplicitPriorityInterface {}
+
+class ImplicitPriorityHandler implements ImplicitPriorityInterface {
+    public static function getDefaultPriority(): int { return 10; }
+    public static function getPriority(): int { return 10; } // error: Unused Symfony\ImplicitPriorityHandler::getPriority
+}
+
+interface IndexedPriorityInterface {}
+
+class IndexedPriorityHandler implements IndexedPriorityInterface {
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\IndexedPriorityHandler::getDefaultPriority
+}
+
+interface LocatorPriorityInterface {}
+
+class LocatorPriorityHandler implements LocatorPriorityInterface {
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\LocatorPriorityHandler::getDefaultPriority
+}
+
+class UntaggedPriorityHandler {
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\UntaggedPriorityHandler::getDefaultPriority
+}
+
 #[Autoconfigure(constructor: 'create')]
 class AutoconfiguredFactory {
     public static function create(): self {
