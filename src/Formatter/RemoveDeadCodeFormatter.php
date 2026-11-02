@@ -5,7 +5,9 @@ namespace ShipMonk\PHPStan\DeadCode\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
-use PHPStan\Fixable\Patcher;
+use PHPStan\Fixable\ErrorFixer;
+use ShipMonk\PHPStan\DeadCode\Enum\MemberType;
+use ShipMonk\PHPStan\DeadCode\Error\BlackMember;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMemberUsage;
 use ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer;
 use ShipMonk\PHPStan\DeadCode\Rule\DeadCodeRule;
@@ -13,7 +15,7 @@ use function count;
 use function in_array;
 
 /**
- * Applies fixes of dead code errors, same as `phpstan analyse --fix` does in its first round
+ * Fixes dead code errors like one round of `phpstan analyse --fix` and lists the removed members
  */
 final class RemoveDeadCodeFormatter implements ErrorFormatter
 {
@@ -27,7 +29,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
     ];
 
     public function __construct(
-        private readonly Patcher $patcher,
+        private readonly ErrorFixer $errorFixer,
         private readonly OutputEnhancer $outputEnhancer,
     )
     {
@@ -50,43 +52,81 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
             return 1;
         }
 
-        $diffGroups = [];
+        $deadCodeErrors = [];
 
         foreach ($analysisResult->getFileSpecificErrors() as $error) {
-            $fixedErrorDiffs = $error->getFixedErrorDiffs(); // @phpstan-ignore method.internal (same as phpstan analyse --fix does)
-
-            if (!in_array($error->getIdentifier(), self::IDENTIFIERS, true) || $fixedErrorDiffs === []) {
-                continue;
-            }
-
-            $diffGroups[] = $fixedErrorDiffs;
-
-            /** @var list<array{excludedUsages: list<ClassMemberUsage>}> $metadata */
-            $metadata = $error->getMetadata();
-
-            foreach ($metadata as ['excludedUsages' => $excludedUsages]) {
-                foreach ($excludedUsages as $excludedUsage) {
-                    $origin = $excludedUsage->getOrigin();
-
-                    if ($origin->getFile() !== null && $origin->getLine() !== null) {
-                        $output->writeLineFormatted("<fg=yellow>! Excluded usage at {$this->outputEnhancer->getOriginReference($origin)} left intact</>");
-                    }
-                }
+            if (in_array($error->getIdentifier(), self::IDENTIFIERS, true)) {
+                $deadCodeErrors[] = $error;
             }
         }
 
-        $result = $this->patcher->applyToFiles($diffGroups); // @phpstan-ignore phpstanApi.method (same as phpstan analyse --fix does)
-        $applied = $result['appliedCount'];
-        $filesCount = count($result['changedFiles']);
+        $result = $this->errorFixer->fix($deadCodeErrors);
+        $removedMembers = [];
+
+        foreach ($result->getFixedErrors() as $error) {
+            /** @var list<array{blackMember: BlackMember, excludedUsages: list<ClassMemberUsage>}> $metadata */
+            $metadata = $error->getMetadata();
+
+            foreach ($metadata as ['blackMember' => $blackMember, 'excludedUsages' => $excludedUsages]) {
+                $member = $blackMember->getMember();
+                $memberKey = "{$member->getMemberType()->value}:{$member->getClassName()}::{$member->getMemberName()}";
+
+                // a property never read and never written is removed by two errors
+                if (isset($removedMembers[$memberKey])) {
+                    continue;
+                }
+
+                $removedMembers[$memberKey] = true;
+                $memberString = $this->getMemberTypeString($member->getMemberType());
+
+                $output->writeLineFormatted(" • Removed $memberString <fg=white>{$member->getClassName()}::{$member->getMemberName()}</>");
+                $this->printExcludedUsages($output, $excludedUsages);
+            }
+        }
+
+        $membersCount = count($removedMembers);
+        $filesCount = count($result->getChangedFiles());
+        $memberPlural = $membersCount === 1 ? '' : 's';
+        $filePlural = $filesCount === 1 ? '' : 's';
 
         $output->writeLineFormatted('');
-        $output->writeLineFormatted("Removed dead code of $applied error" . ($applied === 1 ? '' : 's') . " in $filesCount file" . ($filesCount === 1 ? '' : 's') . '.');
+        $output->writeLineFormatted("Removed $membersCount dead member$memberPlural in $filesCount file$filePlural.");
 
-        if ($result['skippedCount'] > 0) {
-            $output->writeLineFormatted("Skipped {$result['skippedCount']} conflicting fix" . ($result['skippedCount'] === 1 ? '' : 'es') . ', run <fg=white>vendor/bin/phpstan analyse --fix</> to apply them in further rounds.');
+        $skippedCount = count($result->getSkippedErrors());
+
+        if ($skippedCount > 0) {
+            $output->writeLineFormatted("Skipped $skippedCount conflicting fix" . ($skippedCount === 1 ? '' : 'es') . ', run <fg=white>vendor/bin/phpstan analyse --fix</> to apply them in further rounds.');
         }
 
         return 0;
+    }
+
+    /**
+     * @param list<ClassMemberUsage> $excludedUsages
+     */
+    private function printExcludedUsages(
+        Output $output,
+        array $excludedUsages,
+    ): void
+    {
+        foreach ($excludedUsages as $excludedUsage) {
+            $origin = $excludedUsage->getOrigin();
+
+            if ($origin->getFile() === null || $origin->getLine() === null) {
+                continue;
+            }
+
+            $output->writeLineFormatted("<fg=yellow>   ! Excluded usage at {$this->outputEnhancer->getOriginReference($origin)} left intact</>");
+        }
+    }
+
+    private function getMemberTypeString(MemberType $memberType): string
+    {
+        return match ($memberType) {
+            MemberType::METHOD => 'method',
+            MemberType::CONSTANT => 'constant',
+            MemberType::PROPERTY => 'property',
+        };
     }
 
 }

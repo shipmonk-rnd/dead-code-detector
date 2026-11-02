@@ -371,7 +371,7 @@ class UserFacade
 
 - Each dead code error removes its member together with all its transitively dead members (even in other files), unless `reportTransitivelyDeadMethodAsSeparateError` is enabled.
 - `--fix` repeats the analysis until nothing is left to fix, so also conflicting removals (e.g. `public $dead1, $dead2;`) end up applied.
-- The `removeDeadCode` error format still works, it applies the same fixes in a single round and lists the excluded usages left intact:
+- The `removeDeadCode` error format still works, it applies the same fixes in a single round and lists the removed members:
 
 ```bash
 vendor/bin/phpstan analyse --error-format removeDeadCode
@@ -381,7 +381,8 @@ vendor/bin/phpstan analyse --error-format removeDeadCode
   - The `removeDeadCode` error format lists all those kept usages (with links to your IDE if you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor))
 
 ```txt
-! Excluded usage at tests/User/UserFacadeTest.php:241 left intact
+ • Removed method UserFacade::deadMethod
+   ! Excluded usage at tests/User/UserFacadeTest.php:241 left intact
 ```
 
 - Also, removing dead properties currently only removes its definition (leaving all write usages as is).
