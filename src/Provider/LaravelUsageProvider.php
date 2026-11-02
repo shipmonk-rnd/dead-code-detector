@@ -3,6 +3,7 @@
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
+use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
@@ -12,12 +13,14 @@ use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionNamedType;
+use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\ObjectType;
+use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -27,6 +30,8 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
+use function is_array;
+use function is_string;
 use function lcfirst;
 use function ltrim;
 use function str_contains;
@@ -66,6 +71,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
         if ($node instanceof InClassNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
             $usages = [...$usages, ...$this->getMethodUsagesFromReflection($node)];
+            $usages = [...$usages, ...$this->getUsagesFromEventServiceProvider($node)];
         }
 
         if ($node instanceof StaticCall) {
@@ -102,6 +108,66 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Foundation\Support\Providers\EventServiceProvider::register()
+     */
+    private function getUsagesFromEventServiceProvider(InClassNode $node): array
+    {
+        $classReflection = $node->getClassReflection();
+
+        if (!$classReflection->is('Illuminate\Foundation\Support\Providers\EventServiceProvider')) {
+            return [];
+        }
+
+        $listen = $this->getDefaultPropertyValue($classReflection, 'listen');
+        $subscribe = $this->getDefaultPropertyValue($classReflection, 'subscribe');
+        $callables = [];
+
+        foreach (is_array($listen) ? $listen : [] as $listeners) {
+            foreach (is_array($listeners) ? $listeners : [] as $listener) {
+                if (is_string($listener)) {
+                    $callables[] = str_contains($listener, '@') ? explode('@', $listener, 2) : [$listener, 'handle'];
+                } elseif (is_array($listener) && is_string($listener[0] ?? null) && is_string($listener[1] ?? null)) {
+                    $callables[] = [$listener[0], $listener[1]];
+                }
+            }
+        }
+
+        foreach (is_array($subscribe) ? $subscribe : [] as $subscriber) {
+            if (is_string($subscriber)) {
+                $callables[] = [$subscriber, 'subscribe'];
+            }
+        }
+
+        $usages = [];
+
+        foreach ($callables as [$className, $methodName]) {
+            foreach ([$methodName, '__construct'] as $method) {
+                $usages[] = new ClassMethodUsage(
+                    UsageOrigin::createVirtual($this, VirtualUsageData::withNote('Laravel EventServiceProvider registration')),
+                    new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
+                );
+            }
+        }
+
+        return $usages;
+    }
+
+    private function getDefaultPropertyValue(
+        ClassReflection $classReflection,
+        string $propertyName,
+    ): mixed
+    {
+        try {
+            /** @throws IdentifierNotFound|LogicException|ReflectionException */
+            return $classReflection->getNativeReflection()->getProperty($propertyName)->getDefaultValue();
+        } catch (IdentifierNotFound | LogicException | ReflectionException $e) {
+            return null; // unknown class or constant in the default value, reported by PHPStan itself
+        }
     }
 
     /**
