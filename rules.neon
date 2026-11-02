@@ -238,6 +238,7 @@ services:
             - phpstan.rules.rule
             - phpstan.diagnoseExtension
         arguments:
+            parser: @defaultAnalysisParser
             detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%

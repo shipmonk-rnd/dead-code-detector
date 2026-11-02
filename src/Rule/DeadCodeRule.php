@@ -4,10 +4,20 @@ namespace ShipMonk\PHPStan\DeadCode\Rule;
 
 use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassConst;
+use PhpParser\Node\Stmt\ClassLike;
+use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\EnumCase;
+use PhpParser\Node\Stmt\Property;
+use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
 use PHPStan\Command\Output;
 use PHPStan\Diagnose\DiagnoseExtension;
 use PHPStan\Node\CollectedDataNode;
+use PHPStan\Parser\Parser;
+use PHPStan\Parser\ParserErrorsException;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -43,6 +53,7 @@ use function array_slice;
 use function array_unique;
 use function array_values;
 use function in_array;
+use function is_string;
 use function ksort;
 use function serialize;
 use function sort;
@@ -133,7 +144,15 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
      */
     private array $usageGraph = [];
 
+    /**
+     * file => [className => [memberType => [memberName => node to remove]]], filled lazily
+     *
+     * @var array<string, array<string, array<value-of<MemberType>, array<string, Node>>>>
+     */
+    private array $memberNodes = [];
+
     public function __construct(
+        private readonly Parser $parser,
         private readonly DebugUsagePrinter $debugUsagePrinter,
         UsageCacheStorage $usageCacheStorage,
         private readonly ClassHierarchy $classHierarchy,
@@ -167,6 +186,8 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         if ($node->isOnlyFilesAnalysis()) {
             return [];
         }
+
+        $this->memberNodes = [];
 
         /** @var list<CollectedUsage> $knownCollectedUsages */
         $knownCollectedUsages = [];
@@ -326,6 +347,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         $this->memberAlternativesCache = [];
         $this->blackMembers = [];
         $this->usageGraph = [];
+        $this->memberNodes = [];
 
         return $errors;
     }
@@ -920,6 +942,14 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         $builder->metadata($metadata);
 
+        foreach ($blackMembersGroup as $blackMember) {
+            $memberNode = $this->findMemberNode($blackMember);
+
+            if ($memberNode !== null) {
+                $builder->removeNode($memberNode, $blackMember->getFile());
+            }
+        }
+
         sort($tips);
 
         foreach ($tips as $tip) {
@@ -927,6 +957,66 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         }
 
         return $builder->build();
+    }
+
+    private function findMemberNode(BlackMember $blackMember): ?Node
+    {
+        $file = $blackMember->getFile();
+        $member = $blackMember->getMember();
+
+        $this->memberNodes[$file] ??= $this->indexMemberNodes($file);
+
+        return $this->memberNodes[$file][$member->getClassName()][$member->getMemberType()->value][$member->getMemberName()] ?? null;
+    }
+
+    /**
+     * @return array<string, array<value-of<MemberType>, array<string, Node>>>
+     */
+    private function indexMemberNodes(string $file): array
+    {
+        try {
+            $stmts = $this->parser->parseFile($file);
+        } catch (ParserErrorsException $e) {
+            return [];
+        }
+
+        $index = [];
+
+        /** @var list<ClassLike> $classLikes */
+        $classLikes = (new NodeFinder())->findInstanceOf($stmts, ClassLike::class);
+
+        foreach ($classLikes as $classLike) {
+            // PHPStan's AnonymousClassNode does not initialize namespacedName, so check isAnonymous() first
+            if (($classLike instanceof Class_ && $classLike->isAnonymous()) || $classLike->namespacedName === null) {
+                continue; // anonymous class, its members are never removed
+            }
+
+            $className = $classLike->namespacedName->toString();
+
+            foreach ($classLike->stmts as $stmt) {
+                if ($stmt instanceof ClassMethod) {
+                    $index[$className][MemberType::METHOD->value][$stmt->name->toString()] = $stmt;
+
+                    foreach ($stmt->params as $param) {
+                        if ($param->isPromoted() && $param->var instanceof Variable && is_string($param->var->name)) {
+                            $index[$className][MemberType::PROPERTY->value][$param->var->name] = $param;
+                        }
+                    }
+                } elseif ($stmt instanceof ClassConst) {
+                    foreach ($stmt->consts as $const) {
+                        $index[$className][MemberType::CONSTANT->value][$const->name->toString()] = $const;
+                    }
+                } elseif ($stmt instanceof EnumCase) {
+                    $index[$className][MemberType::CONSTANT->value][$stmt->name->toString()] = $stmt;
+                } elseif ($stmt instanceof Property) {
+                    foreach ($stmt->props as $propertyItem) {
+                        $index[$className][MemberType::PROPERTY->value][$propertyItem->name->toString()] = $propertyItem;
+                    }
+                }
+            }
+        }
+
+        return $index;
     }
 
     private function buildMainErrorMessages(BlackMember $blackMember): string
