@@ -7,6 +7,7 @@ use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
 use Generator;
 use LogicException;
+use PharData;
 use PhpatProvider\RegisteredArchitectureTest;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
@@ -91,6 +92,9 @@ use function preg_replace;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
+use function sys_get_temp_dir;
+use function uniqid;
+use function unlink;
 
 /**
  * @extends ShipMonkRuleTestCase<DeadCodeRule>
@@ -212,6 +216,34 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     ): void
     {
         $this->doTestDead($files, $requirementsMet);
+    }
+
+    public function testVendorInPharOutsideVendorDir(): void
+    {
+        // e.g. phpstan.phar used from a location outside vendor
+        // PharData (unlike Phar) can create archives even with phar.readonly=1
+        $archivePath = sys_get_temp_dir() . '/dead-code-detector-' . uniqid() . '.tar';
+        $archive = new PharData($archivePath);
+        $archive->addFromString('PharLibraryInterface.php', <<<'PHP'
+            <?php declare(strict_types = 1);
+
+            namespace PharLibrary;
+
+            interface PharLibraryInterface
+            {
+
+                public function callback(): void;
+
+            }
+            PHP);
+
+        try {
+            require_once "phar://{$archivePath}/PharLibraryInterface.php";
+
+            $this->analyzeFiles([__DIR__ . '/data/providers/vendor-phar.php']);
+        } finally {
+            unlink($archivePath);
+        }
     }
 
     /**
