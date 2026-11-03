@@ -351,10 +351,10 @@ parameters:
 ```
 
 ## Automatic removal of dead code
-- If you are sure that the reported methods are dead, you can automatically remove them by running PHPStan with `removeDeadCode` error format:
+- If you are sure that the reported members are dead, you can automatically remove them by running PHPStan with `--fix`:
 
 ```bash
-vendor/bin/phpstan analyse --error-format removeDeadCode
+vendor/bin/phpstan analyse --fix
 ```
 
 ```diff
@@ -369,8 +369,16 @@ class UserFacade
 }
 ```
 
+- Each dead code error removes its member together with all its transitively dead members (even in other files), unless `reportTransitivelyDeadMethodAsSeparateError` is enabled.
+- `--fix` repeats the analysis until nothing is left to fix, so also conflicting removals (e.g. `public $dead1, $dead2;`) end up applied.
+- The `removeDeadCode` error format still works, it applies the same fixes in a single round and lists the removed members:
+
+```bash
+vendor/bin/phpstan analyse --error-format removeDeadCode
+```
+
 - If you are excluding tests usages (see above), this will not cause the related tests to be removed alongside.
-  - But you will see all those kept usages in output (with links to your IDE if you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor))
+  - The `removeDeadCode` error format lists all those kept usages (with links to your IDE if you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-format#opening-file-in-an-editor))
 
 ```txt
  • Removed method UserFacade::deadMethod
