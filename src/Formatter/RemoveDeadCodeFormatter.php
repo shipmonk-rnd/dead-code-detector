@@ -82,7 +82,7 @@ final class RemoveDeadCodeFormatter implements ErrorFormatter
                 foreach ($deadMembersByType as $memberType => $deadMembers) {
                     foreach ($deadMembers as $memberName => $excludedUsages) {
                         $membersCount++;
-                        $memberString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
+                        $memberString = $this->getMemberTypeString(MemberType::from($memberType));
 
                         $output->writeLineFormatted(" • Removed $memberString <fg=white>$className::$memberName</>");
                         $this->printExcludedUsages($output, $excludedUsages);

@@ -55,6 +55,76 @@ class CreateUserCommand extends Command {
     }
 }
 
+class UserCommands {
+
+    #[AsCommand(name: 'app:update-user')]
+    public function update() {
+    }
+
+    #[AsCommand(name: 'app:user-mode')]
+    public function mode(#[\Symfony\Component\Console\Attribute\Argument] MethodCommandMode $mode): int {
+        return 0;
+    }
+
+    #[AsCommand(name: 'app:user-import')]
+    public function import(
+        #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandInput $input,
+    ): int {
+        return 0;
+    }
+
+    #[AsCommand(name: 'app:user-default-mode')]
+    public function defaultMode(MethodCommandDefaultMode $mode = MethodCommandDefaultMode::Used): int { // no #[Argument], only the default value is passed
+        return 0;
+    }
+
+    public function notACommand(MethodCommandUnusedMode $mode, #[\Symfony\Component\Console\Attribute\MapInput] MethodCommandUnusedInput $input): void {} // error: Unused Symfony\UserCommands::notACommand
+}
+
+enum MethodCommandMode: string {
+    case Dry = 'dry';
+    case Wet = 'wet';
+}
+
+enum MethodCommandDefaultMode: string {
+    case Used = 'used';
+    case Unused = 'unused'; // error: Unused Symfony\MethodCommandDefaultMode::Unused
+}
+
+enum MethodCommandUnusedMode: string {
+    case A = 'a'; // error: Unused Symfony\MethodCommandUnusedMode::A
+}
+
+class MethodCommandInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file;
+
+    #[Interact]
+    public function askFile(): void {}
+}
+
+class MethodCommandUnusedInput {
+    #[\Symfony\Component\Console\Attribute\Argument]
+    public string $file; // error: Property Symfony\MethodCommandUnusedInput::$file is never read // error: Property Symfony\MethodCommandUnusedInput::$file is never written
+
+    #[Interact]
+    public function askFile(): void {} // error: Unused Symfony\MethodCommandUnusedInput::askFile
+}
+
+abstract class InheritedInvokeParent {
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Argument] InheritedInvokeMode $mode): int {
+        return 0;
+    }
+}
+
+#[AsCommand('app:inherited-invoke')]
+class InheritedInvokeCommand extends InheritedInvokeParent {
+}
+
+enum InheritedInvokeMode: string {
+    case On = 'on';
+}
+
 class LegacyNamedCommand extends Command { // no #[AsCommand], name passed to parent constructor
 
     public function __construct() {
@@ -135,7 +205,7 @@ enum InvokableCommandModeViaExtend: string {
 #[AsCommand('app:invokable')]
 class InvokableCommand
 {
-    public function __invoke(InvokableCommandMode $mode): int
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Argument] InvokableCommandMode $mode): int
     {
         InvokableCommandUnused::A;
         return 0;
@@ -144,7 +214,20 @@ class InvokableCommand
 
 class InvokableCommandViaExtend extends Command
 {
-    public function __invoke(InvokableCommandModeViaExtend $mode): int
+    public function __invoke(#[\Symfony\Component\Console\Attribute\Option] InvokableCommandModeViaExtend $mode = InvokableCommandModeViaExtend::Fast): int
+    {
+        return 0;
+    }
+}
+
+enum InvokableCommandNullableMode: string {
+    case A = 'a'; // error: Unused Symfony\InvokableCommandNullableMode::A
+}
+
+#[AsCommand('app:invokable-nullable')]
+class InvokableCommandWithoutArgument
+{
+    public function __invoke(?InvokableCommandNullableMode $mode): int // no #[Argument], always null
     {
         return 0;
     }
@@ -174,6 +257,17 @@ class DicClass3 {
 
 class DicClass4 {
     public function __construct() {}
+}
+
+class DicDoctrineListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {}
+    public function notAnEvent(): void {} // error: Unused Symfony\DicDoctrineListener::notAnEvent
+}
+
+class DicOtherTagListener {
+    public function __construct() {}
+    public function preSoftDelete(): void {} // error: Unused Symfony\DicOtherTagListener::preSoftDelete
 }
 
 class DicErroredService {

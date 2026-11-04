@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Contracts\Validation\Rule as ValidationRuleOld;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Routing\Controller;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -118,6 +120,127 @@ class StringRouteController extends Controller
     }
 
     public function unusedAction(): void // error: Unused Laravel\StringRouteController::unusedAction
+    {
+    }
+}
+
+class LeadingBackslashController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function index(): void
+    {
+    }
+
+    public function store(): void
+    {
+    }
+
+    public function update(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\LeadingBackslashController::unusedAction
+    {
+    }
+}
+
+class LeadingBackslashInvokableController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(): void
+    {
+    }
+}
+
+class OptionsRouteController extends Controller
+{
+    public function index(): void
+    {
+    }
+
+    public function preflight(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\OptionsRouteController::unusedAction
+    {
+    }
+}
+
+class RouterInstanceController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function index(): void
+    {
+    }
+
+    public function store(): void
+    {
+    }
+
+    public function update(): void
+    {
+    }
+
+    public function destroy(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\RouterInstanceController::unusedAction
+    {
+    }
+}
+
+class CustomRouter extends Router
+{
+}
+
+class NotARouter
+{
+    public function get(string $uri, string $action): void
+    {
+    }
+}
+
+class UsesActionController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function index(): void
+    {
+    }
+
+    public function store(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\UsesActionController::unusedAction
+    {
+    }
+}
+
+class UsesInvokableController extends Controller
+{
+    public function __construct()
+    {
+    }
+
+    public function __invoke(): void
+    {
+    }
+
+    public function unusedAction(): void // error: Unused Laravel\UsesInvokableController::unusedAction
     {
     }
 }
@@ -867,6 +990,7 @@ function registerRoutes(): void
     Route::patch('/users/{id}', [UserController::class, 'show']);
     Route::delete('/users/{id}', [UserController::class, 'index']);
     Route::any('/any', [UserController::class, 'show']);
+    Route::options('/options', [OptionsRouteController::class, 'index']);
     Route::match(['GET', 'POST'], '/match', [UserController::class, 'index']);
     Route::match(['GET'], '/match-invokable', MatchInvokableController::class);
     Route::get('/invokable', InvokableController::class);
@@ -877,6 +1001,33 @@ function registerRoutes(): void
     Route::get('/string-route', 'Laravel\StringRouteController@index');
     Route::post('/string-route', 'Laravel\StringRouteController@store');
     Route::match(['GET'], '/string-match', 'Laravel\StringRouteController@index');
+
+    // Array syntax with 'uses' key
+    Route::get('/uses', ['as' => 'uses.index', 'uses' => 'Laravel\UsesActionController@index']);
+    Route::get('/uses-invokable', ['uses' => 'Laravel\UsesInvokableController']);
+
+    // Fully qualified class names with a leading backslash
+    Route::get('/backslash', '\Laravel\LeadingBackslashController@index');
+    Route::post('/backslash', ['\Laravel\LeadingBackslashController', 'store']);
+    Route::put('/backslash', ['uses' => '\Laravel\LeadingBackslashController@update']);
+    Route::get('/backslash-invokable', '\Laravel\LeadingBackslashInvokableController');
+}
+
+function registerRoutesOnRouterInstance(Router $router): void
+{
+    $router->group(['prefix' => 'admin'], function () use ($router): void {
+        $router->get('/instance', [RouterInstanceController::class, 'index']);
+        $router->post('/instance', 'Laravel\RouterInstanceController@store');
+        $router->post('/uses', ['as' => 'uses.store', 'uses' => 'Laravel\UsesActionController@store']);
+    });
+}
+
+function registerRoutesOnRegistrar(Registrar $registrar, CustomRouter $customRouter, NotARouter $notARouter): void
+{
+    $registrar->put('/instance', [RouterInstanceController::class, 'update']);
+    $registrar->options('/instance', 'Laravel\OptionsRouteController@preflight');
+    $customRouter->delete('/instance', 'Laravel\RouterInstanceController@destroy');
+    $notARouter->get('/instance', 'Laravel\RouterInstanceController@unusedAction');
 }
 
 function registerEvents(): void

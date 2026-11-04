@@ -17,6 +17,7 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\ObjectType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -27,6 +28,7 @@ use function count;
 use function explode;
 use function implode;
 use function lcfirst;
+use function ltrim;
 use function str_contains;
 use function str_ends_with;
 use function str_replace;
@@ -206,9 +208,11 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
 
     /**
      * @return list<ClassMethodUsage>
+     *
+     * @see \Illuminate\Routing\Route::getController() trims the leading backslash of the controller class
      */
     private function getUsagesFromRouteCall(
-        StaticCall $node,
+        StaticCall|MethodCall $node,
         Scope $scope,
     ): array
     {
@@ -219,12 +223,12 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         $methodName = $node->name->name;
         $usages = [];
 
-        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'any'])) {
+        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any'])) {
             foreach ($this->extractCallablesFromArg($node, $scope, 1) as [$className, $method]) {
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -234,7 +238,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -244,7 +248,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -255,7 +259,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -265,7 +269,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ([$method, '__construct'] as $usedMethod) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $usedMethod, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $usedMethod, possibleDescendant: false),
                     );
                 }
             }
@@ -275,7 +279,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach (['__invoke', '__construct'] as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -288,7 +292,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ($resourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -301,7 +305,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
                 foreach ($apiResourceMethods as $method) {
                     $usages[] = new ClassMethodUsage(
                         UsageOrigin::createRegular($node, $scope),
-                        new ClassMethodRef($className, $method, possibleDescendant: false),
+                        new ClassMethodRef(ltrim($className, '\\'), $method, possibleDescendant: false),
                     );
                 }
             }
@@ -440,6 +444,14 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         $methodName = $node->name->name;
+
+        if (CaseInsensitiveName::isOneOf($methodName, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any', 'match', 'resource', 'apiResource'])) {
+            if (!(new ObjectType('Illuminate\Contracts\Routing\Registrar'))->isSuperTypeOf($scope->getType($node->var))->yes()) {
+                return [];
+            }
+
+            return $this->getUsagesFromRouteCall($node, $scope);
+        }
 
         if (!CaseInsensitiveName::isOneOf($methodName, ['authorize', 'can', 'cannot', 'cant'])) {
             return [];
@@ -626,7 +638,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
      * @return list<array{string, string}>
      */
     private function extractCallablesFromArg(
-        StaticCall $node,
+        StaticCall|MethodCall $node,
         Scope $scope,
         int $argIndex,
     ): array
@@ -668,7 +680,7 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
      * @return list<string>
      */
     private function extractClassNamesFromArg(
-        StaticCall $node,
+        StaticCall|MethodCall $node,
         Scope $scope,
         int $argIndex,
     ): array
@@ -690,12 +702,14 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
     }
 
     /**
-     * Extracts [class, method] pairs from a 'Controller@method' string argument.
+     * Extracts [class, method] pairs from a 'Controller@method' string argument or from the 'uses' key of an array argument.
      *
      * @return list<array{string, string}>
+     *
+     * @see \Illuminate\Routing\RouteAction::parse()
      */
     private function extractControllerAtMethodFromArg(
-        StaticCall $node,
+        StaticCall|MethodCall $node,
         Scope $scope,
         int $argIndex,
     ): array
@@ -707,10 +721,22 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
         }
 
         $argType = $scope->getType($arg->value);
+        $actions = array_map(
+            static fn (ConstantStringType $stringType): string => $stringType->getValue(),
+            $argType->getConstantStrings(),
+        );
+
+        // Array syntax: Route::get('/path', ['uses' => 'Controller@method'])
+        foreach ($argType->getConstantArrays() as $arrayType) {
+            foreach ($arrayType->getOffsetValueType(new ConstantStringType('uses'))->getConstantStrings() as $usesType) {
+                $uses = $usesType->getValue();
+                $actions[] = str_contains($uses, '@') ? $uses : $uses . '@__invoke';
+            }
+        }
+
         $callables = [];
 
-        foreach ($argType->getConstantStrings() as $stringType) {
-            $value = $stringType->getValue();
+        foreach ($actions as $value) {
             $atPos = strpos($value, '@');
 
             if ($atPos !== false) {

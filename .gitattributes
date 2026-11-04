@@ -12,6 +12,7 @@
 /phpcs.xml.dist export-ignore
 /phpstan.neon.dist export-ignore
 /phpunit.xml.dist export-ignore
+/AGENTS.md export-ignore
 /CLAUDE.md export-ignore
 /coverage-guard.php export-ignore
 /.ecrc export-ignore

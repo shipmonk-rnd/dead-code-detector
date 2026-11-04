@@ -18,6 +18,12 @@
         <service id="Symfony\DicClass4" class="Symfony\DicClass4" public="true" autowire="true" autoconfigure="true">
             <argument type="service" id=".4_TokenConfig~abc123"/>
         </service>
+        <service id="Symfony\DicDoctrineListener" class="Symfony\DicDoctrineListener" autowire="true" autoconfigure="true">
+            <tag name="doctrine.event_listener" event="preSoftDelete" priority="10"/>
+        </service>
+        <service id="Symfony\DicOtherTagListener" class="Symfony\DicOtherTagListener" autowire="true" autoconfigure="true">
+            <tag name="kernel.event_listener" event="preSoftDelete"/>
+        </service>
         <service id="Symfony\TaggedServiceA" class="Symfony\TaggedServiceA" public="true" autowire="true" autoconfigure="true">
             <tag name="app.tagged_handler"/>
         </service>

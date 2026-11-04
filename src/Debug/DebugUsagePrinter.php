@@ -132,7 +132,7 @@ final class DebugUsagePrinter
         foreach ($mixedMemberUsages as $memberType => $collectedUsages) {
             foreach ($collectedUsages as $normalizedMemberName => $usages) {
                 $examplesShown++;
-                $memberTypeString = $this->getMemberTypeString(MemberType::from($memberType)); // @phpstan-ignore missingType.checkedException, missingType.checkedException
+                $memberTypeString = $this->getMemberTypeString(MemberType::from($memberType));
                 // method buckets are keyed in lowercase (case-insensitive matching), so show the original-case name from the usage
                 $displayName = $usages[0]->getUsage()->getMemberRef()->getMemberName() ?? $normalizedMemberName;
                 $output->writeFormatted(sprintf(' • <fg=white>%s</> %s', $displayName, $memberTypeString));
@@ -171,7 +171,7 @@ final class DebugUsagePrinter
 
         foreach ($fullyMixedUsages as $memberType => $collectedUsages) {
             $fullyMixedCount = count($collectedUsages);
-            $memberTypeEnum = MemberType::from($memberType); // @phpstan-ignore missingType.checkedException, missingType.checkedException
+            $memberTypeEnum = MemberType::from($memberType);
             $memberTypeString = $this->getMemberTypeString($memberTypeEnum);
 
             if ($memberTypeEnum === MemberType::METHOD) {
