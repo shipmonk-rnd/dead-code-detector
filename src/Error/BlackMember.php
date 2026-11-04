@@ -102,16 +102,16 @@ final class BlackMember
         }
     }
 
-    public function getExclusionMessage(): string
+    public function getExclusionTip(): ?string
     {
         if (count($this->excludedUsages) === 0) {
-            return '';
+            return null;
         }
 
         $excluderNames = implode(', ', array_keys($this->excludedUsages));
         $plural = count($this->excludedUsages) > 1 ? 's' : '';
 
-        return " (all usages excluded by {$excluderNames} excluder{$plural})";
+        return "All usages excluded by {$excluderNames} excluder{$plural}";
     }
 
     /**
