@@ -13,8 +13,15 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
+use function file_get_contents;
+use function file_put_contents;
 use function getmypid;
+use function glob;
+use function is_dir;
+use function rmdir;
+use function substr;
 use function sys_get_temp_dir;
+use function unlink;
 
 final class UsageCacheStorageTest extends TestCase
 {
@@ -117,6 +124,238 @@ final class UsageCacheStorageTest extends TestCase
         // hash2 should be gone
         $this->expectException(LogicException::class);
         $freshCache->unpack($hash2[0], $scopeFile);
+    }
+
+    public function testGcBundlesReadFilesAndServesThemToNextRun(): void
+    {
+        $tmpDir = $this->freshTmpDir('bundle');
+        $scopeFile = '/app/index.php';
+        [$usage1, $usage2] = $this->createSampleUsages();
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash1 = $cache->pack([$usage1], $scopeFile)[0];
+        $cache->unpack($hash1, $scopeFile);
+        $cache->gc();
+
+        self::assertFileExists($tmpDir . '/dcd/bundle.dat');
+        self::assertFileExists($tmpDir . '/dcd/bundle.idx');
+        self::assertFileDoesNotExist($tmpDir . '/dcd/' . substr($hash1, 0, 2) . '/' . substr($hash1, 2) . '.dat');
+
+        // second run: hash1 comes from the bundle, hash2 is new and gets appended
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash2 = $cache->pack([$usage2], $scopeFile)[0];
+        self::assertCount(1, $cache->unpack($hash1, $scopeFile));
+        self::assertCount(1, $cache->unpack($hash2, $scopeFile));
+        $cache->gc();
+
+        self::assertSame([], glob($tmpDir . '/dcd/*/*.dat'));
+
+        // third run: only hash2 is read, hash1 becomes 50% garbage and the bundle is compacted
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        self::assertCount(1, $cache->unpack($hash2, $scopeFile));
+        $cache->gc();
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        self::assertCount(1, $cache->unpack($hash2, $scopeFile));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('DCD cache file not found');
+        $cache->unpack($hash1, $scopeFile);
+    }
+
+    public function testIndexOfAnotherVersionIsIgnored(): void
+    {
+        $tmpDir = $this->freshTmpDir('foreign-idx');
+        $scopeFile = '/app/index.php';
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash = $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0];
+        $cache->unpack($hash, $scopeFile);
+        $cache->gc();
+
+        file_put_contents($tmpDir . '/dcd/bundle.idx', 'DCD1' . $hash);
+
+        // an upgrade invalidates the result cache, so the collectors pack the loose file again
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        self::assertSame($hash, $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0]);
+        self::assertCount(1, $cache->unpack($hash, $scopeFile));
+        $cache->gc();
+
+        self::assertStringStartsWith('DCD2', (string) file_get_contents($tmpDir . '/dcd/bundle.idx'));
+        self::assertCount(1, (new UsageCacheStorage($tmpDir, offloadCollectorData: true))->unpack($hash, $scopeFile));
+    }
+
+    public function testCorruptIndexIsDiscarded(): void
+    {
+        $tmpDir = $this->freshTmpDir('corrupt-idx');
+        $scopeFile = '/app/index.php';
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash = $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0];
+        $cache->unpack($hash, $scopeFile);
+        $cache->gc();
+
+        file_put_contents($tmpDir . '/dcd/bundle.idx', 'DCD2garbage');
+
+        $this->assertDiscards(
+            $tmpDir,
+            'is corrupt (truncated)',
+            static fn () => (new UsageCacheStorage($tmpDir, offloadCollectorData: true))->unpack($hash, $scopeFile),
+        );
+
+        // a result cache clear re-runs the collectors, so the loose file is packed again and the next run works
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        self::assertSame($hash, $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0]);
+        self::assertCount(1, $cache->unpack($hash, $scopeFile));
+        $cache->gc();
+
+        self::assertFileExists($tmpDir . '/dcd/bundle.idx');
+    }
+
+    public function testIndexFromAnotherBundleGenerationThrows(): void
+    {
+        $tmpDir = $this->freshTmpDir('generation');
+        $scopeFile = '/app/index.php';
+
+        [$usage1, $usage2] = $this->createSampleUsages();
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash1 = $cache->pack([$usage1], $scopeFile)[0];
+        $hash2 = $cache->pack([$usage2], $scopeFile)[0];
+        $cache->unpack($hash1, $scopeFile);
+        $cache->unpack($hash2, $scopeFile);
+        $cache->gc();
+        $staleIndex = file_get_contents($tmpDir . '/dcd/bundle.idx');
+
+        // reading only hash2 leaves 50% garbage, so gc rewrites the bundle under a new generation;
+        // putting the old index back simulates a crash between the data rename and the index write
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $cache->unpack($hash2, $scopeFile);
+        $cache->gc();
+        file_put_contents($tmpDir . '/dcd/bundle.idx', $staleIndex);
+
+        $this->assertDiscards(
+            $tmpDir,
+            'different bundle generation',
+            static fn () => (new UsageCacheStorage($tmpDir, offloadCollectorData: true))->unpack($hash2, $scopeFile),
+        );
+    }
+
+    public function testTruncatedBundleThrows(): void
+    {
+        $tmpDir = $this->freshTmpDir('truncated');
+        $scopeFile = '/app/index.php';
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash = $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0];
+        $cache->unpack($hash, $scopeFile);
+        $cache->gc();
+
+        $bundle = $tmpDir . '/dcd/bundle.dat';
+        file_put_contents($bundle, substr((string) file_get_contents($bundle), 0, -10));
+
+        $this->assertDiscards(
+            $tmpDir,
+            'shorter than the index claims',
+            static fn () => (new UsageCacheStorage($tmpDir, offloadCollectorData: true))->unpack($hash, $scopeFile),
+        );
+    }
+
+    public function testCorruptionDetectedDuringGcIsDiscarded(): void
+    {
+        $tmpDir = $this->freshTmpDir('gc-corrupt');
+        $scopeFile = '/app/index.php';
+        [$usage1, $usage2] = $this->createSampleUsages();
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash1 = $cache->pack([$usage1], $scopeFile)[0];
+        $hash2 = $cache->pack([$usage2], $scopeFile)[0];
+        $cache->unpack($hash1, $scopeFile);
+        $cache->unpack($hash2, $scopeFile);
+        $cache->gc();
+
+        // reading only hash1 leaves 50% garbage, so gc rewrites the bundle and copies hash1 out of it;
+        // cutting the bundle down to its 20 byte header meanwhile makes that copy fail
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $cache->unpack($hash1, $scopeFile);
+        $bundle = $tmpDir . '/dcd/bundle.dat';
+        file_put_contents($bundle, substr((string) file_get_contents($bundle), 0, 20));
+
+        $this->assertDiscards(
+            $tmpDir,
+            'shorter than the index claims',
+            static fn () => $cache->gc(),
+        );
+    }
+
+    public function testMissingBundleDiscardsIndex(): void
+    {
+        $tmpDir = $this->freshTmpDir('missing-bundle');
+        $scopeFile = '/app/index.php';
+
+        $cache = new UsageCacheStorage($tmpDir, offloadCollectorData: true);
+        $hash = $cache->pack([$this->createSampleUsages()[0]], $scopeFile)[0];
+        $cache->unpack($hash, $scopeFile);
+        $cache->gc();
+
+        unlink($tmpDir . '/dcd/bundle.dat');
+
+        $this->assertDiscards(
+            $tmpDir,
+            'data file is missing',
+            static fn () => (new UsageCacheStorage($tmpDir, offloadCollectorData: true))->unpack($hash, $scopeFile),
+        );
+    }
+
+    /**
+     * @param callable(): mixed $action
+     */
+    private function assertDiscards(
+        string $tmpDir,
+        string $reason,
+        callable $action,
+    ): void
+    {
+        try {
+            $action();
+            self::fail('Expected corrupt cache to throw');
+        } catch (LogicException $e) {
+            self::assertStringContainsString($reason, $e->getMessage());
+            self::assertStringContainsString('The bundle was discarded', $e->getMessage());
+            self::assertStringContainsString('Clear the PHPStan result cache', $e->getMessage());
+        }
+
+        self::assertFileDoesNotExist($tmpDir . '/dcd/bundle.dat');
+        self::assertFileDoesNotExist($tmpDir . '/dcd/bundle.idx');
+    }
+
+    private function freshTmpDir(string $name): string
+    {
+        $tmpDir = sys_get_temp_dir() . '/dcd-test-' . $name . '-' . getmypid();
+
+        foreach ($this->glob($tmpDir . '/dcd/*/*.dat') as $file) {
+            unlink($file);
+        }
+
+        foreach ($this->glob($tmpDir . '/dcd/*') as $entry) {
+            if (is_dir($entry)) {
+                rmdir($entry);
+            } else {
+                unlink($entry);
+            }
+        }
+
+        return $tmpDir;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function glob(string $pattern): array
+    {
+        $matches = glob($pattern);
+
+        return $matches === false ? [] : $matches;
     }
 
     /**
