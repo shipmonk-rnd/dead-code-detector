@@ -4,15 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "754c39ab808663eb047fba586b4fe16b",
+    "content-hash": "c901bc2eb54fde326767f343a7af7fa1",
     "packages": [
         {
             "name": "phpstan/phpstan",
-            "version": "2.3.0",
+            "version": "2.3.x-dev",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/b1f9890d9af53a25c58129e78f0aadd31f90d7f4",
-                "reference": "b1f9890d9af53a25c58129e78f0aadd31f90d7f4",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/869111e9ec96833c99c08d70a8c9c16260609fa1",
+                "reference": "869111e9ec96833c99c08d70a8c9c16260609fa1",
                 "shasum": ""
             },
             "require": {
@@ -21,6 +21,7 @@
             "conflict": {
                 "phpstan/phpstan-shim": "*"
             },
+            "default-branch": true,
             "bin": [
                 "phpstan",
                 "phpstan.phar"
@@ -68,7 +69,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-06T06:15:36+00:00"
+            "time": "2026-11-06T14:22:40+00:00"
         }
     ],
     "packages-dev": [
@@ -12206,7 +12207,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "phpstan/phpstan": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
