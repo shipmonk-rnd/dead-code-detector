@@ -38,7 +38,6 @@ use function array_key_last;
 use function array_keys;
 use function array_map;
 use function array_merge;
-use function array_merge_recursive;
 use function array_slice;
 use function array_unique;
 use function array_values;
@@ -171,34 +170,33 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
         /** @var list<CollectedUsage> $knownCollectedUsages */
         $knownCollectedUsages = [];
 
-        $classDefinitionData = $node->get(ClassDefinitionCollector::class);
-        $methodCallData = $node->get(MethodCallCollector::class);
-        $constFetchData = $node->get(ConstantFetchCollector::class);
-        $propertyAccessData = $node->get(PropertyAccessCollector::class);
-        $providedUsagesData = $node->get(ProvidedUsagesCollector::class);
+        $usageCollectors = [
+            MethodCallCollector::class,
+            ProvidedUsagesCollector::class,
+            ConstantFetchCollector::class,
+            PropertyAccessCollector::class,
+        ];
 
-        /** @var array<string, list<list<string>>> $memberUseData */
-        $memberUseData = array_merge_recursive($methodCallData, $providedUsagesData, $constFetchData, $propertyAccessData);
-        unset($methodCallData, $providedUsagesData, $constFetchData, $propertyAccessData);
+        foreach ($usageCollectors as $usageCollector) {
+            foreach ($node->iterate($usageCollector) as $file => $usesPerFile) {
+                foreach ($usesPerFile as $hashes) {
+                    foreach ($hashes as $hash) {
+                        foreach ($this->usageCacheStorage->unpack($hash, $file) as $collectedUsage) {
+                            $memberUsage = $collectedUsage->getUsage();
+                            $className = $memberUsage->getMemberRef()->getClassName();
+                            $memberName = $memberUsage->getMemberRef()->getMemberName();
 
-        foreach ($memberUseData as $file => $usesPerFile) {
-            foreach ($usesPerFile as $hashes) {
-                foreach ($hashes as $hash) {
-                    foreach ($this->usageCacheStorage->unpack($hash, $file) as $collectedUsage) {
-                        $memberUsage = $collectedUsage->getUsage();
-                        $className = $memberUsage->getMemberRef()->getClassName();
-                        $memberName = $memberUsage->getMemberRef()->getMemberName();
+                            if ($className === null) {
+                                $memberType = $memberUsage->getMemberType()->value;
+                                $normalizedMemberNameOrAny = $memberName === null
+                                    ? DebugUsagePrinter::ANY_MEMBER
+                                    : $this->getNormalizedMemberName($memberType, $memberName);
+                                $this->mixedClassNameUsages[$memberType][$normalizedMemberNameOrAny][] = $collectedUsage;
+                                continue;
+                            }
 
-                        if ($className === null) {
-                            $memberType = $memberUsage->getMemberType()->value;
-                            $normalizedMemberNameOrAny = $memberName === null
-                                ? DebugUsagePrinter::ANY_MEMBER
-                                : $this->getNormalizedMemberName($memberType, $memberName);
-                            $this->mixedClassNameUsages[$memberType][$normalizedMemberNameOrAny][] = $collectedUsage;
-                            continue;
+                            $knownCollectedUsages[] = $collectedUsage;
                         }
-
-                        $knownCollectedUsages[] = $collectedUsage;
                     }
                 }
             }
@@ -206,7 +204,7 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
 
         $this->usageCacheStorage->gc();
 
-        foreach ($classDefinitionData as $file => $data) {
+        foreach ($node->iterate(ClassDefinitionCollector::class) as $file => $data) {
             foreach ($data as $typeData) {
                 $typeName = $typeData['name'];
                 $this->typeDefinitions[$typeName] = [
@@ -223,8 +221,6 @@ final class DeadCodeRule implements Rule, DiagnoseExtension
                 ];
             }
         }
-
-        unset($classDefinitionData);
 
         foreach ($this->typeDefinitions as $typeName => $typeDefinition) {
             $methods = $typeDefinition['methods'];
