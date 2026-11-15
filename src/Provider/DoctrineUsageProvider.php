@@ -4,6 +4,8 @@ namespace ShipMonk\PHPStan\DeadCode\Provider;
 
 use Composer\InstalledVersions;
 use PhpParser\Node;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
@@ -14,6 +16,8 @@ use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\TrinaryLogic;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -24,9 +28,13 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use function in_array;
 use function is_array;
 use function is_string;
+use function ltrim;
+use function preg_match_all;
 use function str_starts_with;
+use function strtolower;
 
 final class DoctrineUsageProvider implements ActivatableUsageProvider
 {
@@ -61,6 +69,13 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
             $usages = [
                 ...$usages,
                 ...$this->getUsagesOfEventSubscriber($node, $scope),
+            ];
+        }
+
+        if ($node instanceof MethodCall) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesFromDqlNewOperator($node, $scope),
             ];
         }
 
@@ -410,6 +425,94 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * Constructors called by the DQL NEW operator, AbstractHydrator instantiates the class via ReflectionClass::newInstanceArgs()
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesFromDqlNewOperator(
+        MethodCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        if (!$this->isDqlMethod($scope->getType($node->var), $node->name->toString())) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($node->getArgs() as $arg) {
+            $argType = $scope->getType($arg->value);
+            $dqlTypes = [$argType];
+
+            foreach ($argType->getConstantArrays() as $constantArray) {
+                $dqlTypes = [...$dqlTypes, ...$constantArray->getValueTypes()];
+            }
+
+            foreach ($dqlTypes as $dqlType) {
+                foreach ($dqlType->getConstantStrings() as $dql) {
+                    foreach (self::findNewOperatorClasses($dql->getValue()) as $className) {
+                        $usages[] = new ClassMethodUsage(
+                            UsageOrigin::createRegular($node, $scope),
+                            new ClassMethodRef(
+                                $className,
+                                '__construct',
+                                possibleDescendant: false,
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+
+        return $usages;
+    }
+
+    private function isDqlMethod(
+        Type $callerType,
+        string $methodName,
+    ): bool
+    {
+        $dqlMethods = [
+            'Doctrine\ORM\QueryBuilder' => ['select', 'addselect'],
+            'Doctrine\ORM\EntityManagerInterface' => ['createquery'],
+            'Doctrine\ORM\Query' => ['setdql'],
+        ];
+
+        foreach ($dqlMethods as $className => $methodNames) {
+            if (
+                in_array(strtolower($methodName), $methodNames, true)
+                && (new ObjectType($className))->isSuperTypeOf($callerType)->yes()
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extracts class names from DQL NEW operator, e.g. "SELECT NEW App\Dto\Foo(e.id) FROM ..." or "NEW NAMED App\Dto\Foo(e.id AS id)"
+     *
+     * @return list<string>
+     */
+    private static function findNewOperatorClasses(string $dql): array
+    {
+        preg_match_all('~\bNEW\s+(?:NAMED\s+)?(\\\\?[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*)\s*\(~i', $dql, $matches);
+
+        $classNames = [];
+
+        foreach ($matches[1] as $className) {
+            $classNames[] = ltrim($className, '\\');
+        }
+
+        return $classNames;
     }
 
 }

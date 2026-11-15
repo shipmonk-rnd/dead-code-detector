@@ -79,6 +79,7 @@ parameters:
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 - enums in `#[Column(enumType: UserStatus::class)]`
+- constructors of DTOs instantiated by DQL `NEW` operator in `QueryBuilder::select()`, `addSelect()`, `EntityManager::createQuery()` and `Query::setDQL()`
 
 #### PHPUnit:
 - **data provider methods**
