@@ -49,6 +49,13 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
     private array $serviceClasses = [];
 
     /**
+     * Static methods called by the Nette DI container, collected from NEON `Class::method()` statements.
+     *
+     * @var array<class-string, array<string, true>>
+     */
+    private array $staticFactoryMethods = [];
+
+    /**
      * @param list<string> $containerNeonPaths Paths to NEON files describing the DI container services
      */
     public function __construct(
@@ -91,6 +98,10 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
 
         if ($methodName === '__construct' && isset($this->serviceClasses[$className])) {
             return VirtualUsageData::withNote('Registered as a service in Nette DI container');
+        }
+
+        if ($method->isStatic() && isset($this->staticFactoryMethods[$className][$methodName])) {
+            return VirtualUsageData::withNote('Called by Nette DI container');
         }
 
         return null;
@@ -250,6 +261,90 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
         foreach (self::findServiceClassesInNeon($contents) as $class) {
             if ($this->reflectionProvider->hasClass($class)) {
                 $this->markServiceClass($class);
+            }
+        }
+
+        $statements = self::findStatementsInNeon($contents);
+
+        foreach ($statements['classes'] as $class) {
+            if ($this->reflectionProvider->hasClass($class)) {
+                $this->markConstructorDeclaringClass($this->reflectionProvider->getClass($class));
+            }
+        }
+
+        foreach ($statements['staticMethods'] as [$class, $method]) {
+            if (!$this->reflectionProvider->hasClass($class)) {
+                continue;
+            }
+
+            $classReflection = $this->reflectionProvider->getClass($class);
+
+            if ($classReflection->hasNativeMethod($method)) {
+                $declaringClass = $classReflection->getNativeMethod($method)->getDeclaringClass()->getName();
+                $this->staticFactoryMethods[$declaringClass][$method] = true;
+            }
+        }
+    }
+
+    /**
+     * Extracts NEON statements (entities) the DI container evaluates, the NeonAdapter converts them into DI statements:
+     * - `Class(...)` creates the class instance (e.g. service arguments or extension configs like Sentry integrations)
+     * - `Class::method(...)` calls the static method (e.g. service factory `- App\Registry::create()`)
+     *
+     * The `parameters` section is skipped, statements there are evaluated only when the parameter is used.
+     *
+     * @return array{classes: list<class-string>, staticMethods: list<array{class-string, string}>}
+     */
+    public static function findStatementsInNeon(string $neonContent): array
+    {
+        $decoded = Neon::decode($neonContent);
+        $result = ['classes' => [], 'staticMethods' => []];
+
+        if (!is_array($decoded)) {
+            return $result;
+        }
+
+        unset($decoded['parameters'], $decoded['includes']);
+        self::collectStatements($decoded, $result);
+
+        return $result;
+    }
+
+    /**
+     * @param array{classes: list<class-string>, staticMethods: list<array{class-string, string}>} $result
+     */
+    private static function collectStatements(
+        mixed $value,
+        array &$result,
+    ): void
+    {
+        if ($value instanceof Entity) {
+            if (is_string($value->value)) {
+                if (preg_match('/^\\\\?([A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*)::([A-Za-z_][A-Za-z0-9_]*)$/', $value->value, $matches) === 1) {
+                    /** @var class-string $class */
+                    $class = $matches[1];
+                    $result['staticMethods'][] = [$class, $matches[2]];
+                } else {
+                    $class = self::extractClassName($value->value);
+
+                    if ($class !== null) {
+                        $result['classes'][] = $class;
+                    }
+                }
+            }
+
+            self::collectStatements($value->attributes, $result);
+            return;
+        }
+
+        if (is_array($value)) {
+            // Imported services are provided at runtime, not instantiated by the container
+            if (($value['imported'] ?? null) === true) {
+                return;
+            }
+
+            foreach ($value as $item) {
+                self::collectStatements($item, $result);
             }
         }
     }

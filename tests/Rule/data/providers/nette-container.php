@@ -55,3 +55,55 @@ class NotRegistered
 {
     public function __construct() {} // error: Unused NetteContainerProvider\NotRegistered::__construct
 }
+
+class StaticFactoryService
+{
+    private function __construct() {}
+
+    public static function create(): self
+    {
+        return new self();
+    }
+
+    public static function notFactory(): void {} // error: Unused NetteContainerProvider\StaticFactoryService::notFactory
+}
+
+class StaticFactoryViaCreate
+{
+    public function __construct(int $arg) {}
+
+    public static function create(int $arg): self
+    {
+        return new self($arg);
+    }
+}
+
+class RegisteredWithArgument
+{
+    public function __construct(InstantiatedArgument $argument) {}
+}
+
+class InstantiatedArgument
+{
+    public function __construct() {}
+}
+
+class ImportedWithArgument
+{
+    public function __construct() {} // error: Unused NetteContainerProvider\ImportedWithArgument::__construct
+}
+
+class NotInstantiatedImportedArgument
+{
+    public function __construct() {} // error: Unused NetteContainerProvider\NotInstantiatedImportedArgument::__construct
+}
+
+class InParameters
+{
+    public function __construct() {} // error: Unused NetteContainerProvider\InParameters::__construct
+}
+
+class ExtensionStatement
+{
+    public function __construct(?string $arg) {}
+}

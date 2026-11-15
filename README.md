@@ -107,6 +107,7 @@ parameters:
 - `handleXxx`, `renderXxx`, `actionXxx`, `injectXxx`, `createComponentXxx`
 - `SmartObject` magic calls for `@property` annotations
 - constructors of classes instantiated by the DI container, when `shipmonkDeadCode.usageProviders.nette.containerNeonPaths` is configured (requires `nette/neon`)
+  - including statements like `App\Foo()` in service arguments and extension configs, and static factories like `App\Foo::create()`
 
 #### Nette Tester:
 - `test*` methods, `setUp`/`tearDown`, `@dataProvider` methods in `Tester\TestCase` subclasses
