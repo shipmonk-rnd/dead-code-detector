@@ -526,17 +526,7 @@ If you set up `editorUrl` [parameter](https://phpstan.org/user-guide/output-form
 
 ## Running PHPStan partial analysis:
 - Dead code detection can be reliable executed only on full codebase, thus it gets autodisabled during partial analysis (when only files are passed to PHPStan analysis)
-  - In such cases, PHPStan will report `No error with identifier shipmonk.deadMethod is reported on line X` [false positives](https://github.com/phpstan/phpstan/issues/12328) for every inline ignore (e.g. `// @phpstan-ignore shipmonk.deadMethod`) as those errors are no longer emitted
-  - To eliminate those false positives, use built-in formatter that filters out those errors:
-```neon
-parameters:
-    errorFormat: filterOutUnmatchedInlineIgnoresDuringPartialAnalysis
-
-    # optionally:
-    shipmonkDeadCode:
-        filterOutUnmatchedInlineIgnoresDuringPartialAnalysis:
-            wrappedErrorFormatter: table
-```
+  - PHPStan does not report the inline ignores of dead code errors (e.g. `// @phpstan-ignore shipmonk.deadMethod`) as unmatched in such analysis
 
 ## Future scope:
 - Dead class detection
