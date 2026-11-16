@@ -11,6 +11,7 @@ use PharData;
 use PhpatProvider\RegisteredArchitectureTest;
 use PhpParser\Node;
 use PHPStan\Analyser\Error;
+use PHPStan\Analyser\InternalError;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Command\AnalysisResult;
@@ -18,6 +19,7 @@ use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 use PHPStan\DependencyInjection\Container;
 use PHPStan\File\SimpleRelativePathHelper;
+use PHPStan\Fixable\ErrorFixer;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
@@ -73,22 +75,25 @@ use ShipMonk\PHPStan\DeadCode\Provider\TemplateViewDataTraverser;
 use ShipMonk\PHPStan\DeadCode\Provider\TwigUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VendorUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\VirtualUsageData;
-use ShipMonk\PHPStan\DeadCode\Transformer\FileSystem;
 use ShipMonk\PHPStanDev\RuleTestCase as ShipMonkRuleTestCase;
 use Throwable;
 use Traversable;
 use function array_filter;
 use function array_map;
 use function array_merge;
+use function copy;
 use function count;
+use function dirname;
 use function file_get_contents;
 use function implode;
 use function in_array;
 use function is_array;
 use function iterator_to_array;
+use function mkdir;
 use function ob_end_clean;
 use function ob_start;
 use function preg_replace;
+use function rmdir;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
@@ -140,6 +145,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
 
         if ($this->rule === null) {
             $this->rule = new DeadCodeRule(
+                self::getContainer()->getService('defaultAnalysisParser'), // @phpstan-ignore argument.type
                 new DebugUsagePrinter(
                     $container,
                     $this->createOutputEnhancer(),
@@ -259,6 +265,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
             iterator_to_array(self::provideFiles(), false),
             iterator_to_array(self::provideGroupingFiles(), false),
             iterator_to_array(self::provideAutoRemoveFiles(), false),
+            iterator_to_array(self::provideAutoRemoveFilesAcrossFiles(), false),
         );
 
         foreach ($fileProviders as $args) {
@@ -726,8 +733,29 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     #[DataProvider('provideAutoRemoveFiles')]
     public function testAutoRemove(string $file): void
     {
-        $writtenOutput = '';
+        $this->fix($file, $this->getAutoremoveTransformedFilePath($file));
+    }
 
+    /**
+     * @param array{string, string} $files
+     */
+    #[DataProvider('provideAutoRemoveFilesAcrossFiles')]
+    public function testAutoRemoveAcrossFiles(array $files): void
+    {
+        [$first, $second] = $files;
+
+        $this->fixOtherFile($second, $first, $this->getAutoremoveTransformedFilePath($first));
+        $this->resetInternalAnalyser();
+        $this->fixOtherFile($first, $second, $this->getAutoremoveTransformedFilePath($second));
+    }
+
+    public function testRemoveDeadCodeFormatter(): void
+    {
+        $tmpFile = sys_get_temp_dir() . '/dcd-formatter-' . uniqid() . '/sample.php';
+        mkdir(dirname($tmpFile));
+        copy(__DIR__ . '/data/removing/sample.php', $tmpFile);
+
+        $writtenOutput = '';
         $output = $this->createOutput();
         $output->expects(self::atLeastOnce())
             ->method('writeLineFormatted')
@@ -735,35 +763,52 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $writtenOutput .= $message . "\n";
             });
 
-        $fileSystem = $this->createMock(FileSystem::class);
-        $fileSystem->expects(self::once())
-            ->method('read')
-            ->willReturnCallback(
-                static function (string $file): string {
-                    self::assertFileExists($file);
-                    return file_get_contents($file); // @phpstan-ignore return.type
-                },
-            );
-        $fileSystem->expects(self::once())
-            ->method('write')
-            ->willReturnCallback(
-                function (string $file, string $content): void {
-                    $expectedFile = $this->getAutoremoveTransformedFilePath($file);
-                    self::assertFileExists($expectedFile);
+        $formatter = new RemoveDeadCodeFormatter($this->getErrorFixer(), $this->createOutputEnhancer());
+        $exitCode = $formatter->formatErrors($this->createAnalysisResult(parent::gatherAnalyserErrors([$tmpFile])), $output);
+        $fixedCode = file_get_contents($tmpFile);
+        unlink($tmpFile);
+        rmdir(dirname($tmpFile));
 
-                    $expectedNewCode = file_get_contents($expectedFile);
-                    self::assertSame($expectedNewCode, $content);
-                },
-            );
+        self::assertSame(0, $exitCode);
+        self::assertStringMatchesFormat(
+            <<<'TXT'
+            %w• Removed constant Removal\Interface1::DEAD_IFACE_CONST1
+            %w• Removed constant Removal\Interface1::DEAD_IFACE_CONST2
+            %w• Removed method Removal\Interface1::foo
+            %w• Removed method Removal\Interface2::foo
+            %w• Removed method Removal\AbstractClass::foo
+            %w• Removed method Removal\Child1::foo
+            %w• Removed constant Removal\MyEnum::TransitiveDead
+            %w• Removed constant Removal\Child2::DEAD_CONST
+            %w• Removed method Removal\Child2::mixedExcludedUsage
+            %w! Excluded usage at %ssample.php:55 left intact
+            %w• Removed constant Removal\Child2::TRANSITIVE_DEAD
 
-        $analyserErrors = $this->gatherAnalyserErrors([$file]);
+            Removed 10 dead members in 1 file.
+            Skipped 1 conflicting fix, run vendor/bin/phpstan analyse --fix to apply them in further rounds.
 
-        $formatter = new RemoveDeadCodeFormatter($fileSystem, $this->createOutputEnhancer());
-        $formatter->formatErrors($this->createAnalysisResult($analyserErrors), $output);
+            TXT,
+            $this->trimFgColors($writtenOutput),
+        );
+        self::assertStringNotContainsString('DEAD_CONST = 2', (string) $fixedCode);
+        self::assertStringContainsString('const DEAD_IFACE_CONST', (string) $fixedCode); // conflicting fix left for the next round
+    }
 
-        $expectedOutputFile = $this->getAutoremoveOutputFilePath($file);
-        self::assertFileExists($expectedOutputFile);
-        self::assertSame(file_get_contents($expectedOutputFile), $this->trimFgColors($writtenOutput), "Output does not match expected: $expectedOutputFile");
+    public function testRemoveDeadCodeFormatterRefusesInternalErrors(): void
+    {
+        $writtenOutput = '';
+        $output = $this->createOutput();
+        $output->expects(self::atLeastOnce())
+            ->method('writeLineFormatted')
+            ->willReturnCallback(static function (string $message) use (&$writtenOutput): void {
+                $writtenOutput .= $message . "\n";
+            });
+
+        $formatter = new RemoveDeadCodeFormatter($this->getErrorFixer(), $this->createOutputEnhancer());
+        $analysisResult = new AnalysisResult([], [], [new InternalError('Boom', 'analysing', [], null, false)], [], [], false, null, false, 0, false, []); // @phpstan-ignore phpstanApi.constructor, phpstanApi.constructor
+
+        self::assertSame(1, $formatter->formatErrors($analysisResult, $output));
+        self::assertSame("<error>Boom</error>\n\nFix listed internal errors first.\n", $writtenOutput);
     }
 
     public function testFilterOutUnmatchedInlineIgnores(): void
@@ -1222,23 +1267,27 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     public static function provideAutoRemoveFiles(): Traversable
     {
         yield 'sample' => [__DIR__ . '/data/removing/sample.php'];
-        yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
         yield 'properties' => [__DIR__ . '/data/removing/properties.php'];
+        yield 'no-namespace' => [__DIR__ . '/data/removing/no-namespace.php'];
         yield 'promoted-properties' => [__DIR__ . '/data/removing/promoted-properties.php'];
         yield 'anonymous-class' => [__DIR__ . '/data/removing/anonymous-class.php'];
         yield 'global-constant' => [__DIR__ . '/data/removing/global-constant.php'];
         yield 'mixed-namespaces' => [__DIR__ . '/data/removing/mixed-namespaces.php'];
         yield 'property-group' => [__DIR__ . '/data/removing/property-group.php'];
+        yield 'all-items-in-one-error' => [__DIR__ . '/data/removing/all-items-in-one-error.php'];
+    }
+
+    /**
+     * @return Traversable<string, array{0: list<string>}>
+     */
+    public static function provideAutoRemoveFilesAcrossFiles(): Traversable
+    {
+        yield 'transitively dead in other file' => [[__DIR__ . '/data/removing/cross-file-caller.php', __DIR__ . '/data/removing/cross-file-callee.php']];
     }
 
     private function getAutoremoveTransformedFilePath(string $file): string
     {
         return str_replace('.php', '.transformed.php', $file);
-    }
-
-    private function getAutoremoveOutputFilePath(string $file): string
-    {
-        return str_replace('.php', '.output.txt', $file);
     }
 
     /**
@@ -1418,6 +1467,11 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         }
 
         return $excluders;
+    }
+
+    private function getErrorFixer(): ErrorFixer
+    {
+        return self::getContainer()->getByType(ErrorFixer::class);
     }
 
     private function createOutputEnhancer(): OutputEnhancer

@@ -66,6 +66,12 @@ jobs:
                     HEAD_REF: ${{ github.head_ref }}
                 run: |
                     composer config repositories.pr vcs "https://github.com/$HEAD_REPO"
+                    # let the detector pick its required PHPStan version even if the project pins an older one
+                    for section in require require-dev; do
+                        if jq -e --arg s "$section" '.[$s]["phpstan/phpstan"]' composer.json > /dev/null; then
+                            composer require --no-update $([ "$section" = require-dev ] && echo --dev) "phpstan/phpstan:*"
+                        fi
+                    done
                     composer require --dev "shipmonk/dead-code-detector:dev-$HEAD_REF" --with-all-dependencies --minimal-changes
 
             -

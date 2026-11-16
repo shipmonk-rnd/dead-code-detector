@@ -1,3 +1,0 @@
- • Removed constant Removal\ClassWithGlobalConstSibling::FOO
-
-Removed 1 dead member in 1 file.

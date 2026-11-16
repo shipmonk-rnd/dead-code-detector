@@ -18,8 +18,6 @@ services:
     -
         class: ShipMonk\PHPStan\DeadCode\Hierarchy\ClassHierarchy
     -
-        class: ShipMonk\PHPStan\DeadCode\Transformer\FileSystem
-    -
         class: ShipMonk\PHPStan\DeadCode\Output\OutputEnhancer
         arguments:
             editorUrl: %editorUrl%
@@ -238,6 +236,7 @@ services:
             - phpstan.rules.rule
             - phpstan.diagnoseExtension
         arguments:
+            parser: @defaultAnalysisParser
             detectDeadMethods: %shipmonkDeadCode.detect.deadMethods%
             detectDeadConstants: %shipmonkDeadCode.detect.deadConstants%
             detectDeadEnumCases: %shipmonkDeadCode.detect.deadEnumCases%
