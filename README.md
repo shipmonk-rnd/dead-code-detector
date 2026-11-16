@@ -538,6 +538,9 @@ parameters:
             wrappedErrorFormatter: table
 ```
 
+> [!NOTE]
+> PHPStan 2.3.6 and newer do not report those false positives. You do not need the formatter there.
+
 ## Future scope:
 - Dead class detection
 - Dead parameters detection
