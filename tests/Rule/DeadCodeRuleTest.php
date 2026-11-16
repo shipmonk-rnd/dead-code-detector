@@ -1058,6 +1058,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-phpbench' => [__DIR__ . '/data/providers/phpbench.php'];
         yield 'provider-behat' => [__DIR__ . '/data/providers/behat.php'];
         yield 'provider-doctrine' => [__DIR__ . '/data/providers/doctrine.php'];
+        yield 'provider-doctrine-dql' => [__DIR__ . '/data/providers/doctrine-dql.php'];
+        yield 'provider-doctrine-dql-nested' => [__DIR__ . '/data/providers/doctrine-dql-nested.php', self::requiresPackage('doctrine/orm', '>= 3.3')];
         yield 'provider-phpstan' => [__DIR__ . '/data/providers/phpstan.php'];
         yield 'provider-phpat' => [__DIR__ . '/data/providers/phpat.php'];
         yield 'provider-eloquent' => [__DIR__ . '/data/providers/eloquent.php'];
@@ -1279,6 +1281,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
             ),
             new DoctrineUsageProvider(
+                self::getContainer(),
                 $this->providersEnabled,
             ),
             new PhpStanUsageProvider(
@@ -1573,7 +1576,10 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
     {
         return array_merge(
             parent::getAdditionalConfigFiles(),
-            [__DIR__ . '/data/visitors.neon'],
+            [
+                __DIR__ . '/data/visitors.neon',
+                __DIR__ . '/data/providers/doctrine/phpstan-doctrine.neon',
+            ],
         );
     }
 

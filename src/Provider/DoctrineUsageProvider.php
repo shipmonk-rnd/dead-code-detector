@@ -2,18 +2,35 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
+use AssertionError;
 use Composer\InstalledVersions;
+use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\Query\AST\NewObjectExpression;
+use Doctrine\ORM\Query\AST\SelectExpression;
+use Doctrine\ORM\Query\AST\SelectStatement;
+use Doctrine\Persistence\Mapping\MappingException;
+use LogicException;
 use PhpParser\Node;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Return_;
 use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
+use PHPStan\DependencyInjection\Container;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\TrinaryLogic;
+use PHPStan\Type\Doctrine\ObjectMetadataResolver;
+use PHPStan\Type\Doctrine\Query\QueryType;
+use PHPStan\Type\Type;
+use PHPStan\Type\TypeTraverser;
+use PHPStan\Type\UnionType;
 use ShipMonk\PHPStan\DeadCode\Enum\AccessType;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassConstantUsage;
@@ -24,16 +41,23 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use function in_array;
 use function is_array;
 use function is_string;
+use function ltrim;
+use function method_exists;
 use function str_starts_with;
+use function stripos;
 
 final class DoctrineUsageProvider implements ActivatableUsageProvider
 {
 
     private readonly bool $enabled;
 
-    public function __construct(?bool $enabled)
+    public function __construct(
+        private readonly Container $container,
+        ?bool $enabled,
+    )
     {
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
     }
@@ -64,7 +88,154 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
             ];
         }
 
+        if ($node instanceof MethodCall) {
+            $usages = [
+                ...$usages,
+                ...$this->getUsagesOfDqlNewOperator($node, $scope),
+            ];
+        }
+
         return $usages;
+    }
+
+    /**
+     * The hydrator calls the constructor of each class in a DQL NEW expression via ReflectionClass::newInstanceArgs().
+     * The DQL comes from the Query type that phpstan-doctrine infers.
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getUsagesOfDqlNewOperator(
+        MethodCall $node,
+        Scope $scope,
+    ): array
+    {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        if (!in_array($node->name->toLowerString(), ['createquery', 'getquery'], true)) {
+            return [];
+        }
+
+        $usages = [];
+
+        foreach ($this->getDqls($scope->getType($node)) as $dql) {
+            foreach ($this->getClassesInstantiatedByDql($dql) as $className) {
+                $usages[] = new ClassMethodUsage(
+                    UsageOrigin::createRegular($node, $scope),
+                    new ClassMethodRef(
+                        $className,
+                        '__construct',
+                        possibleDescendant: false,
+                    ),
+                );
+            }
+        }
+
+        return $usages;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getDqls(Type $type): array
+    {
+        $dqls = [];
+
+        TypeTraverser::map($type, static function (Type $type, callable $traverse) use (&$dqls): Type {
+            if ($type instanceof UnionType) {
+                return $traverse($type);
+            }
+
+            if ($type instanceof QueryType) {
+                $dqls[] = $type->getDql();
+            }
+
+            return $type;
+        });
+
+        return $dqls;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getClassesInstantiatedByDql(string $dql): array
+    {
+        if (stripos($dql, 'new') === false) {
+            return []; // skips the entity manager and the second DQL parse for most queries
+        }
+
+        $entityManager = $this->getEntityManager($dql);
+
+        if ($entityManager === null) {
+            return [];
+        }
+
+        try {
+            $ast = $entityManager->createQuery($dql)->getAST();
+        } catch (AssertionError | DbalException | MappingException | ORMException $e) { // @phpstan-ignore catch.neverThrown, catch.neverThrown, catch.neverThrown, catch.neverThrown (Doctrine does not declare them)
+            return []; // phpstan-doctrine reports invalid DQL
+        }
+
+        if (!$ast instanceof SelectStatement) {
+            return [];
+        }
+
+        $classNames = [];
+
+        foreach ($ast->selectClause->selectExpressions as $selectExpression) {
+            if (!$selectExpression instanceof SelectExpression) {
+                throw new LogicException('Doctrine parser creates only SelectExpression there');
+            }
+
+            $classNames = [
+                ...$classNames,
+                ...$this->getClassesOfNewObjectExpression($selectExpression->expression),
+            ];
+        }
+
+        return $classNames;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getClassesOfNewObjectExpression(mixed $expression): array
+    {
+        if (!$expression instanceof NewObjectExpression) {
+            return [];
+        }
+
+        $classNames = [ltrim($expression->className, '\\')];
+
+        foreach ($expression->args as $arg) {
+            $classNames = [
+                ...$classNames,
+                ...$this->getClassesOfNewObjectExpression($arg),
+            ];
+        }
+
+        return $classNames;
+    }
+
+    private function getEntityManager(string $dql): ?EntityManagerInterface
+    {
+        $resolverServiceNames = $this->container->findServiceNamesByType(ObjectMetadataResolver::class);
+
+        if ($resolverServiceNames === []) {
+            return null; // phpstan-doctrine is not installed
+        }
+
+        $resolver = $this->container->getByType(ObjectMetadataResolver::class); // @phpstan-ignore missingType.checkedException (guarded by findServiceNamesByType above)
+
+        $objectManager = method_exists($resolver, 'getObjectManagerForDql') // @phpstan-ignore function.alreadyNarrowedType (exists since phpstan-doctrine 2.0.28)
+            ? $resolver->getObjectManagerForDql($dql) // @phpstan-ignore phpstanApi.method
+            : $resolver->getObjectManager();
+
+        return $objectManager instanceof EntityManagerInterface
+            ? $objectManager
+            : null;
     }
 
     /**

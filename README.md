@@ -79,6 +79,7 @@ parameters:
 - `repositoryMethod` in `#[UniqueEntity]` attribute
 - lifecycle event attributes `#[PreFlush]`, `#[PostLoad]`, ...
 - enums in `#[Column(enumType: UserStatus::class)]`
+- constructors of classes created by the DQL `NEW` operator (needs [phpstan-doctrine](https://github.com/phpstan/phpstan-doctrine) with `objectManagerLoader`)
 
 #### PHPUnit:
 - **data provider methods**
