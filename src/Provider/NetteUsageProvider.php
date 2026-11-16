@@ -16,6 +16,8 @@ use PHPStan\Reflection\ReflectionProvider;
 use ReflectionMethod;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function class_exists;
+use function count;
+use function explode;
 use function file_get_contents;
 use function is_array;
 use function is_string;
@@ -291,6 +293,9 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
      * - `Class(...)` creates the class instance (e.g. service arguments or extension configs like Sentry integrations)
      * - `Class::method(...)` calls the static method (e.g. service factory `- App\Registry::create()`)
      *
+     * A service creator and a setup item can also be a callable without parentheses (`App\Registry::create`,
+     * `[App\Registry, create]`), Nette DI wraps it into the same statement.
+     *
      * The `parameters` section is skipped, statements there are evaluated only when the parameter is used.
      *
      * @return array{classes: list<class-string>, staticMethods: list<array{class-string, string}>}
@@ -304,10 +309,93 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
             return $result;
         }
 
+        self::collectServiceCallables($decoded['services'] ?? null, $result);
+
+        foreach (is_array($decoded['decorator'] ?? null) ? $decoded['decorator'] : [] as $decorator) {
+            if (is_array($decorator)) {
+                self::collectSetupCallables($decorator['setup'] ?? null, $result);
+            }
+        }
+
         unset($decoded['parameters'], $decoded['includes']);
         self::collectStatements($decoded, $result);
 
         return $result;
+    }
+
+    /**
+     * @param array{classes: list<class-string>, staticMethods: list<array{class-string, string}>} $result
+     */
+    private static function collectServiceCallables(
+        mixed $services,
+        array &$result,
+    ): void
+    {
+        if (!is_array($services)) {
+            return;
+        }
+
+        foreach ($services as $service) {
+            $creator = $service;
+
+            // A definition with items 0 and 1 is the creator itself, see DefinitionSchema::normalize()
+            if (is_array($service) && !isset($service[0], $service[1])) {
+                if (($service['imported'] ?? null) === true) {
+                    continue;
+                }
+
+                $creator = $service['create'] ?? $service['factory'] ?? null;
+                self::collectSetupCallables($service['setup'] ?? null, $result);
+            }
+
+            $staticMethod = self::extractStaticMethod($creator);
+
+            if ($staticMethod !== null) {
+                $result['staticMethods'][] = $staticMethod;
+            }
+        }
+    }
+
+    /**
+     * @param array{classes: list<class-string>, staticMethods: list<array{class-string, string}>} $result
+     */
+    private static function collectSetupCallables(
+        mixed $setup,
+        array &$result,
+    ): void
+    {
+        if (!is_array($setup)) {
+            return;
+        }
+
+        foreach ($setup as $item) {
+            // An array setup item is `[$member => $value]`, not a callable
+            $staticMethod = is_string($item) ? self::extractStaticMethod($item) : null;
+
+            if ($staticMethod !== null) {
+                $result['staticMethods'][] = $staticMethod;
+            }
+        }
+    }
+
+    /**
+     * @return array{class-string, string}|null
+     */
+    private static function extractStaticMethod(mixed $callable): ?array
+    {
+        $parts = is_string($callable) ? explode('::', $callable, 2) : $callable;
+
+        if (!is_array($parts) || count($parts) !== 2 || !isset($parts[0], $parts[1]) || !is_string($parts[0]) || !is_string($parts[1])) {
+            return null;
+        }
+
+        $class = self::extractClassName($parts[0]);
+
+        if ($class === null || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $parts[1]) !== 1) {
+            return null;
+        }
+
+        return [$class, $parts[1]];
     }
 
     /**
@@ -320,10 +408,10 @@ final class NetteUsageProvider extends ReflectionBasedMemberUsageProvider implem
     {
         if ($value instanceof Entity) {
             if (is_string($value->value)) {
-                if (preg_match('/^\\\\?([A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*)::([A-Za-z_][A-Za-z0-9_]*)$/', $value->value, $matches) === 1) {
-                    /** @var class-string $class */
-                    $class = $matches[1];
-                    $result['staticMethods'][] = [$class, $matches[2]];
+                $staticMethod = self::extractStaticMethod($value->value);
+
+                if ($staticMethod !== null) {
+                    $result['staticMethods'][] = $staticMethod;
                 } else {
                     $class = self::extractClassName($value->value);
 

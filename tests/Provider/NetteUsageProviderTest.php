@@ -105,6 +105,15 @@ final class NetteUsageProviderTest extends PHPStanTestCase
     {
         yield 'static factory' => ["services:\n\t- Foo\\Bar::create()", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
         yield 'static factory with leading backslash' => ["services:\n\tname:\n\t\tcreate: \\Foo\\Bar::create(1)", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static factory without parentheses' => ["services:\n\t- Foo\\Bar::create", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static factory in create without parentheses' => ["services:\n\tname:\n\t\tcreate: \\Foo\\Bar::create", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static factory in legacy factory key' => ["services:\n\tname:\n\t\tfactory: Foo\\Bar::create", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static factory as array callable' => ["services:\n\tname: [Foo\\Bar, create]", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static factory in create as array callable' => ["services:\n\tname:\n\t\tcreate: [Foo\\Bar, create]", ['classes' => [], 'staticMethods' => [['Foo\\Bar', 'create']]]];
+        yield 'static setup without parentheses' => ["services:\n\tname:\n\t\ttype: Foo\\Bar\n\t\tsetup:\n\t\t\t- Foo\\Baz::register\n\t\t\t- setFoo\n\t\t\t- [Foo\\Baz, notCallable]", ['classes' => [], 'staticMethods' => [['Foo\\Baz', 'register']]]];
+        yield 'static decorator setup without parentheses' => ["decorator:\n\tFoo\\Bar:\n\t\tsetup:\n\t\t\t- Foo\\Baz::register", ['classes' => [], 'staticMethods' => [['Foo\\Baz', 'register']]]];
+        yield 'imported service creator is skipped' => ["services:\n\tname:\n\t\tcreate: Foo\\Bar::create\n\t\timported: true", ['classes' => [], 'staticMethods' => []]];
+        yield 'callable string outside of services is skipped' => ["someExtension:\n\tcallback: Foo\\Bar::create", ['classes' => [], 'staticMethods' => []]];
         yield 'service with statement argument' => ["services:\n\t- Foo\\Bar(Foo\\Baz())", ['classes' => ['Foo\\Bar', 'Foo\\Baz'], 'staticMethods' => []]];
         yield 'setup with statement argument' => ["services:\n\tname:\n\t\ttype: Foo\\Bar\n\t\tsetup:\n\t\t\t- add(Foo\\Baz())", ['classes' => ['add', 'Foo\\Baz'], 'staticMethods' => []]];
         yield 'extension config' => ["sentry:\n\tclient:\n\t\tintegrations:\n\t\t\t- Foo\\Integration(null)", ['classes' => ['Foo\\Integration'], 'staticMethods' => []]];

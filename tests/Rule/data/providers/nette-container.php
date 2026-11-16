@@ -107,3 +107,30 @@ class ExtensionStatement
 {
     public function __construct(?string $arg) {}
 }
+
+class StaticFactoryWithoutParentheses
+{
+    private function __construct() {}
+
+    public static function create(): self
+    {
+        return new self();
+    }
+
+    public static function createViaCreateKey(): self
+    {
+        return new self();
+    }
+
+    public static function createViaArrayCallable(): self
+    {
+        return new self();
+    }
+
+    public static function createViaCreateKeyArrayCallable(): self
+    {
+        return new self();
+    }
+
+    public static function register(RegisteredWithArgument $service): void {}
+}

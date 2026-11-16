@@ -21,6 +21,14 @@ services:
     viaStaticFactory:
         create: NetteContainerProvider\StaticFactoryViaCreate::create(1)
     withArgument: NetteContainerProvider\RegisteredWithArgument(NetteContainerProvider\InstantiatedArgument())
+    staticFactoryWithoutParentheses: NetteContainerProvider\StaticFactoryWithoutParentheses::create
+    viaCreateKeyWithoutParentheses:
+        create: NetteContainerProvider\StaticFactoryWithoutParentheses::createViaCreateKey
+        setup:
+            - NetteContainerProvider\StaticFactoryWithoutParentheses::register
+    viaArrayCallable: [NetteContainerProvider\StaticFactoryWithoutParentheses, createViaArrayCallable]
+    viaCreateKeyArrayCallable:
+        create: [NetteContainerProvider\StaticFactoryWithoutParentheses, createViaCreateKeyArrayCallable]
     importedWithArgument:
         type: NetteContainerProvider\ImportedWithArgument
         arguments: [NetteContainerProvider\NotInstantiatedImportedArgument()]
