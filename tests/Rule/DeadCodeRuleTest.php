@@ -22,6 +22,7 @@ use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Testing\RuleTestCase as OriginalRuleTestCase;
+use PHPStan\Type\Doctrine\ObjectMetadataResolver;
 use PHPStan\Type\FileTypeMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhp;
@@ -1281,8 +1282,8 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 $this->providersEnabled,
             ),
             new DoctrineUsageProvider(
-                self::getContainer(),
                 $this->providersEnabled,
+                self::getContainer()->getByType(ObjectMetadataResolver::class),
             ),
             new PhpStanUsageProvider(
                 $this->providersEnabled,

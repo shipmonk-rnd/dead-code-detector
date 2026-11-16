@@ -16,7 +16,6 @@ use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionClass;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionProperty;
-use PHPStan\DependencyInjection\Container;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ExtendedPropertyReflection;
@@ -52,8 +51,8 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
     private readonly bool $enabled;
 
     public function __construct(
-        private readonly Container $container,
         ?bool $enabled,
+        private readonly ?ObjectMetadataResolver $objectMetadataResolver = null, // null when phpstan-doctrine is not installed
     )
     {
         $this->enabled = $enabled ?? $this->isDoctrineInstalled();
@@ -159,13 +158,19 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
      */
     private function getClassesInstantiatedByDql(string $dql): array
     {
+        if ($this->objectMetadataResolver === null) {
+            return [];
+        }
+
         if (stripos($dql, 'new') === false) {
             return []; // skips the entity manager and the second DQL parse for most queries
         }
 
-        $entityManager = $this->getEntityManager($dql);
+        $entityManager = method_exists($this->objectMetadataResolver, 'getObjectManagerForDql') // @phpstan-ignore function.alreadyNarrowedType (exists since phpstan-doctrine 2.0.28)
+            ? $this->objectMetadataResolver->getObjectManagerForDql($dql) // @phpstan-ignore phpstanApi.method
+            : $this->objectMetadataResolver->getObjectManager();
 
-        if ($entityManager === null) {
+        if (!$entityManager instanceof EntityManagerInterface) {
             return [];
         }
 
@@ -214,25 +219,6 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
         }
 
         return $classNames;
-    }
-
-    private function getEntityManager(string $dql): ?EntityManagerInterface
-    {
-        $resolverServiceNames = $this->container->findServiceNamesByType(ObjectMetadataResolver::class);
-
-        if ($resolverServiceNames === []) {
-            return null; // phpstan-doctrine is not installed
-        }
-
-        $resolver = $this->container->getByType(ObjectMetadataResolver::class); // @phpstan-ignore missingType.checkedException (guarded by findServiceNamesByType above)
-
-        $objectManager = method_exists($resolver, 'getObjectManagerForDql') // @phpstan-ignore function.alreadyNarrowedType (exists since phpstan-doctrine 2.0.28)
-            ? $resolver->getObjectManagerForDql($dql) // @phpstan-ignore phpstanApi.method
-            : $resolver->getObjectManager();
-
-        return $objectManager instanceof EntityManagerInterface
-            ? $objectManager
-            : null;
     }
 
     /**
