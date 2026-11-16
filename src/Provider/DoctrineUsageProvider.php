@@ -2,15 +2,11 @@
 
 namespace ShipMonk\PHPStan\DeadCode\Provider;
 
-use AssertionError;
 use Composer\InstalledVersions;
-use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\Query\AST\NewObjectExpression;
 use Doctrine\ORM\Query\AST\SelectExpression;
 use Doctrine\ORM\Query\AST\SelectStatement;
-use Doctrine\Persistence\Mapping\MappingException;
 use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
@@ -41,6 +37,7 @@ use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassPropertyUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
+use Throwable;
 use function in_array;
 use function is_array;
 use function is_string;
@@ -174,7 +171,7 @@ final class DoctrineUsageProvider implements ActivatableUsageProvider
 
         try {
             $ast = $entityManager->createQuery($dql)->getAST();
-        } catch (AssertionError | DbalException | MappingException | ORMException $e) { // @phpstan-ignore catch.neverThrown, catch.neverThrown, catch.neverThrown, catch.neverThrown (Doctrine does not declare them)
+        } catch (Throwable $e) { // @phpstan-ignore catch.neverThrown (Doctrine does not declare its exceptions)
             return []; // phpstan-doctrine reports invalid DQL
         }
 
