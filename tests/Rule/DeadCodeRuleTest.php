@@ -58,6 +58,7 @@ use ShipMonk\PHPStan\DeadCode\Provider\DoctrineUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EloquentUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\EnumUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\LaravelUsageProvider;
+use ShipMonk\PHPStan\DeadCode\Provider\LatteUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\MemberUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteTesterUsageProvider;
 use ShipMonk\PHPStan\DeadCode\Provider\NetteUsageProvider;
@@ -1066,6 +1067,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
         yield 'provider-nette' => [__DIR__ . '/data/providers/nette.php'];
         yield 'provider-nette-container' => [__DIR__ . '/data/providers/nette-container.php'];
         yield 'provider-nette-tester' => [__DIR__ . '/data/providers/nette-tester.php'];
+        yield 'provider-latte' => [__DIR__ . '/data/providers/latte.php'];
         yield 'provider-apiphpdoc' => [__DIR__ . '/data/providers/api-phpdoc.php'];
         yield 'provider-composer' => [__DIR__ . '/data/providers/composer.php'];
         yield 'provider-enum' => [__DIR__ . '/data/providers/enum.php'];
@@ -1252,6 +1254,7 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 __DIR__ . '/data/providers/twig-template.php',
                 __DIR__ . '/data/providers/blade.php',
                 __DIR__ . '/data/providers/symfony-ux.php',
+                __DIR__ . '/data/providers/latte.php',
             ],
         );
 
@@ -1309,6 +1312,13 @@ final class DeadCodeRuleTest extends ShipMonkRuleTestCase
                 self::getContainer()->getByType(ReflectionProvider::class),
                 $this->providersEnabled,
                 [__DIR__ . '/data/providers/nette/services.neon'],
+            ),
+            new LatteUsageProvider(
+                self::createReflectionProvider(),
+                $templateViewDataTraverser,
+                $this->providersEnabled,
+                [__DIR__ . '/data/providers/latte.php', __DIR__ . '/data/providers/latte-missing'],
+                [__DIR__ . '/data/providers/latte', __DIR__ . '/data/providers/latte-single-file.latte'],
             ),
             new StreamWrapperUsageProvider(
                 $this->providersEnabled,

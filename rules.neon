@@ -166,6 +166,15 @@ services:
             enabled: %shipmonkDeadCode.usageProviders.netteTester.enabled%
 
     -
+        class: ShipMonk\PHPStan\DeadCode\Provider\LatteUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider
+        arguments:
+            enabled: %shipmonkDeadCode.usageProviders.latte.enabled%
+            analysedPaths: %analysedPaths%
+            templatePaths: %shipmonkDeadCode.usageProviders.latte.templatePaths%
+
+    -
         class: ShipMonk\PHPStan\DeadCode\Provider\StreamWrapperUsageProvider
         tags:
             - shipmonk.deadCode.memberUsageProvider
@@ -313,6 +322,9 @@ parameters:
                 containerNeonPaths: []
             netteTester:
                 enabled: null
+            latte:
+                enabled: null
+                templatePaths: []
             streamWrapper:
                 enabled: true
             composer:
@@ -339,6 +351,7 @@ expandRelativePaths:
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][configDir]'
     - '[parameters][shipmonkDeadCode][usageProviders][symfony][containerXmlPaths]'
     - '[parameters][shipmonkDeadCode][usageProviders][nette][containerNeonPaths]'
+    - '[parameters][shipmonkDeadCode][usageProviders][latte][templatePaths]'
     - '[parameters][shipmonkDeadCode][usageProviders][composer][composerJsonPath]'
     - '[parameters][shipmonkDeadCode][usageExcluders][tests][devPaths]'
 
@@ -416,6 +429,10 @@ parametersSchema:
             ])
             netteTester: structure([
                 enabled: schema(bool(), nullable())
+            ])
+            latte: structure([
+                enabled: schema(bool(), nullable())
+                templatePaths: listOf(string())
             ])
             streamWrapper: structure([
                 enabled: bool()

@@ -108,6 +108,14 @@ parameters:
 - `SmartObject` magic calls for `@property` annotations
 - constructors of classes instantiated by the DI container, when `shipmonkDeadCode.usageProviders.nette.containerNeonPaths` is configured (requires `nette/neon`)
 
+#### Latte:
+- View objects passed as parameters to Latte templates (including transitively referenced ones)
+  - Rendered via `Latte\Engine::render()`, `renderToString()`
+  - Passed to Nette `Template::render()`, `renderToString()`, `add()`, `setParameters()` or assigned via `$template->foo = $viewModel`
+- Public properties of typed templates extending `Nette\Bridges\ApplicationLatte\Template`
+- Classes declared in templates via [`{templateType}` and `{varType}`](https://latte.nette.org/en/type-system) (`.latte` files are searched in analysed paths and `shipmonkDeadCode.usageProviders.latte.templatePaths`)
+- `#[TemplateFilter]`, `#[TemplateFunction]` methods
+
 #### Nette Tester:
 - `test*` methods, `setUp`/`tearDown`, `@dataProvider` methods in `Tester\TestCase` subclasses
 
