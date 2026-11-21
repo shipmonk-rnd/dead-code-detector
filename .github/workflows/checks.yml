@@ -22,12 +22,14 @@ jobs:
                 uses: shivammathur/setup-php@v2
                 with:
                     php-version: 8.5
-                    extensions: turbocov-shipmonk-rnd/turbocov@0.1.1
                     coverage: none
-                    ini-values: pcov.directory=src
-                env:
-                    TURBOCOV_CONFIGURE_OPTS: --enable-turbocov --enable-turbocov-impersonate-pcov
-                    TURBOCOV_PATH: .
+                    tools: pie
+                    ini-values: extension=turbocov, pcov.directory=src
+            -
+                name: Install turbocov
+                run: |
+                    sudo pie install shipmonk/turbocov --enable-turbocov-impersonate-pcov --skip-enable-extension
+                    php --ri pcov
             -
                 name: Install dependencies
                 run: composer install --no-progress --prefer-dist --no-interaction
