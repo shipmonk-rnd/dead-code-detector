@@ -65,7 +65,7 @@ parameters:
 - `#[Assert\Callback]`, `#[Interact]`, `#[Route]`, `#[Required]` (methods and properties)
 - `#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]`
 - `#[AutoconfigureTag('doctrine.event_listener')]`, `#[Autoconfigure(constructor:)]`, `#[Autoconfigure(calls:)]`, `#[AutowireCallable]`
-- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]`
+- `defaultIndexMethod` and `defaultPriorityMethod` in `#[AutowireLocator]`, `#[AutowireIterator]`, `#[TaggedIterator]`, `#[TaggedLocator]` and in `tagged_iterator` arguments of the container XML, including the implicit `getDefaultPriority`, `getDefault<Index>Name` and `getDefault<Index>Priority`
 - Workflow event listener attributes: `#[AsAnnounceListener]`, ...
 - `EventSubscriberInterface::getSubscribedEvents`
 - `onKernelResponse`, `onKernelRequest`, etc

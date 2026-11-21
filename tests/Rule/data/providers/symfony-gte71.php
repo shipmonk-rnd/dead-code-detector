@@ -225,6 +225,81 @@ class TaggedIteratorController {
 
 }
 
+interface ImplicitPriorityHandler {}
+
+class ImplicitPriorityFooHandler implements ImplicitPriorityHandler
+{
+    public static function getDefaultPriority(): int { return 10; }
+    public static function getDefaultName(): string { return 'foo'; } // error: Unused Symfony\ImplicitPriorityFooHandler::getDefaultName
+    public static function getDefaultKeyName(): string { return 'foo'; } // error: Unused Symfony\ImplicitPriorityFooHandler::getDefaultKeyName
+    public static function getDefaultKeyPriority(): int { return 10; } // error: Unused Symfony\ImplicitPriorityFooHandler::getDefaultKeyPriority
+}
+
+interface ImplicitIndexedHandler {}
+
+class ImplicitIndexedFooHandler implements ImplicitIndexedHandler
+{
+    public static function getDefaultKeyName(): string { return 'foo'; }
+    public static function getDefaultKeyPriority(): int { return 10; }
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\ImplicitIndexedFooHandler::getDefaultPriority
+}
+
+interface ImplicitHalfExplicitHandler {}
+
+class ImplicitHalfExplicitFooHandler implements ImplicitHalfExplicitHandler
+{
+    public static function getDefaultKeyName(): string { return 'foo'; }
+    public static function getExplicitPriority(): int { return 10; }
+    public static function getDefaultKeyPriority(): int { return 10; } // error: Unused Symfony\ImplicitHalfExplicitFooHandler::getDefaultKeyPriority
+}
+
+interface ImplicitLocatedHandler {}
+
+class ImplicitLocatedFooHandler implements ImplicitLocatedHandler
+{
+    public static function getDefaultSymfonyImplicitLocatedHandlerName(): string { return 'foo'; }
+    public static function getDefaultSymfonyImplicitLocatedHandlerPriority(): int { return 10; }
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\ImplicitLocatedFooHandler::getDefaultPriority
+}
+
+class ImplicitDottedLocatedService
+{
+    public static function getDefaultLocatedItemName(): string { return 'foo'; }
+    public static function getDefaultLocatedItemPriority(): int { return 10; }
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\ImplicitDottedLocatedService::getDefaultPriority
+}
+
+class NotTaggedWithDefaultPriority
+{
+    public static function getDefaultPriority(): int { return 10; } // error: Unused Symfony\NotTaggedWithDefaultPriority::getDefaultPriority
+}
+
+class ImplicitDefaultMethodsController {
+
+    #[Route('/implicit-iterator', name: 'implicit-iterator')]
+    public function iteratorAction(
+        #[AutowireIterator(ImplicitPriorityHandler::class)]
+        $iterator,
+        #[AutowireIterator(ImplicitIndexedHandler::class, indexAttribute: 'key')]
+        $indexedIterator,
+        #[AutowireIterator(ImplicitHalfExplicitHandler::class, indexAttribute: 'key', defaultPriorityMethod: 'getExplicitPriority')]
+        $halfExplicitIterator,
+        #[AutowireIterator('app.tag_without_services')]
+        $emptyIterator,
+    ): void {
+    }
+
+    #[Route('/implicit-locator', name: 'implicit-locator')]
+    public function locatorAction(
+        #[AutowireLocator(ImplicitLocatedHandler::class)]
+        $locator,
+        #[AutowireLocator('app.located_item')]
+        $dottedLocator,
+    ): void {
+    }
+
+}
+
 class AutowireCallableConsumer {
 
     #[Route('/callable', name: 'callable')]

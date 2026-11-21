@@ -30,6 +30,31 @@
         <service id="Symfony\TaggedServiceB" class="Symfony\TaggedServiceB" public="true" autowire="true" autoconfigure="true">
             <tag name="app.tagged_handler"/>
         </service>
+        <service id="Symfony\ImplicitDottedLocatedService" class="Symfony\ImplicitDottedLocatedService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.located_item"/>
+        </service>
+        <service id="Symfony\LegacyLocatedService" class="Symfony\LegacyLocatedService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.legacy_located"/>
+        </service>
+        <service id="Symfony\XmlIteratorConsumer" class="Symfony\XmlIteratorConsumer" public="true" autowire="true" autoconfigure="true">
+            <argument type="tagged_iterator" tag="app.xml_iterated"/>
+            <call method="setIndexed">
+                <argument type="tagged_iterator" tag="app.xml_indexed" index-by="key" default-index-method="getDefaultKeyName" default-priority-method="getDefaultKeyPriority"/>
+                <argument type="tagged_iterator" tag="app.xml_explicit" index-by="key" default-index-method="getXmlIndex" default-priority-method="getXmlPriority"/>
+            </call>
+        </service>
+        <service id="Symfony\XmlIteratedService" class="Symfony\XmlIteratedService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.xml_iterated"/>
+        </service>
+        <service id="Symfony\XmlIndexedService" class="Symfony\XmlIndexedService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.xml_indexed"/>
+        </service>
+        <service id="Symfony\XmlExplicitService" class="Symfony\XmlExplicitService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.xml_explicit"/>
+        </service>
+        <service id="Symfony\XmlNotIteratedService" class="Symfony\XmlNotIteratedService" public="true" autowire="true" autoconfigure="true">
+            <tag name="app.xml_not_iterated"/>
+        </service>
         <service id="Symfony\DicErroredService" class="Symfony\DicErroredService" autowire="true" autoconfigure="true">
             <tag name="container.error" message="Cannot autowire service &quot;Symfony\DicErroredService&quot;: argument &quot;$name&quot; of method &quot;__construct()&quot; is type-hinted &quot;string&quot;, you should configure its value explicitly."/>
         </service>
