@@ -679,8 +679,8 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                     // PriorityTaggedServiceTrait::findAndSortTaggedServices() calls getDefaultPriority() then.
                     // An index attribute changes that name, and a locator always has an index attribute.
                     if (
-                        !isset($arguments['defaultPriorityMethod'])
-                        && !isset($arguments['indexAttribute'])
+                        !$this->isTruthyArgument($arguments, 'defaultPriorityMethod')
+                        && !$this->isTruthyArgument($arguments, 'indexAttribute')
                         && $attributeReflection->getName() !== 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
                     ) {
                         foreach ($classNames as $className) {
@@ -1797,6 +1797,19 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             'onConsoleSignal',
             'onConsoleTerminate',
         ]);
+    }
+
+    /**
+     * TaggedIteratorArgument::__construct() ignores a falsy value, but PHPStan also returns an explicit null argument.
+     *
+     * @param array<string, Type> $arguments
+     */
+    private function isTruthyArgument(
+        array $arguments,
+        string $name,
+    ): bool
+    {
+        return isset($arguments[$name]) && $arguments[$name]->toBoolean()->isTrue()->yes();
     }
 
     /**
