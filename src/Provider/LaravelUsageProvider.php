@@ -20,7 +20,6 @@ use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\ObjectType;
-use ReflectionException;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
@@ -163,9 +162,9 @@ final class LaravelUsageProvider implements ActivatableUsageProvider
     ): mixed
     {
         try {
-            /** @throws IdentifierNotFound|LogicException|ReflectionException */
-            return $classReflection->getNativeReflection()->getProperty($propertyName)->getDefaultValue();
-        } catch (IdentifierNotFound | LogicException | ReflectionException $e) {
+            /** @throws IdentifierNotFound|LogicException */
+            return $classReflection->getNativeProperty($propertyName)->getNativeReflection()->getDefaultValue();
+        } catch (IdentifierNotFound | LogicException $e) {
             return null; // unknown class or constant in the default value, reported by PHPStan itself
         }
     }
