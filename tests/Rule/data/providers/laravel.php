@@ -281,6 +281,119 @@ class OrderEventSubscriber
     }
 }
 
+// --- EventServiceProvider $listen and $subscribe ---
+
+class PropertyListener
+{
+    public function __construct()
+    {
+    }
+
+    public function handle(): void
+    {
+    }
+
+    public function unusedMethod(): void // error: Unused Laravel\PropertyListener::unusedMethod
+    {
+    }
+}
+
+class PropertyMethodListener
+{
+    public function onAtString(): void
+    {
+    }
+
+    public function onArray(): void
+    {
+    }
+
+    public function handle(): void // error: Unused Laravel\PropertyMethodListener::handle
+    {
+    }
+}
+
+class LeadingBackslashListener
+{
+    public function handle(): void
+    {
+    }
+}
+
+class PropertySubscriber
+{
+    public function __construct()
+    {
+    }
+
+    public function subscribe(): void
+    {
+    }
+
+    public function unusedMethod(): void // error: Unused Laravel\PropertySubscriber::unusedMethod
+    {
+    }
+}
+
+class AppEventServiceProvider extends \Illuminate\Foundation\Support\Providers\EventServiceProvider
+{
+    protected $listen = [
+        OrderCreatedEvent::class => [
+            PropertyListener::class,
+            PropertyMethodListener::class . '@onAtString',
+            [PropertyMethodListener::class, 'onArray'],
+            '\Laravel\LeadingBackslashListener',
+        ],
+    ];
+
+    protected $subscribe = [
+        PropertySubscriber::class,
+    ];
+}
+
+class UnresolvableEventServiceProvider extends \Illuminate\Foundation\Support\Providers\EventServiceProvider
+{
+    protected $listen = [
+        OrderCreatedEvent::class => [\Missing\Listener::CONSTANT],
+    ];
+
+    protected $subscribe = [
+        OrderCreatedEvent::MISSING_CONSTANT,
+    ];
+}
+
+class PartlyUnresolvableSubscriber
+{
+    public function subscribe(): void
+    {
+    }
+}
+
+class PartlyUnresolvableEventServiceProvider extends \Illuminate\Foundation\Support\Providers\EventServiceProvider
+{
+    protected $listen = [
+        OrderCreatedEvent::class => [\Missing\Listener::CONSTANT],
+    ];
+
+    protected $subscribe = [
+        PartlyUnresolvableSubscriber::class,
+    ];
+}
+
+class NotEventServiceProviderListener
+{
+    public function handle(): void // error: Unused Laravel\NotEventServiceProviderListener::handle
+    {
+    }
+}
+
+class NotEventServiceProvider
+{
+    protected $listen = [ // error: Property Laravel\NotEventServiceProvider::$listen is never read
+        OrderCreatedEvent::class => [NotEventServiceProviderListener::class],
+    ];
+}
+
 // --- Auto-discovered Event Listeners (reflection-based) ---
 
 class OrderShippedEvent
