@@ -225,6 +225,31 @@ class TaggedIteratorController {
 
 }
 
+class NullArgumentPriorityController {
+
+    #[Route('/null-argument-priority', name: 'null-argument-priority')]
+    public function getAction(
+        #[AutowireIterator(NullIndexPriorityInterface::class, indexAttribute: null)]
+        $nullIndexIterator,
+        #[AutowireIterator(PositionalNullPriorityInterface::class, null, null, null, ['excluded.id'])]
+        $positionalNullIterator
+    ): void {
+    }
+
+}
+
+interface NullIndexPriorityInterface {}
+
+class NullIndexPriorityHandler implements NullIndexPriorityInterface {
+    public static function getDefaultPriority(): int { return 10; }
+}
+
+interface PositionalNullPriorityInterface {}
+
+class PositionalNullPriorityHandler implements PositionalNullPriorityInterface {
+    public static function getDefaultPriority(): int { return 10; }
+}
+
 class AutowireCallableConsumer {
 
     #[Route('/callable', name: 'callable')]
