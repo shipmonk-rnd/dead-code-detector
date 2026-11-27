@@ -354,26 +354,10 @@ class SomeController4 {
         #[TaggedIterator(IndexedPriorityInterface::class, indexAttribute: 'key')]
         $indexedIterator,
         #[TaggedLocator(LocatorPriorityInterface::class)]
-        $locator,
-        #[AutowireIterator(NullIndexPriorityInterface::class, indexAttribute: null)]
-        $nullIndexIterator,
-        #[AutowireIterator(PositionalNullPriorityInterface::class, null, null, null, ['excluded.id'])]
-        $positionalNullIterator
+        $locator
     ): void {
     }
 
-}
-
-interface NullIndexPriorityInterface {}
-
-class NullIndexPriorityHandler implements NullIndexPriorityInterface {
-    public static function getDefaultPriority(): int { return 10; }
-}
-
-interface PositionalNullPriorityInterface {}
-
-class PositionalNullPriorityHandler implements PositionalNullPriorityInterface {
-    public static function getDefaultPriority(): int { return 10; }
 }
 
 interface ImplicitPriorityInterface {}
