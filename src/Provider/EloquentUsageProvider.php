@@ -11,16 +11,18 @@ use PHPStan\Analyser\Scope;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionMethod;
 use PHPStan\BetterReflection\Reflection\Adapter\ReflectionNamedType;
 use PHPStan\Node\InClassNode;
+use PHPStan\Node\MethodReturnStatementsNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodRef;
 use ShipMonk\PHPStan\DeadCode\Graph\ClassMethodUsage;
 use ShipMonk\PHPStan\DeadCode\Graph\UsageOrigin;
 use ShipMonk\PHPStan\DeadCode\Naming\CaseInsensitiveName;
 use function is_array;
 use function is_string;
-use function str_starts_with;
 use function strlen;
 
 final class EloquentUsageProvider implements ActivatableUsageProvider
@@ -58,6 +60,10 @@ final class EloquentUsageProvider implements ActivatableUsageProvider
             $usages = [...$usages, ...$this->getObserverUsagesFromModelAttribute($node)];
         }
 
+        if ($node instanceof MethodReturnStatementsNode) { // @phpstan-ignore phpstanApi.instanceofAssumption
+            $usages = [...$usages, ...$this->getRelationshipUsagesFromReturnStatements($node)];
+        }
+
         if ($node instanceof StaticCall) {
             $usages = [...$usages, ...$this->getUsagesFromObserveCall($node, $scope)];
         }
@@ -88,6 +94,61 @@ final class EloquentUsageProvider implements ActivatableUsageProvider
         }
 
         return $usages;
+    }
+
+    /**
+     * Detects relationships that do not declare a Relation return type, neither native nor in PHPDoc.
+     *
+     * @return list<ClassMethodUsage>
+     */
+    private function getRelationshipUsagesFromReturnStatements(MethodReturnStatementsNode $node): array
+    {
+        $methodReflection = $node->getMethodReflection();
+
+        if (!$node->getClassReflection()->is('Illuminate\Database\Eloquent\Model')) {
+            return [];
+        }
+
+        if ($this->methodReturnsRelation($methodReflection)) {
+            return []; // already detected by the declared return type
+        }
+
+        $returnStatements = $node->getReturnStatements();
+
+        if ($returnStatements === []) {
+            return [];
+        }
+
+        foreach ($returnStatements as $returnStatement) {
+            $returnedExpr = $returnStatement->getReturnNode()->expr;
+
+            if ($returnedExpr === null || !$this->isRelationType($returnStatement->getScope()->getType($returnedExpr))) {
+                return [];
+            }
+        }
+
+        return [$this->createUsage($methodReflection, 'Eloquent relationship')];
+    }
+
+    /**
+     * @see \Illuminate\Database\Eloquent\Concerns\HasAttributes::getRelationshipFromMethod() accepts only Relation instances
+     */
+    private function isRelationType(Type $type): bool
+    {
+        return (new ObjectType('Illuminate\Database\Eloquent\Relations\Relation'))
+            ->isSuperTypeOf(TypeCombinator::removeNull($type))
+            ->yes();
+    }
+
+    private function methodReturnsRelation(ExtendedMethodReflection $methodReflection): bool
+    {
+        foreach ($methodReflection->getVariants() as $variant) {
+            if ($this->isRelationType($variant->getReturnType())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -219,7 +280,7 @@ final class EloquentUsageProvider implements ActivatableUsageProvider
             return 'Eloquent query scope';
         }
 
-        if ($this->methodReturnsType($method, 'Illuminate\Database\Eloquent\Relations')) {
+        if ($this->methodReturnsRelation($classReflection->getNativeMethod($methodName))) {
             return 'Eloquent relationship';
         }
 
@@ -297,23 +358,6 @@ final class EloquentUsageProvider implements ActivatableUsageProvider
         }
 
         return null;
-    }
-
-    /**
-     * Checks if the method return type starts with the given prefix (for namespace matching).
-     */
-    private function methodReturnsType(
-        ReflectionMethod $method,
-        string $typePrefix,
-    ): bool
-    {
-        $returnType = $method->getReturnType();
-
-        if (!$returnType instanceof ReflectionNamedType) {
-            return false;
-        }
-
-        return str_starts_with($returnType->getName(), $typePrefix);
     }
 
     /**

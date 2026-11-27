@@ -60,6 +60,59 @@ class User extends Model
         throw new \RuntimeException('stub');
     }
 
+    /**
+     * @return HasMany<Post, $this>
+     */
+    public function phpDocTypedPosts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    public function untypedPosts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    public function untypedConditional()
+    {
+        if ($this->exists) {
+            return $this->hasMany(Post::class);
+        }
+
+        return $this->belongsToMany(Post::class);
+    }
+
+    public function customRelation(): CustomRelation
+    {
+        throw new \RuntimeException('stub');
+    }
+
+    public function untypedNotRelation() // error: Unused Eloquent\User::untypedNotRelation
+    {
+        return 'value';
+    }
+
+    public function untypedSometimesRelation() // error: Unused Eloquent\User::untypedSometimesRelation
+    {
+        if ($this->exists) {
+            return $this->hasMany(Post::class);
+        }
+
+        return 'value';
+    }
+
+    public function untypedWithoutReturn() // error: Unused Eloquent\User::untypedWithoutReturn
+    {
+    }
+
+    /**
+     * @return mixed
+     */
+    public function declaredMixed()
+    {
+        return $this->hasMany(Post::class);
+    }
+
     protected function firstName(): Attribute
     {
         return new Attribute();
@@ -84,6 +137,17 @@ class User extends Model
     private function notAFrameworkMethod(): void // error: Unused Eloquent\User::notAFrameworkMethod
     {
     }
+}
+
+class Post extends Model
+{
+}
+
+/**
+ * @extends HasMany<Post, User>
+ */
+class CustomRelation extends HasMany
+{
 }
 
 // --- Factories ---
