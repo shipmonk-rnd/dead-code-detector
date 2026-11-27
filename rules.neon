@@ -12,6 +12,7 @@ services:
         class: ShipMonk\PHPStan\DeadCode\Cache\UsageCacheStorage
         arguments:
             tmpDir: %tmpDir%
+            resultCachePath: %resultCachePath%
             offloadCollectorData: %shipmonkDeadCode.cache.offloadCollectorData%
     -
         class: ShipMonk\PHPStan\DeadCode\Composer\ComposerIntrospector
