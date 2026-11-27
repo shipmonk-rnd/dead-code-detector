@@ -637,7 +637,7 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                 ) {
                     $arguments = $attributeReflection->getArgumentTypes();
 
-                    if (!isset($arguments['tag']) || (!isset($arguments['defaultIndexMethod']) && !isset($arguments['defaultPriorityMethod']))) {
+                    if (!isset($arguments['tag'])) {
                         continue;
                     }
 
@@ -670,6 +670,25 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
                                 new ClassMethodRef(
                                     $className,
                                     $method[0]->getValue(),
+                                    possibleDescendant: true,
+                                ),
+                            );
+                        }
+                    }
+
+                    // PriorityTaggedServiceTrait::findAndSortTaggedServices() calls getDefaultPriority() then.
+                    // An index attribute changes that name, and a locator always has an index attribute.
+                    if (
+                        !$this->isTruthyArgument($arguments, 'defaultPriorityMethod')
+                        && !$this->isTruthyArgument($arguments, 'indexAttribute')
+                        && $attributeReflection->getName() !== 'Symfony\Component\DependencyInjection\Attribute\TaggedLocator'
+                    ) {
+                        foreach ($classNames as $className) {
+                            $usages[] = new ClassMethodUsage(
+                                $usageOrigin,
+                                new ClassMethodRef(
+                                    $className,
+                                    'getDefaultPriority',
                                     possibleDescendant: true,
                                 ),
                             );
@@ -1778,6 +1797,19 @@ final class SymfonyUsageProvider implements ActivatableUsageProvider
             'onConsoleSignal',
             'onConsoleTerminate',
         ]);
+    }
+
+    /**
+     * TaggedIteratorArgument::__construct() ignores a falsy value, but PHPStan also returns an explicit null argument.
+     *
+     * @param array<string, Type> $arguments
+     */
+    private function isTruthyArgument(
+        array $arguments,
+        string $name,
+    ): bool
+    {
+        return isset($arguments[$name]) && $arguments[$name]->toBoolean()->isTrue()->yes();
     }
 
     /**
