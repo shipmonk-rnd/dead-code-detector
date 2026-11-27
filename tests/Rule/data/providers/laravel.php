@@ -3,7 +3,9 @@
 namespace Laravel;
 
 use Exception;
+use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Routing\Registrar;
@@ -1085,6 +1087,46 @@ function testCanAndGateMethods(Post $post, Song $song, User $user): void
     Gate::authorize('feature', $song);     // SongPolicy::feature
 }
 
+// --- Ability lists, argument lists, Gate instances and route authorization ---
+
+function testMoreAbilityChecks(Post $post, User $user, GateContract $gate): void
+{
+    $user->canAny(['moderate', 'pin'], $post);                 // PostPolicy::moderate, PostPolicy::pin
+    $user->can(['feature-post', 'lock'], $post);               // PostPolicy::featurePost, PostPolicy::lock
+    $user->can('duplicate', [$post, 'extra argument']);        // PostPolicy::duplicate
+    Gate::inspect('inspectAbility', $post);                    // PostPolicy::inspectAbility
+    Gate::raw('rawAbility', $post);                            // PostPolicy::rawAbility
+    Gate::forUser($user)->allows('forUserAbility', $post);     // PostPolicy::forUserAbility
+    $gate->denies('gateInstanceAbility', $post);               // PostPolicy::gateInstanceAbility
+    $gate->define('gate-instance-define', [GateInstanceAbility::class, 'check']);
+
+    Route::get('/posts', static function (): void {})->can('routeCan', Post::class);
+    Route::get('/posts', static function (): void {})->can('routeCanList', [Post::class]);
+    Route::can('facadeCan', Post::class)->group(static function (): void {});
+    Route::middleware('auth')->can('registrarCan', Post::class)->group(static function (): void {});
+    Route::get('/posts', static function (): void {})->middleware('can:middlewareString,' . Post::class);
+    Route::get('/posts', static function (): void {})->middleware('auth', 'can:middleware-variadic,Laravel\Post');
+    Route::middleware(['auth', 'can:middlewareList,Laravel\Post'])->group(static function (): void {});
+    Route::get('/posts', static function (): void {})->middleware(Authorize::class . ':middlewareClassName,Laravel\Post');
+    Route::get('/posts', static function (): void {})->middleware(Authorize::using('middlewareUsing', Post::class));
+
+    Route::get('/posts/{post}', static function (): void {})->middleware('can:routeParameterModel,post');
+    Route::get('/posts', static function (): void {})->middleware('throttle:otherMiddleware,Laravel\Post');
+}
+
+class GateInstanceAbility
+{
+    public function check(): bool
+    {
+        return true;
+    }
+
+    public function unused(): bool // error: Unused Laravel\GateInstanceAbility::unused
+    {
+        return true;
+    }
+}
+
 // --- Controller using authorize() ---
 
 class SongController extends Controller
@@ -1168,6 +1210,106 @@ class PostPolicy
     }
 
     public function draft(object $user, object $post): bool
+    {
+        return true;
+    }
+
+    public function moderate(object $user): bool
+    {
+        return true;
+    }
+
+    public function pin(object $user): bool
+    {
+        return true;
+    }
+
+    public function featurePost(object $user): bool
+    {
+        return true;
+    }
+
+    public function lock(object $user): bool
+    {
+        return true;
+    }
+
+    public function duplicate(object $user): bool
+    {
+        return true;
+    }
+
+    public function inspectAbility(object $user): bool
+    {
+        return true;
+    }
+
+    public function rawAbility(object $user): bool
+    {
+        return true;
+    }
+
+    public function forUserAbility(object $user): bool
+    {
+        return true;
+    }
+
+    public function gateInstanceAbility(object $user): bool
+    {
+        return true;
+    }
+
+    public function routeCan(object $user): bool
+    {
+        return true;
+    }
+
+    public function routeCanList(object $user): bool
+    {
+        return true;
+    }
+
+    public function facadeCan(object $user): bool
+    {
+        return true;
+    }
+
+    public function registrarCan(object $user): bool
+    {
+        return true;
+    }
+
+    public function middlewareString(object $user): bool
+    {
+        return true;
+    }
+
+    public function middlewareVariadic(object $user): bool
+    {
+        return true;
+    }
+
+    public function middlewareList(object $user): bool
+    {
+        return true;
+    }
+
+    public function middlewareClassName(object $user): bool
+    {
+        return true;
+    }
+
+    public function middlewareUsing(object $user): bool
+    {
+        return true;
+    }
+
+    public function routeParameterModel(object $user): bool // error: Unused Laravel\Policies\PostPolicy::routeParameterModel
+    {
+        return true;
+    }
+
+    public function otherMiddleware(object $user): bool // error: Unused Laravel\Policies\PostPolicy::otherMiddleware
     {
         return true;
     }
