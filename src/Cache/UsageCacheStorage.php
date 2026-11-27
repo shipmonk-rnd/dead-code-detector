@@ -7,12 +7,16 @@ use LogicException;
 use RuntimeException;
 use ShipMonk\PHPStan\DeadCode\Graph\CollectedUsage;
 use function array_map;
+use function clearstatcache;
 use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function filemtime;
 use function implode;
 use function is_dir;
+use function is_file;
+use function is_int;
 use function md5;
 use function mkdir;
 use function substr;
@@ -23,6 +27,8 @@ final class UsageCacheStorage
 
     private readonly string $cacheDir;
 
+    private readonly string $resultCachePath;
+
     private readonly bool $offloadCollectorData;
 
     /**
@@ -32,10 +38,12 @@ final class UsageCacheStorage
 
     public function __construct(
         string $tmpDir,
+        string $resultCachePath,
         bool $offloadCollectorData,
     )
     {
         $this->cacheDir = $tmpDir . '/dcd';
+        $this->resultCachePath = $resultCachePath;
         $this->offloadCollectorData = $offloadCollectorData;
     }
 
@@ -109,10 +117,13 @@ final class UsageCacheStorage
 
     /**
      * Delete all files in cacheDir that were not read by this cache instance
+     *
+     * PHPStan does not save the result cache in some runs (editor mode, a non-ignorable error, ...).
+     * The older result cache on disk then references files that this run did not read, so gc keeps them.
      */
     public function gc(): void
     {
-        if (!is_dir($this->cacheDir)) {
+        if (!is_dir($this->cacheDir) || !$this->isResultCacheSavedByThisProcess()) {
             return;
         }
 
@@ -145,6 +156,30 @@ final class UsageCacheStorage
                 }
             }
         }
+    }
+
+    private function isResultCacheSavedByThisProcess(): bool
+    {
+        clearstatcache(true, $this->resultCachePath);
+
+        if (!is_file($this->resultCachePath)) {
+            return true; // no result cache can reference the unread files
+        }
+
+        $modificationTime = filemtime($this->resultCachePath);
+
+        if ($modificationTime === false) {
+            throw new LogicException("Could not read modification time of PHPStan result cache: {$this->resultCachePath}");
+        }
+
+        $processStartTime = $_SERVER['REQUEST_TIME'] ?? null;
+
+        if (!is_int($processStartTime)) {
+            throw new LogicException('Could not read process start time from $_SERVER[\'REQUEST_TIME\']');
+        }
+
+        // filemtime() has a resolution of 1 second: a save in the start second of the process does not count, a later run does the gc
+        return $modificationTime > $processStartTime;
     }
 
     private function getFilePath(string $hash): string
